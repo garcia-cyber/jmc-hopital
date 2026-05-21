@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: jmc-hospital-erp
+    runtime: python
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn conf.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.5 # Modifiez selon votre version locale si nécessaire
+      - key: SECRET_KEY
+        generateValue: true # Render génère automatiquement une clé secrète sécurisée unique pour la production
+    disk:
+      name: jmc-hospital-data
+      mountPath: /data
+      sizeGB: 1

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Ajouter une Chambre</title>
+        
+        <!-- Favicon et CSS -->
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+        
+            <!-- Header -->
+            {% include 'back-end/includes/header.html' %}
+            <!-- /Header -->
+            
+            <!-- Sidebar -->
+            {% include 'back-end/includes/sidebar.html' %}
+            <!-- /Sidebar -->
+            
+            <!-- Page Wrapper -->
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Configuration des Hospitalisations</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="#">Chambres</a></li>
+                                    <li class="breadcrumb-item active">Nouvelle Chambre</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <!-- Notifications Django -->
+                    {% if messages %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Fil conducteur du processus (Steppers) -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-center align-items-center steps-container py-3 bg-white shadow-sm" style="border-radius: 8px;">
+                                <div class="step-item text-muted text-center px-3">
+                                    <span class="badge badge-secondary rounded-circle px-3 py-2">1</span>
+                                    <p class="mb-0 mt-1 small">Catégorie (VIP, Commune...)</p>
+                                </div>
+                                <div class="step-line bg-light mx-4" style="height: 2px; width: 80px;"></div>
+                                <div class="step-item active-step text-center px-3">
+                                    <span class="badge badge-primary rounded-circle px-3 py-2">2</span>
+                                    <p class="mb-0 mt-1 font-weight-bold small">Création de la Chambre</p>
+                                </div>
+                                <div class="step-line bg-light mx-4" style="height: 2px; width: 80px;"></div>
+                                <div class="step-item text-muted text-center px-3">
+                                    <span class="badge badge-secondary rounded-circle px-3 py-2">3</span>
+                                    <p class="mb-0 mt-1 small">Ajout des Lits physiques</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire de saisie -->
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card card-box shadow-sm" style="border-radius: 10px;">
+                                <div class="card-header bg-white border-0 pt-4 px-4">
+                                    <h4 class="card-title mb-0"><i class="la la-door-closed text-primary" style="font-size: 22px;"></i> Étape 2 : Enregistrer une chambre physique</h4>
+                                    <small class="text-muted">Attribuez la chambre à une catégorie tarifaire et associez-la à son service médical.</small>
+                                </div>
+                                <div class="card-body px-4 pb-4">
+                                    <form method="POST" action="">
+                                        {% csrf_token %}
+                                        
+                                        <!-- Affichage des erreurs globales du formulaire s'il y en a -->
+                                        {% if form.non_field_errors %}
+                                        <div class="alert alert-danger">
+                                            {% for error in form.non_field_errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+
+                                        <div class="row">
+                                            {% for field in form %}
+                                            <div class="col-sm-12 col-md-6 mb-3">
+                                                <div class="form-group">
+                                                    <label class="font-weight-bold text-secondary">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                                    
+                                                    <!-- Différenciation des types de champs de formulaire -->
+                                                    {% if field.field.widget.input_type == "select" or field.field.widget.choices %}
+                                                        <select name="{{ field.html_name }}" 
+                                                                id="{{ field.id_for_label }}" 
+                                                                class="select form-control {% if field.errors %}is-invalid{% endif %}">
+                                                            {% for choice_id, choice_label in field.field.choices %}
+                                                                <option value="{{ choice_id }}" {% if field.value|stringformat:"s" == choice_id|stringformat:"s" %}selected{% endif %}>{{ choice_label }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    {% elif field.field.widget.input_type == "checkbox" %}
+                                                        <div class="checkbox mt-2">
+                                                            <label>{{ field }} Activer / Rendre opérationnelle</label>
+                                                        </div>
+                                                    {% else %}
+                                                        <input type="{{ field.field.widget.input_type|default:'text' }}" 
+                                                               name="{{ field.html_name }}" 
+                                                               id="{{ field.id_for_label }}"
+                                                               class="form-control {% if field.errors %}is-invalid{% endif %}"
+                                                               value="{{ field.value|default:'' }}">
+                                                    {% endif %}
+                                                    
+                                                    <!-- Gestion fine des erreurs par champ -->
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                            {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+
+                                        <div class="submit-section mt-4 text-right">
+                                            <a href="{% url 'ajouter_type_chambre' %}" class="btn btn-outline-secondary rounded-pill px-4 mr-2">
+                                                <i class="fa fa-chevron-left"></i> Étape précédente
+                                            </a>
+                                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                                Suivant <i class="fa fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- /Page Wrapper -->
+            
+        </div>
+        <!-- /Main Wrapper -->
+        
+        <!-- jQuery & Scripts de base -->
+        {% include 'back-end/includes/js.html' %}     
+
+        <!-- Styles locaux pour le composant d'étape (Stepper) -->
+        <style>
+            .steps-container {
+                border-bottom: 2px solid #f3f4f6;
+            }
+            .step-item {
+                opacity: 0.5;
+            }
+            .active-step {
+                opacity: 1 !important;
+            }
+            .font-weight-medium {
+                font-weight: 500;
+            }
+            .form-control:focus {
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+            }
+        </style>
+    </body>
+</html>

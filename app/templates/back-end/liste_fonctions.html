@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Affectations des Postes - Moyanoli ERP</title>
+        
+        {% include 'back-end/includes/css.html'%}
+
+        <style>
+            .page-wrapper { background-color: #f4f7fe; }
+            .card-table {
+                border: none;
+                border-radius: 15px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            }
+            .badge-role {
+                padding: 8px 12px;
+                border-radius: 20px;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            .table-avatar img {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                margin-right: 10px;
+            }
+            .search-box-container { max-width: 300px; }
+            .search-box-container .form-control {
+                border-radius: 20px;
+                padding-left: 15px;
+                background-color: #f8f9fa;
+                border: 1px solid #e3e3e3;
+            }
+            /* Style pour le bouton supprimer */
+            .btn-delete {
+                color: #e63c3c;
+                background: #fff1f1;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 8px;
+                transition: all 0.3s;
+            }
+            .btn-delete:hover {
+                background: #e63c3c;
+                color: #fff;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html'%}
+            {% include 'back-end/includes/sidebar.html'%}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Rapports d'Affectation</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Liste des Fonctions</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card card-table">
+                                <div class="card-header bg-white border-0 pt-4">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <h4 class="card-title mb-0">Répartition du Personnel par Poste</h4>
+                                        </div>
+                                        <div class="col-auto">
+                                            <div class="search-box-container">
+                                                <input type="text" id="searchInput" class="form-control" placeholder="Rechercher...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-center mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Employé</th>
+                                                    <th>Poste / Fonction</th>
+                                                    <th>Nom d'utilisateur</th>
+                                                    <th>Date d'affectation</th>
+                                                    <th>Statut</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tableBody">
+                                                {% for poste in liste_postes %}
+                                                <tr>
+                                                    <td>
+                                                        <h2 class="table-avatar">
+                                                            <img src="/static/back-end/assets/img/profiles/avatar-01.jpg" alt="">
+                                                            {{ poste.userKey.get_full_name|default:poste.userKey.username }}
+                                                        </h2>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-inverse-primary badge-role">
+                                                            <i class="la la-briefcase mr-1"></i> {{ poste.fonctionKey.roleName }}
+                                                        </span>
+                                                    </td>
+                                                    <td>@{{ poste.userKey.username }}</td>
+                                                    <td>{{ poste.userKey.date_joined|date:"d M Y" }}</td>
+                                                    <td>
+                                                        {% if poste.userKey.is_active %}
+                                                            <span class="badge badge-success-border"><i class="fa fa-circle text-success mr-1"></i> Actif</span>
+                                                        {% else %}
+                                                            <span class="badge badge-danger-border"><i class="fa fa-circle text-danger mr-1"></i> Inactif</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <!-- BOUTON SUPPRIMER -->
+                                                        <a href="{% url 'supprimer_poste' poste.id %}" 
+                                                           class="btn-delete" 
+                                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette affectation ?');"
+                                                           title="Supprimer l'affectation">
+                                                            <i class="la la-trash-alt"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        Aucune affectation enregistrée.
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-footer bg-white border-0 pb-4">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <small class="text-muted">Total : {{ liste_postes|length }}</small>
+                                        </div>
+                                        <div class="col-auto">
+                                            <ul class="pagination pagination-sm mb-0">
+                                                <li class="page-item disabled"><a class="page-link" href="#"><i class="la la-angle-left"></i></a></li>
+                                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                                <li class="page-item"><a class="page-link" href="#"><i class="la la-angle-right"></i></a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        {% include 'back-end/includes/js.html'%}
+
+        <script>
+            $(document).ready(function(){
+                $("#searchInput").on("keyup", function() {
+                    var value = $(this).val().toLowerCase();
+                    $("#tableBody tr").filter(function() {
+                        $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>

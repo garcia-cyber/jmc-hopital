@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Détails de la Consultation</title>
+        
+        {% include 'back-end/includes/css.html' %}
+        <style>
+            .info-label { font-weight: bold; color: #4b5563; min-width: 150px; display: inline-block; }
+            .info-value { color: #1f2937; font-weight: 500; }
+            .section-title-view { border-left: 4px solid #007bff; padding-left: 10px; font-weight: bold; color: #0056b3; margin-bottom: 15px; text-uppercase: uppercase; font-size: 14px; letter-spacing: 0.5px;}
+            .box-fiche { border: 1px solid #e5e7eb; background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Dossier Clinique Clôturé</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Médecin</a></li>
+                                    <li class="breadcrumb-item active">Résumé Consultation</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <button onclick="window.print();" class="btn btn-white btn-sm rounded-pill mr-2">
+                                    <i class="fa fa-print"></i> Imprimer la fiche
+                                </button>
+                                <a href="{% url 'liste_consultation_medecin' %}" class="btn btn-secondary btn-sm rounded-pill">
+                                    <i class="fa fa-arrow-left"></i> Retour
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOC 1 : Identité Patient & Constantes de Triage -->
+                    <div class="card bg-dark text-white mb-4">
+                        <div class="card-body py-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 border-right border-secondary">
+                                    <small class="text-muted text-uppercase d-block">Patient</small>
+                                    <h4 class="text-warning font-weight-bold mb-0">{{ patient.noms }}</h4>
+                                    <small>Code: #{{ patient.code_patient }} | Âge : {{ patient.age }} ans</small>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="row text-center">
+                                        <div class="col-3">
+                                            <small class="text-muted d-block">Température</small>
+                                            <span class="font-weight-bold">{{ triage.temperature }} °C</span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block">Tension Art.</small>
+                                            <span class="font-weight-bold">{{ triage.tension_arterielle|default:"--" }} mmHg</span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block">Fréq. Cardiaque</small>
+                                            <span class="font-weight-bold">{{ triage.frequence_cardiaque|default:"--" }} bpm</span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block">Poids</small>
+                                            <span class="font-weight-bold">{{ triage.poids }} Kg</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Colonne Gauche : Constatations Médicales (Données issues du Formulaire) -->
+                        <div class="col-md-7">
+                            <div class="box-fiche">
+                                <h4 class="section-title-view"><i class="fa fa-user-md"></i> Données de l'Examen Clinique</h4>
+                                <hr>
+                                
+                                <!-- On liste ici dynamiquement les champs sauvegardés de votre ConsultationForm -->
+                                <div class="mb-3">
+                                    <span class="info-label">Médecin Traitant :</span>
+                                    <span class="info-value text-primary">Dr. {{ consultation.medecin.get_full_name|default:consultation.medecin.username }}</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <span class="info-label">Date & Heure :</span>
+                                    <span class="info-value">{{ consultation.created_at|date:"d/m/Y à H:i" }}</span>
+                                </div>
+
+                                <div class="mt-4">
+                                    <h5 class="font-weight-bold text-secondary small text-uppercase">Motif de consultation / Histoire de la maladie :</h5>
+                                    <p class="bg-light p-3 rounded text-justify text-dark">{{ consultation.motif|default:"Aucun motif renseigné."|linebreaks }}</p>
+                                </div>
+
+                                <div class="mt-3">
+                                    <h5 class="font-weight-bold text-secondary small text-uppercase">Examen Physique / Signes Cliniques :</h5>
+                                    <p class="bg-light p-3 rounded text-justify text-dark">{{ consultation.examen_physique|default:"Non renseigné."|linebreaks }}</p>
+                                </div>
+
+                                <div class="mt-3">
+                                    <h5 class="font-weight-bold text-secondary small text-uppercase">Hypothèse Diagnostique :</h5>
+                                    <p class="bg-light p-3 rounded text-justify text-dark font-weight-bold text-danger">{{ consultation.diagnostic|default:"Aucun diagnostic posé."|linebreaks }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colonne Droite : Examens complémentaires & Prescriptions faites -->
+                        <div class="col-md-5">
+                            
+                            <!-- A. Liste de TOUS les examens demandés -->
+                            <div class="box-fiche" style="border-top: 4px solid #17a2b8;">
+                                <h4 class="section-title-view text-info"><i class="fa fa-flask"></i> Examens Paracliniques Demandés</h4>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-sm table-striped table-bordered mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Type / Catégorie</th>
+                                                <th>Examen</th>
+                                                <th class="text-center" style="width: 60px;">Qté</th>
+                                                <th class="text-center">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for examen in examens_demandes %}
+                                                <tr>
+                                                    <td><span class="badge badge-info">{{ examen.prestation.categorie }}</span></td>
+                                                    <td class="font-weight-bold">{{ examen.prestation.libelle }}</td>
+                                                    <td class="text-center">{{ examen.quantite }}</td>
+                                                    <td class="text-center">
+                                                        {% if examen.statut == 'EN_ATTENTE' %}
+                                                            <span class="badge badge-warning">En attente</span>
+                                                        {% elif examen.statut == 'TERMINE' %}
+                                                            <span class="badge badge-success">Prêt / Validé</span>
+                                                        {% else %}
+                                                            <span class="badge badge-secondary">{{ examen.statut }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted small py-3">Aucun examen de laboratoire ou d'imagerie prescrit.</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- B. Ordonnance d'Urgence Initiale -->
+                            <div class="box-fiche" style="border-top: 4px solid #ffc107;">
+                                <h4 class="section-title-view text-warning"><i class="fa fa-pills"></i> Ordonnance d'Urgence Prévue</h4>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Médicament</th>
+                                                <th>Posologie</th>
+                                                <th>Durée</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ligne in lignes_ordonnance %}
+                                                <tr>
+                                                    <td class="font-weight-bold text-dark">{{ ligne.nom_medicament }}</td>
+                                                    <td>{{ ligne.posologie|default:"--" }}</td>
+                                                    <td>{{ ligne.duree|default:"--" }}</td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted small py-3">Aucun traitement d'urgence administré.</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

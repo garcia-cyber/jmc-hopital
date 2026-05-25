@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Attribuer Fonction - Moyanoli ERP</title>
+        
+        {% include 'back-end/includes/css.html' %}
+
+        <style>
+            .page-wrapper { background-color: #f4f7fe; }
+            .card {
+                border: none;
+                border-radius: 15px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            }
+            .user-info-card {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                color: white;
+                border-radius: 15px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .form-control {
+                border-radius: 8px;
+                height: 45px;
+            }
+            .btn-save {
+                border-radius: 8px;
+                padding: 10px 30px;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Gestion des Postes</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 'employeRead' %}">Employés</a></li>
+                                    <li class="breadcrumb-item active">Attribuer Fonction</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <div class="row justify-content-center">
+                        <div class="col-lg-6 col-md-8">
+                            
+                            <!-- Carte Info Employé -->
+                            <div class="user-info-card shadow-sm">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-xl mr-3">
+                                        <img src="/static/back-end/assets/img/profiles/avatar-01.jpg" alt="User" class="rounded-circle border border-white">
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-0">{{ employe.first_name }} {{ employe.last_name }}</h4>
+                                        <p class="mb-0 opacity-75">ID Employé: #00{{ employe.id }} | @{{ employe.username }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Formulaire d'attribution -->
+                            <div class="card">
+                                <div class="card-header bg-white border-0 pt-4">
+                                    <h4 class="card-title mb-0 text-primary"><i class="la la-user-tag mr-2"></i>Affectation du poste</h4>
+                                </div>
+                                <div class="card-body">
+                                    {% if msg %}
+                                        <div class="alert alert-info border-0 shadow-sm">{{ msg }}</div>
+                                    {% endif %}
+
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Choisir la fonction / Rôle <span class="text-danger">*</span></label>
+                                            <!-- On rend le champ du formulaire Django avec des classes Bootstrap -->
+                                            {{ form.fonctionKey }}
+                                            {% if form.fonctionKey.errors %}
+                                                <small class="text-danger">{{ form.fonctionKey.errors }}</small>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="alert alert-light border-0">
+                                            <small class="text-muted">
+                                                <i class="la la-info-circle"></i> Cette action définira les permissions d'accès de <strong>{{ employe.username }}</strong> dans le système Moyanoli.
+                                            </small>
+                                        </div>
+
+                                        <div class="submit-section text-center mt-4">
+                                            <button type="submit" class="btn btn-primary btn-save shadow-sm">
+                                                <i class="la la-check-circle mr-1"></i> Confirmer l'affectation
+                                            </button>
+                                            <a href="{% url 'employeRead' %}" class="btn btn-light btn-save ml-2">Annuler</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            <!-- /Page Wrapper -->
+
+        </div>
+
+        {% include 'back-end/includes/js.html'%}
+
+        <!-- Script pour injecter les classes bootstrap dans le champ select du form Django -->
+        <script>
+            $(document).ready(function() {
+                $('select').addClass('form-control');
+            });
+        </script>
+        
+    </body>
+</html>

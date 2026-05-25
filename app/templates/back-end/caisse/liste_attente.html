@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Attente Facturation Caisse</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title"><i class="fa fa-money"></i> Guichet de Caisse</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Examens en attente de paiement</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Affichage des messages flash (Succès/Erreur) -->
+                    {% if messages %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Barre de Recherche pour le Caissier -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <form method="GET" action="" class="search-form">
+                                <div class="input-group">
+                                    <input type="text" name="q" class="form-control" placeholder="Rechercher par nom de patient, code unique ou médecin..." value="{{ request.GET.q }}">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="fa fa-search"></i> Filtrer la file d'attente
+                                        </button>
+                                        {% if request.GET.q %}
+                                            <a href="?" class="btn btn-secondary">Réinitialiser</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Tableau de la file d'attente de facturation -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card shadow-sm">
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover custom-table mb-0 datatable">
+                                            <thead class="thead-dark">
+                                                <tr>
+                                                    <th>Date & Heure d'Envoi</th>
+                                                    <th>Code Patient</th>
+                                                    <th>Nom du Patient</th>
+                                                    <th>Médecin Prescripteur</th>
+                                                    <th>Statut Actes</th>
+                                                    <th>Net à Payer</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for c in consultations %}
+                                                <tr>
+                                                    <!-- Date et Heure -->
+                                                    <td>
+                                                        <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
+                                                        <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
+                                                    </td>
+                                                    
+                                                    <!-- Code Unique Patient -->
+                                                    <td>
+                                                        <span class="badge badge-light-info">{{ c.triage.patient.code_patient }}</span>
+                                                    </td>
+                                                    
+                                                    <!-- Noms du Patient -->
+                                                    <td>
+                                                        <strong>{{ c.triage.patient.noms }}</strong><br>
+                                                        <small class="text-muted">{{ c.triage.patient.age }} ans</small>
+                                                    </td>
+                                                    
+                                                    <!-- Médecin -->
+                                                    <td>
+                                                        <i class="fa fa-user-md text-primary"></i> Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}
+                                                    </td>
+                                                    
+                                                    <!-- Indicateur visuel du type d'actes en attente -->
+                                                    <td>
+                                                        <span class="badge badge-warning">
+                                                            <i class="fa fa-clock-o"></i> À Facturer
+                                                        </span>
+                                                    </td>
+                                                    
+                                                    <!-- Montant Total Calculé depuis les Prestations -->
+                                                    <td>
+                                                        <strong class="text-danger" style="font-size: 16px;">
+                                                            {{ c.total_examens_a_payer }} USD
+                                                        </strong>
+                                                    </td>
+                                                    
+                                                    <!-- Bouton d'action embarquant le consultation_id -->
+                                                    <td class="text-right">
+                                                        <a href="{% url 'encaisser_examens_prescrits' c.id %}" class="btn btn-sm btn-success px-3 shadow-sm">
+                                                            <i class="fa fa-money"></i> Encaisser le Paiement
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted py-5">
+                                                        <div class="mb-2">
+                                                            <i class="fa fa-check-circle fa-3x text-success"></i>
+                                                        </div>
+                                                        <h5 class="text-secondary font-weight-normal">La file d'attente est vide</h5>
+                                                        <small class="text-muted">Aucun examen médical n'est actuellement en attente de traitement financier dans le système Moyanoli.</small>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

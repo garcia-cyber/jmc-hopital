@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique Global des Examens - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        /* Design moderne et épuré */
+        .custom-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            background: #fff;
+        }
+        .custom-card-header {
+            background: #ffffff;
+            border-bottom: 1px solid #f2f4f8;
+            padding: 1.25rem 1.5rem;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+        }
+        .service-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+            width: 115px;
+        }
+        .bg-labo {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .bg-radio {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+        .bg-echo {
+            background-color: #f3e5f5;
+            color: #6a1b9a;
+        }
+        .patient-box {
+            border-left: 3px solid #4f46e5;
+            padding-left: 10px;
+        }
+        .patient-code {
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        /* Encadré pour le compte-rendu clinique */
+        .result-preview-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #334155;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .user-avatar-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-icon-circle {
+            width: 32px;
+            height: 32px;
+            background: #f1f5f9;
+            color: #64748b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .search-wrapper .form-control {
+            border-radius: 8px;
+            padding-left: 40px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .search-wrapper .form-control:focus {
+            background: #fff;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .search-wrapper {
+            position: relative;
+        }
+        .search-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            z-index: 4;
+        }
+        .table thead th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px;
+        }
+        .table tbody td {
+            padding: 16px 14px;
+            border-color: #f1f5f9;
+        }
+        .pagination .page-item .page-link {
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 8px 16px;
+            border-radius: 6px;
+            margin: 0 2px;
+            font-weight: 500;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <!-- En-tête de la Page -->
+                <div class="page-header mb-4">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title font-weight-bold text-dark" style="font-size: 24px;">Archives Médicales</h3>
+                            <ul class="breadcrumb bg-transparent p-0 m-0">
+                                <li class="breadcrumb-item"><a href="#" class="text-muted">Examens</a></li>
+                                <li class="breadcrumb-item active text-primary font-weight-medium">Historique des Résultats</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barre d'outils et de filtrage rapide -->
+                <div class="custom-card mb-4">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center justify-content-between">
+                            <div class="col-md-5 col-lg-4">
+                                <div class="search-wrapper">
+                                    <i class="fa fa-search"></i>
+                                    <input type="text" id="SearchInput" class="form-control" placeholder="Rechercher un patient, examen, observations...">
+                                </div>
+                            </div>
+                            <div class="col-md-auto mt-3 mt-md-0">
+                                <span class="d-inline-flex align-items-center bg-light text-dark font-weight-medium px-3 py-2 rounded-lg" style="gap: 8px; font-size: 13px;">
+                                    <i class="fa fa-folder-open text-primary"></i> 
+                                    Total archivés : <strong class="text-primary">{{ historique_examens.paginator.count|default:historique_examens.count }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table d'historique principale -->
+                <div class="custom-card mb-4">
+                    <div class="custom-card-header d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0 text-dark font-weight-bold" style="font-size: 16px;">
+                            <i class="fa fa-history text-muted mr-2"></i> Registre Général des Résultats
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="TableHistorique" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 12%;">Date & Heure</th>
+                                        <th style="width: 20%;">Patient</th>
+                                        <th style="width: 38%;">Détails & Compte-rendu de l'Examen</th>
+                                        <th style="width: 12%;" class="text-center">Provenance</th>
+                                        <th style="width: 18%;">Technicien</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for examen in historique_examens %}
+                                    <tr>
+                                        <!-- 📅 Date & Heure -->
+                                        <td class="align-middle">
+                                            <span class="font-weight-bold text-dark d-block">{{ examen.date_realisation|date:"d M Y" }}</span>
+                                            <small class="text-muted"><i class="far fa-clock mr-1"></i> {{ examen.date_realisation|date:"H:i" }}</small>
+                                        </td>
+
+                                        <!-- 👤 Patient -->
+                                        <td class="align-middle">
+                                            <div class="patient-box">
+                                                <span class="patient-code d-inline-block mb-1">{{ examen.consultation.triage.patient.code_patient }}</span>
+                                                <span class="d-block text-uppercase font-weight-bold text-dark" style="font-size: 13px;">{{ examen.consultation.triage.patient.noms }}</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- 🔬 Libellé Examen & Contenu des résultats -->
+                                        <td class="align-middle">
+                                            <div class="mb-2">
+                                                <span class="font-weight-bold text-primary" style="font-size: 14px;">
+                                                    {{ examen.prestation.libelle }}
+                                                </span>
+                                            </div>
+                                            
+                                            <!-- Bloc contenant les conclusions de l'examen -->
+                                            <div class="result-preview-box">
+                                                {% if examen.resultat %}
+                                                    <div class="font-weight-semibold text-secondary small mb-1"><i class="fa fa-comment-medical"></i> Conclusion / Résultat :</div>
+                                                    <span class="text-dark">{{ examen.resultat|linebreaksbr }}</span>
+                                                {% else %}
+                                                    <span class="text-muted italic small"><i class="fa fa-exclamation-circle"></i> Aucun texte ou résultat enregistré.</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+
+                                        <!-- 🏢 Service (Catégorie) -->
+                                        <td class="align-middle text-center">
+                                            {% if examen.prestation.categorie == 'LABO' %}
+                                                <span class="service-badge bg-labo">
+                                                    <i class="fa fa-flask"></i> Labo
+                                                </span>
+                                            {% elif examen.prestation.categorie == 'RADIO' %}
+                                                <span class="service-badge bg-radio">
+                                                    <i class="fa fa-radiation"></i> Radio
+                                                </span>
+                                            {% elif examen.prestation.categorie == 'ECHO' %}
+                                                <span class="service-badge bg-echo">
+                                                    <i class="fa fa-wave-square"></i> Écho
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-light border text-muted py-2 px-3 rounded-pill">
+                                                    {{ examen.prestation.categorie|default:"Autre" }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- 🧑‍⚕️ Technicien & Rôle -->
+                                        <td class="align-middle">
+                                            <div class="user-avatar-info">
+                                                <div class="user-icon-circle">
+                                                    <i class="fa fa-user-md"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="d-block font-weight-bold text-dark" style="font-size: 13px;">
+                                                        {{ examen.technicien.get_full_name|default:examen.technicien.username }}
+                                                    </span>
+                                                    {% with affectation=examen.technicien.user_fonction.first %}
+                                                        {% if affectation %}
+                                                            <small class="text-muted d-block" style="font-size: 11px;">
+                                                                {{ affectation.fonctionKey.roleName }}
+                                                            </small>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 bg-white">
+                                            <div class="text-muted">
+                                                <i class="fa fa-box-open fa-3x mb-3 text-light"></i>
+                                                <h5 class="font-weight-bold text-secondary">Aucun examen archivé</h5>
+                                                <p class="mb-0 text-muted small">Les examens finalisés s'afficheront automatiquement ici.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 🎛️ Bloc de Pagination -->
+                    {% if historique_examens.has_other_pages %}
+                    <div class="card-footer bg-white border-top-0 px-4 py-3">
+                        <div class="row align-items-center justify-content-between">
+                            <div class="col-sm-auto text-center text-sm-left mb-3 mb-sm-0">
+                                <span class="text-muted small">
+                                    Page {{ historique_examens.number }} sur {{ historique_examens.paginator.num_pages }}
+                                </span>
+                            </div>
+                            <div class="col-sm-auto">
+                                <nav aria-label="Navigation des archives">
+                                    <ul class="pagination pagination-sm justify-content-center m-0">
+                                        
+                                        {% if historique_examens.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ historique_examens.previous_page_number }}" aria-label="Précédent">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                                        {% endif %}
+
+                                        {% for i in historique_examens.paginator.page_range %}
+                                            {% if historique_examens.number == i %}
+                                                <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                            {% elif i > historique_examens.number|add:-3 and i < historique_examens.number|add:3 %}
+                                                <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        {% if historique_examens.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ historique_examens.next_page_number }}" aria-label="Suivant">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                                        {% endif %}
+
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+
+    <script>
+        // Recherche instantanée JS (recherche également dans le texte des résultats)
+        document.getElementById('SearchInput').addEventListener('keyup', function() {
+            let filter = this.value.toUpperCase();
+            let rows = document.querySelector('#TableHistorique tbody').getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                // Ignore la ligne "Aucun examen archivé" s'il n'y a pas de cellules suffisantes
+                if (rows[i].getElementsByTagName('td').length < 5) continue;
+                
+                let textContent = rows[i].textContent || rows[i].innerText;
+                if (textContent.toUpperCase().indexOf(filter) > -1) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

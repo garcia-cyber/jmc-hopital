@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Détail Consultation #{{ c.id }}</title>
+        
+        <!-- Favicon & CSS -->
+        {% include 'back-end/includes/css.html' %}
+        
+        <style>
+            .card-title-custom { border-left: 4px solid #007bff; padding-left: 10px; font-weight: bold; color: #333; }
+            .info-label { font-size: 12px; color: #777; text-uppercase: true; display: block; margin-bottom: 2px; }
+            .info-value { font-size: 15px; font-weight: 600; color: #333; }
+            .block-text { background-color: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 3px solid #6c757d; min-height: 60px; white-space: pre-line; }
+            @media print {
+                .no-print { display: none !important; }
+                .page-wrapper { margin: 0 !important; padding: 0 !important; }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+        
+            <!-- Header -->
+            {% include 'back-end/includes/header.html' %}
+            <!-- /Header -->
+            
+            <!-- Sidebar -->
+            {% include 'back-end/includes/sidebar.html' %}
+            <!-- /Sidebar -->
+            
+            <!-- Page Wrapper -->
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header & Actions -->
+                    <div class="page-header no-print">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Fiche Clinique de Consultation</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Médecin</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 'liste_consultations_terminees' %}">Registre</a></li>
+                                    <li class="breadcrumb-item active">Détails</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <button onclick="window.print();" class="btn btn-white text-dark border rounded-pill mr-2">
+                                    <i class="fa fa-print"></i> Imprimer la fiche
+                                </button>
+                                <a href="{% url 'liste_consultations_terminees' %}" class="btn btn-secondary rounded-pill">
+                                    <i class="fa fa-arrow-left"></i> Retour au Registre
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <!-- ROW 1 : Fiche d'Identité & Constantes -->
+                    <div class="row">
+                        <!-- Identité Patient -->
+                        <div class="col-md-6 d-flex">
+                            <div class="card flex-fill border-top border-primary">
+                                <div class="card-body">
+                                    <h4 class="card-title-custom mb-3">Information Patient</h4>
+                                    <div class="row">
+                                        <div class="col-sm-6 mb-3">
+                                            <span class="info-label">Nom Complet</span>
+                                            <span class="info-value text-primary text-uppercase">{{ c.triage.patient.noms }}</span>
+                                        </div>
+                                        <div class="col-sm-6 mb-3">
+                                            <span class="info-label">Code / Matricule</span>
+                                            <span class="badge badge-info py-1 px-2" style="font-size: 13px;">#{{ c.triage.patient.code_patient }}</span>
+                                        </div>
+                                        <div class="col-sm-6 mb-3">
+                                            <span class="info-label">Âge & Sexe</span>
+                                            <span class="info-value">{{ c.triage.patient.age }} ans</span>
+                                        </div>
+                                        <div class="col-sm-6 mb-3">
+                                            <span class="info-label">Téléphone</span>
+                                            <span class="info-value">{{ c.triage.patient.telephone|default:"Non renseigné" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Constantes Vitales du Triage -->
+                        <div class="col-md-6 d-flex">
+                            <div class="card flex-fill border-top border-danger">
+                                <div class="card-body">
+                                    <h4 class="card-title-custom mb-3" style="border-left-color: #dc3545;">Constantes au Triage (Signes Vitaux)</h4>
+                                    <div class="row text-center">
+                                        <div class="col-3 border-right">
+                                            <span class="info-label"><i class="fa fa-thermometer-half text-danger"></i> Temp.</span>
+                                            <span class="info-value d-block mt-2 badge {% if c.triage.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %} text-white p-2">
+                                                {{ c.triage.temperature }} °C
+                                            </span>
+                                        </div>
+                                        <div class="col-3 border-right">
+                                            <span class="info-label"><i class="fa fa-heartbeat text-warning"></i> Tension</span>
+                                            <span class="info-value d-block mt-2">{{ c.triage.tension_arterielle|default:"--" }} <small class="text-muted">mmHg</small></span>
+                                        </div>
+                                        <div class="col-3 border-right">
+                                            <span class="info-label"><i class="fa fa-pulse text-info"></i> Pouls</span>
+                                            <span class="info-value d-block mt-2">{{ c.triage.frequence_cardiaque|default:"--" }} <small class="text-muted">bpm</small></span>
+                                        </div>
+                                        <div class="col-3">
+                                            <span class="info-label"><i class="fa fa-balance-scale text-secondary"></i> Poids</span>
+                                            <span class="info-value d-block mt-2 text-dark font-weight-bold">{{ c.triage.poids }} Kg</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">Prélevé le {{ c.triage.date_prelevement|date:"d/m/Y à H:i" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ROW 2 : Examen Clinique & Médical -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4 class="card-title-custom mb-4" style="border-left-color: #28a745;"><i class="fa fa-folder-open text-success"></i> Observations Médicales</h4>
+                                    
+                                    <div class="row">
+                                        <!-- Motif de consultation -->
+                                        <div class="col-md-6 mb-4">
+                                            <label class="font-weight-bold text-dark"><i class="fa fa-comment-o"></i> Motif de consultation</label>
+                                            <div class="block-text">{{ c.motif|default:"Aucun motif renseigné." }}</div>
+                                        </div>
+
+                                        <!-- Histoire de la maladie -->
+                                        <div class="col-md-6 mb-4">
+                                            <label class="font-weight-bold text-dark"><i class="fa fa-history"></i> Histoire de la maladie / Anamnèse</label>
+                                            <div class="block-text">{{ c.histoire_maladie|default:"Non renseignée." }}</div>
+                                        </div>
+
+                                        <!-- Examen physique -->
+                                        <div class="col-md-12 mb-4">
+                                            <label class="font-weight-bold text-dark"><i class="fa fa-stethoscope"></i> Examen Physique / Signes Cliniques</label>
+                                            <div class="block-text" style="border-left-color: #007bff;">{{ c.examen_physique|default:"Aucune donnée d'examen physique saisie." }}</div>
+                                        </div>
+
+                                        <!-- Diagnostic Retenu -->
+                                        <div class="col-md-12 mb-2">
+                                            <div class="alert alert-secondary bg-light border">
+                                                <label class="font-weight-bold text-danger mb-1" style="font-size: 14px;"><i class="fa fa-gavel"></i> Diagnostic Retenu</label>
+                                                <p class="mb-0 font-weight-bold text-dark" style="font-size: 16px; white-space: pre-line;">
+                                                    {{ c.diagnostic|default:"Aucun diagnostic définitif posé." }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ROW 3 : Examens complémentaires demandés -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h4 class="card-title-custom mb-3" style="border-left-color: #17a2b8;"><i class="fa fa-flask text-info"></i> Bilan Paraclinique Demandé (Labo / Imagerie)</h4>
+                                    
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-striped custom-table mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Catégorie Examen</th>
+                                                    <th>Libellé de la Prestation</th>
+                                                    <th class="text-center" style="width: 120px;">Quantité</th>
+                                                    <th class="text-center">Statut du Bilan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for exam in c.examens.all %}
+                                                <tr>
+                                                    <td>{{ forloop.counter }}</td>
+                                                    <td><span class="badge badge-secondary">{{ exam.prestation.categorie }}</span></td>
+                                                    <td><strong>{{ exam.prestation.libelle }}</strong></td>
+                                                    <td class="text-center"><span class="badge badge-pill badge-light border px-3 py-1">{{ exam.quantite }}</span></td>
+                                                    <td class="text-center">
+                                                        {% if exam.statut == 'EN_ATTENTE' %}
+                                                            <span class="badge badge-warning-light"><i class="fa fa-clock-o"></i> En attente</span>
+                                                        {% elif exam.statut == 'TERMINE' %}
+                                                            <span class="badge badge-success-light"><i class="fa fa-check"></i> Résultats Disponibles</span>
+                                                        {% else %}
+                                                            <span class="badge badge-secondary-light">{{ exam.statut }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted">Aucun examen de laboratoire ou d'imagerie n'a été rattaché à cette consultation.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métadonnées / Pied de Fiche -->
+                    <div class="row mt-3 mb-5">
+                        <div class="col-md-12 text-right text-muted">
+                            <p class="small">
+                                Fiche créée le {{ c.date_creation|date:"d/m/Y à H:i" }} | Médecin Traitant : <strong>Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <!-- /Page Wrapper -->
+            
+        </div>
+        <!-- /Main Wrapper -->
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

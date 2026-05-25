@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+{% load static %}
+{% load tz %} <!-- Chargement pour gérer l'heure de Kinshasa -->
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Services - Moyanoli Médicale</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+            
+                <!-- Page Content -->
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Services Médicaux</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Administration</a></li>
+                                    <li class="breadcrumb-item active">Services</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <a href="#" class="btn btn-primary add-btn" data-toggle="modal" data-target="#add_service">
+                                    <i class="fa fa-plus"></i> Ajouter un Service
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <!-- Alertes Django -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-striped custom-table mb-0 datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nom du Service</th>
+                                            <th>Date de Création</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for service in services %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td><strong>{{ service.nom }}</strong></td>
+                                            <!-- Correction de l'heure ici avec localtime -->
+                                            <td>{{ service.date_creation|localtime|date:"d/m/Y H:i" }}</td>
+                                            <td class="text-right">
+                                                <div class="dropdown dropdown-action">
+                                                    <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false"><i class="material-icons">more_vert</i></a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <!-- Lien vers la page de modification -->
+                                                        <a class="dropdown-item" href="{% url 'modifier_service' service.id %}">
+                                                            <i class="fa fa-pencil m-r-5"></i> Modifier
+                                                        </a>
+                                                        <a class="dropdown-item" href="#">
+                                                            <i class="fa fa-trash-o m-r-5"></i> Supprimer
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">Aucun service enregistré pour le moment.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /Page Content -->
+            
+                <!-- Add Service Modal -->
+                <div id="add_service" class="modal custom-modal fade" role="dialog">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Nouveau Service</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    {% for field in form %}
+                                        <div class="form-group">
+                                            <label>{{ field.label }} <span class="text-danger">*</span></label>
+                                            {{ field }}
+                                            {% if field.errors %}
+                                                <small class="text-danger">{{ field.errors.0 }}</small>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                    <div class="submit-section">
+                                        <button class="btn btn-primary submit-btn">Enregistrer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /Add Service Modal -->
+                
+            </div>
+            <!-- /Page Wrapper -->
+            
+        </div>
+        <!-- /Main Wrapper -->
+        
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            $(document).ready(function(){
+                // Injection automatique de la classe form-control pour le design Bootstrap
+                $('#add_service form input, #add_service form select, #add_service form textarea').addClass('form-control');
+            });
+        </script>
+        
+    </body>
+</html>

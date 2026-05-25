@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Saisie des Signes Vitaux</title>
+        
+        <!-- Favicon et CSS -->
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            <!-- Header & Sidebar -->
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Triage : {{ patient.noms }}</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'liste_attente_triage' %}">Liste d'attente</a></li>
+                                    <li class="breadcrumb-item active">Saisie des signes vitaux</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Affichage des messages d'alertes (Info / Succès / Erreur) -->
+                    {% if messages %}
+                        <div class="row">
+                            <div class="col-md-8 offset-md-2">
+                                {% for message in messages %}
+                                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card">
+                                <div class="card-header" style="background-color: #f8f9fa;">
+                                    <h4 class="card-title mb-0">
+                                        <i class="fa fa-heartbeat text-danger"></i> 
+                                        {% if triage_existant %}
+                                            Mise à jour des Paramètres Cliniques
+                                        {% else %}
+                                            Paramètres Cliniques Initiaux
+                                        {% endif %}
+                                    </h4>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        
+                                        <div class="row">
+                                            <!-- Température -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>Température (°C) <span class="text-danger">*</span></label>
+                                                    <div class="input-group">
+                                                        <input class="form-control" type="number" step="0.1" name="temp" value="{{ triage_existant.temperature|default:'' }}" placeholder="Ex: 37.5" required>
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text"><i class="fa fa-thermometer-half"></i></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Poids -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>Poids (Kg) <span class="text-danger">*</span></label>
+                                                    <div class="input-group">
+                                                        <input class="form-control" type="number" step="0.1" name="poids" value="{{ triage_existant.poids|default:'' }}" placeholder="Ex: 70" required>
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text"><i class="fa fa-balance-scale"></i></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tension Artérielle -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>Tension Artérielle (mmHg)</label>
+                                                    <input class="form-control" type="text" name="tension" value="{{ triage_existant.tension_arterielle|default:'' }}" placeholder="Ex: 120/80">
+                                                </div>
+                                            </div>
+
+                                            <!-- Fréquence Cardiaque (Pouls) -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>Pouls (bpm)</label>
+                                                    <div class="input-group">
+                                                        <input class="form-control" type="number" name="pouls" value="{{ triage_existant.frequence_cardiaque|default:'' }}" placeholder="Ex: 80">
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text"><i class="fa fa-heartbeat"></i></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Fréquence Respiratoire -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>Fréq. Respiratoire (cpm)</label>
+                                                    <input class="form-control" type="number" name="f_resp" value="{{ triage_existant.frequence_respiratoire|default:'' }}" placeholder="Ex: 18">
+                                                </div>
+                                            </div>
+
+                                            <!-- Saturation Oxygène (SpO2) -->
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>SpO2 (%)</label>
+                                                    <div class="input-group">
+                                                        <input class="form-control" type="number" name="spo2" value="{{ triage_existant.saturation_oxygene|default:'' }}" placeholder="Ex: 98">
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text"><strong>%</strong></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="submit-section">
+                                            <button type="submit" class="btn btn-primary submit-btn">
+                                                {% if triage_existant %}
+                                                    Actualiser les constantes
+                                                {% else %}
+                                                    Enregistrer les constantes
+                                                {% endif %}
+                                            </button>
+                                            <a href="{% url 'liste_attente_triage' %}" class="btn btn-secondary submit-btn" style="background: #6c757d;">Annuler</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

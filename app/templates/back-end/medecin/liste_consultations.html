@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Historique des Consultations</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Historique des Consultations Clôturées</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Consultations terminées</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Affichage des messages flash (Succès/Erreur) -->
+                    {% if messages %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Barre de Recherche Backend -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <form method="GET" action="" class="search-form">
+                                <div class="input-group">
+                                    <input type="text" name="q" class="form-control" placeholder="Rechercher par nom de patient, code ou médecin..." value="{{ request.GET.q }}">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="fa fa-search"></i> Filtrer
+                                        </button>
+                                        {% if request.GET.q %}
+                                            <a href="?" class="btn btn-secondary">Réinitialiser</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Liste des consultations -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-hover custom-table mb-0 datatable">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th>Date & Heure</th>
+                                            <th>Patient</th>
+                                            <th>Médecin</th>
+                                            <th>Constantes (Triage)</th>
+                                            <th>Données Cliniques</th>
+                                            <th>Examens Prescrits</th>
+                                            <th class="text-right">Statut / Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for c in consultations %}
+                                        <tr>
+                                            <!-- Date -->
+                                            <td>
+                                                <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
+                                                <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
+                                            </td>
+                                            
+                                            <!-- Patient -->
+                                            <td>
+                                                <span class="badge badge-light-info">{{ c.triage.patient.code_patient }}</span><br>
+                                                <strong>{{ c.triage.patient.noms }}</strong><br>
+                                                <small>{{ c.triage.patient.age }} ans</small>
+                                            </td>
+                                            
+                                            <!-- Médecin -->
+                                            <td>
+                                                <i class="fa fa-user-md text-primary"></i> Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}
+                                            </td>
+                                            
+                                            <!-- Constantes du Triage -->
+                                            <td>
+                                                <small>
+                                                    <strong>T°:</strong> {{ c.triage.temperature }} °C <br>
+                                                    <strong>Tension:</strong> {{ c.triage.tension_arterielle|default:"--" }} <br>
+                                                    <strong>Poids:</strong> {{ c.triage.poids }} Kg <br>
+                                                    <strong>Pouls:</strong> {{ c.triage.frequence_cardiaque|default:"--" }} bpm
+                                                </small>
+                                            </td>
+                                            
+                                            <!-- Données Cliniques (Motif & Diagnostic) -->
+                                            <td>
+                                                <button class="btn btn-xs btn-outline-info btn-block mb-1" data-toggle="collapse" data-target="#clinique_{{ c.id }}">
+                                                    <i class="fa fa-eye"></i> Voir Clinique
+                                                </button>
+                                                <div id="clinique_{{ c.id }}" class="collapse mt-2" style="min-width: 250px; font-size: 12px; background: #fdfdfd; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                                    <strong>Motif :</strong> {{ c.motif_consultation }}<br><br>
+                                                    <strong>Histoire maladie :</strong> {{ c.histoire_maladie }}<br><br>
+                                                    <strong>Examen physique :</strong> {{ c.examen_physique }}<br><br>
+                                                    {% if c.complement_d_anamnese %}
+                                                        <strong>Complément Anamnèse :</strong> {{ c.complement_d_anamnese }}<br><br>
+                                                    {% endif %}
+                                                    <strong class="text-danger">Hypothèse Diag :</strong> {{ c.hypothese_diagnostique }}
+                                                </div>
+                                            </td>
+                                            
+                                            <!-- Examens -->
+                                            <td>
+                                                {% if c.examens.all %}
+                                                    <ul class="pl-3 mb-0" style="font-size: 12px;">
+                                                        {% for exam in c.examens.all %}
+                                                            <li>
+                                                                {{ exam.prestation.libelle }} 
+                                                                {% if exam.quantite > 1 %}<small class="text-muted">(x{{ exam.quantite }})</small>{% endif %}
+                                                                <span class="badge {% if exam.statut == 'TERMINE' %}badge-success{% elif exam.statut == 'ANNULE' %}badge-danger{% else %}badge-warning{% endif %}" style="font-size: 10px;">
+                                                                    {{ exam.get_statut_display }}
+                                                                </span>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                    <hr class="my-1">
+                                                    <small class="text-dark font-weight-bold">Total : {{ c.total_examens_a_payer }} USD/FC</small>
+                                                {% else %}
+                                                    <span class="text-muted" style="font-size: 12px;">Aucun examen</span>
+                                                {% endif %}
+                                            </td>
+                                            
+                                            <!-- Statut final & Bouton d'urgence -->
+                                            <td class="text-right">
+                                                <span class="badge badge-success mb-2 d-inline-block"><i class="fa fa-check-circle"></i> Clôturé</span>
+                                                <button class="btn btn-sm btn-danger btn-block mt-1" data-toggle="modal" data-target="#modal_urgence_{{ c.id }}" style="font-size: 11px; padding: 4px 8px;">
+                                                    <i class="fa fa-ambulance"></i> Ordo Urgence
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fa fa-folder-open fa-2x"></i><br>
+                                                Aucune consultation n'a encore été enregistrée dans le système Moyanoli.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bloc Pagination Django -->
+                            {% if consultations.has_other_pages %}
+                            <div class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if consultations.has_previous %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ consultations.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo;</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                                    {% endif %}
+
+                                    {% for i in consultations.paginator.page_range %}
+                                        {% if consultations.number == i %}
+                                            <li class="page-item active"><span class="page-link">{{ i }} <span class="sr-only">(actuel)</span></span></li>
+                                        {% else %}
+                                            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if consultations.has_next %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ consultations.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&raquo;</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals de Prescription Réactifs d'Urgence (Générés proprement hors du tableau) -->
+        {% for c in consultations %}
+        <div class="modal fade" id="modal_urgence_{{ c.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fa fa-ambulance"></i> Rédiger une Ordonnance d'Urgence</h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form method="POST" action="{% url 'prescrire_ordonnance_urgence_rapide' c.id %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <div class="alert alert-warning mb-3" style="color: #856404; background-color: #fff3cd; border-color: #ffeeba;">
+                                <strong>Patient :</strong> {{ c.triage.patient.noms }} ({{ c.triage.patient.code_patient }})<br>
+                                <small>État dégradé avant les résultats d'examens. Délivrez un traitement symptomatique immédiat.</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="font-weight-bold text-dark">Médicaments & Posologies d'Urgence</label>
+                                <textarea name="medicaments_text" class="form-control" rows="4" placeholder="Ex: Perfusion Paracétamol 1g Direct + Perfalgan IV..." required></textarea>
+                            </div>
+                            
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-dark">Observations / Justification médicale</label>
+                                <textarea name="observation" class="form-control" rows="2" placeholder="Ex: Pic de fièvre soudain à 39.8°C, vomissements sévères..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                            <button type="submit" class="btn btn-danger"><i class="fa fa-paper-plane"></i> Enregistrer et Envoyer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

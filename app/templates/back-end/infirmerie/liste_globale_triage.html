@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Registre Global de Triage</title>
+        
+        <!-- Favicon et CSS -->
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            <!-- Header & Sidebar -->
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Registre Global de Triage</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Infirmerie</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barre de Recherche et Filtres -->
+                    <div class="row filter-row">
+                        <div class="col-sm-6 col-md-9">  
+                            <div class="form-group form-focus">
+                                <input type="text" id="myInput" class="form-control floating">
+                                <label class="focus-label">Rechercher un patient, une date ou un infirmier...</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-3">  
+                            <a href="#" class="btn btn-success btn-block"> <i class="fa fa-refresh"></i> Actualiser </a>  
+                        </div>
+                    </div>
+                    <!-- /Barre de Recherche -->
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card card-table">
+                                <div class="card-header">
+                                    <h4 class="card-title mb-0">Historique des Prélèvements</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="padding: 15px;">
+                                        <table class="table table-striped table-nowrap custom-table mb-0 datatable" id="triageTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date & Heure</th>
+                                                    <th>Patient</th>
+                                                    <th class="text-center">Temp. (°C)</th>
+                                                    <th class="text-center">Tension (mmHg)</th>
+                                                    <th class="text-center">Pouls (bpm)</th>
+                                                    <th class="text-center">Poids (Kg)</th>
+                                                    <th>Infirmier</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for signe in historique %}
+                                                <tr>
+                                                    <td>{{ signe.date_prelevement|date:"d/m/Y H:i" }}</td>
+                                                    <td>
+                                                        <h2 class="table-avatar">
+                                                            <a href="#" class="avatar avatar-xs"><img src="{% static 'back-end/assets/img/user.jpg' %}" alt=""></a>
+                                                            <a href="#">{{ signe.patient.noms }} <span>ID: #{{ signe.patient.id|stringformat:"04d" }}</span></a>
+                                                        </h2>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge {% if signe.temperature >= 38 %}badge-danger{% elif signe.temperature < 36 %}badge-warning{% else %}badge-success{% endif %}">
+                                                            {{ signe.temperature }}°C
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">{{ signe.tension_arterielle|default:"--" }}</td>
+                                                    <td class="text-center">{{ signe.frequence_cardiaque|default:"--" }}</td>
+                                                    <td class="text-center"><strong>{{ signe.poids }}</strong></td>
+                                                    <td><small class="text-muted">{{ signe.infirmier.get_full_name|default:signe.infirmier.username }}</small></td>
+                                                    <td class="text-right">
+                                                        <div class="dropdown dropdown-action">
+                                                            <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false"><i class="material-icons">more_vert</i></a>
+                                                            <div class="dropdown-menu dropdown-menu-right">
+                                                                <a class="dropdown-item" href="{% url 'historique_signes_vitaux' signe.patient.id %}">
+                                                                    <i class="fa fa-eye m-r-5"></i> Voir historique
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="8" class="text-center text-muted py-4">Aucun prélèvement enregistré.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <!-- Script pour lier la barre de recherche personnalisée à la DataTable -->
+        <script>
+            $(document).ready(function() {
+                if ($.fn.DataTable.isDataTable('.datatable')) {
+                    var table = $('.datatable').DataTable();
+                    $('#myInput').on('keyup', function() {
+                        table.search(this.value).draw();
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

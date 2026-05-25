@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Encaissement Examens</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title"><i class="fa fa-calculator"></i> Validation du Paiement</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'liste_attente_caisse' %}">Caisse</a></li>
+                                    <li class="breadcrumb-item active">Facturation Patient</li>
+                                </ul>
+                            </div>
+                            {% if fonctionKey %}
+                            <div class="col-auto text-right font-weight-bold text-muted">
+                                <span class="badge badge-secondary"><i class="fa fa-user-shield"></i> {{ fonctionKey }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Affichage des messages flash (Idéal pour afficher les alertes de dettes restantes) -->
+                    {% if messages %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Le formulaire englobe toute la structure -->
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Colonne de gauche : Détails du ticket et de la prescription -->
+                            <div class="col-lg-8 col-md-12">
+                                <div class="card shadow-sm border-0">
+                                    <div class="card-header bg-primary text-white p-3">
+                                        <h5 class="card-title mb-0"><i class="fa fa-file-invoice"></i> Détails de la Prescription</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Infos Patient / Médecin -->
+                                        <div class="row mb-4 p-3 style-info-patient" style="background: #f8f9fa; border-left: 4px solid #00d2aa; border-radius: 4px;">
+                                            <div class="col-md-6 col-sm-12">
+                                                <p class="mb-1"><strong>Code Patient :</strong> <span class="text-primary font-weight-bold">{{ consultation.triage.patient.code_patient }}</span></p>
+                                                <p class="mb-1"><strong>Nom Complet :</strong> {{ consultation.triage.patient.noms }}</p>
+                                                <p class="mb-0"><strong>Âge :</strong> {{ consultation.triage.patient.age }} ans</p>
+                                            </div>
+                                            <div class="col-md-6 col-sm-12 text-md-right mt-2 mt-md-0">
+                                                <p class="mb-1"><strong>Prescripteur :</strong> Dr. {{ consultation.medecin.get_full_name|default:consultation.medecin.username }}</p>
+                                                <p class="mb-0"><strong>Date Envoi :</strong> {{ consultation.date_creation|date:"d/m/Y à H:i" }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tableau des Examens à payer -->
+                                        <h5 class="text-dark font-weight-bold mb-3"><i class="fa fa-flask"></i> Actes et Examens à Facturer</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-striped custom-table mb-0">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th class="text-center" style="width: 50px;">
+                                                            <input type="checkbox" id="checkAll" style="transform: scale(1.2); cursor: pointer;">
+                                                        </th>
+                                                        <th>Désignation Examen</th>
+                                                        <th class="text-center">Prix Unitaire</th>
+                                                        <th class="text-center">Quantité</th>
+                                                        <th class="text-right">Statut</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for exam in examens %}
+                                                    <tr>
+                                                        <td class="text-center">
+                                                            <input type="checkbox" name="examens_choisis" value="{{ exam.id }}" class="examen-checkbox" data-prix="{{ exam.prestation.prix }}" style="transform: scale(1.2); cursor: pointer;">
+                                                        </td>
+                                                        <td>
+                                                            <span class="font-weight-bold text-secondary">{{ exam.prestation.libelle }}</span>
+                                                        </td>
+                                                        <td class="text-center">{{ exam.prestation.prix }} USD</td>
+                                                        <td class="text-center">x{{ exam.quantite|default:1 }}</td>
+                                                        <td class="text-right">
+                                                            <span class="badge badge-warning"><i class="fa fa-clock-o"></i> {{ exam.get_statut_display }}</span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Colonne de droite : Panneau de Caisse et Validation dynamique -->
+                            <div class="col-lg-4 col-md-12 mt-4 mt-lg-0">
+                                <div class="card shadow-sm border-success">
+                                    <div class="card-body text-center py-4">
+                                        <div class="mb-3">
+                                            <i class="fa fa-calculator fa-3x text-muted"></i>
+                                        </div>
+                                        
+                                        <h5 class="text-uppercase text-muted mb-1" style="font-size: 12px; letter-spacing: 1px;">Acompte à verser</h5>
+                                        <h2 class="display-4 font-weight-bold text-success my-2" id="total_affiche">
+                                            0.00 <span style="font-size: 24px;">USD</span>
+                                        </h2>
+                                        
+                                        <p class="text-muted small mb-1">Sur un total à payer de : <strong>{{ total_a_payer }} USD</strong></p>
+                                        
+                                        <!-- Affichage dynamique de la future dette calculée en JS -->
+                                        <p class="small text-danger" id="dette_estimee_wrapper" style="display: none;">
+                                            Reste à payer (Dette) : <span id="dette_affiche" class="font-weight-bold">0.00</span> USD
+                                        </p>
+                                        
+                                        <hr class="my-3">
+                                            
+                                        <button type="submit" class="btn btn-lg btn-success btn-block shadow-sm py-2 font-weight-bold">
+                                            <i class="fa fa-check-circle"></i> Confirmer l'Encaissement
+                                        </button>
+                                        
+                                        <a href="{% url 'liste_attente_caisse' %}" class="btn btn-link text-muted mt-3 d-block">
+                                            <i class="fa fa-arrow-left"></i> Annuler et retourner
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <!-- Script d'automatisation des calculs avec gestion de la dette à l'écran -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const checkboxes = document.querySelectorAll('.examen-checkbox');
+                const totalAffiche = document.getElementById('total_affiche');
+                const detteAffiche = document.getElementById('dette_affiche');
+                const detteWrapper = document.getElementById('dette_estimee_wrapper');
+                const checkAll = document.getElementById('checkAll');
+                
+                // On récupère le total global initial passé par Django
+                const totalGlobalInitial = parseFloat("{{ total_a_payer }}") || 0;
+
+                function calculerRecapitulatif() {
+                    let totalSelection = 0;
+                    checkboxes.forEach(box => {
+                        if (box.checked) {
+                            totalSelection += parseFloat(box.getAttribute('data-prix'));
+                        }
+                    });
+                    
+                    // Mise à jour de l'acompte sélectionné
+                    totalAffiche.innerHTML = totalSelection.toFixed(2) + ' <span style="font-size: 24px;">USD</span>';
+                    
+                    // Calcul de la dette résiduelle en direct
+                    let detteRestante = totalGlobalInitial - totalSelection;
+                    
+                    if (totalSelection > 0 && detteRestante > 0) {
+                        detteAffiche.innerText = detteRestante.toFixed(2);
+                        detteWrapper.style.display = 'block';
+                    } else {
+                        detteWrapper.style.display = 'none';
+                    }
+                }
+
+                checkboxes.forEach(box => {
+                    box.addEventListener('change', calculerRecapitulatif);
+                });
+
+                if (checkAll) {
+                    checkAll.addEventListener('change', function() {
+                        checkboxes.forEach(box => {
+                            box.checked = this.checked;
+                        });
+                        calculerRecapitulatif();
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultats des Examens - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <!-- Header -->
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col">
+                            <h3 class="page-title">Suivi des Examens Par Consultation</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Médecin</a></li>
+                                <li class="breadcrumb-item active">Laboratoire & Imagerie</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profil Patient -->
+                <div class="card mb-4 border-left-primary">
+                    <div class="card-body">
+                        <h4><i class="fa fa-user"></i> Patient : {{ patient.noms }}</h4>
+                        <p class="text-muted mb-0">ID: #{{ patient.id }} | Genre: {{ patient.genre }} | Âge: {{ patient.age }} ans</p>
+                    </div>
+                </div>
+
+                <!-- Boucle des consultations chronologiques -->
+                {% for item in historique %}
+                <div class="card shadow-sm mb-4">
+                    <!-- Entête du groupe : La Consultation -->
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1 text-primary">
+                                <i class="fa fa-calendar-alt"></i> Consultation du {{ item.consultation.date_creation|date:"d/m/Y à H:i" }}
+                            </h5>
+                            <small class="text-muted">Prescrit par : Dr. {{ item.consultation.medecin.username }}</small>
+                        </div>
+                        <div>
+                            <span class="badge {{ item.classe_badge }} p-2" style="font-size: 13px;">
+                                {{ item.statut_global }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Résumé clinique rapide pour mémoire -->
+                        <div class="bg-light p-3 rounded mb-3" style="font-size: 13px; border-left: 3px solid #6c757d;">
+                            <strong>Hypothèse diagnostique du médecin à ce moment-là :</strong> <span class="text-danger">{{ item.consultation.hypothese_diagnostique }}</span>
+                        </div>
+
+                        {% if item.a_des_examens %}
+                            <div class="row">
+                                
+                                <!-- 🔬 SECTION 1 : LABORATOIRE -->
+                                <div class="col-md-4 border-right">
+                                    <h6 class="text-success font-weight-bold border-bottom pb-2">
+                                        <i class="fa fa-flask"></i> 1. LABORATOIRE
+                                    </h6>
+                                    {% if item.labo %}
+                                        {% for ex in item.labo %}
+                                            <div class="p-2 mb-2 rounded {% if ex.statut == 'TERMINE' %}bg-light-success{% else %}bg-light-danger{% endif %}" style="font-size: 13px;">
+                                                <strong>{{ ex.prestation.libelle }}</strong> <br>
+                                                {% if ex.statut == 'TERMINE' %}
+                                                    <span class="text-dark font-italic">Résultat : {{ ex.resultat|linebreaksbr }}</span>
+                                                {% else %}
+                                                    <span class="text-danger small"><i class="fa fa-clock"></i> En attente de résultat...</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small font-italic">Aucun examen de laboratoire demandé.</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- 🔊 SECTION 2 : ÉCHOGRAPHIE -->
+                                <div class="col-md-4 border-right">
+                                    <h6 class="text-info font-weight-bold border-bottom pb-2">
+                                        <i class="fa fa-wave-square"></i> 2. ÉCHOGRAPHIE
+                                    </h6>
+                                    {% if item.echo %}
+                                        {% for ex in item.echo %}
+                                            <div class="p-2 mb-2 rounded {% if ex.statut == 'TERMINE' %}bg-light-success{% else %}bg-light-danger{% endif %}" style="font-size: 13px;">
+                                                <strong>{{ ex.prestation.libelle }}</strong> <br>
+                                                {% if ex.statut == 'TERMINE' %}
+                                                    <span class="text-dark font-italic">Conclusions : {{ ex.resultat|linebreaksbr }}</span>
+                                                {% else %}
+                                                    <span class="text-danger small"><i class="fa fa-clock"></i> En attente d'écho...</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small font-italic">Aucune échographie demandée.</p>
+                                    {% endif %}
+                                </div>
+
+                                <!-- 🩻 SECTION 3 : RADIOLOGIE -->
+                                <div class="col-md-4">
+                                    <h6 class="text-warning font-weight-bold border-bottom pb-2">
+                                        <i class="fa fa-x-ray"></i> 3. RADIOLOGIE
+                                    </h6>
+                                    {% if item.radio %}
+                                        {% for ex in item.radio %}
+                                            <div class="p-2 mb-2 rounded {% if ex.statut == 'TERMINE' %}bg-light-success{% else %}bg-light-danger{% endif %}" style="font-size: 13px;">
+                                                <strong>{{ ex.prestation.libelle }}</strong> <br>
+                                                {% if ex.statut == 'TERMINE' %}
+                                                    <span class="text-dark font-italic">Protocole : {{ ex.resultat|linebreaksbr }}</span>
+                                                {% else %}
+                                                    <span class="text-danger small"><i class="fa fa-clock"></i> En attente de protocole...</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small font-italic">Aucun examen radiologique demandé.</p>
+                                    {% endif %}
+                                </div>
+
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center m-0 py-2">Aucun examen n'a été prescrit lors de cette consultation.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-warning text-center">
+                    Aucun historique de consultation trouvé pour ce patient.
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

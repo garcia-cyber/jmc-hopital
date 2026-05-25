@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>{{ titre_page }} - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <!-- Header -->
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col">
+                            <h3 class="page-title"><i class="fa fa-money-bill-wave"></i> {{ titre_page }}</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
+                                <li class="breadcrumb-item active">Nouvelle dépense</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card shadow-sm border">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">Formulaire de Décaissement</h5>
+                            </div>
+                            <div class="card-body">
+                                
+                                <!-- ⚠️ Gestion des blocages et erreurs de Solde de caisse insuffisant -->
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        {% for error in form.non_field_errors %}
+                                            <i class="fa fa-exclamation-triangle"></i> {{ error }}
+                                        {% endfor %}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endif %}
+
+                                <form method="POST" autocomplete="off">
+                                    {% csrf_token %}
+                                    
+                                    <div class="row">
+                                        <div class="col-sm-8 mb-3">
+                                            <label class="font-weight-bold text-secondary">Motif / Catégorie <span class="text-danger">*</span></label>
+                                            {{ form.motif }}
+                                        </div>
+                                        <div class="col-sm-4 mb-3">
+                                            <label class="font-weight-bold text-secondary">Devise <span class="text-danger">*</span></label>
+                                            {{ form.devise }}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="font-weight-bold text-secondary">Montant à décaisser <span class="text-danger">*</span></label>
+                                        {{ form.montant }}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="font-weight-bold text-secondary">Bénéficiaire / Fournisseur</label>
+                                        {{ form.beneficiaire }}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="font-weight-bold text-secondary">Description / Justification</label>
+                                        {{ form.description }}
+                                    </div>
+
+                                    <hr>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="{% url 'dashboard_finance' %}" class="btn btn-light border"><i class="fa fa-arrow-left"></i> Annuler</a>
+                                        <button type="submit" class="btn btn-danger font-weight-bold">
+                                            <i class="fa fa-check-circle"></i> Valider le Décaissement
+                                        </button>
+                                    </div>
+                                </form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

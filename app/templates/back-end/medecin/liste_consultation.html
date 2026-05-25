@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Patients Prêts - Moyanoli Médicale</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Salle d'Attente (Consultation)</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Patients Orientés</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barre de recherche -->
+                    <div class="row filter-row">
+                        <div class="col-sm-6 col-md-12">  
+                            <div class="form-group form-focus">
+                                <input type="text" class="form-control floating" id="searchWaitingList" placeholder="Rechercher un patient en attente...">
+                                <label class="focus-label">Recherche rapide</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tableau des Patients en attente -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-striped custom-table mb-0 datatable" id="waitingTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Ordre</th>
+                                            <th>Matricule</th>
+                                            <th>Nom Complet</th>
+                                            <th>Âge</th>
+                                            <th>Température</th>
+                                            <th>Tension</th>
+                                            <th>Trié par</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for signe in patients_prets %}
+                                        <tr>
+                                            <td><strong>#{{ forloop.counter }}</strong></td>
+                                            <td><span class="badge badge-info">{{ signe.patient.code_patient }}</span></td>
+                                            <td><strong>{{ signe.patient.noms }}</strong></td>
+                                            <td>{{ signe.patient.age }} ans</td>
+                                            <td>
+                                                <span class="badge {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
+                                                    {{ signe.temperature }} °C
+                                                </span>
+                                            </td>
+                                            <td>{{ signe.tension_arterielle|default:"--" }}</td>
+                                            <td><small>{{ signe.infirmier.username }}</small></td>
+                                            <td class="text-right">
+                                                <a href="{% url 'marquer_consulte' signe.id %}" class="btn btn-sm btn-primary">
+                                                    <i class="fa fa-stethoscope"></i> Consulter
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted">Aucun patient en attente dans la file du triage.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            $(document).ready(function() {
+                if ($.fn.DataTable.isDataTable('#waitingTable')) {
+                    var table = $('#waitingTable').DataTable({
+                        "ordering": false // Conserve l'ordre d'arrivée du triage (date_prelevement)
+                    });
+                    $('#searchWaitingList').on('keyup', function() {
+                        table.search(this.value).draw();
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

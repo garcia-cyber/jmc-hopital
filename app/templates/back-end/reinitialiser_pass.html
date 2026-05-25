@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Réinitialiser le mot de passe - Moyanoli ERP</title>
+        
+        {% include 'back-end/includes/css.html' %}
+        
+        <style>
+            /* Style pour harmoniser les champs Django avec ton template Admin */
+            .form-group input {
+                border-radius: 8px;
+                border: 1px solid #e3e3e3;
+                padding: 10px 15px;
+            }
+            .help-block, .text-danger {
+                font-size: 13px;
+                margin-top: 5px;
+                display: block;
+            }
+            ul.errorlist {
+                list-style: none;
+                color: #e63c3c;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    <div class="row">
+                        <div class="col-md-6 offset-md-3">
+                        
+                            <div class="page-header">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <h3 class="page-title">Réinitialiser le mot de passe</h3>
+                                        <p class="text-muted">Utilisateur : <strong>{{ u.get_full_name|default:u.username }}</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Affichage des messages de succès ou d'erreur -->
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            <form method="POST">
+                                {% csrf_token %}
+                                
+                                <!-- Affichage des erreurs globales -->
+                                {{ form.non_field_errors }}
+
+                                {% for field in form %}
+                                    <div class="form-group">
+                                        <label>{{ field.label }}</label>
+                                        {# Ajout manuel de la classe form-control via Django widget tweaks ou manuellement #}
+                                        {{ field }}
+                                        
+                                        {% if field.help_text %}
+                                            <small class="text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                        
+                                        {% if field.errors %}
+                                            <div class="text-danger">
+                                                {{ field.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="submit-section text-center">
+                                    <button type="submit" class="btn btn-primary submit-btn">Mettre à jour le mot de passe</button>
+                                    <a href="{% url 'employeRead' %}" class="btn btn-secondary submit-btn">Annuler</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <!-- Petit script pour forcer la classe Bootstrap sur les inputs générés par Django -->
+        <script>
+            $(document).ready(function(){
+                $('input').addClass('form-control');
+            });
+        </script>
+
+    </body>
+</html>

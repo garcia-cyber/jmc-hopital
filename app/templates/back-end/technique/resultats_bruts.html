@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Conclusions des Examens - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <!-- Infos Patient -->
+                <div class="card mb-4">
+                    <div class="card-body bg-light">
+                        <h4>Patient : {{ patient.noms }}</h4>
+                        <p class="text-muted mb-0">Âge : {{ patient.age }} ans | Sexe : {{ patient.genre }}</p>
+                    </div>
+                </div>
+
+                <!-- Liste des résultats par consultation -->
+                {% for item in historique_resultats %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary">
+                        <h5 class="mb-0 text-white">
+                            <i class="fa fa-calendar-alt"></i> Résultats liés à la consultation du {{ item.consultation.date_creation|date:"d/m/Y à H:i" }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th style="width: 25%;">Examen</th>
+                                        <th style="width: 15%;">Service</th>
+                                        <th style="width: 60%;">Résultats / Conclusions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ex in item.examens %}
+                                    <tr>
+                                        <td class="font-weight-bold text-dark">{{ ex.prestation.libelle }}</td>
+                                        <td>
+                                            {% if ex.prestation.categorie == 'LABO' %}
+                                                <span class="badge badge-success"><i class="fa fa-flask"></i> Laboratoire</span>
+                                            {% elif ex.prestation.categorie == 'ECHO' %}
+                                                <span class="badge badge-info"><i class="fa fa-wave-square"></i> Échographie</span>
+                                            {% elif ex.prestation.categorie == 'RADIO' %}
+                                                <span class="badge badge-warning"><i class="fa fa-x-ray"></i> Radiologie</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ ex.prestation.categorie }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="bg-white text-dark font-italic">
+                                            {{ ex.resultat|linebreaksbr }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-info text-center p-4">
+                    <i class="fa fa-info-circle fa-2x mb-2"></i><br>
+                    Aucun résultat d'examen n'est encore disponible pour ce patient.
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

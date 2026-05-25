@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Ordonnances d'Urgence</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Gestion des Ordonnances d'Urgence</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Ordonnances</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barre de Recherche -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <form method="GET" action="" class="search-form">
+                                <div class="input-group">
+                                    <input type="text" name="q" class="form-control" placeholder="Rechercher par patient (Nom ou Code)..." value="{{ request.GET.q }}">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-danger" type="submit">
+                                            <i class="fa fa-search"></i> Rechercher
+                                        </button>
+                                        {% if request.GET.q %}
+                                            <a href="?" class="btn btn-secondary">Réinitialiser</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Tableau des ordonnances -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-hover custom-table mb-0 datatable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>ID Ordo</th>
+                                            <th>Date & Heure</th>
+                                            <th>Patient</th>
+                                            <th>Médecin Prescripteur</th>
+                                            <th>Médicaments & Posologie / Observation</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ord in ordonnances %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge badge-danger">#{{ ord.id }}</span>
+                                            </td>
+                                            <td>
+                                                <!-- Correction : Utilisation de date_prescrite -->
+                                                <strong>{{ ord.date_prescrite|date:"d/m/Y" }}</strong><br>
+                                                <small class="text-muted">{{ ord.date_prescrite|date:"H:i" }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-light-info">{{ ord.consultation.triage.patient.code_patient }}</span><br>
+                                                <strong>{{ ord.consultation.triage.patient.noms }}</strong><br>
+                                                <small>{{ ord.consultation.triage.patient.age }} ans</small>
+                                            </td>
+                                            <td>
+                                                <i class="fa fa-user-md text-danger"></i> Dr. {{ ord.consultation.medecin.get_full_name|default:ord.consultation.medecin.username }}
+                                            </td>
+                                            <td>
+                                                <!-- Affichage des médicaments liés à l'ordonnance -->
+                                                <ul class="pl-3 mb-2" style="font-size: 13px;">
+                                                    {% for med in ord.medicaments.all %}
+                                                        <li class="mb-1">
+                                                            <strong class="text-dark">{{ med.designation }}</strong>
+                                                            {% if med.quantite %}<span class="badge badge-light-secondary">x{{ med.quantite }}</span>{% endif %}
+                                                        </li>
+                                                    {% empty %}
+                                                        <li class="text-muted">Aucun médicament listé</li>
+                                                    {% endfor %}
+                                                </ul>
+                                                
+                                                <!-- Affichage de la note ou observation si elle existe -->
+                                                {% if ord.observation %}
+                                                    <div class="text-muted mt-1 p-2" style="font-size: 12px; background-color: #f9f9f9; border-left: 3px solid #dc3545; border-radius: 4px;">
+                                                        <i class="fa fa-commenting-o"></i> <strong>Obs :</strong> {{ ord.observation }}
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right">
+                                                <a href="#" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fa fa-print"></i> Imprimer
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                <i class="fa fa-medkit fa-2x text-muted mb-2"></i><br>
+                                                Aucune ordonnance d'urgence trouvée dans le système Moyanoli.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            {% if ordonnances.has_other_pages %}
+                            <div class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if ordonnances.has_previous %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ ordonnances.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo;</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                                    {% endif %}
+
+                                    {% for i in ordonnances.paginator.page_range %}
+                                        {% if ordonnances.number == i %}
+                                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                        {% else %}
+                                            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if ordonnances.has_next %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ ordonnances.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&raquo;</a></li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

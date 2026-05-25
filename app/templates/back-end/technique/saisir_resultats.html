@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saisie des Résultats Laboratoire - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .clinical-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #495057;
+            text-transform: uppercase;
+            background-color: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .clinical-text {
+            padding: 10px 15px;
+            background-color: #fff;
+            border-left: 3px solid #007bff;
+            border-radius: 0 4px 4px 0;
+            font-size: 14px;
+            color: #333;
+            min-height: 40px;
+        }
+        /* Style exclusif pour l'affichage des normes biologiques du Laboratoire */
+        .lab-reference-block {
+            background-color: #f0fdf4;
+            border-left: 3px solid #16a34a;
+            padding: 10px 14px;
+            border-radius: 0 4px 4px 0;
+            font-size: 13px;
+            color: #14532d;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <!-- Header -->
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col">
+                            <h3 class="page-title">Saisie des Résultats de Laboratoire</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'liste_examens_techniques' %}">Console Laboratoire</a></li>
+                                <li class="breadcrumb-item active">Saisie Biologique</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fiche Patient Sommaire -->
+                <div class="card mb-4 bg-light">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Patient :</strong> {{ patient.noms }}</p>
+                                <p class="mb-0 text-muted">ID: #{{ patient.id }} | {{ patient.genre }} | {{ patient.age }} ans</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Prescripteur :</strong> Dr. {{ consultation.medecin.username|default:"Généraliste" }}</p>
+                                <p class="mb-0 text-muted">Consultation du : {{ consultation.date_creation|date:"d/m/Y à H:i" }}</p>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <span class="badge badge-success p-2">Reçu de paiement : #{{ paiement.id }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- 📑 PANNEAU GAUCHE : DOSSIER CLINIQUE (Renseignements médicaux reçus) -->
+                    <div class="col-md-5">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0" style="color: white;"><i class="fa fa-folder-open"></i> Renseignements Cliniques Prescrits</h5>
+                            </div>
+                            <div class="card-body" style="background-color: #f8f9fa; max-height: 650px; overflow-y: auto;">
+                                
+                                <div class="clinical-title"><i class="fa fa-comment-medical"></i> Motif de Consultation</div>
+                                <div class="clinical-text shadow-sm">{{ consultation.motif_consultation|linebreaksbr|default:"Non spécifié" }}</div>
+
+                                <div class="clinical-title"><i class="fa fa-history"></i> Histoire de la maladie</div>
+                                <div class="clinical-text shadow-sm">{{ consultation.histoire_maladie|linebreaksbr|default:"Non spécifiée" }}</div>
+
+                                <div class="clinical-title"><i class="fa fa-heartbeat"></i> Examen Physique</div>
+                                <div class="clinical-text shadow-sm">{{ consultation.examen_physique|linebreaksbr|default:"Non spécifié" }}</div>
+
+                                {% if consultation.complement_d_anamnese %}
+                                <div class="clinical-title"><i class="fa fa-plus-circle"></i> Complément d'Anamnèse</div>
+                                <div class="clinical-text shadow-sm">{{ consultation.complement_d_anamnese }}</div>
+                                {% endif %}
+
+                                <div class="clinical-title text-danger" style="background-color: #f8d7da; color: #721c24;"><i class="fa fa-stethoscope"></i> Hypothèse Diagnostique</div>
+                                <div class="clinical-text shadow-sm" style="border-left-color: #dc3545; font-weight: bold; color: #dc3545;">
+                                    {{ consultation.hypothese_diagnostique|linebreaksbr|default:"Aucune hypothèse" }}
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📝 PANNEAU DROIT : FORMULAIRE DE SAISIE LABO -->
+                    <div class="col-md-7">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0" style="color: white;"><i class="fa fa-flask"></i> Examens Biologiques à analyser</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    
+                                    {% for exam in examens_a_saisir %}
+                                        <div class="form-group border-bottom pb-4 mb-4">
+                                            <label class="font-weight-bold text-dark" style="font-size: 15px;">
+                                                <i class="fa fa-chevron-right text-success mr-2"></i> {{ exam.prestation.libelle }}
+                                            </label>
+                                            
+                                            <!-- 🔬 Bloc Valeur Normale / de Référence (Strictement Labo) -->
+                                            {% if exam.prestation.valeur_normale %}
+                                                <div class="lab-reference-block mb-3 shadow-sm">
+                                                    <strong><i class="fa fa-info-circle"></i> Valeurs normales de référence :</strong>
+                                                    <div class="mt-1 text-monospace small" style="white-space: pre-line;">{{ exam.prestation.valeur_normale }}</div>
+                                                </div>
+                                            {% endif %}
+
+                                            <p class="text-muted small mb-2">Saisissez les analyses ou mesures chiffrées obtenues :</p>
+                                            
+                                            <!-- Zone de saisie du résultat -->
+                                            <textarea 
+                                                name="resultat_{{ exam.id }}" 
+                                                rows="4" 
+                                                class="form-control" 
+                                                placeholder="Saisir les résultats pour : {{ exam.prestation.libelle }}..."
+                                                required></textarea>
+                                        </div>
+                                    {% empty %}
+                                        <div class="alert alert-warning">
+                                            Aucun examen de laboratoire en attente de manipulation.
+                                        </div>
+                                    {% endfor %}
+
+                                    <!-- Boutons d'actions -->
+                                    <div class="form-group mb-0 text-right">
+                                        <a href="{% url 'liste_examens_techniques' %}" class="btn btn-secondary mr-2">
+                                            <i class="fa fa-times"></i> Annuler
+                                        </a>
+                                        <button type="submit" class="btn btn-success shadow-sm">
+                                            <i class="fa fa-save"></i> Confirmer et Clôturer les Analyses
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

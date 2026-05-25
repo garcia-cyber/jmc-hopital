@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Historique Paiements - {{ patient.noms }}</title>
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Historique des Paiements</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Finance</a></li>
+                                    <li class="breadcrumb-item active">{{ patient.noms }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <a href="{% url 'enregistrement_patient' %}" class="btn btn-secondary shadow-sm">
+                                    <i class="fa fa-arrow-left"></i> Retour à la liste
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cartes de Résumé Financier -->
+                    <div class="row">
+                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                            <div class="card dash-widget">
+                                <div class="card-body">
+                                    <span class="dash-widget-icon"><i class="fa fa-money"></i></span>
+                                    <div class="dash-widget-info">
+                                        <h3>{{ cout_total_usd|floatformat:2 }} $</h3>
+                                        <span>Facturation Globale</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                            <div class="card dash-widget">
+                                <div class="card-body">
+                                    <span class="dash-widget-icon" style="background-color: #55ce63;"><i class="fa fa-check"></i></span>
+                                    <div class="dash-widget-info">
+                                        <h3>{{ total_paye_usd|floatformat:2 }} $</h3>
+                                        <span>Total Versé (USD)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                            <div class="card dash-widget">
+                                <div class="card-body">
+                                    <span class="dash-widget-icon" style="background-color: #f62d51;"><i class="fa fa-clock-o"></i></span>
+                                    <div class="dash-widget-info">
+                                        <h3>{{ reste_a_payer_usd|floatformat:2 }} $</h3>
+                                        <span>Reste à Payer (USD)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                            <div class="card dash-widget">
+                                <div class="card-body">
+                                    <span class="dash-widget-icon" style="background-color: #ff9b44;"><i class="fa fa-exchange"></i></span>
+                                    <div class="dash-widget-info">
+                                        <h3>{{ reste_a_payer_cdf }} FC</h3>
+                                        <span>Équivalent Francs</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tableau de l'historique -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card card-table">
+                                <div class="card-header border-bottom-0">
+                                    <h4 class="card-title mb-0">Détails des versements - <span class="text-primary">{{ patient.noms }}</span></h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped custom-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date & Heure</th>
+                                                    <th>Service / Détails médicaux</th>
+                                                    <th>Montant Versé</th>
+                                                    <th>Devise</th>
+                                                    <th>Reste après vers.</th>
+                                                    <th>Caissier</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in paiements_liste %}
+                                                <tr>
+                                                    <td>{{ item.date|date:"d/m/Y H:i" }}</td>
+                                                    <td>
+                                                        <span class="badge badge-light-info mb-1">{{ item.service }}</span>
+                                                        
+                                                        <!-- Section Traçabilité : Liste des examens rattachés à ce paiement -->
+                                                        {% if item.examens %}
+                                                            <div class="mt-1" style="font-size: 0.85rem; line-height: 1.3;">
+                                                                <ul class="pl-3 m-0 text-muted" style="list-style-type: circle;">
+                                                                    {% for ex in item.examens %}
+                                                                        <li>{{ ex.libelle }} <span class="text-success">({{ ex.prix|floatformat:2 }} $)</span></li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </div>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td><strong>{{ item.montant|floatformat:2 }}</strong></td>
+                                                    <td>{{ item.devise }}</td>
+                                                    <td>
+                                                        {% if item.reste_usd > 0 %}
+                                                            <span class="text-danger">{{ item.reste_usd|floatformat:2 }} $</span>
+                                                        {% else %}
+                                                            <span class="text-success"><i class="fa fa-check-circle"></i> Soldé</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td><i class="fa fa-user m-r-5 text-muted"></i> {{ item.caissier }}</td>
+                                                    <td class="text-right">
+                                                        <a href="{% url 'imprimer_recu_direct' item.id %}" target="_blank" class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-print"></i> Reçu
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted p-4">Aucun versement enregistré pour le moment.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

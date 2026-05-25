@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Modifier Service - Moyanoli Médicale</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+            
+                <!-- Page Content -->
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Modifier le Service</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'gestion_services' %}">Services</a></li>
+                                    <li class="breadcrumb-item active">Modification</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <div class="row">
+                        <div class="col-lg-8 offset-lg-2">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title mb-0">Édition de : <strong>{{ service.nom }}</strong></h4>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        
+                                        {% for field in form %}
+                                            <div class="form-group">
+                                                <label>{{ field.label }} <span class="text-danger">*</span></label>
+                                                {{ field }}
+                                                {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                {% endif %}
+                                                {% if field.errors %}
+                                                    {% for error in field.errors %}
+                                                        <div class="text-danger small">{{ error }}</div>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+
+                                        <div class="submit-section text-center">
+                                            <button type="submit" class="btn btn-primary submit-btn">Mettre à jour</button>
+                                            <a href="{% url 'gestion_services' %}" class="btn btn-secondary submit-btn">Annuler</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /Page Content -->
+                
+            </div>
+            <!-- /Page Wrapper -->
+            
+        </div>
+        <!-- /Main Wrapper -->
+        
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            $(document).ready(function(){
+                // On applique la classe form-control de Bootstrap à tous les champs du formulaire Django
+                $('form input, form select, form textarea').addClass('form-control');
+            });
+        </script>
+        
+    </body>
+</html>

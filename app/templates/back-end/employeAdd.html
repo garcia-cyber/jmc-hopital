@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Inscription Personnel - Moyanoli ERP</title>
+        
+        {% include 'back-end/includes/css.html'%}
+
+        <style>
+            .page-wrapper { background-color: #f4f7fe; }
+            .card { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+            .card-title { font-weight: 700; color: #1e293b; }
+            .btn-register { 
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                border: none;
+                border-radius: 8px;
+                padding: 12px 30px;
+                font-weight: 600;
+                box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+            }
+            .form-group label { font-weight: 600; color: #475569; }
+            .medical-header-icon {
+                font-size: 24px;
+                color: #007bff;
+                background: rgba(0, 123, 255, 0.1);
+                padding: 10px;
+                border-radius: 10px;
+                margin-right: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html'%}
+            {% include 'back-end/includes/sidebar.html'%}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- En-tête de page -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">
+                                    <i class="la la-user-plus medical-header-icon"></i>
+                                    Inscription du Personnel
+                                </h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Nouvel Agent</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-header bg-white border-0 pt-4">
+                                    <h4 class="card-title mb-0"><i class="la la-edit text-primary"></i> Formulaire d'identification</h4>
+                                    <p class="text-muted small">Veuillez renseigner les informations professionnelles du nouvel employé.</p>
+                                </div>
+                                <div class="card-body">
+                                    
+                                    {% if msg %}
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        <strong><i class="fa fa-check-circle"></i> Succès !</strong> {{ msg }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    {% endif %}
+
+                                    <form method="POST" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        
+                                        <div class="row">
+                                            {% for field in form %}
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>{{ field.label }}</label>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <small class="text-danger">{{ field.errors|striptags }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+
+                                        <hr class="my-4">
+
+                                        <div class="text-right">
+                                            <button type="reset" class="btn btn-light mr-2">Annuler</button>
+                                            <button type="submit" class="btn btn-primary btn-register">
+                                                <i class="la la-check-circle"></i> Enregistrer l'Agent
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                
+                </div>            
+            </div>
+            
+        </div>
+        
+        {% include 'back-end/includes/js.html'%}
+
+        <script>
+            // Ajout automatique des classes Bootstrap aux champs Django
+            $(document).ready(function() {
+                $('input, select, textarea').addClass('form-control');
+            });
+        </script>
+        
+    </body>
+</html>

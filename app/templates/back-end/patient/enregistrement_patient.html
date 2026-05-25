@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Patients - Moyanoli Médicale</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+            
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Gestion des Patients</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                    <li class="breadcrumb-item active">Enregistrement Patient</li>
+                                </ul>
+                            </div>
+                            {% if fonctionKey == 'receptionniste' %}
+                            <div class="col-auto float-right ml-auto">
+                                <a href="#" class="btn btn-primary add-btn" data-toggle="modal" data-target="#add_patient">
+                                    <i class="fa fa-plus"></i> Nouveau Patient
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Alertes -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Barre de recherche -->
+                    <div class="row filter-row">
+                        <div class="col-sm-6 col-md-9">  
+                            <div class="form-group form-focus">
+                                <input type="text" class="form-control floating" id="myInput" placeholder="Rechercher par nom, matricule, téléphone...">
+                                <label class="focus-label">Recherche rapide</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-3">  
+                            <a href="#" class="btn btn-success btn-block"> <i class="fa fa-search"></i> Filtrer </a>  
+                        </div>
+                    </div>
+
+                    <!-- Tableau des Patients -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-striped custom-table mb-0 datatable" id="myTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Matricule</th>
+                                            <th>Nom Complet</th>
+                                            <th>Téléphone</th>
+                                            <th>Âge</th>
+                                            <th>Service</th>
+                                            <th>Adresse</th>
+                                            <th>Date Enreg.</th>
+                                            <th>Auteur</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients %}
+                                        <tr>
+                                            <td><span class="badge badge-info">{{ patient.code_patient }}</span></td>
+                                            <td><strong>{{ patient.noms }}</strong></td>
+                                            <td>{{ patient.telephone }}</td>
+                                            <td>{{ patient.age }} ans</td>
+                                            <td>
+                                                <span class="badge badge-light-primary text-uppercase">
+                                                    {{ patient.service }}
+                                                </span>
+                                            </td>
+                                            <td><small>{{ patient.adresse|truncatechars:25 }}</small></td>
+                                            <td>{{ patient.date_creation|date:"d/m/Y" }}</td>
+                                            <td>{{ patient.created_by.username }}</td>
+                                            <td class="text-right">
+                                                <div class="dropdown dropdown-action">
+                                                    <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <i class="material-icons">more_vert</i>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <!-- Lien Payer la Fiche -->
+                                                        {% if not patient.fiche_payee %}
+                                                            <a class="dropdown-item text-success" href="{% url 'payer_fiche' patient.id %}">
+                                                                <i class="fa fa-money m-r-5"></i> <strong>Payer la Fiche</strong>
+                                                            </a>
+                                                        {% else %}
+                                                            <a class="dropdown-item text-muted disabled" href="#">
+                                                                <i class="fa fa-check text-success m-r-5"></i> Fiche déjà réglée
+                                                            </a>
+                                                        {% endif %}
+
+                                                        <!-- Lien Historique Paiements -->
+                                                        <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}">
+                                                            <i class="fa fa-history m-r-5"></i> Historique Paiements
+                                                        </a>
+
+                                                        <div class="dropdown-divider"></div>
+
+                                                        <!-- Liens de gestion et médicaux -->
+                                                        <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}">
+                                                            <i class="fa fa-pencil m-r-5"></i> Modifier
+                                                        </a>
+                                                        <a class="dropdown-item" href="#"><i class="fa fa-eye m-r-5"></i> Dossier</a>
+                                                        
+                                                        <!-- AJOUT DU LIEN HISTORIQUE TRIAGE (SIGNES VITAUX) -->
+                                                        <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}">
+                                                            <i class="fa fa-heartbeat m-r-5"></i> Historique Triage
+                                                        </a>
+                                                        
+                                                        <div class="dropdown-divider"></div>
+                                                        
+                                                        <a class="dropdown-item" href="#" style="color: red;">
+                                                            <i class="fa fa-trash-o m-r-5"></i> Supprimer
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="9" class="text-center">Aucun patient trouvé dans la base de données.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal d'ajout -->
+                <div id="add_patient" class="modal custom-modal fade" role="dialog">
+                    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Nouvel Enregistrement</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        {% for field in form %}
+                                            <div class="col-sm-6">
+                                                <div class="form-group">
+                                                    <label>{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        {% for error in field.errors %}
+                                                            <div class="text-danger small">{{ error }}</div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="submit-section">
+                                        <button type="submit" class="btn btn-primary submit-btn">Valider l'enregistrement</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            $(document).ready(function(){
+                // Ajout de la classe form-control aux champs du modal
+                $('#add_patient form input, #add_patient form select, #add_patient form textarea').addClass('form-control');
+                
+                // Liaison moderne de la barre de recherche avec l'instance de DataTable 
+                if ($.fn.DataTable.isDataTable('#myTable')) {
+                    var table = $('#myTable').DataTable();
+                    $('#myInput').on('keyup', function() {
+                        table.search(this.value).draw();
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

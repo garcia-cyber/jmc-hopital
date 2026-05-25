@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Personnel Médical - Moyanoli ERP</title>
+        
+        {% include 'back-end/includes/css.html'%}
+
+        <style>
+            .page-wrapper { background-color: #f4f7fe; }
+            .table-avatar {
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+                margin-right: 10px;
+            }
+            .btn-action {
+                width: 32px;
+                height: 32px;
+                line-height: 32px;
+                padding: 0;
+                border-radius: 8px;
+                margin: 0 2px;
+            }
+            .card-table {
+                border: none;
+                border-radius: 15px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            }
+
+            /* Style pour la barre de recherche personnalisée */
+            .search-box {
+                position: relative;
+                max-width: 300px;
+            }
+            .search-box input {
+                border-radius: 20px;
+                padding-left: 35px;
+                border: 1px solid #e3e3e3;
+                background-color: #fbfbfb;
+            }
+            .search-box i {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #999;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html'%}
+            {% include 'back-end/includes/sidebar.html'%}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title"><i class="la la-users-cog text-primary mr-2"></i>Annuaire du Personnel</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Liste des Employés</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <a href="{% url 'employeAdd' %}" class="btn btn-primary btn-rounded"><i class="fa fa-plus"></i> Inscrire un Agent</a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card card-table">
+                                <div class="card-header bg-white border-0 pt-4">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <h4 class="card-title mb-0">Effectif Actif</h4>
+                                        </div>
+                                        <div class="col-auto">
+                                            <!-- Barre de Recherche -->
+                                            <div class="search-box">
+                                                <i class="la la-search"></i>
+                                                <input type="text" class="form-control" id="myInput" placeholder="Rechercher un agent...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped custom-table datatable mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Identité</th>
+                                                    <th>Email</th>
+                                                    <th>Nom d'utilisateur</th>
+                                                    <th>Date d'adhésion</th>
+                                                    <th class="text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="myTable">
+                                                {% for user in lst_user %}
+                                                <tr>
+                                                    <td>
+                                                        <h2 class="table-avatar">
+                                                            <a href="#" class="avatar"><img src="/static/back-end/assets/img/profiles/avatar-01.jpg" alt=""></a>
+                                                            <a href="#">{{ user.first_name }} {{ user.last_name }} <span>{{ user.fonction_set.first.fonctionKey.roleName|default:"Agent" }}</span></a>
+                                                        </h2>
+                                                    </td>
+                                                    <td>{{ user.email }}</td>
+                                                    <td><span class="badge badge-light">@{{ user.username }}</span></td>
+                                                    <td>{{ user.date_joined|date:"d M Y" }}</td>
+                                                    <td class="text-right">
+                                                        <a href="{% url 'ajouter_fonction' user.id %}" class="btn btn-info btn-action" title="Attribuer Fonction/Profil">
+                                                            <i class="la la-user-tag"></i>
+                                                        </a>
+                                                        <a href="{% url 'modifier_user' user.id %}" class="btn btn-primary btn-action" title="Modifier">
+                                                            <i class="la la-edit"></i>
+                                                        </a>
+                                                        <a href="{% url 'force_pass' user.id %}" class="btn btn-warning btn-action text-white" title="Réinitialiser MDP" onclick="return confirm('Forcer la réinitialisation du mot de passe ?')">
+                                                            <i class="la la-key"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted">Aucun employé enregistré.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <!-- Pagination Footer -->
+                                <div class="card-footer bg-white border-0 pb-4">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <span class="text-muted small">Affichage de {{ lst_user|length }} membre(s) au total</span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <ul class="pagination mb-0">
+                                                <li class="page-item disabled">
+                                                    <a class="page-link" href="#" tabindex="-1"><i class="la la-angle-left"></i></a>
+                                                </li>
+                                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="#"><i class="la la-angle-right"></i></a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% include 'back-end/includes/js.html'%}
+
+        <!-- Script de filtrage en temps réel -->
+        <script>
+            $(document).ready(function(){
+              $("#myInput").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("#myTable tr").filter(function() {
+                  $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+              });
+            });
+        </script>
+    </body>
+</html>

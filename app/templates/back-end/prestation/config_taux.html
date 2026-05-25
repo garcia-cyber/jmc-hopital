@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Configuration Taux - Moyanoli ERP</title>
+
+        {% include 'back-end/includes/css.html'%}
+        
+        <style>
+            .config-card {
+                border-radius: 15px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            }
+            .rate-display {
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                border-left: 5px solid #ff9b44;
+                margin-bottom: 25px;
+            }
+            .form-control-lg {
+                border-radius: 10px;
+                font-weight: 600;
+                font-size: 1.2rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+
+            {% include 'back-end/includes/header.html'%}
+            {% include 'back-end/includes/sidebar.html'%}
+
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h3 class="page-title">Configuration Financière</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Taux de change</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <div class="row">
+                        <div class="col-md-6 offset-md-3">
+                            
+                            <!-- Affichage des messages Django -->
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                        <strong>Succès !</strong> {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            <div class="card config-card">
+                                <div class="card-body">
+                                    <h4 class="card-title mb-4">Mise à jour du Taux USD / CDF</h4>
+                                    
+                                    <div class="rate-display">
+                                        <h5 class="text-muted small text-uppercase">Taux actuel</h5>
+                                        <h3 class="mb-0">1 USD = <span class="text-primary">{{ config.taux_usd_en_cdf }}</span> CDF</h3>
+                                    </div>
+
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Nouveau Taux (Valeur en CDF pour 1$)</label>
+                                            {# Injection du champ Django avec une classe personnalisée #}
+                                            <div class="input-group">
+                                                {{ form.taux_usd_en_cdf }}
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text font-weight-bold">CDF</span>
+                                                </div>
+                                            </div>
+                                            {% if form.taux_usd_en_cdf.errors %}
+                                                <div class="text-danger mt-2">
+                                                    {{ form.taux_usd_en_cdf.errors }}
+                                                </div>
+                                            {% endif %}
+                                            <small class="form-text text-muted mt-2">
+                                                Ce taux sera utilisé pour convertir automatiquement les prix des prestations dans tout le système Moyanoli.
+                                            </small>
+                                        </div>
+
+                                        <div class="submit-section text-center mt-4">
+                                            <button type="submit" class="btn btn-primary submit-btn btn-block btn-lg">
+                                                <i class="fa fa-save mr-2"></i> Mettre à jour le taux
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        {% include 'back-end/includes/js.html'%}
+
+        <script>
+            $(document).ready(function(){
+                // On applique les classes Bootstrap à l'input généré par Django
+                $('input').addClass('form-control form-control-lg');
+            });
+        </script>
+    </body>
+</html>

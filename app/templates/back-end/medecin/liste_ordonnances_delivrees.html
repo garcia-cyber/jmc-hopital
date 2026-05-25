@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique des Ordonnances - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .custom-table-card { border: none; border-radius: 12px; overflow: hidden; }
+        .table-modern { border-collapse: separate; border-spacing: 0; border: none !important; }
+        .table-modern thead th {
+            background-color: #34495e !important; color: #ffffff !important;
+            font-weight: 600; text-transform: uppercase; font-size: 0.85rem;
+            padding: 16px 20px !important; border: none !important;
+        }
+        .table-modern tbody tr { transition: all 0.2s ease-in-out; background-color: #ffffff; }
+        .table-modern tbody tr:hover { background-color: #f8fafd !important; }
+        .table-modern tbody td { padding: 18px 20px !important; border-bottom: 1px solid #edf2f7 !important; }
+        
+        /* Badges de statut des lignes de traitement */
+        .badge-actif { background-color: #e6f7ed; color: #1f7a42; border: 1px solid #c2eed4; font-weight: 600; }
+        .badge-stoppe { background-color: #fff0f1; color: #b82c39; border: 1px solid #ffccd1; font-weight: 600; }
+        .medoc-item { border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; margin-bottom: 8px; }
+        .medoc-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col">
+                            <h3 class="page-title" style="font-weight: 700; color: #1e293b;">Suivi des Ordonnances Émises</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Médecin</a></li>
+                                <li class="breadcrumb-item active">Registre des Ordonnances</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="card shadow-sm custom-table-card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-modern table-hover mb-0" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">Date & Type</th>
+                                        <th style="width: 25%;">Patient</th>
+                                        <th style="width: 45%;">Médicaments & Posologies</th>
+                                        <th style="width: 15%;" class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ord in ordonnances_medecin %}
+                                    <tr>
+                                        <!-- 1. DATE & TYPE -->
+                                        <td class="align-middle">
+                                            <div class="text-dark font-weight-bold">{{ ord.date_prescrite|date:"d/m/Y" }}</div>
+                                            <small class="text-muted d-block mb-1"><i class="far fa-clock mr-1"></i>{{ ord.date_prescrite|date:"H:i" }}</small>
+                                            <span class="badge {% if ord.type_ordonnance == 'URGENCE' %}badge-danger{% else %}badge-info{% endif %} font-weight-bold" style="font-size: 0.75rem;">
+                                                {{ ord.get_type_ordonnance_display }}
+                                            </span>
+                                        </td>
+
+                                        <!-- 2. PATIENT -->
+                                        <td class="align-middle">
+                                            <span class="badge badge-secondary mb-1 px-2 py-1" style="font-size: 0.75rem; background-color: #64748b;">
+                                                {{ ord.consultation.triage.patient.code_patient }}
+                                            </span>
+                                            <span class="d-block text-uppercase font-weight-bold text-dark">{{ ord.consultation.triage.patient.noms }}</span>
+                                            <small class="text-secondary font-weight-bold">{{ ord.consultation.triage.patient.age }} ans &bull; {{ ord.consultation.triage.patient.sexe }}</small>
+                                        </td>
+
+                                        <!-- 3. MEDICAMENTS DE L'ORDONNANCE -->
+                                        <td class="align-middle">
+                                            <div class="bg-light p-3 rounded" style="border-left: 4px solid #34495e;">
+                                                {% for medoc in ord.medicaments.all %}
+                                                <div class="d-flex justify-content-between align-items-center medoc-item">
+                                                    <div>
+                                                        <strong class="text-dark" {% if medoc.statut == 'STOPPE' %}style="text-decoration: line-through; color: #94a3b8 !important;"{% endif %}>
+                                                            {{ medoc.nom_medicament }}
+                                                        </strong>
+                                                        <span class="text-muted small d-block">
+                                                            Posologie : {{ medoc.posologie }} &bull; Durée : {{ medoc.duree }}
+                                                        </span>
+                                                        {% if medoc.motif_arret %}
+                                                            <small class="text-danger d-block font-italic">Motif d'arrêt : {{ medoc.motif_arret }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div>
+                                                        {% if medoc.statut == 'EN_COURS' %}
+                                                            <span class="badge badge-actif px-2 py-1 small">En cours</span>
+                                                        {% else %}
+                                                            <span class="badge badge-stoppe px-2 py-1 small">Stoppé</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                                
+                                                {% if ord.observation %}
+                                                    <div class="mt-2 pt-2 border-top small text-secondary">
+                                                        <strong>Note :</strong> {{ ord.observation }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+
+                                        <!-- 4. ACTIONS DE CONTROLE (STOPPER UN MEDICAMENT) -->
+                                        <td class="text-center align-middle">
+                                            <button type="button" class="btn btn-outline-danger btn-sm btn-block font-weight-bold py-2" data-toggle="modal" data-target="#modalGerer{{ ord.id }}">
+                                                <i class="fa fa-sliders-h mr-1"></i> Gérer
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- FENÊTRE MODALE POUR STOPPER DES LIGNES INDIVIDUELLEMENT -->
+                                    <div class="modal fade" id="modalGerer{{ ord.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                        <div class="modal-dialog modal-md modal-dialog-centered" role="document">
+                                            <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+                                                <div class="modal-header text-white" style="background-color: #2c3e50;">
+                                                    <h5 class="modal-title" style="color: white; font-weight: 600;">
+                                                        <i class="fa fa-hand-holding-medical mr-2"></i>Contrôle Médications
+                                                    </h5>
+                                                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body bg-light">
+                                                    <p class="small text-muted mb-3">Sélectionnez le traitement à suspendre ou modifier pour <strong>{{ ord.consultation.triage.patient.noms }}</strong>.</p>
+                                                    
+                                                    {% for medoc in ord.medicaments.all %}
+                                                    <div class="card p-3 mb-2 border-0 shadow-sm">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <h6 class="font-weight-bold text-dark mb-0">{{ medoc.nom_medicament }}</h6>
+                                                                <small class="text-muted">{{ medoc.posologie }} ({{ medoc.duree }})</small>
+                                                            </div>
+                                                            
+                                                            {% if medoc.statut == 'EN_COURS' %}
+                                                            <form method="POST" action="" class="form-inline" onsubmit="return confirm('Stopper ce traitement ?');">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="action" value="stopper_medicament">
+                                                                <input type="hidden" name="ligne_id" value="{{ medoc.id }}">
+                                                                <input type="text" name="motif_arret" class="form-control form-control-sm mr-2" placeholder="Motif d'arrêt (optionnel)" style="max-width: 150px;">
+                                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                                    <i class="fa fa-stop mr-1"></i> Stopper
+                                                                </button>
+                                                            </form>
+                                                            {% else %}
+                                                                <span class="badge badge-stoppe">Déjà arrêté</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary text-white btn-block" data-dismiss="modal">Fermer</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 bg-light">
+                                            <div class="text-muted">
+                                                <i class="fa fa-folder-open fa-3x mb-3 text-secondary"></i>
+                                                <h5 class="font-weight-bold">Aucune ordonnance émise</h5>
+                                                <p class="mb-0">Les ordonnances enregistrées via le formulaire s'afficheront ici.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

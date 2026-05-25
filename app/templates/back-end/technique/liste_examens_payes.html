@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titre_page }} - Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+            
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col">
+                            <h3 class="page-title">{{ titre_page }}</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Console Technique</a></li>
+                                <li class="breadcrumb-item active">Examens à faire</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card card-table">
+                            <div class="card-header">
+                                <h4 class="card-title mb-0">File d'attente des fiches d'examens payées et libérées</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped custom-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Patient / Réf</th>
+                                                <th>Âge & Sexe</th>
+                                                <th>Détails des examens à effectuer</th>
+                                                <th>Prescripteur</th>
+                                                <th class="text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if examens_presents %}
+                                                {% for item in historique_technique %}
+                                                <tr>
+                                                    <!-- Patient -->
+                                                    <td>
+                                                        <h2 class="table-avatar">
+                                                            <span class="avatar" style="background-color: #007bff; color: white; font-weight: bold;">
+                                                                {{ item.patient.noms|slice:":1" }}
+                                                            </span>
+                                                            <a href="#">
+                                                                {{ item.patient.noms }} 
+                                                                <span>ID Pat: #{{ item.patient.id }} | Reçu: #{{ item.id_paiement }}</span>
+                                                            </a>
+                                                        </h2>
+                                                    </td>
+                                                    
+                                                    <!-- Âge & Sexe -->
+                                                    <td>
+                                                        {{ item.patient.genre }}<br>
+                                                        <small class="text-muted">{{ item.patient.age }} ans</small>
+                                                    </td>
+                                                    
+                                                    <!-- Détails des examens avec gestion d'état individuel -->
+                                                    <td>
+                                                        <ul class="pl-3 m-0" style="list-style-type: square; font-weight: 500; font-size: 13px;">
+                                                            {% for ex in item.examens %}
+                                                                <li class="mb-1 {% if ex.est_deja_fait %}text-muted{% else %}text-danger{% endif %}">
+                                                                    <!-- Si l'examen est fait, on barre discrètement le texte -->
+                                                                    <span {% if ex.est_deja_fait %}style="text-decoration: line-through;"{% endif %}>
+                                                                        {{ ex.libelle }}
+                                                                    </span>
+                                                                    
+                                                                    <!-- Badge de statut pour un meilleur suivi visuel -->
+                                                                    {% if ex.est_deja_fait %}
+                                                                        <span class="badge badge-success" style="font-size: 9px; padding: 2px 4px;">Fait</span>
+                                                                    {% else %}
+                                                                        <span class="badge badge-warning text-dark" style="font-size: 9px; padding: 2px 4px;">En attente</span>
+                                                                    {% endif %}
+
+                                                                    <span class="badge badge-light text-muted font-weight-normal" style="font-size: 10px;">
+                                                                        Payé le {{ ex.date|date:"d/m à H:i" }}
+                                                                    </span>
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </td>
+                                                    
+                                                    <!-- Provenance -->
+                                                    <td>
+                                                        <span class="badge badge-light-info">
+                                                            <i class="fa fa-user-md"></i> Dr. {{ item.medecin }}
+                                                        </span>
+                                                    </td>
+                                                    
+                                                    <!-- Action : Blocage intelligent basé sur la présence d'examens restants -->
+                                                    <td class="text-right">
+                                                        {% regroup item.examens by est_deja_fait as examens_groupes %}
+                                                        
+                                                        {# Si tous les examens de ce groupe ont 'est_deja_fait' à True #}
+                                                        {% if item.examens|length == 1 and item.examens.0.est_deja_fait or item.examens.0.est_deja_fait and item.examens.1.est_deja_fait %}
+                                                            <!-- Bouton désactivé si tout est traité -->
+                                                            <button class="btn btn-sm btn-secondary shadow-sm" disabled title="Tous les examens de cette fiche ont été saisis.">
+                                                                <i class="fa fa-lock"></i> Traité
+                                                            </button>
+                                                        {% else %}
+                                                            <!-- Bouton accessible s'il reste au moins un examen à faire -->
+                                                            <a href="{% url 'saisir_resultats_examens' item.id_paiement %}" class="btn btn-sm btn-success shadow-sm">
+                                                                <i class="fa fa-flask"></i> Saisir Résultats
+                                                            </a>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted p-4">
+                                                        <i class="fa fa-check-circle fa-2x text-success mb-2"></i><br>
+                                                        Aucun examen payé en attente pour votre service.
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

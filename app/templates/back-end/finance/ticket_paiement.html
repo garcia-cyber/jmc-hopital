@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu de Paiement #{{ paiement.id }}</title>
+    <style>
+        /* Configuration de la page pour imprimante thermique (Ticket) */
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+        
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Style ticket classique */
+            font-size: 13px;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 10px;
+            max-width: 280px; /* Largeur standard ticket de caisse */
+            background-color: #fff;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+
+        .header {
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+        }
+
+        .header h2 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            margin: 2px 0;
+            font-size: 11px;
+        }
+
+        .info-section {
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .info-section p {
+            margin: 3px 0;
+        }
+
+        /* Tableaux des détails financiers */
+        .ticket-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
+        .ticket-table th {
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 4px 0;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .ticket-table td {
+            padding: 5px 0;
+            vertical-align: top;
+            font-size: 12px;
+        }
+
+        .exam-list {
+            margin: 2px 0 0 0;
+            padding-left: 12px;
+            list-style-type: square;
+            font-size: 11px;
+            color: #333;
+        }
+
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 8px 0;
+        }
+
+        .total-block {
+            margin-top: 5px;
+            font-size: 13px;
+        }
+
+        .footer {
+            margin-top: 15px;
+            padding-top: 8px;
+            border-top: 1px dashed #000;
+            font-size: 11px;
+        }
+
+        /* Bouton d'action masqué à l'impression */
+        .no-print-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        @media print {
+            .no-print-btn {
+                display: none;
+            }
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Bouton de secours si l'impression auto ne se lance pas -->
+    <button class="no-print-btn" onclick="window.print()">Imprimer le reçu</button>
+
+    <!-- En-tête de l'Hôpital -->
+    <div class="header text-center">
+        <h2>Moyanoli ERP</h2>
+        <p>Centre Hospitalier & Médical</p>
+        <p>Kinshasa, RDC</p>
+        <p>Tél: +243 81x xxx xxx</p>
+    </div>
+
+    <!-- Informations du Ticket -->
+    <div class="info-section">
+        <p><span class="bold">RECU N° :</span> {{ paiement.id }}</p>
+        <p><span class="bold">Date :</span> {{ date_paiement_fix|date:"d/m/Y H:i" }}</p>
+        <p><span class="bold">Patient :</span> {{ patient.noms }}</p>
+        <p><span class="bold">ID Pat :</span> #{{ patient.id }}</p>
+        <p><span class="bold">Caissier :</span> {{ paiement.caissier.username|default:"Système" }}</p>
+    </div>
+
+    <!-- Tableau de tarification -->
+    <table class="ticket-table">
+        <thead>
+            <tr>
+                <th>Libellé / Prestation</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <span class="bold">{{ paiement.get_service_display }}</span>
+                    
+                    <!-- Traçabilité médicale : Liste des examens rattachés à ce paiement -->
+                    {% if examens_ticket %}
+                        <ul class="exam-list">
+                            {% for ex in examens_ticket %}
+                                <li>{{ ex.libelle }} ({{ ex.prix|floatformat:2 }} $)</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </td>
+                <td class="text-right bold">
+                    {{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <!-- Bloc des Totaux -->
+    <div class="total-block">
+        <table style="width: 100%;">
+            <tr>
+                <td>Net Payé :</td>
+                <td class="text-right bold" style="font-size: 15px;">
+                    {{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Pied de Page du ticket -->
+    <div class="footer text-center">
+        <p class="bold">Merci pour votre confiance !</p>
+        <p>Les actes médicaux payés ne sont pas remboursables.</p>
+        <p style="font-size: 9px; margin-top: 10px; color: #555;">Généré le 17/05/2026 à 19:45 via Moyanoli</p>
+    </div>
+
+    <!-- Script d'automatisation de l'impression -->
+    <script>
+        window.onload = function() {
+            // Lance automatiquement la boîte de dialogue d'impression au chargement
+            setTimeout(function() {
+                window.print();
+            }, 300);
+        };
+    </script>
+</body>
+</html>

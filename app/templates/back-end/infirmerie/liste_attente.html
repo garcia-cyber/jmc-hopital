@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - File d'attente Triage</title>
+        
+        <!-- Favicon et CSS -->
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            <!-- Header & Sidebar -->
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">File d'Attente - Triage</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Infirmerie</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtre de recherche rapide -->
+                    <div class="row filter-row">
+                        <div class="col-sm-9 col-md-9">  
+                            <div class="form-group form-focus">
+                                <input type="text" id="searchPatient" class="form-control floating" onkeyup="filterTable()">
+                                <label class="focus-label">Rechercher un patient par nom...</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-3 col-md-3">  
+                            <button class="btn btn-success btn-block"> <i class="fa fa-search"></i> Actualiser </button>  
+                        </div>      
+                    </div>
+
+                    <!-- Tableau des Patients -->
+                    <div class="card card-table mt-3">
+                        <div class="card-header">
+                            <h4 class="card-title mb-0">Patients en attente de constantes (Taux : {{ taux }} FC)</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-center mb-0" id="patientTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient</th>
+                                            <th>Heure d'arrivée</th>
+                                            <th class="text-center">Total Fiche</th>
+                                            <th class="text-center">Statut</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients %}
+                                        <tr>
+                                            <td>
+                                                <h2 class="table-avatar">
+                                                    <a href="#" class="avatar avatar-sm mr-2">
+                                                        <img class="avatar-img rounded-circle" src="{% static 'back-end/assets/img/user.jpg' %}" alt="User">
+                                                    </a>
+                                                    <a href="#">{{ patient.noms }} <span>ID: #{{ patient.id|stringformat:"04d" }}</span></a>
+                                                </h2>
+                                            </td>
+                                            <td>{{ patient.date_creation|date:"H:i" }} <br><small class="text-muted">{{ patient.date_creation|date:"d/m/Y" }}</small></td>
+                                            <td class="text-center">
+                                                <span class="badge badge-info">{{ patient.total_fiche_usd|floatformat:2 }} $</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if patient.a_solde_fiche %}
+                                                    <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Prêt pour triage</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger-border"><i class="fa fa-clock-o"></i> Attente Paiement</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right">
+                                                {% if patient.a_solde_fiche %}
+                                                    <!-- Lien dynamique vers la saisie des signes vitaux -->
+                                                    <a href="{% url 'saisir_signes' patient.id %}" class="btn btn-primary btn-sm">
+                                                        <i class="fa fa-stethoscope"></i> Prélèvement Signes Vitaux
+                                                    </a>
+                                                {% else %}
+                                                    <button class="btn btn-secondary btn-sm" disabled title="Le patient doit d'abord solder la fiche (6 USD)">
+                                                        <i class="fa fa-lock"></i> Dossier bloqué
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4">
+                                                <div class="text-muted">Aucun patient dans la file d'attente.</div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <!-- Petit script de filtrage JS simple -->
+        <script>
+            function filterTable() {
+                let input = document.getElementById("searchPatient");
+                let filter = input.value.toUpperCase();
+                let table = document.getElementById("patientTable");
+                let tr = table.getElementsByTagName("tr");
+
+                for (let i = 1; i < tr.length; i++) {
+                    let td = tr[i].getElementsByTagName("td")[0];
+                    if (td) {
+                        let txtValue = td.textContent || td.innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
+                        }
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Consultation Médicale</title>
+        
+        <!-- Favicon & CSS -->
+        {% include 'back-end/includes/css.html' %}
+        <style>
+            .constant-val { font-size: 16px; font-weight: bold; color: #1f2937; }
+            .section-title { border-left: 4px solid #dc3545; padding-left: 10px; font-weight: bold; color: #b21f2d; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+        
+            <!-- Header -->
+            {% include 'back-end/includes/header.html' %}
+            <!-- /Header -->
+            
+            <!-- Sidebar -->
+            {% include 'back-end/includes/sidebar.html' %}
+            <!-- /Sidebar -->
+            
+            <!-- Page Wrapper -->
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Cabinet de Consultation</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#">Médecin</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 'liste_consultation_medecin' %}">Salle d'attente</a></li>
+                                    <li class="breadcrumb-item active">Examen Clinique</li>
+                                </ul>
+                            </div>
+                            <div class="col-auto float-right ml-auto">
+                                <a href="{% url 'liste_consultation_medecin' %}" class="btn btn-secondary rounded-pill btn-sm">
+                                    <i class="fa fa-arrow-left"></i> Retour à la salle d'attente
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <!-- Alertes Flash -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Récapitulatif Triage & Constantes -->
+                    <div class="card bg-light border-danger mb-4">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 border-right">
+                                    <small class="text-muted text-uppercase d-block">Patient sous examen</small>
+                                    <h4 class="text-danger font-weight-bold mb-1 text-uppercase">{{ triage.patient.noms }}</h4>
+                                    <p class="mb-0 text-muted">
+                                        Matricule : <strong>#{{ triage.patient.code_patient }}</strong> | Âge : <strong>{{ triage.patient.age }} ans</strong>
+                                    </p>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="row text-center">
+                                        <div class="col-3">
+                                            <small class="text-muted d-block"><i class="fa fa-thermometer-half text-danger"></i> Température</small>
+                                            <span class="constant-val badge {% if triage.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %} text-white">{{ triage.temperature }} °C</span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block"><i class="fa fa-heartbeat text-warning"></i> Tension Artérielle</small>
+                                            <span class="constant-val">{{ triage.tension_arterielle|default:"--" }} <small>mmHg</small></span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block"><i class="fa fa-pulse text-info"></i> Fréq. Cardiaque</small>
+                                            <span class="constant-val">{{ triage.frequence_cardiaque|default:"--" }} <small>bpm</small></span>
+                                        </div>
+                                        <div class="col-3">
+                                            <small class="text-muted d-block"><i class="fa fa-balance-scale text-secondary"></i> Poids</small>
+                                            <span class="constant-val">{{ triage.poids }} <small>Kg</small></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire de Consultation Principal -->
+                    <form method="POST" id="consultationForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Partie Gauche : Formulaire clinique Django -->
+                            <div class="col-lg-7 col-md-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="section-title"><i class="fa fa-user-md"></i> Constatations Cliniques</h4>
+                                        <div class="row">
+                                            {% for field in form %}
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label class="font-weight-bold">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        {% for error in field.errors %}
+                                                            <div class="text-danger small">{{ error }}</div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Partie Droite : Examens complémentaires & Ordonnance d'urgence -->
+                            <div class="col-lg-5 col-md-12">
+                                
+                                <!-- Module A: Prescription d'Examens Paracliniques Filtre Dynamique -->
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h4 class="section-title text-info" style="border-left-color: #17a2b8;"><i class="fa fa-flask"></i> Examens Laboratoire / Imagerie</h4>
+                                        
+                                        <!-- ÉTAPE 1 : Choisir la Catégorie (Filtre) -->
+                                        <div class="form-group">
+                                            <label class="small font-weight-bold text-muted">1. Filtrer par type d'examen :</label>
+                                            <select id="filter_categorie" class="form-control select">
+                                                <option value="all">-- Afficher toutes les catégories --</option>
+                                                {% regroup examens_disponibles by categorie as categorie_list %}
+                                                {% for cat in categorie_list %}
+                                                    <option value="{{ cat.grouper }}">{{ cat.grouper }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <!-- ÉTAPE 2 : Sélectionner l'examen filtré -->
+                                        <div class="form-group row">
+                                            <div class="col-9">
+                                                <label class="small font-weight-bold text-muted">2. Sélectionner l'examen :</label>
+                                                <select id="select_examen" class="form-control select">
+                                                    <option value="">-- Choisir un examen --</option>
+                                                    {% for ex in examens_disponibles %}
+                                                        <option value="{{ ex.id }}" data-cat="{{ ex.categorie }}" data-libelle="{{ ex.libelle }}">
+                                                            [{{ ex.categorie }}] {{ ex.libelle }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-3 d-flex align-items-end">
+                                                <button type="button" id="btn_add_examen" class="btn btn-info btn-block" style="height: 44px;"><i class="fa fa-plus"></i></button>
+                                            </div>
+                                        </div>
+
+                                        <table class="table table-sm table-bordered custom-table" id="table_examens_demandes">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th>Examen</th>
+                                                    <th style="width: 80px;" class="text-center">Qté</th>
+                                                    <th style="width: 40px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wrapper_examens">
+                                                <!-- Généré dynamiquement en JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Module B: Ordonnance d'Urgence Initiale (Facultative) -->
+                                <div class="card border-warning">
+                                    <div class="card-body">
+                                        <h4 class="section-title text-warning" style="border-left-color: #ffc107;"><i class="fa fa-pills"></i> Ordonnance d'Urgence <small class="text-muted">(Facultatif)</small></h4>
+                                        
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered" id="table_ordonnance">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th>Médicament</th>
+                                                        <th>Posologie</th>
+                                                        <th>Durée</th>
+                                                        <th style="width: 40px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="wrapper_medicaments">
+                                                    <!-- On démarre sans ligne par défaut pour bien marquer le côté facultatif, ou une ligne vide -->
+                                                    <tr class="placeholder-row">
+                                                        <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button type="button" id="btn_add_medoc" class="btn btn-sm btn-outline-warning btn-block mt-2">
+                                            <i class="fa fa-plus"></i> Ajouter un médicament d'urgence
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Bouton de validation final globale -->
+                        <div class="row mb-5">
+                            <div class="col-md-12 text-center">
+                                <div class="card py-3">
+                                    <div class="submit-section mb-0">
+                                        <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5">
+                                            <i class="fa fa-save"></i> Enregistrer & Clôturer l'examen clinique
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            <!-- /Page Wrapper -->
+        </div>
+        <!-- /Main Wrapper -->
+        
+        <!-- jQuery & JS -->
+        {% include 'back-end/includes/js.html' %}
+
+        <!-- Script d'automatisation et de filtrage -->
+        <script>
+            $(document).ready(function() {
+                // Style des inputs Django
+                $('#consultationForm textarea, #consultationForm input[type="text"], #consultationForm select').addClass('form-control');
+
+                // --- OPTIMISATION 1 : FILTRAGE DYNAMIQUE DES EXAMENS ---
+                // Sauvegarde de toutes les options originales pour pouvoir filtrer proprement
+                var allExamenOptions = $('#select_examen option').clone();
+
+                $('#filter_categorie').on('change', function() {
+                    var selectedCat = $(this).val();
+                    
+                    // Réinitialiser le sélecteur d'examens
+                    $('#select_examen').empty();
+                    
+                    // Réinjecter uniquement les options correspondantes
+                    allExamenOptions.each(function() {
+                        var optionCat = $(this).data('cat');
+                        
+                        if (selectedCat === 'all' || !optionCat || optionCat === selectedCat) {
+                            $('#select_examen').append($(this).clone());
+                        }
+                    });
+                    
+                    // Forcer Select2 ou le select de base à se mettre à jour
+                    $('#select_examen').val('').trigger('change');
+                });
+
+                // --- AJOUT DES EXAMENS DANS LE TABLEAU ---
+                $('#btn_add_examen').on('click', function() {
+                    var select = $('#select_examen');
+                    var selectedOption = $('#select_examen option:selected');
+                    var exId = select.val();
+                    var exLibelle = selectedOption.data('libelle');
+                    var exCat = selectedOption.data('cat');
+
+                    if (!exId) {
+                        alert("Veuillez sélectionner un examen d'abord.");
+                        return;
+                    }
+
+                    if ($('#exam_row_' + exId).length > 0) {
+                        alert("Cet examen a déjà été ajouté.");
+                        return;
+                    }
+
+                    var htmlRow = `
+                        <tr id="exam_row_${exId}">
+                            <td>
+                                <input type="hidden" name="examens_ids" value="${exId}">
+                                <small class="badge badge-secondary">${exCat}</small> ${exLibelle}
+                            </td>
+                            <td>
+                                <input type="number" name="qty_${exId}" value="1" min="1" class="form-control form-control-sm text-center">
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="$('#exam_row_${exId}').remove();"><i class="fa fa-times"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    $('#wrapper_examens').append(htmlRow);
+                    select.val('').trigger('change');
+                });
+
+
+                // --- OPTIMISATION 2 : ORDONNANCE FACULTATIVE ---
+                // Ajouter un médicament
+                $('#btn_add_medoc').on('click', function() {
+                    // Supprimer la ligne "Aucun médicament" si elle existe
+                    $('.placeholder-row').remove();
+
+                    var htmlMedocRow = `
+                        <tr>
+                            <td><input type="text" name="nom_medicament" class="form-control form-control-sm" placeholder="Ex: Paracétamol ampoule" required></td>
+                            <td><input type="text" name="posologie" class="form-control form-control-sm" placeholder="Ex: 1g toutes les 8h"></td>
+                            <td><input type="text" name="duree" class="form-control form-control-sm" placeholder="Ex: 3 jours"></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-medoc"><i class="fa fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    $('#wrapper_medicaments').append(htmlMedocRow);
+                });
+
+                // Supprimer un médicament
+                $(document).on('click', '.btn-remove-medoc', function() {
+                    $(this).closest('tr').remove();
+                    
+                    // Si plus aucun médicament, remettre le message informatif facultatif
+                    if ($('#wrapper_medicaments tr').length === 0) {
+                        $('#wrapper_medicaments').append(`
+                            <tr class="placeholder-row">
+                                <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
+                            </tr>
+                        `);
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>

@@ -28,45 +28,7 @@
                         </ul>
                     </li>
 
-                    <li class="submenu">
-                        <a href="#"><i class="la la-cog"></i> <span> Configuration </span> <span class="menu-arrow"></span></a>
-                        <ul style="display: none;">
-                            <li><a href="{% url 'gestion_prestations' %}">Prestations</a></li>
-                            <li><a href="{% url 'modifier_taux' %}">Taux de change</a></li>
-                            <li><a href="{% url 'gestion_services' %}">Services</a></li>
-                        </ul>
-                    </li>
-
-                    <li class="submenu">
-                        <a href="#"><i class="la la-user-injured"></i> <span> Patients </span> <span class="menu-arrow"></span></a>
-                        <ul style="display: none;">
-                            <li><a href="{% url 'enregistrement_patient' %}">Tous les patients</a></li>
-                        </ul>
-                    </li>
-
-                    <li class="{% if request.resolver_match.url_name == 'dashboard_finance' %}active{% endif %}">
-                        <a href="{% url 'dashboard_finance' %}">
-                            <i class="fa fa-wallet"></i> 
-                            <span>Journal de Caisse</span>
-                        </a>
-                    </li>
-
-                    <li class="submenu {% if request.resolver_match.url_name == 'dashboard_finance_depense' or request.resolver_match.url_name == 'creer_depense' %}active{% endif %}">
-                        <a href="#"><i class="la la-wallet"></i> <span> Gestion Financière </span> <span class="menu-arrow"></span></a>
-                        <ul style="{% if request.resolver_match.url_name == 'dashboard_finance_depense' or request.resolver_match.url_name == 'creer_depense' %}display: block;{% else %}display: none;{% endif %}">
-                            <li>
-                                <a class="{% if request.resolver_match.url_name == 'dashboard_finance_depense' %}active{% endif %}" href="{% url 'dashboard_finance_depense' %}">
-                                    <i class="la la-list"></i> Journal de Caisse
-                                </a>
-                            </li>
-                            <li>
-                                <a class="{% if request.resolver_match.url_name == 'creer_depense' %}active{% endif %}" href="{% url 'creer_depense' %}">
-                                    <i class="la la-money-bill-wave"></i> Saisir une Dépense
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-
+                 
                 <!-- ========================================== -->
                 <!-- 2. MENU RECEPTIONNISTE                     -->
                 <!-- ========================================== -->

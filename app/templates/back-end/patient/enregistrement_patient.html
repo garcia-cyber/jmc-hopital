@@ -5,16 +5,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Patients - JMC</title>
+    
     {% include 'back-end/includes/css.html' %}
+    
     <style>
-        /* Design Moderne */
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .page-title { font-weight: 700; color: #2c3e50; }
         .custom-table thead { background-color: #f8f9fa; }
-        .custom-table thead th { border-top: none; color: #7f8c8d; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
         .badge-light-primary { background-color: #e3f2fd; color: #1976d2; }
         .btn-success { background: #27ae60; border: none; border-radius: 8px; }
         .form-control { border-radius: 8px; border: 1px solid #ddd; padding: 12px; }
+        
+        /* Design du menu déroulant d'actions */
+        .dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.1); padding: 0.5rem 0; }
+        .dropdown-item { padding: 10px 20px; font-size: 0.9rem; transition: 0.3s; color: #495057; }
+        .dropdown-item:hover { background-color: #f8f9fa; color: #2c3e50; }
+        .dropdown-item i { margin-right: 10px; width: 15px; text-align: center; }
+        .dropdown-divider { margin: 0.5rem 0; }
     </style>
 </head>
 <body>
@@ -29,7 +36,6 @@
                     <div class="row align-items-center">
                         <div class="col">
                             <h3 class="page-title">Tableau des Patients</h3>
-                            <p class="text-muted">Gérez et consultez les dossiers patients</p>
                         </div>
                         {% if fonctionKey == 'receptionniste' %}
                         <div class="col-auto">
@@ -65,7 +71,7 @@
                                         <th>Téléphone</th>
                                         <th>Âge</th>
                                         <th>Service</th>
-                                        <th>Actions</th>
+                                        <th class="text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -77,7 +83,25 @@
                                         <td>{{ patient.age }} ans</td>
                                         <td><span class="badge badge-light-primary">{{ patient.service }}</span></td>
                                         <td class="text-right">
-                                            <button class="btn btn-sm btn-outline-primary"><i class="fa fa-pencil"></i></button>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    Options
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <a class="dropdown-item" href="#"><i class="fa fa-pencil text-primary"></i> Modifier</a>
+                                                    
+                                                    {% if not patient.fiche_payee %}
+                                                        <a class="dropdown-item" href="{% url 'payer_fiche_partiel' patient.id %}">
+                                                            <i class="fa fa-money text-warning"></i> Payer Fiche
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="dropdown-item text-success"><i class="fa fa-check"></i> Fiche Payée</span>
+                                                    {% endif %}
+                                                    
+                                                    <div class="dropdown-divider"></div>
+                                                    <a class="dropdown-item" href="#"><i class="fa fa-file-text-o text-info"></i> Voir Dossier</a>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -91,11 +115,16 @@
     </div>
 
     {% include 'back-end/includes/js.html' %}
+    
     <script>
         $(document).ready(function(){
-            // Amélioration de la recherche
+            // Initialisation DataTables
             var table = $('#myTable').DataTable();
-            $('#myInput').on('keyup', function() { table.search(this.value).draw(); });
+            
+            // Recherche en temps réel
+            $('#myInput').on('keyup', function() { 
+                table.search(this.value).draw(); 
+            });
         });
     </script>
 </body>

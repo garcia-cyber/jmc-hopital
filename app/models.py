@@ -85,24 +85,33 @@ class Service(models.Model):
 
 # 6. PATIENT =======================================================
 class Patient(models.Model):
+    # Champ unique pour l'identification
     code_patient = models.CharField(max_length=20, unique=True, editable=False)
+    
+    # Informations personnelles
     noms = models.CharField(max_length=100)
-    service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name='patients', null=True)
     sexe = models.CharField(max_length=1, choices=[('M', 'Masculin'), ('F', 'Féminin')])
     age = models.CharField(max_length=30)
     adresse = models.TextField()
     telephone = models.CharField(max_length=20)
+    
+    # Statut du paiement de la fiche
     fiche_payee = models.BooleanField(default=False)
     
+    # Relation avec Service (en utilisant le nom du modèle entre guillemets pour éviter les erreurs)
+    service = models.ForeignKey('Service', on_delete=models.PROTECT, related_name='patients', null=True)
+    
+    # Audit et traçabilité
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='patients_crees')
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        """Génération automatique du matricule patient à la création."""
         if not self.code_patient:
-            # Remplacement de datetime.now() par timezone.now() pour la cohérence des fuseaux horaires
             annee = timezone.now().year
             prefixe = f"MLY-{annee}-"
+            # On récupère le dernier patient créé avec ce préfixe
             last_patient = Patient.objects.filter(code_patient__startswith=prefixe).order_by('id').last()
             
             if last_patient:
@@ -111,10 +120,15 @@ class Patient(models.Model):
             else:
                 new_id = 1
             self.code_patient = f"{prefixe}{new_id:04d}"
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.noms} ({self.code_patient})"
+
+    class Meta:
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
 
 
 # ============================================================================
@@ -152,6 +166,12 @@ class Facture(models.Model):
     prestations = models.ManyToManyField(Prestation, related_name='factures')
     est_payee = models.BooleanField(default=False)
 
+
+    @property
+    def reste_a_payer(self):
+        total_paye = sum(p.montant_paye for p in self.paiements.all())
+        return self.montant_total - total_paye
+        
     def __str__(self):
         return f"Facture #{self.id} - {self.patient.noms}"
 

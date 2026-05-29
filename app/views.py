@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm ,UserChangeForm
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import transaction
 
 # Create your views here.
 
@@ -562,61 +563,63 @@ def liste_signes_vitaux(request):
 @login_required
 def payer_fiche_partiel(request, patient_id):
     patient = get_object_or_404(Patient, pk=patient_id)
-    prestation_fiche = Prestation.objects.filter(categorie='ADM').first()
-    
-    if not prestation_fiche:
-        messages.error(request, "Erreur : La prestation 'Fiche' n'est pas configurée.")
-        return redirect('enregistrement_patient')
-
+    prestation = Prestation.objects.filter(categorie='ADM').first()
     config = ConfigurationHopital.objects.first()
     taux = float(config.taux_usd_en_cdf) if config else 2500.00
     
-    # Récupérer la facture en cours ou en créer une nouvelle
+    if not prestation:
+        messages.error(request, "Erreur : La prestation 'Fiche' n'est pas configurée.")
+        return redirect('enregistrement_patient')
+
+    # 1. On récupère LA facture unique du patient (non payée)
+    # Si elle n'existe pas, on la crée une seule fois.
     facture, created = Facture.objects.get_or_create(
-        patient=patient, est_payee=False,
-        defaults={'montant_total': float(prestation_fiche.prix)}
+        patient=patient, 
+        est_payee=False,
+        defaults={'montant_total': prestation.prix, 'devise': 'USD'}
     )
+    
     if created:
-        facture.prestations.add(prestation_fiche)
-            
-    # Calcul du reste à payer pour l'affichage
-    total_deja_paye = sum(float(p.montant_paye) for p in facture.paiements.all())
-    reste_a_payer = float(facture.montant_total) - total_deja_paye
+        facture.prestations.add(prestation)
 
     if request.method == 'POST':
         montant_verse = float(request.POST.get('montant', 0))
-        devise = request.POST.get('devise', 'USD')
+        devise_recue = request.POST.get('devise', 'USD')
         
-        # Conversion
-        montant_en_usd = montant_verse / taux if devise == 'CDF' else montant_verse
+        # Calcul : convertir en USD pour la comptabilité
+        montant_en_usd = montant_verse / taux if devise_recue == 'CDF' else montant_verse
         
-        # Sécurité : Vérifier le surplus
-        if montant_en_usd > (reste_a_payer + 0.01):
-            messages.error(request, f"Erreur : Le paiement dépasse le reste à payer ({reste_a_payer:.2f} USD).")
-            return redirect('payer_fiche_partiel', patient_id=patient.id)
-
-        # Enregistrement
-        Paiement.objects.create(
-            facture=facture,
-            montant_paye=montant_en_usd,
-            methode_paiement='CASH'
-        )
-        
-        # Mise à jour statut
-        if (reste_a_payer - montant_en_usd) <= 0.01:
-            facture.est_payee = True
-            facture.save()
-            patient.fiche_payee = True
-            patient.save()
-            messages.success(request, "Paiement complet.")
-        else:
-            messages.info(request, "Paiement partiel enregistré.")
+        # 2. Utilisation d'une transaction pour éviter les erreurs de calcul
+        with transaction.atomic():
+            Paiement.objects.create(
+                facture=facture,
+                montant_paye=montant_en_usd,
+                devise_paiement=devise_recue,
+                taux_applique=taux,
+                methode_paiement='CASH'
+            )
             
+            # 3. Si le reste à payer est soldé, on clôture la facture
+            if facture.reste_a_payer <= 0.01:
+                facture.est_payee = True
+                facture.save()
+                patient.fiche_payee = True
+                patient.save()
+                messages.success(request, "Paiement total effectué.")
+            else:
+                messages.info(request, f"Paiement partiel. Reste : {facture.reste_a_payer:.2f} USD")
+        
         return redirect('enregistrement_patient')
+
+    # Récupération de la fonction pour le menu (comme dans vos autres vues)
+    role = Fonction.objects.filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role else None
+
     
     return render(request, 'back-end/patient/payer_fiche.html', {
-        'patient': patient, 
-        'prestation': prestation_fiche,
+        'patient': patient,
+        'facture': facture,
         'taux': taux,
-        'reste_a_payer': max(0, reste_a_payer)
+        'reste_a_payer': facture.reste_a_payer , 
+        'fonctionKey' : fonctionKey
     })

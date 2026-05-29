@@ -159,21 +159,26 @@ class SigneVital(models.Model):
 # --- Nouveaux modèles ---
 
 class Facture(models.Model):
+    DEVISE_CHOICES = [('USD', 'USD'), ('CDF', 'CDF')]
+    
     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='factures')
     date_creation = models.DateTimeField(auto_now_add=True)
     montant_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    # Lier les prestations à la facture
+    devise = models.CharField(max_length=3, choices=DEVISE_CHOICES, default='USD') # Nouvelle colonne
     prestations = models.ManyToManyField(Prestation, related_name='factures')
     est_payee = models.BooleanField(default=False)
 
+    @property
+    def total_paye(self):
+        # Utilise aggregate pour plus de performance que sum() en python
+        return self.paiements.aggregate(models.Sum('montant_paye'))['montant_paye__sum'] or 0
 
     @property
     def reste_a_payer(self):
-        total_paye = sum(p.montant_paye for p in self.paiements.all())
-        return self.montant_total - total_paye
-        
+        return self.montant_total - self.total_paye
+    
     def __str__(self):
-        return f"Facture #{self.id} - {self.patient.noms}"
+        return f"Facture #{self.id} - {self.patient.noms} ({self.devise})"
 
 class Paiement(models.Model):
     METHODES = [

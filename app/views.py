@@ -358,7 +358,7 @@ def modifier_prestation(request, pk):
         else:
             messages.error(request, "Erreur lors de la mise à jour. Vérifiez les données.")
             
-    return redirect('gestion_prestations')
+    return redirect('gestion_prestations') 
 
 # 15
 # ==================================================================================================
@@ -424,36 +424,33 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
-    # Récupération de tous les patients pour le tableau
-    patients = Patient.objects.all().order_by('-date_creation')
-    
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
-            # On enregistre mais on ne commit pas encore pour pouvoir lier l'utilisateur
             patient = form.save(commit=False)
             patient.created_by = request.user
             patient.save()
+            messages.success(request, f"Patient {patient.noms} enregistré.")
             
-            messages.success(request, f"Patient {patient.noms} enregistré avec succès. Matricule : {patient.code_patient}")
-            return redirect('enregistrement_patient')
+            # REDIRECTION : On envoie l'ID du patient créé vers la vue des signes vitaux
+            return redirect('ajouter_signes_vitaux', patient_id=patient.id)
         else:
-            messages.error(request, "Erreur lors de l'enregistrement. Vérifiez les informations.")
+            messages.error(request, "Erreur lors de l'enregistrement.")
     else:
         form = PatientForm()
 
-    # verification de la fonction
-    role = Fonction.objects.filter(userKey = request.user).first()
+    # Logique pour le tableau des patients
+    patients = Patient.objects.all().order_by('-date_creation')
+    
+    # Gestion des rôles
+    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role else None
 
-    context = {
+    return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
         'form': form,
-        'segment': 'enregistrement_patient', 
-        'fonctionKey' : fonctionKey
-    }
-
-    return render(request, 'back-end/patient/enregistrement_patient.html', context)
+        'fonctionKey': fonctionKey
+    })
 # 18
 # ==================================================================================================
 #  LISTE DES PATIENT(E)S 
@@ -506,4 +503,53 @@ def modifier_patient(request, pk):
         'form': form,
         'patient': patient ,
         'fonctionKey' : fonctionKey
+    })
+
+
+# 20
+# ==================================================================================================
+#  AJOUTE SIGNE VITAUX
+# ==================================================================================================
+@login_required
+def ajouter_signes_vitaux(request, patient_id):
+    # 1. On récupère le patient par son ID
+    patient = get_object_or_404(Patient, pk=patient_id)
+    
+    if request.method == 'POST':
+        form = SigneVitalForm(request.POST)
+        if form.is_valid():
+            # 2. On crée l'objet sans l'enregistrer tout de suite
+            signe_vital = form.save(commit=False)
+            # 3. On lui attribue le patient récupéré plus haut
+            signe_vital.patient = patient
+            signe_vital.save()
+            return redirect('enregistrement_patient') # Remplace par la page de ton choix
+    else:
+        form = SigneVitalForm()
+    role = Fonction.objects.filter(userKey = request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role else None
+
+    return render(request, 'back-end/patient/ajout_signes_vitaux.html', {
+        'form': form, 
+        'patient': patient , 
+        'fonctionKey': fonctionKey
+    })
+
+
+# 21
+# ==================================================================================================
+#  LISTE DE SIGNE VITAUX
+# ==================================================================================================
+@login_required
+def liste_signes_vitaux(request):
+    # Optimisation : select_related récupère le patient en une seule requête
+    signes = SigneVital.objects.select_related('patient').order_by('-date_enregistrement')
+    
+    # Récupération de la fonction pour le menu (comme dans vos autres vues)
+    role = Fonction.objects.filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role else None
+
+    return render(request, 'back-end/patient/liste_signes_vitaux.html', {
+        'signes': signes,
+        'fonctionKey': fonctionKey
     })

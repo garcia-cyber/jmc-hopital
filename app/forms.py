@@ -213,3 +213,22 @@ class ServiceForm(forms.ModelForm):
         if Service.objects.filter(nom__iexact=nom).exists():
             raise forms.ValidationError("Ce service existe déjà dans le système.")
         return nom
+
+
+
+# ==================================================
+# 
+class SigneVitalForm(forms.ModelForm):
+    class Meta:
+        model = SigneVital
+        # On exclut 'patient' car on le remplit automatiquement dans la vue
+        exclude = ['patient', 'date_enregistrement']
+        
+        # Ajoute des classes CSS (Bootstrap) pour faire joli
+        widgets = {
+            'tension_sys': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 120'}),
+            'tension_dia': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 80'}),
+            'temperature': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'poids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5'}),
+            'frequence_cardiaque': forms.NumberInput(attrs={'class': 'form-control'}),
+        }

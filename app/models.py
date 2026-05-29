@@ -117,3 +117,60 @@ class Patient(models.Model):
         return f"{self.noms} ({self.code_patient})"
 
 
+# ============================================================================
+#
+#
+class SigneVital(models.Model):
+    # Lien vers le patient pour l'historique
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    
+    # Les mesures médicales
+    tension_sys = models.IntegerField()
+    tension_dia = models.IntegerField()
+    temperature = models.DecimalField(max_digits=4, decimal_places=1)
+    poids = models.DecimalField(max_digits=5, decimal_places=2)
+    frequence_cardiaque = models.IntegerField()
+    
+    # Date automatique pour créer la chronologie du carnet médical
+    date_enregistrement = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        # Attention : utilisez self.patient.noms (avec un 's') 
+        # au lieu de self.patient.nom
+        return f"Signes vitaux de {self.patient.noms} - {self.date_enregistrement.strftime('%d/%m/%Y %H:%M')}"
+
+
+
+
+# --- Nouveaux modèles ---
+
+class Facture(models.Model):
+    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='factures')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Lier les prestations à la facture
+    prestations = models.ManyToManyField(Prestation, related_name='factures')
+    est_payee = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Facture #{self.id} - {self.patient.noms}"
+
+class Paiement(models.Model):
+    METHODES = [
+        ('CASH', 'Espèces'),
+        ('BANK', 'Virement/Banque'),
+        ('MOBILE', 'Mobile Money'),
+    ]
+    
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE, related_name='paiements')
+    montant_paye = models.DecimalField(max_digits=10, decimal_places=2)
+    methode_paiement = models.CharField(max_length=10, choices=METHODES)
+    date_paiement = models.DateTimeField(default=timezone.now)
+    
+    # Pour les statistiques : on lie la prestation au paiement si nécessaire,
+    # mais il est plus simple de filtrer par la facture.
+    
+    def __str__(self):
+        return f"Paiement {self.montant_paye} USD - Facture #{self.facture.id}"
+
+

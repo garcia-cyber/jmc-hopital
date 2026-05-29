@@ -38,5 +38,12 @@ urlpatterns = [
      # SERVICE
      path('services/', views.gestion_services, name='gestion_services'),
      path('services/modifier/<int:pk>/', views.modifier_service, name='modifier_service'),
+
+     # =================================
+     # SIGNE VITAUX
+
+
+    path('signes-vitaux/<int:patient_id>/', views.ajouter_signes_vitaux, name='ajouter_signes_vitaux'),
+    path('signes-vitaux/liste/', views.liste_signes_vitaux, name='liste_signes_vitaux'),
     
 ]

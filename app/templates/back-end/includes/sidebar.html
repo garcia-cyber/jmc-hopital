@@ -28,6 +28,21 @@
                         </ul>
                     </li>
 
+                     <li class="menu-title"> <span>RECEPTION</span> </li>
+                    <li class="submenu">
+                        <a href="#"><i class="la la-user-injured"></i> <span> Patients </span> <span class="menu-arrow"></span></a>
+                        <ul style="display: none;">
+                            <li><a href="{% url 'enregistrement_patient' %}">Liste des patients</a></li>
+                        </ul>
+                    </li>
+                    <li>
+    <a href="{% url 'liste_signes_vitaux' %}">
+        <i class="la la-stethoscope"></i> 
+        <span>Signes Vitaux</span>
+    </a>
+</li>
+
+
                  
                 <!-- ========================================== -->
                 <!-- 2. MENU RECEPTIONNISTE                     -->
@@ -40,21 +55,31 @@
                             <li><a href="{% url 'enregistrement_patient' %}">Enregistrement</a></li>
                         </ul>
                     </li>
-
+                    <li>
+    <a href="{% url 'liste_signes_vitaux' %}">
+        <i class="la la-stethoscope"></i> 
+        <span>Signes Vitaux</span>
+    </a>
+</li>
 
                     <li class="menu-title"> 
-    <span>Gestion Administrative</span>
-</li>
+                    <span>Gestion Administrative</span>
+                    </li>
 
-<li class="submenu">
-    <a href="#"><i class="la la-briefcase"></i> <span> Prestations </span> <span class="menu-arrow"></span></a>
-    <ul>
-        <li><a href="{% url 'gestion_prestations' %}">Liste des prestations</a></li>
-        <li><a href="{% url 'modifier_taux' %}">Configuration des taux</a></li>
-    </ul>
-</li>
-
-                 
+                    <li class="submenu">
+                        <a href="#"><i class="la la-briefcase"></i> <span> Prestations </span> <span class="menu-arrow"></span></a>
+                    <ul>
+                    <li><a href="{% url 'gestion_prestations' %}">Liste des prestations</a></li>
+                    <li><a href="{% url 'modifier_taux' %}">Configuration des taux</a></li>
+                    </ul>
+                    </li>
+                <!-- ========================================== -->
+                <!-- 3. MENU LABORANTIN                         -->
+                <!-- ========================================== -->
+                 {% elif fonctionKey == 'infirmier'%}
+                 {% elif fonctionKey == 'laborantin'%}
+                 {% elif fonctionKey == 'echographe'%}
+                 {% elif fonctionKey == 'medecin'%}
 
                    
 

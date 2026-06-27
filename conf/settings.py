@@ -10,7 +10,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 🛠️ DÉTECTION DE L'ENVIRONNEMENT RENDER
-IS_IN_PRODUCTION = os.environ.get('RENDER') is not None
+IS_IN_PRODUCTION = os.environ.get('RENDER') is not None 
 
 
 # ==============================================================================

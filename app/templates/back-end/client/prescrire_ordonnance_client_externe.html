@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescrire - {{ client.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header">
+                <h3 class="page-title">Nouvelle Ordonnance : {{ client.noms }}</h3>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" id="prescriptionForm">
+                        {% csrf_token %}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Médicament / Examen</th>
+                                        <th>Posologie / Instructions</th>
+                                        <th>Quantité</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="medicaments-container">
+                                    <tr class="ligne-medicament">
+                                        <td><input type="text" name="designation[]" class="form-control" placeholder="Nom..." required></td>
+                                        <td><input type="text" name="posologie[]" class="form-control" placeholder="Ex: 2 fois/jour..." required></td>
+                                        <td><input type="text" name="quantite[]" class="form-control" placeholder="Qté..."></td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger remove-btn"><i class="fa fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" id="add-btn" class="btn btn-secondary btn-sm mb-3">
+                            <i class="fa fa-plus"></i> Ajouter une ligne
+                        </button>
+
+                        <div class="form-group">
+                            <label class="font-weight-bold">Notes générales</label>
+                            <textarea name="note_globale" class="form-control" rows="3" placeholder="Instructions complémentaires..."></textarea>
+                        </div>
+
+                        <div class="text-right mt-4">
+                            <a href="{% url 'detail_client_externe' client.id %}" class="btn btn-light">Annuler</a>
+                            <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> Enregistrer l'ordonnance</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ajouter une nouvelle ligne
+    document.getElementById('add-btn').addEventListener('click', function() {
+        let container = document.getElementById('medicaments-container');
+        let newRow = container.firstElementChild.cloneNode(true);
+        // Vider les inputs de la ligne clonée
+        newRow.querySelectorAll('input').forEach(input => input.value = '');
+        container.appendChild(newRow);
+    });
+
+    // Supprimer une ligne
+    document.addEventListener('click', function(e) {
+        if(e.target.closest('.remove-btn')) {
+            let rows = document.querySelectorAll('.ligne-medicament');
+            if(rows.length > 1) {
+                e.target.closest('.ligne-medicament').remove();
+            } else {
+                alert("Vous devez garder au moins une ligne.");
+            }
+        }
+    });
+</script>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

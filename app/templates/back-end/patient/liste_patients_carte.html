@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Patients Fidèles - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table-container { background: #ffffff; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .custom-table thead tr { background: #f0fdf4; }
+        .custom-table thead th { border: none !important; color: #166534; font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 1px; padding: 20px !important; }
+        .custom-table td { padding: 18px !important; vertical-align: middle !important; border-top: 1px solid #f1f5f9; }
+        .badge-fid { padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; color: #166534; background: #dcfce7; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title">Patients avec Carte de Fidélité</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                <li class="breadcrumb-item active">Patients Fidèles</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-container">
+                            <div class="table-responsive">
+                                <table class="table custom-table" id="myTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Matricule</th>
+                                            <th>Patient</th>
+                                            <th>Contact</th>
+                                            <th>Type Actuel</th>
+                                            <th>Date Activation</th>
+                                            <th class="text-center">Statut</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients %}
+                                        <tr>
+                                            <td><span class="badge badge-soft-info" style="font-family:monospace;">{{ patient.code_patient }}</span></td>
+                                            <td>
+                                                <div style="font-weight: 600; color: #2d3748;">{{ patient.noms }}</div>
+                                            </td>
+                                            <td>{{ patient.telephone }}</td>
+                                            <td>{{ patient.get_type_patient_display }}</td>
+                                            <td>{{ patient.date_creation|date:"d/m/Y" }}</td>
+                                            <td class="text-center">
+                                                <span class="badge-fid"><i class="fa fa-star mr-1"></i> Active</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if patient.type_patient == 'FIDELE' %}
+                                                    <button class="btn btn-sm btn-light" disabled title="Statut définitif">
+                                                        <i class="fa fa-lock"></i> Verrouillé
+                                                    </button>
+                                                {% else %}
+                                                    <a href="{% url 'modifier_type_patient' patient.id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fa fa-pencil"></i> Modifier
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">Aucun patient n'a encore activé sa carte de fidélité.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        $(document).ready(function() {
+            $('#myTable').DataTable();
+        });
+    </script>
+</body>
+</html>

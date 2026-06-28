@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Liste des Sessions - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title">Sessions de Soins</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item active">Suivi des paiements et soldes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="tableSessions" class="table table-hover table-striped border">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Patient</th>
+                                                <th>Prestations</th>
+                                                <th>Total</th>
+                                                <th>Réductions</th>
+                                                <th>Reste à payer</th>
+                                                <th>Statut</th>
+                                                <th class="text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for session in sessions %}
+                                            <tr>
+                                                <td>{{ session.date_creation|date:"d/m/Y H:i" }}</td>
+                                                <td><h6 class="mb-0">{{ session.patient.noms }}</h6></td>
+                                                <td>
+                                                    <ul class="list-unstyled mb-0 text-muted small">
+                                                        {% for item in session.items.all %}
+                                                            <li><i class="fa fa-caret-right text-primary"></i> {{ item.prestation.libelle }} ({{ item.quantite }} x {{ item.prix_facture }} USD)</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </td>
+                                                <td><strong>{{ session.total_a_payer }} USD</strong></td>
+                                                <td><span class="text-info">{{ session.total_reductions|floatformat:2 }} USD</span></td>
+                                                <td>
+                                                    {% if session.actuel_reste > 0 %}
+                                                        <span class="badge badge-soft-danger">{{ session.actuel_reste|floatformat:2 }} USD</span>
+                                                    {% else %}
+                                                        <span class="badge badge-soft-success">Soldé</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if session.est_payee %}
+                                                        <span class="badge badge-success">Payée</span>
+                                                    {% else %}
+                                                        <span class="badge badge-warning">En attente</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-right">
+                                                    {% if not session.est_payee %}
+                                                        <a href="{% url 'paiement_session' session.id %}" class="btn btn-primary btn-sm shadow-none">
+                                                            <i class="fa fa-money"></i> Payer
+                                                        </a>
+                                                    {% else %}
+                                                        <button class="btn btn-light btn-sm" disabled><i class="fa fa-check"></i> Soldé</button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#tableSessions').DataTable({
+                "order": [[ 0, "desc" ]], // Tri par défaut : plus récent en premier
+                "language": {
+                    "search": "Rechercher un patient ou une date :",
+                    "lengthMenu": "Afficher _MENU_ sessions par page",
+                    "info": "Affichage de _START_ à _END_ sur _TOTAL_ sessions",
+                    "paginate": {
+                        "next": "Suivant",
+                        "previous": "Précédent"
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

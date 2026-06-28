@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Accouchement | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <h3 class="mb-4">Paiement pour : <strong>{{ cr.consultation.triage.patient.noms }}</strong></h3>
+                
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-primary text-white">Détails du Forfait</div>
+                            <div class="card-body">
+                                <p class="mb-2"><strong>Prix :</strong> {{ cr.prestation.prix }} USD</p>
+                                <p class="mb-0"><strong>Reste à payer :</strong> <span class="text-danger font-weight-bold">{{ reste_a_payer }} USD</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-8">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                {% if fonctionKey|lower == 'receptionniste' %}
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        
+                                        <div class="row">
+                                            <div class="col-12 col-sm-6 form-group">
+                                                <label>Montant versé</label>
+                                                <input type="number" name="montant_verse" step="0.01" class="form-control" placeholder="0.00" required>
+                                            </div>
+                                            <div class="col-12 col-sm-6 form-group">
+                                                <label>Réduction (USD)</label>
+                                                <input type="number" name="montant_reduction" step="0.01" value="0" class="form-control">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Devise</label>
+                                            <select name="devise" class="form-control">
+                                                <option value="USD">USD</option>
+                                                <option value="CDF">CDF (Taux : {{ taux }})</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
+                                            <button type="submit" class="btn btn-success mb-2 mb-sm-0">
+                                                <i class="fa fa-save"></i> Enregistrer le paiement
+                                            </button>
+                                            <a href="{% url 'liste_cr_accouchement' %}" class="btn btn-secondary">Annuler</a>
+                                        </div>
+                                    </form>
+                                {% else %}
+                                    <div class="alert alert-danger">
+                                        <i class="fa fa-lock"></i> Accès refusé. Seule la réceptionniste peut effectuer des paiements.
+                                    </div>
+                                    <a href="{% url 'liste_cr_accouchement' %}" class="btn btn-primary">Retour à la liste</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

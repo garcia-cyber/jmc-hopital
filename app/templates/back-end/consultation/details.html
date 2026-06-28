@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Détails Consultation - Moyanoli Médicale</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="page-header">
+                    <div class="row">
+                        <div class="col-12">
+                            <h3 class="page-title">Consultation : {{ session.patient.noms }}</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Détails de la Session</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    {% if fonctionKey != 'infirmier' %}
+                    <div class="col-12 col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h4 class="card-title">Informations Session</h4>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Date :</strong> {{ session.date_creation|date:"d/m/Y H:i" }}</p>
+                                <p><strong>Total à payer :</strong> {{ session.total_a_payer }} USD</p>
+                                <p><strong>Statut :</strong> 
+                                    {% if session.est_payee %}
+                                        <span class="badge badge-success">Payée</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">En attente</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12 {% if fonctionKey != 'infirmier' %}col-md-8{% endif %}">
+                        <div class="card shadow-sm">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="card-title">Historique des Signes Vitaux</h4>
+                                {% if fonctionKey == 'infirmier' %}
+                                    <a href="{% url 'saisir_signes' session.patient.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fa fa-plus"></i> Nouveau
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="tableSignes" class="table table-hover table-striped table-bordered">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Tension</th>
+                                                <th>Temp.</th>
+                                                <th class="d-none d-sm-table-cell">Pouls</th>
+                                                <th class="d-none d-sm-table-cell">Poids</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for signe in historique_signes %}
+                                            <tr>
+                                                <td>{{ signe.date_prelevement|date:"d/m/y H:i" }}</td>
+                                                <td><span class="text-primary font-weight-bold">{{ signe.tension_arterielle }}</span></td>
+                                                <td>{{ signe.temperature }} °C</td>
+                                                <td class="d-none d-sm-table-cell">{{ signe.frequence_cardiaque }} bpm</td>
+                                                <td class="d-none d-sm-table-cell">{{ signe.poids }} kg</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center">Aucun signe vital enregistré.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('#tableSignes').DataTable({
+                "language": {
+                    "search": "🔍 Rechercher :",
+                    "lengthMenu": "Afficher _MENU_ par page",
+                    "info": "Affichage _START_ à _END_ de _TOTAL_ mesures",
+                    "paginate": { "next": "Suivant", "previous": "Précédent" }
+                },
+                "order": [[ 0, "desc" ]] // Trie par date décroissante
+            });
+        });
+    </script>
+</body>
+</html>

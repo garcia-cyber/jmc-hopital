@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Certificat de Décès - {{ deces.patient.noms|default:deces.nom_patient_externe }}</title>
+    <style>
+        :root { --primary-color: #006064; }
+        @page { size: A4; margin: 20mm; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: #2d3436; 
+            padding: 40px; 
+            border: 2px solid var(--primary-color); 
+            min-height: 270mm;
+            box-sizing: border-box;
+        }
+
+        /* Header inspiré de l'ordonnance */
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--primary-color); padding-bottom: 20px; margin-bottom: 40px; }
+        .logo { max-width: 120px; }
+        .hospital-info { text-align: right; }
+        .hospital-info h1 { margin: 0; color: var(--primary-color); font-size: 24px; text-transform: uppercase; }
+
+        /* Titre */
+        .title { text-align: center; font-size: 22px; font-weight: bold; margin: 40px 0; color: var(--primary-color); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Contenu */
+        .content { font-size: 16px; line-height: 1.8; text-align: justify; }
+        
+        /* Grille de données propre */
+        .data-grid { margin: 40px 0; padding: 20px; background: #f9fbfb; border-radius: 8px; border-left: 4px solid var(--primary-color); }
+        .data-row { display: flex; margin-bottom: 12px; }
+        .label { width: 220px; font-weight: 600; color: var(--primary-color); }
+
+        /* Footer / Signature */
+        .footer { margin-top: 80px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .signature { text-align: center; border-top: 1px solid #333; width: 250px; padding-top: 10px; font-weight: bold; }
+        
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{% static 'front-end/assets/dr/logo.jpeg' %}" alt="Logo" class="logo">
+        <div class="hospital-info">
+            <h1>Moyanoli Médicale</h1>
+            <p style="margin:0; font-size: 0.9rem;">{{ deces.etablissement|default:"Hôpital de Référence" }}</p>
+        </div>
+    </div>
+
+    <div class="title">Certificat de Constatation de Décès</div>
+
+    <div class="content">
+        <p>Je soussigné(e), <strong>Dr. {{ deces.certifie_par }}</strong>, médecin habilité à exercer sous le numéro CNOM <strong>{{ deces.numero_cnom }}</strong>, certifie par la présente avoir constaté le décès de la personne dont l'identité est détaillée ci-dessous :</p>
+        
+        <div class="data-grid">
+            <div class="data-row"><div class="label">Nom complet :</div><div>{{ deces.patient.noms|default:deces.nom_patient_externe }}</div></div>
+            <div class="data-row"><div class="label">Date de naissance :</div><div>{{ deces.date_naissance|date:"d/m/Y"|default:"Non renseignée" }}</div></div>
+            <div class="data-row"><div class="label">Domicile :</div><div>{{ deces.adresse_avenue }} n°{{ deces.adresse_numero }}, {{ deces.adresse_commune }}</div></div>
+            <div class="data-row"><div class="label">Date et heure du décès :</div><div style="color: #d32f2f; font-weight: bold;">{{ deces.date_deces|date:"d/m/Y à H:i" }}</div></div>
+            <div class="data-row"><div class="label">Cause du décès :</div><div>{{ deces.cause_deces|default:"Non spécifiée" }}</div></div>
+        </div>
+        
+        <p>En foi de quoi, ce certificat est établi pour servir et valoir ce que de droit.</p>
+    </div>
+
+    <div class="footer">
+        <div style="font-size: 14px;">
+            Fait à Kinshasa, le {% now "d/m/Y" %}
+        </div>
+        <div class="signature">
+            Signature & Cachet
+        </div>
+    </div>
+
+    <div class="no-print" style="text-align: center; margin-top: 60px;">
+        <button onclick="window.print()" style="padding: 12px 30px; background: var(--primary-color); color: #fff; border: none; cursor: pointer; border-radius: 5px;">
+            Imprimer le Certificat
+        </button>
+    </div>
+
+</body>
+</html>

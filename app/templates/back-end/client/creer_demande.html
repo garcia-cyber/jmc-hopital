@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Sélection Examens - {{ client.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .category-box { border: 1px solid #dee2e6; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .category-title { font-weight: 700; color: #2c3e50; border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-bottom: 15px; display: block; text-transform: uppercase; font-size: 0.9rem; }
+        .scroll-list { max-height: 350px; overflow-y: auto; padding-right: 10px; }
+        .checkbox-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+        .search-input { border: 1px solid #ced4da; border-radius: 4px; padding: 8px; font-size: 0.85rem; width: 100%; margin-bottom: 10px; }
+        .price-tag { color: #28a745; font-weight: bold; float: right; }
+        .total-box { background: #e9ecef; padding: 15px; border-radius: 8px; font-weight: bold; text-align: right; margin-top: 20px; }
+        .btn-more { color: #007bff; cursor: pointer; text-decoration: underline; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title">Nouvelle demande d'examens</h3>
+                            <p class="text-muted">Patient : <strong>{{ client.noms }}</strong> | Rôle : {{ fonctionKey }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" id="examenForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="category-box">
+                                <span class="category-title"><i class="fa fa-flask"></i> Laboratoire</span>
+                                <input type="text" class="search-input" placeholder="Rechercher labo...">
+                                <div class="scroll-list">
+                                    {% for p in prestations_labo %}
+                                        <div class="checkbox-item" style="display:none;">
+                                            <label class="w-100">
+                                                <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="category-box">
+                                <span class="category-title"><i class="fa fa-x-ray"></i> Radiographie</span>
+                                <input type="text" class="search-input" placeholder="Rechercher radio...">
+                                <div class="scroll-list">
+                                    {% for p in prestations_radio %}
+                                        <div class="checkbox-item" style="display:none;">
+                                            <label class="w-100">
+                                                <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="category-box">
+                                <span class="category-title"><i class="fa fa-stethoscope"></i> Échographie</span>
+                                <input type="text" class="search-input" placeholder="Rechercher écho...">
+                                <div class="scroll-list">
+                                    {% for p in prestations_echo %}
+                                        <div class="checkbox-item" style="display:none;">
+                                            <label class="w-100">
+                                                <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 total-box">
+                            <h4>Total à payer : <span id="total-display" class="text-primary">0.00</span> $</h4>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="{% url 'enregistrer_client_externe' %}" class="btn btn-secondary btn-lg mr-3">Annuler</a>
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="fa fa-save"></i> Générer la demande</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+
+    <script>
+        $(document).ready(function() {
+            const LIMIT = 5;
+
+            // Fonction pagination
+            function applyPagination() {
+                $('.category-box').each(function() {
+                    let items = $(this).find('.checkbox-item');
+                    items.hide().slice(0, LIMIT).show();
+                    
+                    if (items.length > LIMIT && $(this).find('.btn-more').length === 0) {
+                        $(this).append('<div class="btn-more">Voir plus...</div>');
+                    }
+                });
+            }
+
+            applyPagination();
+
+            // Clic Voir plus
+            $(document).on('click', '.btn-more', function() {
+                $(this).closest('.category-box').find('.checkbox-item').show();
+                $(this).hide();
+            });
+
+            // Recherche
+            $('.search-input').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                var box = $(this).closest('.category-box');
+                box.find('.checkbox-item').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+                
+                if (value !== "") { box.find('.btn-more').hide(); }
+                else { box.find('.btn-more').show(); applyPagination(); }
+            });
+
+            // Calcul Total
+            $('.examen-checkbox').on('change', function() {
+                let total = 0;
+                $('.examen-checkbox:checked').each(function() {
+                    total += parseFloat($(this).attr('data-prix')) || 0;
+                });
+                $('#total-display').text(total.toFixed(2));
+            });
+        });
+    </script>
+</body>
+</html>

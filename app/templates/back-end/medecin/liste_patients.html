@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Registre des Patients</title>
+        {% include 'back-end/includes/css.html' %}
+        <style>
+            .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .table thead th { background-color: #2c3e50; color: #ecf0f1; text-transform: uppercase; font-size: 0.85rem; }
+            .badge-code { background-color: #3498db; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+            .btn-action { transition: transform 0.2s; }
+            .btn-action:hover { transform: scale(1.05); }
+            .search-container { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #3498db; }
+            /* Styles pour les tabs médicaux */
+            .med-tab { font-size: 0.70rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; display: inline-block; margin-top: 5px; }
+            #hosp_tab { background-color: #f39c12; color: #fff; }
+            #sv_tab { background-color: #27ae60; color: #fff; }
+            .tab-inactive { background-color: #e0e0e0 !important; color: #7f8c8d !important; }
+        </style>
+    </head>
+    <body>
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title text-primary">Registre des Patients Admis</h3>
+                                <p class="text-muted">Gestion des dossiers médicaux, hospitalisations et suivi vital</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row search-container">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-search"></i></span></div>
+                                <input type="text" id="searchInput" class="form-control" placeholder="Rechercher par nom ou code patient...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="patientTable">
+                                    <thead>
+                                        <tr>
+                                            <th>CODE</th>
+                                            <th>IDENTITÉ DU PATIENT</th>
+                                            <th>SEXE</th>
+                                            <th>SERVICE</th>
+                                            <th class="text-right">INTERVENTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="patientTableBody">
+                                        {% for patient in patients %}
+                                        <tr class="align-middle">
+                                            <td><span class="badge-code">{{ patient.code_patient }}</span></td>
+                                            
+                                            <td>
+                                                <div class="font-weight-bold text-dark">{{ patient.noms }}</div>
+                                                <div>
+                                                    <span id="hosp_tab" class="med-tab {% if not patient.hosp_en_cours %}tab-inactive{% endif %}">
+                                                        <i class="fa fa-bed"></i> {% if patient.hosp_en_cours %}Lit: {{ patient.hosp_en_cours.lit.nom_lit }}{% else %}Non Hosp{% endif %}
+                                                    </span>
+                                                    <span id="sv_tab" class="med-tab {% if not patient.a_signes_vitaux %}tab-inactive{% endif %}">
+                                                        <i class="fa fa-heartbeat"></i> SV
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            <td>{{ patient.get_sexe_display }}</td>
+                                            <td><span class="text-secondary"><i class="fa fa-hospital-o"></i> {{ patient.service.nom|default:"Non assigné" }}</span></td>
+                                            
+                                            <td class="text-right">
+                                                {% if patient.consultation_active %}
+                                                    <a href="{% url 'enregistrer_ordonnance_urgence' patient.consultation_active.id %}" 
+                                                       class="btn btn-sm btn-outline-danger btn-action mr-2">
+                                                        <i class="fa fa-heartbeat"></i> Urgence
+                                                    </a>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-outline-light mr-2" disabled><i class="fa fa-ban"></i></button>
+                                                {% endif %}
+                                                
+                                                <a href="{% url 'dossier_medical_complet' patient.id %}" class="btn btn-sm btn-primary btn-action">
+                                                    <i class="fa fa-folder-open"></i> Ouvrir Dossier
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-5 text-muted">
+                                                <i class="fa fa-folder-open-o fa-3x"></i><br>Aucun dossier patient en attente.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            // Recherche en temps réel
+            document.getElementById('searchInput').addEventListener('keyup', function() {
+                let filter = this.value.toLowerCase();
+                let rows = document.querySelectorAll('#patientTableBody tr');
+                rows.forEach(row => {
+                    row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+                });
+            });
+        </script>
+    </body>
+</html>

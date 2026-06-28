@@ -89,6 +89,10 @@
                                 <div class="clinical-title"><i class="fa fa-comment-medical"></i> Motif de Consultation</div>
                                 <div class="clinical-text shadow-sm">{{ consultation.motif_consultation|linebreaksbr|default:"Non spécifié" }}</div>
 
+                                <div class="clinical-title"><i class="fa fa-comment-medical"></i>Antecedent</div>
+                                <div class="clinical-text shadow-sm">{{ consultation.antecedent|linebreaksbr|default:"Non spécifié" }}</div>
+
+
                                 <div class="clinical-title"><i class="fa fa-history"></i> Histoire de la maladie</div>
                                 <div class="clinical-text shadow-sm">{{ consultation.histoire_maladie|linebreaksbr|default:"Non spécifiée" }}</div>
 

@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique des Soins | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table-responsive { overflow-x: auto; }
+        .search-container { margin-bottom: 20px; }
+        .badge { padding: 5px 10px; border-radius: 4px; font-size: 0.85em; }
+        /* Ajustement pour les petits écrans */
+        @media (max-width: 768px) {
+            .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>Historique Complet des Soins</h3>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Rechercher un patient ou une prestation..." onkeyup="filterTable()">
+                </div>
+                
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0" id="historiqueTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Prestation</th>
+                                        <th>Statut</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+    {% for paiement in paiements %}
+    <tr>
+        <td class="align-middle">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+        <td class="align-middle"><strong>{{ paiement.soins_lies.first.nom_patient }}</strong></td>
+        <td class="align-middle">
+            {% for soin in paiement.soins_lies.all %}
+                <span class="badge badge-light border">{{ soin.prestation.libelle }}</span>
+            {% endfor %}
+        </td>
+        <td class="align-middle">
+            <span class="badge badge-success">Payé</span>
+        </td>
+        <td class="text-center align-middle">
+            <a href="{% url 'facture_print' paiement.id %}" class="btn btn-sm btn-info" target="_blank">
+                <i class="fa fa-print"></i> Facture
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterTable() {
+            let input = document.getElementById("searchInput").value.toLowerCase();
+            let table = document.getElementById("historiqueTable");
+            let tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let patientTd = tr[i].getElementsByTagName("td")[1];
+                let prestationTd = tr[i].getElementsByTagName("td")[2];
+                if (patientTd || prestationTd) {
+                    let text = (patientTd.textContent + prestationTd.textContent).toLowerCase();
+                    tr[i].style.display = text.indexOf(input) > -1 ? "" : "none";
+                }
+            }
+        }
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

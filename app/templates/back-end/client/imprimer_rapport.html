@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Rapport Médical - {{ demande.client.noms }}</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.5; }
+        
+        /* En-tête de l'hôpital */
+        .hospital-header { display: flex; justify-content: space-between; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }
+        .hospital-info h1 { margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; }
+        .doc-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; text-decoration: underline; }
+
+        /* Infos patient */
+        .patient-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 30px; }
+        
+        /* Tableaux */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #2c3e50; color: white; padding: 10px; text-align: left; }
+        td { border: 1px solid #ddd; padding: 10px; }
+        
+        /* Résultats */
+        .result-item { margin-bottom: 20px; page-break-inside: avoid; }
+        .exam-name { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        
+        /* Print */
+        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #777; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="hospital-header">
+        <div class="hospital-info">
+            <h1>Hôpital medical Moyanoli</h1>
+            <p>Service d'Imagerie et Laboratoire<br>Kinshasa, RDC | Tél: +243 000 000 000</p>
+        </div>
+        <div style="text-align: right;">
+            <p>Date : {% now "d/m/Y" %}<br>Réf : #{{ demande.id }}</p>
+        </div>
+    </div>
+
+    <div class="doc-title">FICHE DE CONSULTATION ET PAIEMENT</div>
+
+    <div class="patient-box">
+        <strong>Patient :</strong> {{ demande.client.noms }} &nbsp;&nbsp;|&nbsp;&nbsp; 
+        <strong>Âge :</strong> {{ demande.client.age }} &nbsp;&nbsp;|&nbsp;&nbsp; 
+        <strong>Sexe :</strong> {{ demande.client.get_sexe_display }}
+    </div>
+
+    <h3 style="color: #2c3e50; border-bottom: 1px solid #2c3e50;">Historique des Paiements</h3>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Montant Versé</th>
+            <th>Réduction</th>
+            <th>Devise</th>
+        </tr>
+        {% for p in paiements %}
+        <tr>
+            <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
+            <td>{{ p.montant_verse }}</td>
+            <td>{{ p.montant_reduction }}</td>
+            <td>{{ p.devise }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Aucun paiement enregistré.</td></tr>
+        {% endfor %}
+    </table>
+
+    <h3 style="color: #2c3e50; border-bottom: 1px solid #2c3e50;">Résultats des Examens</h3>
+    {% for r in resultats %}
+        <div class="result-item">
+            <div class="exam-name">Examen : {{ r.prestation.libelle }}</div>
+            <p>{{ r.rapport|linebreaks }}</p>
+        </div>
+    {% empty %}
+        <p>En attente des résultats du laboratoire.</p>
+    {% endfor %}
+
+    <div class="footer">
+        <p>Ce document est une pièce officielle de l'hôpital. Cachet et signature :</p>
+        <br><br><br>
+        <button class="no-print" onclick="window.print()" style="padding: 10px 25px; background: #2c3e50; color: white; border: none; cursor:pointer;">Imprimer le rapport</button>
+    </div>
+</body>
+</html>

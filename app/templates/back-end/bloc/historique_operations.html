@@ -1,0 +1,116 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Suivi des Opérations | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        @media (max-width: 768px) {
+            .btn-group-sm { display: flex; flex-direction: column; }
+            .btn-sm { margin-bottom: 5px; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title">Suivi des Opérations</h3>
+                        </div>
+                        <div class="col-auto">
+                            <form method="GET" class="form-inline">
+                                <input type="text" name="q" class="form-control" placeholder="Rechercher patient..." value="{{ query|default:'' }}">
+                                <button type="submit" class="btn btn-primary ml-2"><i class="fa fa-search"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-bordered mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Date Prévue</th>
+                                                <th>Patient</th>
+                                                <th>Intervention</th>
+                                                <th>Chirurgien</th>
+                                                <th>Statut</th>
+                                                <th>État Financier</th>
+                                                <th class="text-center">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for op in historique %}
+                                            <tr>
+                                                <td>{{ op.date_programmee|date:"d/m/Y H:i" }}</td>
+                                                <td><strong>{{ op.consultation.triage.patient.noms }}</strong></td>
+                                                <td>{{ op.prestation.libelle|default:"Non défini" }}</td>
+                                                <td>{{ op.chirurgien.username|default:"---" }}</td>
+                                                <td>
+                                                    {% if op.statut == 'TERMINE' %}<span class="badge badge-success">Terminé</span>
+                                                    {% elif op.statut == 'EN_COURS' %}<span class="badge badge-warning text-white">En cours</span>
+                                                    {% else %}<span class="badge badge-secondary">En attente</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if op.reste_a_payer > 0 %}
+                                                        <span class="badge badge-warning">{{ op.reste_a_payer|floatformat:2 }} USD restants</span>
+                                                    {% else %}
+                                                        <span class="badge badge-success">Soldé</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="btn-group-sm">
+                                                        <a href="{% url 'voir_rapport' op.id %}" class="btn btn-sm btn-info">
+                                                            <i class="fa fa-file-text"></i> Voir
+                                                        </a>
+                                                        
+                                                        {% if fonctionKey == 'medecin' %}
+                                                        <a href="{% url 'rediger_rapport' op.id %}" class="btn btn-sm btn-warning ml-1">
+                                                            <i class="fa fa-pencil"></i> Rédiger
+                                                        </a>
+                                                        {% endif %}
+                                                        
+                                                        {% if fonctionKey == 'receptionniste' %}
+                                                            {% if op.reste_a_payer > 0 %}
+                                                            <a href="{% url 'encaisser_bloc' op.id %}" class="btn btn-sm btn-success ml-1">
+                                                                <i class="fa fa-credit-card"></i> Payer
+                                                            </a>
+                                                            {% else %}
+                                                            <button class="btn btn-sm btn-secondary ml-1" disabled>
+                                                                <i class="fa fa-check"></i> Payé
+                                                            </button>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr><td colspan="7" class="text-center py-4 text-muted">Aucune opération trouvée.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

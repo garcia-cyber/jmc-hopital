@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultats Examens - {{ consultation.triage.patient.noms }}</title>
+    <style>
+        :root { --primary-color: #006064; --bg-light: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; color: #2d3436; max-width: 750px; margin: 40px auto; padding: 40px; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.05); border-top: 8px solid var(--primary-color); }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { max-width: 120px; }
+        .hospital-info { text-align: right; }
+        .hospital-info h1 { margin: 0; color: var(--primary-color); font-size: 24px; text-transform: uppercase; }
+        
+        .patient-card { background: var(--bg-light); padding: 15px 20px; border-radius: 8px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .patient-card div strong { color: var(--primary-color); display: block; font-size: 0.8rem; text-transform: uppercase; }
+        
+        h3 { border-left: 4px solid var(--primary-color); padding-left: 10px; color: var(--primary-color); margin-top: 30px; font-size: 1.1rem; }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; }
+        th { background: #f8f9fa; color: #636e72; padding: 12px; text-align: left; font-size: 0.9rem; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #f1f1f1; vertical-align: top; }
+        
+        .signature-box { margin-top: 50px; display: flex; justify-content: flex-end; }
+        .stamp-area { width: 250px; text-align: center; }
+        
+        @media print { 
+            body { box-shadow: none; border-top: none; margin: 0; }
+            .no-print { display: none; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{% static 'front-end/assets/dr/logo.jpeg' %}" alt="Logo" class="logo">
+        <div class="hospital-info">
+            <h1>Moyanoli</h1>
+            <p style="margin:0; font-size: 0.9rem;">Résultats d'examens médicaux</p>
+        </div>
+    </div>
+
+    <div class="patient-card">
+        <div><strong>Patient</strong> {{ consultation.triage.patient.noms }}</div>
+        <div><strong>Date prélèvement</strong> {{ consultation.triage.date_prelevement|date:"d/m/Y H:i" }}</div>
+    </div>
+
+    <h3>Synthèse des Résultats</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Examen</th>
+                <th>Résultat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for exam in examens %}
+            <tr>
+                <td><span style="font-size: 0.8rem; background: #e0f2f1; padding: 2px 6px; border-radius: 4px; color: var(--primary-color);">{{ exam.prestation.categorie }}</span></td>
+                <td><strong>{{ exam.prestation.libelle }}</strong></td>
+                <td>{{ exam.resultat }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="color: #999;">Aucun résultat disponible.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="signature-box">
+        <div class="stamp-area">
+            <p>Signature et Cachet</p>
+            <br><br>
+            <div style="border-top: 1px solid #333; width: 100%;"></div>
+        </div>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <button class="no-print" onclick="window.print()" style="padding: 10px 25px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Imprimer les résultats
+        </button>
+        <a href="javascript:history.back()" class="no-print" style="margin-left: 15px; color: #636e72;">Retour</a>
+    </div>
+
+</body>
+</html>

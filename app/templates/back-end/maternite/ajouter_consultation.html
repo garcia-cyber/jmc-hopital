@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+{% load static %}
+{% load crispy_forms_tags %} <html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Consultation Maternité - {{ dossier.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card { border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: none; }
+        .history-item { border-left: 4px solid #4a90e2; padding: 10px; margin-bottom: 10px; background: #f8f9fe; }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+    
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header">
+                <h3 class="page-title">Consultation : {{ dossier.patient.noms }}</h3>
+                <p>ID Patient : {{ dossier.patient.code_patient }}</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card p-4">
+                        <h4>Nouvelle Saisie</h4>
+                        <form method="POST">
+                            {% csrf_token %}
+                            {{ form|crispy }} <button type="submit" class="btn btn-primary mt-3">Enregistrer la consultation</button>
+                            <a href="{% url 'liste_admissions_maternite' %}" class="btn btn-secondary mt-3">Annuler</a>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card p-4">
+                        <h4>Historique Médical</h4>
+                        <div style="max-height: 500px; overflow-y: auto;">
+                            {% for c in dossier.consultations.all|dictsortreversed:"date_consultation" %}
+                            <div class="history-item">
+                                <strong>{{ c.date_consultation|date:"d/m/Y H:i" }}</strong> par {{ c.effectue_par }}
+                                <p class="mb-0">Poids: {{ c.poids }}kg | Tension: {{ c.tension_arterielle }}</p>
+                                <p class="mb-0">Note: {{ c.notes }}</p>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">Aucune consultation précédente.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

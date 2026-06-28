@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi Accouchements | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between mb-4">
+                    <h3>Gestion des Accouchements - {{ fonctionKey }}</h3>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <input type="text" id="searchPatient" class="form-control" placeholder="🔍 Rechercher une patiente...">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="tableCR">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patiente</th>
+                                        <th>Type</th>
+                                        {% if fonctionKey|lower != 'medecin' %}
+                                            <th>Forfait</th>
+                                            <th>Prix</th>
+                                            <th>Réduction</th>
+                                            <th>Statut Paiement</th>
+                                        {% endif %}
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cr in liste_cr %}
+                                    <tr>
+                                        <td>{{ cr.date_creation|date:"d/m/Y H:i" }}</td>
+                                        <td><strong>{{ cr.consultation.triage.patient.noms }}</strong></td>
+                                        <td>{{ cr.get_type_accouchement_display }}</td>
+                                        
+                                        {% if fonctionKey|lower != 'medecin' %}
+                                            <td>{{ cr.prestation.nom }}</td>
+                                            <td>{{ cr.prestation.prix }} USD</td>
+                                            <td>
+                                                {% if cr.paiement and cr.paiement.montant_reduction > 0 %}
+                                                    <span class="text-primary font-weight-bold">- {{ cr.paiement.montant_reduction }} USD</span>
+                                                {% else %}
+                                                    <span class="text-muted">0.00</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if cr.paiement %}
+                                                    {% if cr.paiement.reste_a_payer > 0 %}
+                                                        <span class="badge badge-danger">Dette : {{ cr.paiement.reste_a_payer }}</span>
+                                                    {% else %}
+                                                        <span class="badge badge-success">Soldé</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge badge-warning">À payer : {{ cr.prestation.prix }}</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+
+                                        <td class="text-center">
+                                            {% if fonctionKey|lower == 'medecin' %}
+                                                <a href="{% url 'saisir_fiche_accouchement' cr.consultation.id %}" class="btn btn-sm btn-primary" title="Saisir CR">
+                                                    <i class="fa fa-plus"></i> CR
+                                                </a>
+                                            {% endif %}
+
+                                            {% if fonctionKey|lower == 'receptionniste' %}
+                                                {% if not cr.paiement or cr.paiement.reste_a_payer > 0 %}
+                                                    <a href="{% url 'payer_accouchement' cr.id %}" class="btn btn-sm btn-warning" title="Payer">
+                                                        <i class="fa fa-money-bill"></i> Payer
+                                                    </a>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-success" disabled>Payé</button>
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            <a href="{% url 'voir_cr_accouchement' cr.consultation.id %}" class="btn btn-sm btn-info" title="Voir">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if fonctionKey|lower == 'medecin' %}5{% else %}8{% endif %}" class="text-center">Aucun compte-rendu disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchPatient').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#tableCR tbody tr');
+            rows.forEach(row => {
+                let name = row.cells[1].textContent.toLowerCase();
+                row.style.display = name.includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

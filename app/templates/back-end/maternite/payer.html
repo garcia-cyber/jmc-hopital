@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Maternité - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .payment-container { max-width: 600px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .info-box { background: #ebf8ff; border-left: 4px solid #3182ce; padding: 15px; margin-bottom: 20px; font-size: 0.9rem; }
+        .form-group { margin-bottom: 20px; }
+        .form-control { border-radius: 10px; border: 1px solid #e2e8f0; padding: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="payment-container">
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <h3 class="page-title" style="margin-bottom: 25px;">Paiement : {{ dossier.patient.noms }}</h3>
+                    
+                    <div class="info-box">
+                        <p class="mb-1"><strong>Forfait :</strong> {{ prix_max }} USD</p>
+                        <p class="mb-0"><strong>Taux du jour :</strong> 1 USD = {{ taux }} CDF</p>
+                    </div>
+                    
+                    <form method="POST" action="{% url 'payer_dossier_maternite' dossier.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label>Montant versé</label>
+                            <input type="number" name="montant" id="montant" class="form-control" step="0.01" placeholder="Ex: 50.00" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Devise</label>
+                            <select name="devise" id="devise" class="form-control">
+                                <option value="USD">USD</option>
+                                <option value="CDF">CDF</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Reste à payer (Dette)</label>
+                            <input type="number" name="reste_a_payer" id="reste" class="form-control" step="0.01" readonly required>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-weight: bold;">
+                            <i class="fa fa-save"></i> Enregistrer le paiement
+                        </button>
+                        
+                        <a href="{% url 'liste_admissions_maternite' %}" class="btn btn-link mt-3" style="width: 100%; color: #718096;">Annuler</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputMontant = document.getElementById('montant');
+            const inputReste = document.getElementById('reste');
+            const selectDevise = document.getElementById('devise');
+            
+            const prixMax = parseFloat("{{ prix_max|default:150 }}");
+            const taux = parseFloat("{{ taux|default:2500 }}");
+
+            function updateReste() {
+                const montant = parseFloat(inputMontant.value) || 0;
+                // Calcul selon la devise
+                const montantEnUsd = (selectDevise.value === 'CDF') ? (montant / taux) : montant;
+                
+                const calculReste = Math.max(0, prixMax - montantEnUsd);
+                inputReste.value = calculReste.toFixed(2);
+            }
+
+            inputMontant.addEventListener('input', updateReste);
+            selectDevise.addEventListener('change', updateReste);
+        });
+    </script>
+</body>
+</html>

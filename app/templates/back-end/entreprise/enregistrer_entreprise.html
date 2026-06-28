@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle Entreprise | Moyanoli</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    
+    <style>
+        .page-wrapper { background-color: #f0f2f5; padding: 40px 20px; min-height: 90vh; }
+        
+        .card { 
+            border-radius: 20px; 
+            border: none; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            max-width: 500px; 
+            margin: 0 auto; 
+            overflow: hidden;
+        }
+        
+        .card-header { 
+            background: linear-gradient(135deg, #006064 0%, #00838f 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center;
+        }
+        
+        .card-body { padding: 40px; }
+        
+        .form-group label { color: #546e7a; font-weight: 600; margin-bottom: 8px; display: block; }
+        
+        .form-control { 
+            border-radius: 12px; 
+            padding: 12px 15px; 
+            border: 2px solid #e0e0e0; 
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus { 
+            border-color: #006064; 
+            box-shadow: 0 0 8px rgba(0,96,100,0.2); 
+        }
+        
+        .btn-save { 
+            background: #006064; 
+            color: white; 
+            width: 100%; 
+            padding: 14px; 
+            font-weight: 700; 
+            border-radius: 12px; 
+            border: none;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn-save:hover { background: #004d40; transform: translateY(-2px); }
+        
+        .error-message { color: #d32f2f; font-size: 0.8rem; margin-top: 5px; font-weight: 500; }
+        
+        .icon-box { font-size: 2.5rem; margin-bottom: 10px; }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper mt-4">
+            <div class="card mt-4">
+                <div class="card-header">
+                    <div class="icon-box"><i class="fa fa-building"></i></div>
+                    <h4 class="mb-0">Ajout Partenaire</h4>
+                    <small style="opacity: 0.8;">Veuillez remplir les informations de l'entreprise</small>
+                </div>
+                
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} rounded-pill">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-4">
+                            <label>Nom de l'Entreprise</label>
+                            {{ form.nom }}
+                            {% if form.nom.errors %}<div class="error-message">{{ form.nom.errors.as_text }}</div>{% endif %}
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label>Numéro du Responsable</label>
+                            {{ form.contact_responsable }}
+                            {% if form.contact_responsable.errors %}<div class="error-message">{{ form.contact_responsable.errors.as_text }}</div>{% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-save shadow-sm">
+                            <i class="fa fa-check-circle mr-2"></i> Valider l'enregistrement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

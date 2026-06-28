@@ -5,52 +5,44 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
         <title>Patients Prêts - Moyanoli Médicale</title>
-        
         {% include 'back-end/includes/css.html' %}
+        <style>.dataTables_filter { display: none; }</style>
     </head>
     <body>
         <div class="main-wrapper">
-        
             {% include 'back-end/includes/header.html' %}
             {% include 'back-end/includes/sidebar.html' %}
             
             <div class="page-wrapper">
                 <div class="content container-fluid">
-                
-                    <!-- Page Header -->
                     <div class="page-header">
                         <div class="row align-items-center">
                             <div class="col">
                                 <h3 class="page-title">Salle d'Attente (Consultation)</h3>
-                                <ul class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="#">Accueil</a></li>
-                                    <li class="breadcrumb-item active">Patients Orientés</li>
-                                </ul>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Barre de recherche -->
                     <div class="row filter-row">
-                        <div class="col-sm-6 col-md-12">  
+                        <div class="col-sm-12 col-md-12">  
                             <div class="form-group form-focus">
-                                <input type="text" class="form-control floating" id="searchWaitingList" placeholder="Rechercher un patient en attente...">
+                                <input type="text" class="form-control floating" id="searchWaitingList" placeholder="Rechercher un patient...">
                                 <label class="focus-label">Recherche rapide</label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Tableau des Patients en attente -->
                     <div class="row">
                         <div class="col-md-12">
                             <div class="table-responsive">
-                                <table class="table table-striped custom-table mb-0 datatable" id="waitingTable">
+                                <table class="table table-striped custom-table mb-0" id="waitingTable">
                                     <thead>
                                         <tr>
                                             <th>Ordre</th>
                                             <th>Matricule</th>
                                             <th>Nom Complet</th>
                                             <th>Âge</th>
+                                            <th>Prestations (Motif)</th>
                                             <th>Température</th>
                                             <th>Tension</th>
                                             <th>Trié par</th>
@@ -64,6 +56,22 @@
                                             <td><span class="badge badge-info">{{ signe.patient.code_patient }}</span></td>
                                             <td><strong>{{ signe.patient.noms }}</strong></td>
                                             <td>{{ signe.patient.age }} ans</td>
+                                            
+                                            <td>
+                                                {% if signe.session %}
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for item in signe.session.items.all %}
+                                                            <li>
+                                                                <i class="fa fa-caret-right text-primary"></i> 
+                                                                {{ item.prestation.libelle }}
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <span class="text-muted"><small>Consultation Libre</small></span>
+                                                {% endif %}
+                                            </td>
+
                                             <td>
                                                 <span class="badge {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
                                                     {{ signe.temperature }} °C
@@ -79,7 +87,7 @@
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">Aucun patient en attente dans la file du triage.</td>
+                                            <td colspan="9" class="text-center text-muted">Aucun patient en attente.</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -92,17 +100,22 @@
         </div>
 
         {% include 'back-end/includes/js.html' %}
-
         <script>
             $(document).ready(function() {
                 if ($.fn.DataTable.isDataTable('#waitingTable')) {
-                    var table = $('#waitingTable').DataTable({
-                        "ordering": false // Conserve l'ordre d'arrivée du triage (date_prelevement)
-                    });
-                    $('#searchWaitingList').on('keyup', function() {
-                        table.search(this.value).draw();
-                    });
+                    $('#waitingTable').DataTable().destroy();
                 }
+                var table = $('#waitingTable').DataTable({
+                    "ordering": false,
+                    "paging": true,
+                    "searching": true,
+                    "info": false
+                });
+
+                // Recherche simple
+                $('#searchWaitingList').on('keyup', function() {
+                    table.search(this.value).draw();
+                });
             });
         </script>
     </body>

@@ -1,0 +1,114 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un Produit | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root { --med-blue: #007bff; --light-bg: #f4f7f6; }
+        body { background-color: var(--light-bg); }
+        
+        .card { 
+            border: none; 
+            border-top: 4px solid var(--med-blue); 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .card-header { background: white; border-bottom: 1px solid #eee; padding: 20px; }
+        
+        /* Style des inputs */
+        .form-control { 
+            border: 1px solid #d1d3e2; 
+            border-radius: 6px; 
+            padding: 12px;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus { border-color: var(--med-blue); box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15); }
+        
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header mb-4">
+                    <h3 class="text-primary font-weight-bold"><i class="fa fa-pills mr-2"></i>Nouveau Produit Pharmaceutique</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-10 col-md-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="mb-0 text-secondary">Fiche Médicament</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    
+                                    <h6 class="text-primary mb-3 mt-2"><i class="fa fa-info-circle mr-2"></i>Informations Générales</h6>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">NOM COMMERCIAL / DCI</label>
+                                            {{ form.nom }}
+                                        </div>
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">FORME</label>
+                                            {{ form.forme }}
+                                        </div>
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">DOSAGE</label>
+                                            {{ form.dosage }}
+                                        </div>
+                                        <div class="col-md-12 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">CATÉGORIE</label>
+                                            {{ form.categorie }}
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+
+                                    <h6 class="text-primary mb-3"><i class="fa fa-calculator mr-2"></i>Logistique & Prix</h6>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">UNITÉS PAR CARTON</label>
+                                            {{ form.unites_par_carton }}
+                                        </div>
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">DEVISE</label>
+                                            {{ form.devise }}
+                                        </div>
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">PRIX ACHAT (UNITÉ)</label>
+                                            {{ form.prix_achat_unitaire }}
+                                        </div>
+                                        <div class="col-md-6 form-group mb-3">
+                                            <label class="font-weight-bold text-muted small">PRIX VENTE (UNITÉ)</label>
+                                            {{ form.prix_vente_unitaire }}
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <a href="{% url 'gestion_pharmacie' %}" class="btn btn-outline-secondary mr-2">Annuler</a>
+                                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                                            <i class="fa fa-save mr-2"></i>Enregistrer le médicament
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

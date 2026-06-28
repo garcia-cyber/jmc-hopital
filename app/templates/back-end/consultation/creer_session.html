@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Créer Session - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .session-card { background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .prestation-row:hover { background-color: #f8f9fe; }
+        .total-badge { font-size: 1.2rem; font-weight: bold; color: #2d3748; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <h3>Nouvelle Session de Soins</h3>
+                    <p class="text-muted">Patient : <strong>{{ patient.noms }}</strong> (Code : {{ patient.code_patient }})</p>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="session-card">
+                            <form method="POST">
+                                {% csrf_token %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">Sélection</th>
+                                                <th>Libellé</th>
+                                                <th>Catégorie</th>
+                                                <th class="text-right">Prix (USD)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for p in prestations %}
+                                            <tr class="prestation-row">
+                                                <td>
+                                                    <input type="checkbox" name="prestations" value="{{ p.id }}" class="prestation-check" data-price="{{ p.prix }}">
+                                                </td>
+                                                <td>{{ p.libelle }}</td>
+                                                <td><span class="badge badge-secondary">{{ p.get_categorie_display }}</span></td>
+                                                <td class="text-right">{{ p.prix }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="mt-4 p-3 border-top d-flex justify-content-between align-items-center">
+                                    <div class="total-badge">Total estimé : <span id="totalDisplay">0.00</span> USD</div>
+                                    <button type="submit" class="btn btn-primary btn-lg" style="border-radius: 25px;">
+                                        <i class="fa fa-save"></i> Enregistrer la Session
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    
+    <script>
+        // Calcul du total en temps réel
+        $(document).ready(function() {
+            $('.prestation-check').on('change', function() {
+                let total = 0;
+                $('.prestation-check:checked').each(function() {
+                    total += parseFloat($(this).data('price'));
+                });
+                $('#totalDisplay').text(total.toFixed(2));
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Enregistrement Patient Externe - Moyanoli</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    
+    <style>
+        .card-header { border-bottom: 2px solid #f4f4f4 !important; }
+        .input-group-text { background-color: #f8f9fa; }
+        .btn-lg { padding: 0.75rem 2rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col-sm-12">
+                            <h3 class="page-title">Gestion des Patients Externes</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                <li class="breadcrumb-item active">Nouvel Enregistrement</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-10 offset-md-1">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="card-title mb-0">
+                                    <i class="fa fa-user-plus mr-2"></i> Informations du Patient de passage
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Nom complet <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-user"></i></span></div>
+                                                    {{ form.noms }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Sexe</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-venus-mars"></i></span></div>
+                                                    {{ form.sexe }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Âge</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-calendar"></i></span></div>
+                                                    {{ form.age }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Poids (kg)</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-balance-scale"></i></span></div>
+                                                    {{ form.poids }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label class="font-weight-bold">Téléphone de contact</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-phone"></i></span></div>
+                                                    {{ form.telephone }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="submit-section mt-4 pt-3 border-top text-right">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fa fa-arrow-right"></i> Enregistrer et choisir les examens
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

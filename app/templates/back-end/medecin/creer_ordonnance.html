@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle Prescription | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .form-card { border-top: 4px solid #28a745; border-radius: 10px; }
+        .med-row { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 10px; }
+        .section-title { color: #2c3e50; font-weight: 600; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px; }
+        .btn-add { background: #17a2b8; color: white; }
+    </style>
+</head>
+<body>
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>🩺 Prescription Médicale</h3>
+                <span class="badge badge-primary p-2">Patient : {{ c.triage.patient.noms }}</span>
+            </div>
+
+            <div class="card shadow-sm form-card">
+                <div class="card-body p-4">
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <h5 class="section-title">Diagnostic & Observation</h5>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Diagnostic Final</label>
+                                <input type="text" name="diagnostic_final" class="form-control" placeholder="Entrez le diagnostic..." required>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Type d'ordonnance</label>
+                                <select name="type_ordonnance" class="form-control">
+                                    <option value="URGENCE">Ordonnance d’Urgence</option>
+                                    <option value="DEFINITIVE" selected>Ordonnance Définitive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Notes médicales</label>
+                            <textarea name="contenu_ordonnance" class="form-control" rows="2" placeholder="Ajoutez des précisions..."></textarea>
+                        </div>
+
+                        <h5 class="section-title mt-4">Traitement médicamenteux</h5>
+                        <div id="zone-medicaments">
+                            <div class="row med-row">
+                                <div class="col-md-4"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Nom du médicament" required></div>
+                                <div class="col-md-4"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie (ex: 2x/jour)" required></div>
+                                <div class="col-md-3"><input type="text" name="duree[]" class="form-control" placeholder="Durée (ex: 7 jours)" required></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button></div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-add btn-sm mt-2" onclick="ajouterLigne()">+ Ajouter un médicament</button>
+
+                        <div class="mt-5 text-right">
+                            <a href="{% url 'liste_attente_medecin' %}" class="btn btn-secondary mr-2">Annuler</a>
+                            <button type="submit" class="btn btn-success px-4"><i class="fa fa-save"></i> Enregistrer la prescription</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        function ajouterLigne() {
+            const zone = document.getElementById('zone-medicaments');
+            const div = document.createElement('div');
+            div.className = 'row med-row';
+            div.innerHTML = `
+                <div class="col-md-4"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Nom du médicament" required></div>
+                <div class="col-md-4"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
+                <div class="col-md-3"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button></div>
+            `;
+            zone.appendChild(div);
+        }
+    </script>
+</body>
+</html>

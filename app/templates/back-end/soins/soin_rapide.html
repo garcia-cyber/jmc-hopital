@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soin Rapide | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        /* Optimisations responsive */
+        .prestation-list { max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 15px; background: #fff; border-radius: 4px; }
+        .checkbox-group { padding: 10px; border-bottom: 1px solid #f1f1f1; cursor: pointer; }
+        .checkbox-group:hover { background: #f8f9fa; }
+        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <h3 class="mb-3">Enregistrement Soin Rapide</h3>
+                
+                <form method="POST" id="formSoin">
+                    {% csrf_token %}
+                    <div class="card p-3 p-md-4">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <input type="text" name="nom_patient" class="form-control form-control-lg" required placeholder="Nom du patient">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-lg-8 mb-3">
+                                <label class="font-weight-bold">Rechercher et sélectionner les prestations :</label>
+                                <input type="text" id="searchInput" class="form-control mb-2" placeholder="🔍 Taper pour filtrer..." onkeyup="filtrer()">
+                                <div class="prestation-list" id="prestationList">
+                                    {% for p in prestations %}
+                                    <div class="checkbox-group prestation-item">
+                                        <input class="form-check-input" type="checkbox" name="prestation_ids" value="{{ p.id }}" data-prix="{{ p.prix }}" onchange="calculer()">
+                                        <label class="ml-2 mb-0" style="cursor:pointer;">{{ p.libelle }} - <strong>{{ p.prix }} USD</strong></label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-lg-4">
+                                <div class="bg-light p-3 rounded border">
+                                    <div class="form-group">
+                                        <label>Réduction (USD)</label>
+                                        <input type="number" name="reduction" id="reduction" class="form-control" value="0.00" step="0.01" oninput="calculer()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Devise</label>
+                                        <select name="devise" id="devise" class="form-control" onchange="calculer()">
+                                            <option value="USD">USD</option>
+                                            <option value="CDF">CDF</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Net à payer</label>
+                                        <input type="text" id="netAffichage" class="form-control form-control-lg" readonly style="font-weight:bold; color:green; background:#fff;">
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-block">Valider et Imprimer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TAUX = parseFloat("{{ taux|default:'2500' }}");
+
+        function filtrer() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.prestation-item').forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(input) ? "" : "none";
+            });
+        }
+
+        function calculer() {
+            let total = 0;
+            document.querySelectorAll('input[name="prestation_ids"]:checked').forEach(c => {
+                total += parseFloat(c.getAttribute('data-prix')) || 0;
+            });
+            let reduction = parseFloat(document.getElementById('reduction').value) || 0;
+            let netUSD = Math.max(0, total - reduction);
+            let d = document.getElementById('devise').value;
+            let final = (d === 'CDF') ? (netUSD * TAUX) : netUSD;
+            document.getElementById('netAffichage').value = final.toFixed(2) + " " + d;
+        }
+
+        window.onload = calculer;
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

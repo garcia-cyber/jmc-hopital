@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossier Patient - {{ hosp.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table thead { background-color: #f8f9fa; color: #333; }
+        .card-header { font-weight: bold; }
+        .pagination .page-link { color: #0d6efd; }
+        .btn-xs { padding: .15rem .4rem; font-size: .75rem; }
+        .table-danger { opacity: 0.8; }
+        .admin-form { display: flex; gap: 3px; align-items: center; justify-content: center; }
+        .cell-date { font-size: 0.70rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">Dossier de suivi : {{ hosp.patient.noms }}</h3>
+                    <div>
+                        {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                            <a href="{% url 'creer_rdv' hosp.id %}" class="btn btn-info text-white me-2"><i class="fa fa-calendar"></i> Prendre RDV</a>
+                            <form method="POST" action="{% url 'finir_hospitalisation' hosp.id %}" class="d-inline" onsubmit="return confirm('Confirmer la fin de l\'hospitalisation ?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger me-2">Terminer l'Hospitalisation</button>
+                            </form>
+                        {% endif %}
+                        <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">Retour</a>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-primary text-white">Traitement (Ordonnances)</div>
+                            <div class="card-body">
+                                {% for ordonnance in ordonnances %}
+                                    <div class="mb-4 pb-2 border-bottom">
+                                        <h6 class="text-primary">{{ ordonnance.get_type_ordonnance_display }}</h6>
+                                        <ul class="list-unstyled mt-2">
+                                            {% for med in ordonnance.medicaments.all %}
+                                                <li class="mb-2"><strong>{{ med.nom }}</strong> | <small>{{ med.posologie }}</small></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-dark text-white">Cardex (Suivi Chronologique)</div>
+                            <div class="card-body p-2">
+                                {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                    <form method="POST" action="{% url 'ajouter_kardex' hosp.id %}" class="mb-3 p-2 border rounded bg-light">
+                                        {% csrf_token %}
+                                        <input type="text" name="medicament" class="form-control form-control-sm mb-1" placeholder="Nom médicament" required>
+                                        <div class="row g-1">
+                                            <div class="col-6"><input type="text" name="posologie" class="form-control form-control-sm" placeholder="Dosage" required></div>
+                                            <div class="col-6"><input type="text" name="voie" class="form-control form-control-sm" placeholder="Voie" required></div>
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-success w-100 mt-2">Ajouter</button>
+                                    </form>
+                                {% endif %}
+
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Médicament</th>
+                                                {% for jour in jours %}
+                                                    <th class="text-center cell-date">{{ jour|date:"d/m" }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in kardex_data %}
+                                            <tr class="{% if not row.est_actif %}table-danger{% endif %}">
+                                                <td style="font-size: 0.8rem;">
+                                                    <strong>{{ row.medicament }}</strong><br>{{ row.posologie }}
+                                                    <br>
+                                                    {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                                        <form method="POST" action="{% url 'changer_statut_kardex' row.id %}" class="mt-1">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-xs {% if row.est_actif %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
+                                                                {% if row.est_actif %}Arrêter{% else %}Réactiver{% endif %}
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </td>
+                                                {% for cell in row.cellules %}
+                                                <td class="text-center">
+                                                    <form method="POST" action="{% url 'marquer_administration' row.id %}" class="admin-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="date_cible" value="{{ cell.date|date:'Y-m-d' }}">
+                                                        <input type="checkbox" name="matin" {% if cell.admin.matin %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
+                                                        <input type="checkbox" name="midi" {% if cell.admin.midi %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
+                                                        <input type="checkbox" name="soir" {% if cell.admin.soir %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
+                                                    </form>
+                                                </td>
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="card shadow-sm"> 
+                            <div class="card-body">
+                                {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                    <form method="POST" action="{% url 'ajouter_suivi' hosp.id %}" class="mb-4 p-4 bg-light rounded border">
+                                        {% csrf_token %}
+                                        <h6 class="mb-3 text-uppercase text-secondary">Ajouter relevé (Signes Vitaux)</h6>
+                                        <div class="row">
+                                            <div class="col-md-4"><input name="ta" class="form-control mb-2" placeholder="TA" required></div>
+                                            <div class="col-md-4"><input name="pouls" class="form-control mb-2" placeholder="Pouls" required></div>
+                                            <div class="col-md-4"><input name="temp" class="form-control mb-2" placeholder="Temp (°C)" required></div>
+                                        </div>
+                                        <textarea name="etat_general" class="form-control mb-2" placeholder="État général" required></textarea>
+                                        <textarea name="soins_effectues" class="form-control mb-2" placeholder="Soins effectués"></textarea>
+                                        <button type="submit" class="btn btn-primary px-4">Valider le suivi</button>
+                                    </form>
+                                {% endif %}
+                                
+                                <h5 class="text-uppercase text-secondary mb-3">Historique des Signes Vitaux</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead><tr><th>Date</th><th>TA</th><th>Pouls</th><th>Temp</th><th>État</th><th>Soins</th></tr></thead>
+                                        <tbody>
+                                            {% for s in suivis %}
+                                            <tr>
+                                                <td class="text-nowrap">{{ s.date_suivi|date:"d/m H:i" }}</td>
+                                                <td><span class="badge bg-info text-dark">{{ s.ta }}</span></td>
+                                                <td><span class="badge bg-warning text-dark">{{ s.pouls }}</span></td>
+                                                <td><span class="badge bg-danger text-white">{{ s.temp }}°C</span></td>
+                                                <td>{{ s.etat_general }}</td>
+                                                <td>{{ s.soins_effectues }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    <div class="pagination">
+                                        {% if suivis.has_previous %}
+                                            <a href="?page={{ suivis.previous_page_number }}" class="btn btn-outline-primary btn-sm">Précédent</a>
+                                        {% endif %}
+                                        <span class="mx-3">Page {{ suivis.number }} sur {{ suivis.paginator.num_pages }}</span>
+                                        {% if suivis.has_next %}
+                                            <a href="?page={{ suivis.next_page_number }}" class="btn btn-outline-primary btn-sm">Suivant</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

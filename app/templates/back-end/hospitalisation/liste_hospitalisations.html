@@ -1,0 +1,133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Suivi Hospitalisations | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .page-wrapper { background: #f4f7fa; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .search-box { width: 300px; border-radius: 25px; padding: 10px 20px; border: 1px solid #ddd; outline: none; }
+        .table thead { background: #f8f9fe; color: #707e8c; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+        .table tbody td { padding: 20px; vertical-align: middle; }
+        .btn-sm { border-radius: 6px; }
+        .avatar-info { background: #eef2ff; color: #5a8dee; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
+        .badge { padding: 0.5em 1em; border-radius: 50px; font-weight: 500; }
+        .text-debt { color: #dc3545; font-weight: bold; }
+        .text-paid { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="mb-0">Suivi des Séjours</h4>
+                        <small class="text-muted">Gestion complète des hospitalisations en cours.</small>
+                    </div>
+                    <div class="d-flex">
+                        <input type="text" id="searchInput" class="search-box mr-2" placeholder="Rechercher par nom ou ID...">
+                        {% if fonctionKey == 'medecin' %}
+                        <a href="{% url 'admettre_patient' %}" class="btn btn-primary"><i class="la la-plus"></i> Nouvelle Admission</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="hospTable">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Lit / Catégorie</th>
+                                        <th>Date Entrée</th>
+                                        <th>Durée</th>
+                                        <th>Coût Total</th>
+                                        <th>Reste à payer</th>
+                                        <th>Statut</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hosp in hospitalisations %}
+                                    <tr>
+                                        <td>
+                                            <div class="font-weight-bold text-dark">{{ hosp.patient.noms }}</div>
+                                            <small class="text-muted">ID: {{ hosp.patient.id }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="font-weight-bold">{{ hosp.lit.nom_lit }}</div>
+                                            <span class="avatar-info">{{ hosp.lit.chambre.type_chambre.libelle }}</span>
+                                        </td>
+                                        <td>{{ hosp.date_entree|date:"d M, Y" }}</td>
+                                        <td><span class="badge badge-soft-dark">{{ hosp.nombre_jours }} j</span></td>
+                                        <td>{{ hosp.cout_total|floatformat:0 }} USD</td>
+                                        <td>
+                                            {% with reste=hosp.get_reste_a_payer %}
+                                                {% if reste > 0 %}
+                                                    <span class="text-debt">{{ reste|floatformat:2 }} USD</span>
+                                                {% else %}
+                                                    <span class="text-paid">PAYÉ</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            {% if hosp.statut == 'EN_COURS' %}<span class="badge badge-soft-success text-success">En cours</span>
+                                            {% elif hosp.statut == 'TERMINE' %}<span class="badge badge-soft-info text-info">Terminé</span>
+                                            {% else %}<span class="badge badge-soft-secondary text-secondary">Annulé</span>{% endif %}
+                                        </td>
+                                        <td class="text-right">
+                                            {% if hosp.statut == 'EN_COURS' %}
+                                                {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                                    <a href="{% url 'modifier_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-warning" title="Modifier"><i class="la la-edit"></i></a>
+                                                {% endif %}
+                                                
+                                                {% if fonctionKey == 'infirmier' or fonctionKey == 'medecin' %}
+                                                    <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-primary" title="Suivi"><i class="la la-stethoscope"></i></a>
+                                                {% endif %}
+                                                
+                                                {% if fonctionKey == 'receptionniste' or fonctionKey == 'admin' %}
+                                                    <a href="{% url 'payer_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-danger" title="Encaisser"><i class="la la-money-bill"></i></a>
+                                                    
+                                                    {% if hosp.get_reste_a_payer <= 0 %}
+                                                        <a href="{% url 'finir_hospitalisation' hosp.id %}" class="btn btn-sm btn-success" title="Valider Sortie"><i class="la la-door-open"></i></a>
+                                                    {% else %}
+                                                        <button class="btn btn-sm btn-secondary" disabled title="Paiement incomplet"><i class="la la-lock"></i></button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% else %}
+                                                <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-light" title="Voir"><i class="la la-eye"></i></a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="8" class="text-center py-5">Aucune donnée disponible.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#hospTable tbody tr');
+            rows.forEach(row => {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

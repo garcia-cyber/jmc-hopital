@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle Ordonnance d'Urgence</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: none; }
+        .card-header { border-radius: 12px 12px 0 0 !important; padding: 20px; }
+        .form-control { border-radius: 8px; border: 1px solid #ced4da; }
+        .table-responsive { overflow-x: auto; }
+        /* Style pour mobile */
+        @media (max-width: 767px) {
+            .table thead { display: none; }
+            .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+            .table td { display: flex; flex-direction: column; margin-bottom: 10px; }
+            .table td::before { content: attr(data-label); font-weight: bold; margin-bottom: 5px; color: #555; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0"><i class="fa fa-stethoscope"></i> Ordonnance d'Urgence</h4>
+                        <small class="text-white-50">Patient : {{ consultation.triage.patient.noms }}</small>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {% csrf_token %}
+                            
+                            <div class="form-group mb-4">
+                                <label class="font-weight-bold">Diagnostic Principal</label>
+                                <input type="text" name="diagnostic" class="form-control form-control-lg" placeholder="Saisir le diagnostic..." required>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="table-medicaments">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Médicament</th>
+                                            <th>Posologie</th>
+                                            <th>Durée</th>
+                                            <th style="width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td data-label="Médicament"><input type="text" name="nom" class="form-control" placeholder="Nom..." required></td>
+                                            <td data-label="Posologie"><input type="text" name="posologie" class="form-control" placeholder="ex: 1cp 3x/j..." required></td>
+                                            <td data-label="Durée"><input type="text" name="duree" class="form-control" placeholder="ex: 5 jours..." required></td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button type="button" class="btn btn-outline-info btn-block mb-4" onclick="ajouterLigne()">
+                                <i class="fa fa-plus"></i> Ajouter un médicament
+                            </button>
+                            
+                            <div class="form-group mb-4">
+                                <label class="font-weight-bold">Observations complémentaires</label>
+                                <textarea name="observation" class="form-control" rows="3" placeholder="Informations supplémentaires..."></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between border-top pt-3">
+                                <a href="{% url 'detail_consultation' consultation.pk %}" class="btn btn-secondary px-4">Annuler</a>
+                                <button type="submit" class="btn btn-danger px-4 shadow-sm"><i class="fa fa-save"></i> Enregistrer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function ajouterLigne() {
+            const table = document.getElementById("table-medicaments").getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            newRow.innerHTML = `
+                <td data-label="Médicament"><input type="text" name="nom" class="form-control" required></td>
+                <td data-label="Posologie"><input type="text" name="posologie" class="form-control" required></td>
+                <td data-label="Durée"><input type="text" name="duree" class="form-control" required></td>
+                <td data-label="Action"><button type="button" class="btn btn-danger btn-sm" onclick="supprimerLigne(this)"><i class="fa fa-trash"></i></button></td>
+            `;
+        }
+
+        function supprimerLigne(btn) {
+            btn.closest('tr').remove();
+        }
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

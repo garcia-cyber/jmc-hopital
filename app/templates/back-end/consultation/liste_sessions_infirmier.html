@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Nouvelle Cons Patients - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title">File d'attente Triage</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item active">Patients ayant effectué un paiement</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="tableInfirmier" class="table table-hover table-striped border">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Patient</th>
+                                                <th>Prestations</th>
+                                                <!-- <th>Statut</th> -->
+                                                <th class="text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for session in sessions %}
+                                            <tr>
+                                                <td>{{ session.date_creation|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    <h6 class="mb-0">{{ session.patient.noms }}</h6>
+                                                    <small class="text-muted">Matricule: #{{ session.patient.id|stringformat:"04d" }}</small>
+                                                </td>
+                                                <td>
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for item in session.items.all %}
+                                                            <li>
+                                                                <i class="fa fa-caret-right text-primary"></i> 
+                                                                {% comment %} 
+                                                                   Si .nom ne fonctionne pas, remplace par .libelle ou .designation 
+                                                                   selon ton modèle Prestation.
+                                                                {% endcomment %}
+                                                                {{ item.prestation.nom|default:item.prestation }}
+                                                            </li>
+                                                        {% empty %}
+                                                            <li class="text-muted"><small>Aucune prestation</small></li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </td>
+                                                <!-- <td>
+                                                    {% if session.est_payee %}
+                                                        <span class="badge badge-success">Soldé</span>
+                                                    {% else %}
+                                                        <span class="badge badge-warning">Partiel</span>
+                                                    {% endif %}
+                                                </td> -->
+                                                <td class="text-right">
+                                                    <a href="{% url 'detail_consultation' session.id %}" class="btn btn-primary btn-sm">
+                                                        <i class="fa fa-stethoscope"></i> Triage
+                                                    </a>
+
+                                                     <a href="{% url 'saisir_signes_vitaux' session.id %}" class="btn btn-info btn-sm">
+                                                        <i class="fa fa-stethoscope"></i> preleve
+                                                    </a>
+
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            if (!$.fn.DataTable.isDataTable('#tableInfirmier')) {
+                $('#tableInfirmier').DataTable({
+                    "language": {
+                        "search": "Rechercher un patient :",
+                        "lengthMenu": "Afficher _MENU_ par page",
+                        "info": "Affichage _START_ à _END_ de _TOTAL_ entrées",
+                        "paginate": { "next": "Suivant", "previous": "Précédent" }
+                    },
+                    "order": [[ 0, "desc" ]]
+                });
+            }
+        });
+    </script>
+</body>
+</html>

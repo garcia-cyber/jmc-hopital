@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste Fiches Accouchement | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+    
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h4 class="text-primary mb-4"><i class="fa fa-list"></i> Fiches d'Accouchement</h4>
+                    
+                    <form method="GET" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Rechercher par patient ou notes...">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Prestation</th>
+                                    <th>Type</th>
+                                    <th>Sexe Bébé</th>
+                                    <th>Poids</th>
+                                    <th>Apgar</th>
+                                    <th>Date</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fiche in page_obj %}
+                                <tr>
+                                    <td><strong>{{ fiche.consultation.triage.patient.noms }}</strong></td>
+                                    <td>{{ fiche.prestation.libelle }}</td>
+                                    <td>{{ fiche.get_type_accouchement_display }}</td>
+                                    <td>{{ fiche.get_sexe_bebe_display }}</td>
+                                    <td>{{ fiche.poids_bebe }} kg</td>
+                                    <td>{{ fiche.score_apgar|default:"-" }}</td>
+                                    <td>{{ fiche.date_creation|date:"d/m/Y H:i" }}</td>
+                                    <td class="text-center">
+                                        <a href="{% url 'detail_fiche_accouchement' fiche.id %}" class="btn btn-sm btn-info">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">Aucune fiche trouvée.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <nav class="mt-3">
+                        <ul class="pagination justify-content-center flex-wrap">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}">Précédent</a></li>
+                            {% endif %}
+                            
+                            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}">Suivant</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

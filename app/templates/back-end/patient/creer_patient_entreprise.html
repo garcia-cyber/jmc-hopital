@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>{{ titre }} - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .form-container { background: #ffffff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <h3 class="page-title">{{ titre }}</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                                <li class="breadcrumb-item active">Nouveau Patient</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 offset-md-2">
+                        <div class="form-container">
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                                {% endfor %}
+                            {% endif %}
+
+                            <form method="POST" action="{% url 'enregistrer_patient_entreprise' %}">
+                                {% csrf_token %}
+                                <div class="row">
+                                    {% for field in form %}
+                                        <div class="col-md-6 mb-3">
+                                            <label class="font-weight-bold">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% for error in field.errors %}
+                                                <small class="text-danger">{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="submit-section mt-4 text-center">
+                                    <button type="submit" class="btn btn-primary" style="border-radius: 20px; padding: 10px 40px;">
+                                        Enregistrer le patient
+                                    </button>
+                                    <a href="{% url 'liste_patients' %}" class="btn btn-secondary" style="border-radius: 20px; padding: 10px 40px;">Annuler</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -1,0 +1,122 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Service {{ fonctionKey }} - Liste d'Attente | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card-patient { border-left: 5px solid #2c3e50; transition: 0.3s; margin-bottom: 20px; height: 100%; display: flex; flex-direction: column; }
+        .card-body { flex: 1; display: flex; flex-direction: column; }
+        .bg-vitals { background-color: #fff3cd; border-left: 3px solid #ffc107; padding: 10px; margin-bottom: 10px; }
+        .bg-ordonnance { background-color: #f8f9fa; border-left: 3px solid #007bff; padding: 10px; margin-top: 10px; }
+        .service-header { background: #f8f9fa; padding: 20px; border-bottom: 2px solid #e9ecef; margin-bottom: 20px; }
+        .footer-card { margin-top: auto; padding-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="service-header">
+                    <h3>Service : {{ fonctionKey }}</h3>
+                    <p class="text-muted mb-0">Gestion des patients orientés pour votre service.</p>
+                </div>
+
+                <div class="row">
+                    {% for o in orientations %}
+                    <div class="col-12 col-sm-12 col-md-6 col-lg-4 d-flex">
+                        <div class="card shadow-sm card-patient w-100" id="print-area-{{ o.id }}">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary font-weight-bold">{{ o.consultation.triage.patient.noms }}</h5>
+                                
+                                <div class="bg-vitals small">
+                                    <p class="mb-1 font-weight-bold">Signes Vitaux :</p>
+                                    <div class="row">
+                                        <div class="col-6">TA: {{ o.consultation.triage.tension_arterielle }}</div>
+                                        <div class="col-6">Pouls: {{ o.consultation.triage.frequence_cardiaque }}</div>
+                                        <div class="col-6">Temp: {{ o.consultation.triage.temperature }}°C</div>
+                                        <div class="col-6">Poids: {{ o.consultation.triage.poids }}kg</div>
+                                    </div>
+                                </div>
+
+                                <p class="small text-muted"><i class="fa fa-user-md"></i> Orienté par : Dr. {{ o.medecin_orientateur.username }}</p>
+                                
+                                <h6 class="font-weight-bold small mt-3">Prescriptions :</h6>
+                                {% for ord in o.consultation.ordonnance_set.all %}
+                                    <div class="bg-ordonnance mb-2">
+                                        <ul class="list-unstyled mb-0">
+                                            {% for med in ord.medicaments.all %}
+                                                <li class="small">
+                                                    <i class="fa fa-pills text-primary"></i> 
+                                                    <strong>{{ med.nom }}</strong>: {{ med.posologie }}
+                                                </li>
+                                            {% empty %}
+                                                <li class="small text-muted font-italic">Aucun médicament.</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% empty %}
+                                    <p class="small text-muted font-italic">Aucune ordonnance.</p>
+                                {% endfor %}
+
+                                {% if 'pharmacien' in fonctionKey|lower %}
+                                    <button type="button" class="btn btn-info btn-block mt-2" onclick="imprimerSection('print-area-{{ o.id }}')">
+                                        <i class="fa fa-print"></i> Imprimer Ordonnance
+                                    </button>
+                                {% endif %}
+
+                                <div class="footer-card">
+                                    {% if fonctionKey == 'medecin' %}
+                                    {% if o.destination == 'BLOC_OPERATOIRE' %}
+                                        <a href="{% url 'saisir_compte_rendu_bloc' o.consultation.id %}" class="btn btn-primary btn-block mb-2">
+                                            <i class="fa fa-notes-medical"></i> Saisir Compte Rendu
+                                        </a>
+                                    {% elif o.destination == 'ACCOUCHEMENT' %}
+                                        <a href="{% url 'saisir_cr_accouchement' o.consultation.id %}" class="btn btn-primary btn-block mb-2">
+                                            <i class="fa fa-notes-medical"></i> Fiche accouchement
+                                        </a>
+                                    {% endif %}
+                                    {% endif %}
+
+
+                                    <form method="POST" action="{% url 'service_liste_attente' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="orientation_id" value="{{ o.id }}">
+                                        <button type="submit" class="btn btn-success btn-block">
+                                            <i class="fa fa-check"></i> Marquer comme traité
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center mt-5"><div class="alert alert-info">Aucun patient en attente.</div></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function imprimerSection(divId) {
+            var contenu = document.getElementById(divId).innerHTML;
+            var fenetre = window.open('', '_blank', 'height=600,width=800');
+            fenetre.document.write('<html><head><title>Impression Ordonnance</title>');
+            fenetre.document.write('<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">');
+            fenetre.document.write('</head><body class="p-4">');
+            fenetre.document.write(contenu);
+            fenetre.document.write('</body></html>');
+            fenetre.document.close();
+            fenetre.print();
+        }
+    </script>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Facturations</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .badge-info { background-color: #17a2b8; color: #fff; margin-right: 4px; font-size: 0.75rem; }
+        .fin-val { display: block; font-size: 0.85rem; }
+        .text-reduction { color: #dc3545; }
+        .text-verse { color: #28a745; }
+        .btn-print { margin-top: 8px; font-size: 0.75rem; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <h3 class="page-title">Gestion des encaissements</h3>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Examens</th>
+                                        <th>Détails Financiers</th>
+                                        <th>État Financier</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for d in demandes %}
+                                    <tr>
+                                        <td><strong>{{ d.client.noms }}</strong><br><small>#{{ d.id }}</small></td>
+                                        <td>
+                                            {% for p in d.prestations.all %}
+                                                <span class="badge badge-info">{{ p.libelle }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            <span class="fin-val">Total: <strong>{{ d.total_a_payer }} $</strong></span>
+                                            <span class="fin-val text-reduction">Réduc: {{ d.total_reduit|floatformat:2 }} $</span>
+                                            <span class="fin-val text-verse">Versé: {{ d.total_verse|floatformat:2 }} $</span>
+                                        </td>
+                                        <td>
+                                            {% if d.reste_usd <= 0 %}
+                                                <span class="badge badge-success">Soldé</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">
+                                                    {{ d.reste_usd|floatformat:2 }} $ 
+                                                    <br>
+                                                    (<small>{% widthratio d.reste_usd 1 taux %} CDF</small>)
+                                                </span>
+                                            {% endif %}
+                                            
+                                            <br>
+                                            <a href="{% url 'imprimer_rapport_complet' d.id %}" target="_blank" class="btn btn-sm btn-info btn-print">
+                                                <i class="fa fa-print"></i> Imprimer Reçu
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if d.reste_usd > 0 %}
+                                                <a href="{% url 'encaisser_examen' d.id %}" class="btn btn-sm btn-success">
+                                                    <i class="fa fa-money-bill"></i> Payer
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Finalisé</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

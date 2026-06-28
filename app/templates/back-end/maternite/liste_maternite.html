@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi Maternité - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table-container { background: #fff; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .dataTables_filter { margin-bottom: 20px; float: right; }
+        .dataTables_filter input { border: 1px solid #e2e8f0; border-radius: 25px; padding: 8px 20px; outline: none; width: 300px; }
+        .custom-table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 10px !important; }
+        .custom-table thead { background: #f8f9fe; }
+        .custom-table thead th { border: none !important; color: #718096; font-size: 0.75rem; text-transform: uppercase; padding: 15px !important; }
+        .custom-table tbody tr { background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .custom-table td { padding: 15px !important; border-top: none !important; border-bottom: none !important; }
+        .badge-blood { background: #fff5f5; color: #e53e3e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <h3 class="page-title">Suivi des Admissions Maternité</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-container">
+                            <div class="table-responsive">
+                                <table class="table custom-table display" id="materniteTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Patiente</th>
+                                            <th>Groupe Sanguin</th>
+                                            <th>Date Admission</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in admissions %}
+                                        <tr>
+                                            <td>
+                                                <div style="font-weight: 600; color: #2d3748;">{{ item.patient.noms }}</div>
+                                                <div style="font-size: 0.75rem; color: #a0aec0;">ID: {{ item.patient.code_patient }}</div>
+                                            </td>
+                                            <td><span class="badge badge-blood" style="padding: 5px 10px; border-radius: 6px;">{{ item.groupe_sanguin }}</span></td>
+                                            <td>{{ item.date_admission|date:"d/m/Y" }}</td>
+                                            <td class="text-right">
+                                                {% if fonctionKey == 'infirmier'%}
+                                                <a href="{% url 'ajouter_consultation' item.id %}" class="btn btn-sm btn-primary" style="border-radius: 20px;">
+                                                    <i class="fa fa-stethoscope"></i> Consulter
+                                                </a>
+                                                {% elif fonctionKey == 'medecin' or fonctionKey == 'receptionniste'%}
+                                                <a href="" class="btn btn-sm btn-primary" style="border-radius: 20px;">
+                                                    <i class="fa fa-stethoscope"></i> Detail
+                                                </a>
+
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">Aucune admission en maternité pour le moment.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        $(document).ready(function() {
+            $('#materniteTable').DataTable({
+                "language": {
+                    "search": "Rechercher :",
+                    "lengthMenu": "Afficher _MENU_ entrées",
+                    "info": "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+                    "paginate": { "next": "Suivant", "previous": "Précédent" }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du Stock | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card { border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .table thead th { border-top: none; text-transform: uppercase; font-size: 0.75rem; color: #6c757d; letter-spacing: 0.5px; }
+        .badge-status { padding: 0.4rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.70rem; }
+        .search-box { margin-bottom: 25px; }
+        .currency-text { font-family: monospace; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="text-primary font-weight-bold">Inventaire Pharmacie</h3>
+                    <a href="{% url 'ajouter_lot' %}" class="btn btn-success">
+                        <i class="fa fa-plus"></i> Ajouter Lot
+                    </a>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="searchStock" class="form-control form-control-lg" placeholder="🔍 Rechercher par médicament ou catégorie..." onkeyup="filterStock()">
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="tableStock">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Médicament</th>
+                                        <th>Catégorie</th>
+                                        <th>Prix (USD)</th>
+                                        <th>Prix (CDF)</th>
+                                        <th class="text-center">Stock Total</th>
+                                        <th class="text-center">Valeur Stock (USD)</th>
+                                        <th class="text-center">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for produit in produits %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ produit.nom }}</strong><br>
+                                            <small class="text-muted">{{ produit.forme }} | {{ produit.dosage }}</small>
+                                        </td>
+                                        <td>{{ produit.categorie }}</td>
+                                        <td class="currency-text">${{ produit.prix_vente_unitaire }}</td>
+                                        <td class="currency-text text-secondary">{{ produit.prix_vente_cdf|floatformat:0 }} CDF</td>
+                                        <td class="text-center font-weight-bold">{{ produit.stock_reel }}</td>
+                                        <td class="text-center font-weight-bold">${{ produit.valeur_totale|floatformat:2 }}</td>
+                                        <td class="text-center">
+                                            {% if produit.stock_reel <= 0 %}
+                                                <span class="badge badge-danger badge-status">RUPTURE</span>
+                                            {% elif produit.stock_reel < 10 %}
+                                                <span class="badge badge-warning badge-status">FAIBLE</span>
+                                            {% else %}
+                                                <span class="badge badge-success badge-status">OK</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">Aucun médicament enregistré.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterStock() {
+            let input = document.getElementById("searchStock").value.toLowerCase();
+            let table = document.getElementById("tableStock");
+            let tr = table.getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let tdName = tr[i].getElementsByTagName("td")[0];
+                let tdCat = tr[i].getElementsByTagName("td")[1];
+                if (tdName || tdCat) {
+                    let txtName = tdName.textContent || tdName.innerText;
+                    let txtCat = tdCat.textContent || tdCat.innerText;
+                    tr[i].style.display = (txtName.toLowerCase().indexOf(input) > -1 || txtCat.toLowerCase().indexOf(input) > -1) ? "" : "none";
+                }
+            }
+        }
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

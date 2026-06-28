@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordonnance de Sortie - {{ hosp.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card shadow">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0 text-white">Ordonnance de Sortie : {{ hosp.patient.noms }}</h4>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Médicaments prescrits</label>
+                                        <textarea name="prescriptions" class="form-control" rows="5" placeholder="Détaillez les médicaments, dosages et fréquences..." required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Recommandations et hygiène de vie</label>
+                                        <textarea name="recommandations" class="form-control" rows="4" placeholder="Conseils alimentaires, repos, activités autorisées..." required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Date du prochain rendez-vous de suivi</label>
+                                        <input type="date" name="date_prochain_rdv" class="form-control">
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-secondary me-2">Annuler</a>
+                                        <button type="submit" class="btn btn-primary px-4">
+                                            <i class="fa fa-save"></i> Enregistrer l'ordonnance
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

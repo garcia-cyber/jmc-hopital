@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Consultation Ordonnance - #{{ ordonnance.id }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        /* Impression : masquer les éléments inutiles */
+        @media print {
+            .btn-print, .sidebar, .header { display: none !important; }
+            .page-wrapper { margin: 0 !important; padding: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; }
+        }
+        
+        /* Responsive : ajustement des colonnes et polices */
+        @media (max-width: 768px) {
+            .ordonnance-header .col-6 { flex: 0 0 100%; max-width: 100%; margin-bottom: 10px; }
+            .btn-print { width: 100%; }
+            th, td { font-size: 13px; }
+        }
+        
+        .ordonnance-header { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="mb-4">
+                <button onclick="window.print()" class="btn btn-primary btn-print">
+                    <i class="fa fa-print"></i> Imprimer l'ordonnance
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="ordonnance-header">
+                        <div class="row">
+                            <div class="col-6">
+                                <h5>Cabinet Médical</h5>
+                                <p>Date : {{ ordonnance.date_creation|date:"d/m/Y H:i" }}</p>
+                            </div>
+                            <div class="col-6 text-right">
+                                <h5>Patient : {{ ordonnance.client.noms }}</h5>
+                                <p>Médecin : Dr. {{ ordonnance.medecin.get_full_name|default:ordonnance.medecin.username }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Désignation</th>
+                                    <th>Posologie</th>
+                                    <th>Quantité</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in ordonnance.items.all %}
+                                <tr>
+                                    <td><strong>{{ item.designation }}</strong></td>
+                                    <td>{{ item.posologie }}</td>
+                                    <td>{{ item.quantite|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">Aucun article dans cette ordonnance.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if ordonnance.note_globale %}
+                    <div class="mt-4 p-3 bg-light border-left border-primary">
+                        <h6>Instructions supplémentaires :</h6>
+                        <p>{{ ordonnance.note_globale|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

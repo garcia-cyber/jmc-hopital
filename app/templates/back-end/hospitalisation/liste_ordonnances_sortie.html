@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archives Ordonnances de Sortie</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <h3 class="mb-4">Archives des Ordonnances de Sortie</h3>
+                
+                <div class="card shadow">
+                    <div class="card-body">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Date de Sortie</th>
+                                    <th>Médecin</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ord in ordonnances %}
+                                <tr>
+                                    <td><strong>{{ ord.hospitalisation.patient.noms }}</strong></td>
+                                    <td>{{ ord.date_creation|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ ord.medecin_nom|default:"Non spécifié" }}</td>
+                                    <td>
+                                        <a href="{% url 'detail_hospitalisation' ord.hospitalisation.id %}" class="btn btn-sm btn-info text-white">
+                                            <i class="fa fa-folder-open"></i> Dossier
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">Aucune ordonnance de sortie archivée.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

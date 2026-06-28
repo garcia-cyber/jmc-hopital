@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Paiement - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <h3>Paiement de la session de soins</h3>
+                    <p class="text-muted">Patient : <strong>{{ session.patient.noms }}</strong></p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header"><h5 class="card-title">Détail des prestations</h5></div>
+                            <div class="card-body">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Prestation</th>
+                                            <th>Qté</th>
+                                            <th class="text-right">Prix</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in session.items.all %}
+                                        <tr>
+                                            <td>{{ item.prestation.libelle }}</td>
+                                            <td>{{ item.quantite }}</td>
+                                            <td class="text-right">{{ item.prix_facture }} USD</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="2" class="text-right">Total à payer :</th>
+                                            <th class="text-right text-primary h5">{{ session.total_a_payer }} USD</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header"><h5 class="card-title">Encaisser le paiement</h5></div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <strong>Reste à payer : {{ reste_a_payer|floatformat:2 }} USD</strong><br>
+                                    <small>Équivalent en CDF (Taux : {{ taux }}) : {{ reste_a_payer_cdf|floatformat:0 }} CDF</small>
+                                </div>
+
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <label>Montant versé</label>
+                                        <input type="number" step="0.01" name="montant" class="form-control" required placeholder="0.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Réduction accordée (USD)</label>
+                                        <input type="number" step="0.01" name="reduction" class="form-control" value="0.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Devise</label>
+                                        <select name="devise" class="form-control">
+                                            <option value="USD">USD</option>
+                                            <option value="CDF">CDF</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <button type="submit" class="btn btn-success btn-block btn-lg">
+                                            <i class="fa fa-money"></i> Valider l'encaissement
+                                        </button>
+                                        <a href="{% url 'liste_sessions' %}" class="btn btn-secondary btn-block">Annuler</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

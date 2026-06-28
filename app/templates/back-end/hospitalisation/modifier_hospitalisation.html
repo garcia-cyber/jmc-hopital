@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Hospitalisation | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header mb-4">
+                    <h3>Modifier l'hospitalisation : {{ hosp.patient.noms }}</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 offset-md-2">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Détails de l'hospitalisation</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label font-weight-bold">Patient</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" value="{{ hosp.patient.noms }}" disabled>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label font-weight-bold">Lit</label>
+                                        <div class="col-sm-9">
+                                            <select name="lit_id" class="form-control" required>
+                                                {% for lit in lits %}
+                                                    <option value="{{ lit.id }}" {% if lit.id == hosp.lit.id %}selected{% endif %}>
+                                                        {{ lit.nom_lit }} - Chambre: {{ lit.chambre.nom_chambre }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label font-weight-bold">Date d'entrée</label>
+                                        <div class="col-sm-9">
+                                            <input type="datetime-local" name="date_entree" class="form-control" 
+                                                   value="{{ hosp.date_entree|date:'Y-m-d\TH:i' }}" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label font-weight-bold">Motif d'admission</label>
+                                        <div class="col-sm-9">
+                                            <textarea name="motif_admission" class="form-control" rows="3" required>{{ hosp.motif_admission }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label font-weight-bold">Statut</label>
+                                        <div class="col-sm-9">
+                                            <select name="statut" class="form-control">
+                                                <option value="EN_COURS" {% if hosp.statut == 'EN_COURS' %}selected{% endif %}>En cours</option>
+                                                <option value="TERMINE" {% if hosp.statut == 'TERMINE' %}selected{% endif %}>Terminé (Sortie)</option>
+                                                <option value="ANNULE" {% if hosp.statut == 'ANNULE' %}selected{% endif %}>Annulé</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-right mt-4">
+                                        <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">Annuler</a>
+                                        <button type="submit" class="btn btn-success">Enregistrer les modifications</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

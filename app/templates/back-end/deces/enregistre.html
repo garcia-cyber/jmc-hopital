@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Enregistrer un décès - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .form-container { max-width: 800px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .section-title { border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; margin-top: 30px; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="form-container">
+                    <h3 class="page-title">Déclaration de décès</h3>
+                    <form method="POST" action="{% url 'enregistrer_deces' %}">
+                        {% csrf_token %}
+                        
+                        <h5 class="section-title">Identité du défunt</h5>
+                        <div class="form-group">
+                            <label>Patient (Si enregistré)</label>
+                            <select name="patient_id" class="form-control">
+                                <option value="">-- Choisir un patient (Optionnel) --</option>
+                                {% for p in patients %}
+                                    <option value="{{ p.id }}">{{ p.noms }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ou Nom du Patient Externe</label>
+                            <input type="text" name="nom_patient_externe" class="form-control">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Date de naissance</label>
+                                <input type="date" name="date_naissance" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Lieu de naissance</label>
+                                <input type="text" name="lieu_naissance" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <h5 class="section-title">Adresse du défunt</h5>
+                        <div class="row">
+                            <div class="col-md-3 form-group"><input type="text" name="adresse_avenue" class="form-control" placeholder="Avenue" required></div>
+                            <div class="col-md-2 form-group"><input type="text" name="adresse_numero" class="form-control" placeholder="N°" required></div>
+                            <div class="col-md-3 form-group"><input type="text" name="adresse_quartier" class="form-control" placeholder="Quartier" required></div>
+                            <div class="col-md-4 form-group"><input type="text" name="adresse_commune" class="form-control" placeholder="Commune" required></div>
+                        </div>
+
+                        <h5 class="section-title">Informations sur le décès</h5>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Date et Heure du décès</label>
+                                <input type="datetime-local" name="date_deces" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Cause du décès</label>
+                                <textarea name="cause_deces" class="form-control" rows="1" required></textarea>
+                            </div>
+                        </div>
+
+                        <h5 class="section-title">Certification médicale</h5>
+                        <div class="row">
+                            <div class="col-md-4 form-group">
+                                <label>Établissement</label>
+                                <input type="text" name="etablissement" class="form-control" value="Hôpital Paradis Center" required>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label>Nom du médecin</label>
+                                <input type="text" name="certifie_par" class="form-control" required>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label>Numéro CNOM</label>
+                                <input type="text" name="numero_cnom" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Notes complémentaires</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger w-100 mt-3">Enregistrer le décès</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

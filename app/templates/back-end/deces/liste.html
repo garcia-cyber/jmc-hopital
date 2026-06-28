@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registre des décès - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    
+    <style>
+        .table-container { background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .custom-table thead { background-color: #f8f9fa; }
+        .search-box { width: 100%; max-width: 400px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="page-title">Registre des Décès</h3>
+                    <a href="{% url 'enregistrer_deces' %}" class="btn btn-primary">
+                        <i class="fa fa-plus"></i> Nouveau Décès
+                    </a>
+                </div>
+
+                <div class="table-container">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group search-box">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                <input type="text" id="searchInput" class="form-control" placeholder="Rechercher (Nom, Cause, Médecin...)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table custom-table table-hover" id="decesTable">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Date Naiss. / Lieu</th>
+                                    <th>Date Décès</th>
+                                    <th>Cause</th>
+                                    <th>Médecin</th>
+                                    <th>Adresse</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in deces_list %}
+                                <tr>
+                                    <td>
+                                        <strong>{% if d.patient %}{{ d.patient.noms }}{% else %}{{ d.nom_patient_externe }}{% endif %}</strong>
+                                        {% if not d.patient %}<br><small class="text-muted">(Externe)</small>{% endif %}
+                                    </td>
+                                    <td>{{ d.date_naissance|date:"d/m/Y" }}<br><small>{{ d.lieu_naissance }}</small></td>
+                                    <td>{{ d.date_deces|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ d.cause_deces|truncatechars:30 }}</td>
+                                    <td>{{ d.certifie_par }}<br><small class="text-muted">CNOM: {{ d.numero_cnom }}</small></td>
+                                    <td>
+                                        <small>{{ d.adresse_avenue }} n°{{ d.adresse_numero }},<br>{{ d.adresse_quartier }}, {{ d.adresse_commune }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if d.paiements.exists %}
+                                            <a href="{% url 'imprimer_deces' d.id %}" target="_blank" class="btn btn-sm btn-info" title="Imprimer">
+                                                <i class="fa fa-print"></i>
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'enregistrer_paiement_deces' d.id %}" class="btn btn-sm btn-warning" title="Payer">
+                                                <i class="fa fa-money"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">Aucun décès enregistré pour le moment.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let value = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#decesTable tbody tr');
+            
+            rows.forEach(row => {
+                // Vérifie si la ligne contient le terme recherché
+                row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none";
+            });
+        });
+    </script>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

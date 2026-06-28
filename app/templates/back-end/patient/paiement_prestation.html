@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Paiement Carte - {{ patient.noms }}</title>
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body> 
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    <div class="page-header">
+                        <h3 class="page-title">Paiement Carte de Fidélité</h3>
+                    </div>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="card">
+                        <div class="card-body">
+                            <p>Prix total de la carte : <strong>{{ prix_carte }} USD</strong></p>
+                            <p>Reste à payer : <strong class="text-danger">{{ reste_a_payer|floatformat:2 }} USD</strong></p>
+                            
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="prestation" value="carte"> 
+                                
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label>Montant à payer</label>
+                                            <input type="number" step="0.01" name="montant" class="form-control" required placeholder="Ex: 5.00">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label>Devise</label>
+                                            <select name="devise" class="form-control">
+                                                <option value="USD">USD</option>
+                                                <option value="CDF">CDF (Taux: {{ taux }})</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Enregistrer le paiement</button>
+                                <a href="{% url 'enregistrement_patient' %}" class="btn btn-secondary">Annuler</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% include 'back-end/includes/js.html' %}
+    </body>
+</html>

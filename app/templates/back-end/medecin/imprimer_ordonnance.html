@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Ordonnance d'Urgence #{{ ord.id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .medicaments li { margin-bottom: 5px; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Ordonnance d'Urgence</h2>
+        <p><strong>Patient :</strong> {{ ord.consultation.triage.patient.noms }} ({{ ord.consultation.triage.patient.code_patient }})</p>
+        <p><strong>Médecin :</strong> Dr. {{ ord.consultation.medecin.get_full_name|default:ord.consultation.medecin.username }}</p>
+        <p><strong>Date :</strong> {{ ord.date_prescrite|date:"d/m/Y H:i" }}</p>
+    </div>
+
+    <h4>Médicaments prescrits :</h4>
+    <ul class="medicaments">
+        {% for med in ord.medicaments.all %}
+            <li>{{ med.nom }} — {{ med.posologie }} ({{ med.duree }})</li>
+        {% empty %}
+            <li>Aucun médicament prescrit</li>
+        {% endfor %}
+    </ul>
+
+    {% if ord.observation %}
+        <h4>Observation :</h4>
+        <p>{{ ord.observation }}</p>
+    {% endif %}
+
+    <button class="no-print" onclick="window.print()">🖨️ Imprimer</button>
+</body>
+</html>

@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enregistrer un Lot | Moyanoli</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    
+    <style>
+        .card { border: none; border-top: 4px solid #28a745; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .form-control { border: 1px solid #d1d3e2; border-radius: 6px; padding: 12px; }
+        .page-header h3 { color: #2d3436; }
+        /* Ajustement pour que le champ de recherche Select2 ressemble aux autres inputs */
+        .select2-container .select2-selection--single { height: 46px; padding: 8px; border: 1px solid #d1d3e2; border-radius: 6px; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header mb-4">
+                    <h3><i class="fa fa-boxes text-success mr-2"></i>Réception de stock</h3>
+                    <p class="text-muted">Recherchez le médicament et enregistrez le nouveau lot.</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 col-md-8 col-sm-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    
+                                    {% for field in form %}
+                                        <div class="form-group mb-3">
+                                            <label class="font-weight-bold text-muted small text-uppercase">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% if field.help_text %}
+                                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                                            {% endif %}
+                                            {% if field.errors %}
+                                                <div class="text-danger small mt-1">{{ field.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <a href="{% url 'gestion_pharmacie' %}" class="btn btn-outline-secondary mr-2">Annuler</a>
+                                        <button type="submit" class="btn btn-success px-4">
+                                            <i class="fa fa-check-circle mr-2"></i>Valider l'entrée
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialisation de la recherche sur le champ "produit" (ID généré par Django)
+            $('#id_produit').select2({
+                placeholder: "🔍 Rechercher par nom, dosage ou forme...",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
+</body>
+</html>

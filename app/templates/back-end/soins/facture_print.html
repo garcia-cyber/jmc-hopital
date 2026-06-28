@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Facture Médicale #{{ paiement.id }}</title>
+    <style>
+        :root { --primary-color: #2c3e50; --accent-color: #3498db; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; margin: 0; padding: 20px; background: #f4f7f6; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); border-radius: 8px; }
+        
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid var(--primary-color); padding-bottom: 20px; }
+        .hospital-info h2 { margin: 0; color: var(--primary-color); text-transform: uppercase; }
+        .invoice-info { text-align: right; }
+        
+        /* Patient Details */
+        .patient-box { background: #f8f9fa; padding: 15px; border-left: 4px solid var(--accent-color); margin-bottom: 30px; }
+        
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background: var(--primary-color); color: #fff; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        /* Totals */
+        .total-section { float: right; width: 300px; }
+        .total-row { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid #eee; }
+        .grand-total { font-size: 1.3em; font-weight: bold; color: var(--primary-color); }
+
+        @media print { 
+            body { background: #fff; padding: 0; }
+            .invoice-box { box-shadow: none; border: none; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="invoice-box">
+    <div class="header">
+        <div class="hospital-info">
+            <h2>Moyanoli Medical</h2>
+            <p>Centre de Soins Rapides<br>Kinshasa, RDC</p>
+        </div>
+        <div class="invoice-info">
+            <h3 style="margin:0;">FACTURE #{{ paiement.id }}</h3>
+            <p>Date : {{ paiement.date_paiement|date:"d/m/Y" }}<br>Heure : {{ paiement.date_paiement|date:"H:i" }}</p>
+        </div>
+    </div>
+
+    <div class="patient-box">
+        <strong>Patient : </strong> {{ paiement.soins_lies.first.nom_patient }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Prestation médicale</th>
+                <th style="text-align: right;">Prix</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for soin in soins %}
+            <tr>
+                <td>{{ soin.prestation.libelle }}</td>
+                <td style="text-align: right;">{{ soin.prestation.prix }} USD</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <div class="total-row grand-total">
+            <span>Net à payer :</span>
+            <span>{{ paiement.montant_verse }} {{ paiement.devise }}</span>
+        </div>
+    </div>
+
+    <div style="clear: both;"></div>
+
+    <div class="no-print" style="margin-top: 50px; text-align: center;">
+        <button onclick="window.print()" style="padding: 12px 25px; background: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+            Imprimer la facture
+        </button>
+    </div>
+</div>
+
+<script>
+    window.onload = function() { window.print(); };
+</script>
+
+</body>
+</html>

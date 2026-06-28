@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Dossier Médical - {{ consultation.triage.patient.noms }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+        .header-doc { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; }
+        .patient-info { background: #f4f7f6; padding: 15px; border-radius: 8px; margin-bottom: 30px; }
+        .result-section { border: 1px solid #dcdcdc; padding: 20px; margin-bottom: 20px; border-radius: 5px; page-break-inside: avoid; }
+        .result-section h3 { margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .tech-info { font-size: 0.85em; color: #666; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; font-style: italic; }
+        
+        @media print {
+            .no-print { display: none; }
+            body { padding: 20px; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="header-doc">
+        <h1>Compte-rendu d'Examens</h1>
+        <p>Document médical confidentiel</p>
+    </div>
+
+    <div class="patient-info">
+        <p><strong>Patient :</strong> {{ consultation.triage.patient.noms }}</p>
+        <p><strong>Date de consultation :</strong> {{ consultation.date_creation|date:"d/m/Y à H:i" }}</p>
+        <p><strong>N° Dossier / Consultation :</strong> {{ consultation.id }}</p>
+    </div>
+
+    {% for exam in examens %}
+    <div class="result-section">
+        <h3>{{ exam.prestation.categorie }} : {{ exam.prestation.libelle }}</h3>
+        <div>
+            <strong>Résultat :</strong> 
+            <div style="margin-top: 10px; white-space: pre-wrap;">{{ exam.resultat|default:"Aucun résultat saisi." }}</div>
+        </div>
+        
+        <div class="tech-info">
+            <div>
+                <strong>Réalisé par :</strong> 
+                {% if exam.technicien %}
+                    {{ exam.technicien.first_name }} {{ exam.technicien.last_name }}
+                {% else %}
+                    Non spécifié
+                {% endif %}
+            </div>
+            <div>
+                <strong>Date de réalisation :</strong> {{ exam.date_realisation|date:"d/m/Y à H:i"|default:"Date non enregistrée" }}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+        <p>Aucun examen terminé n'a été trouvé pour cette consultation.</p>
+    {% endfor %}
+
+    <div style="margin-top: 40px; text-align: center;" class="no-print">
+        <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 5px;">
+            Ré-imprimer le document
+        </button>
+        <br><br>
+        <a href="javascript:history.back()">Retour à la liste</a>
+    </div>
+
+</body>
+</html>

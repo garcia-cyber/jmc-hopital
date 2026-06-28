@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Liste des Équipements</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .search-input { margin-bottom: 20px; width: 100%; max-width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        /* Empêche les éléments de trop s'écraser */
+        .table-responsive { min-height: .01%; overflow-x: auto; }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            
+            <div class="page-header">
+                <div class="row align-items-center">
+                    <div class="col-6">
+                        <h3 class="page-title">Inventaire Matériel</h3>
+                    </div>
+                    <div class="col-6 text-right">
+                        <a href="{% url 'ajouter_equipement' %}" class="btn btn-primary"><i class="fa fa-plus"></i> Ajouter</a>
+                    </div>
+                </div>
+            </div>
+
+            <input type="text" id="searchInput" class="search-input" placeholder="Rechercher...">
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered" id="equipementTable">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>N° Série</th>
+                                    <th>Catégorie</th>
+                                    <th>État</th>
+                                    <th>Service</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for eq in equipements %}
+                                <tr>
+                                    <td>{{ eq.nom }}</td>
+                                    <td>{{ eq.numero_serie }}</td>
+                                    <td>{{ eq.categorie.nom }}</td>
+                                    <td>
+                                        <span class="badge {% if eq.etat == 'bon' %}badge-success{% elif eq.etat == 'panne' %}badge-danger{% else %}badge-warning{% endif %}">
+                                            {{ eq.get_etat_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ eq.service.nom|default:"-" }}</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-info"><i class="fa fa-eye"></i></a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+<script>
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#equipementTable tbody tr');
+        rows.forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
+        });
+    });
+</script>
+</body>
+</html>

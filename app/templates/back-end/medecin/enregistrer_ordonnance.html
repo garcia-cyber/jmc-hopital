@@ -1,105 +1,95 @@
 <!DOCTYPE html>
-{% load static %}
 <html lang="fr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rédaction Ordonnance - Moyanoli</title>
-    <!-- Inclure tes fichiers CSS habituels ici -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .valeur-normale { font-size: 0.85em; color: #17a2b8; font-weight: bold; }
-        .resultat-technicien { font-size: 1em; color: #333; font-weight: 500; font-style: italic; }
-        .card-resultat { background-color: #fcfcfc; border-left: 4px solid #28a745; margin-bottom: 15px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        body { background-color: #f4f7f6; }
+        .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .bg-teal { background-color: #20c997; color: white; }
+        .btn-remove { cursor: pointer; color: #dc3545; font-size: 1.2rem; }
     </style>
 </head>
 <body>
-    <div class="main-wrapper">
-        <!-- Ton header et sidebar ici -->
-        
-        <div class="page-wrapper">
-            <div class="content container-fluid">
-                <div class="page-header">
-                    <h3 class="page-title">Ordonnance : {{ patient.noms }}</h3>
+
+<div class="container py-4">
+    <h3 class="mb-4">Ordonnance : {{ consultation.triage.patient.noms }}</h3>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card border-0 mb-4">
+                <div class="card-header bg-teal">Résultats des Examens</div>
+                <div class="card-body">
+                    {% for ex in examens_termines %}
+                    <div class="mb-3 p-2 border-start border-primary border-4 bg-light">
+                        <h6 class="text-primary">{{ ex.prestation.libelle }}</h6>
+                        <p class="mb-0 small"><strong>Résultat :</strong> {{ ex.resultat }}</p>
+                        <small class="text-muted">Réf : {{ ex.prestation.valeur_normale|default:"N/A" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted small">Aucun résultat terminé.</p>
+                    {% endfor %}
                 </div>
+            </div>
+        </div>
 
-                <div class="row">
-                    <!-- PARTIE GAUCHE : RÉSULTATS EXAMENS -->
-                    <div class="col-md-5">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <i class="fa fa-microscope"></i> Résultats des Examens
-                            </div>
-                            <div class="card-body">
-                                {% for ex in examens_termines %}
-                                    <div class="card-resultat">
-                                        <p class="mb-1"><strong>{{ ex.prestation.libelle }}</strong></p>
-                                        <p class="mb-1 resultat-technicien">Résultat : {{ ex.resultat }}</p>
-                                        <p class="mb-1 valeur-normale">Réf : {{ ex.prestation.valeur_normale|default:"Non définie" }}</p>
-                                        <div class="text-right mt-2 pt-1 border-top">
-                                            <small class="text-muted">
-                                                <i class="fa fa-user-md"></i> Validé par : <strong>{{ ex.technicien.username|default:"Système" }}</strong>
-                                            </small>
-                                        </div>
-                                    </div>
-                                {% empty %}
-                                    <p class="text-muted">Aucun résultat terminé.</p>
-                                {% endfor %}
+        <div class="col-md-8">
+            <div class="card border-0">
+                <div class="card-body p-4">
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Type d'ordonnance</label>
+                            <select name="type_ordonnance" class="form-select">
+                                <option value="DEFINITIVE">Ordonnance Définitive</option>
+                                <option value="URGENCE">Ordonnance d’Urgence</option>
+                            </select>
+                        </div>
+
+                        <div id="zone-medicaments">
+                            <label class="form-label fw-bold">Liste des médicaments</label>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-5"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required></div>
+                                <div class="col-md-3"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
+                                <div class="col-md-3"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
+                                <div class="col-md-1"></div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- PARTIE DROITE : FORMULAIRE ORDONNANCE -->
-                    <div class="col-md-7">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">Nouvelle Prescription</div>
-                            <div class="card-body">
-                                <form method="POST" action="">
-                                    {% csrf_token %}
-                                    <div class="form-group">
-                                        <label>Type d'ordonnance</label>
-                                        <select name="type_ordonnance" class="form-control">
-                                            <option value="DEFINITIVE">Ordonnance Définitive</option>
-                                            <option value="URGENCE">Ordonnance d’Urgence</option>
-                                        </select>
-                                    </div>
-
-                                    <div id="zone-medicaments">
-                                        <div class="form-row mb-2">
-                                            <div class="col"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required></div>
-                                            <div class="col"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
-                                            <div class="col"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
-                                        </div>
-                                    </div>
-
-                                    <button type="button" class="btn btn-info btn-sm mb-3" onclick="ajouterLigne()">+ Ajouter ligne</button>
-                                    
-                                    <div class="form-group">
-                                        <label>Observations</label>
-                                        <textarea name="observation" class="form-control" rows="2"></textarea>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success btn-block">Enregistrer l'Ordonnance</button>
-                                </form>
-                            </div>
+                        <button type="button" class="btn btn-outline-info btn-sm mt-2" onclick="ajouterLigne()">+ Ajouter ligne</button>
+                        
+                        <div class="mt-4">
+                            <label class="form-label">Observations</label>
+                            <textarea name="observation" class="form-control" rows="2"></textarea>
                         </div>
-                    </div>
+
+                        <button type="submit" class="btn btn-success w-100 mt-4">Enregistrer l'Ordonnance</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        function ajouterLigne() {
-            const zone = document.getElementById('zone-medicaments');
-            const row = document.createElement('div');
-            row.className = 'form-row mb-2';
-            row.innerHTML = `
-                <div class="col"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament"></div>
-                <div class="col"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie"></div>
-                <div class="col"><input type="text" name="duree[]" class="form-control" placeholder="Durée"></div>
-            `;
-            zone.appendChild(row);
-        }
-    </script>
+<script>
+    function ajouterLigne() {
+        const zone = document.getElementById('zone-medicaments');
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2';
+        row.innerHTML = `
+            <div class="col-md-5"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required></div>
+            <div class="col-md-3"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
+            <div class="col-md-3"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
+            <div class="col-md-1 d-flex align-items-center">
+                <span class="btn-remove" onclick="this.parentElement.parentElement.remove()">✕</span>
+            </div>
+        `;
+        zone.appendChild(row);
+    }
+</script>
+
 </body>
 </html>

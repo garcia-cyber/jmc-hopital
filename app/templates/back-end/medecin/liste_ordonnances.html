@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossiers Médicaux & Prescriptions | Moyanoli</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    
+    <style>
+        .page-wrapper { background-color: #f8fafc; padding: 20px; }
+        .search-container { margin-bottom: 20px; }
+        .search-box { width: 100%; max-width: 400px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .table thead { background-color: #006064; color: #ffffff; }
+        .badge-exam { 
+            background: #e0f2f1; color: #006064; font-size: 0.75rem; 
+            display: block; padding: 6px; border-radius: 6px; 
+            margin-bottom: 5px; border-left: 4px solid #006064; 
+        }
+        .med-list { font-size: 0.85rem; color: #37474f; list-style: square; padding-left: 20px; margin: 0; }
+        .btn-action { border-radius: 50%; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+                    <h3 class="page-title text-primary font-weight-bold">Dossiers Médicaux & Prescriptions</h3>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-box" onkeyup="filterTable()" placeholder="🔍 Rechercher par nom de patient...">
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="ordonnanceTable">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Diagnostic / Notes</th>
+                                        <th>Médicaments</th>
+                                        <th>Examens & Résultats</th>
+                                        <th>Médecin</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ord in ordonnances %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ ord.consultation.triage.patient.noms }}</strong><br>
+                                            <small class="text-muted"><i class="fa fa-calendar"></i> {{ ord.consultation.date_creation|date:"d/m/Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <small><strong>Diag:</strong> {{ ord.consultation.diagnostic_final|default:"Non spécifié" }}</small><br>
+                                            <small class="text-muted"><strong>Note:</strong> {{ ord.observation|truncatechars:50|default:"-" }}</small>
+                                        </td>
+                                        <td>
+                                            <ul class="med-list">
+                                                {% for med in ord.medicaments.all %}
+                                                    <li>{{ med.nom }} <small>({{ med.posologie }})</small></li>
+                                                {% empty %}
+                                                    <small class="text-muted">Aucun</small>
+                                                {% endfor %}
+                                            </ul>
+                                        </td>
+                                        <td>
+                                            {% for ex in ord.consultation.examens.all %}
+                                                <div class="badge-exam">
+                                                    <strong>{{ ex.prestation.libelle }}:</strong> {{ ex.resultat|default:"En cours..." }}<br>
+                                                    <span style="font-size: 0.65rem; color: #004d40;">Tech: {{ ex.technicien.noms|default:"-" }}</span>
+                                                </div>
+                                            {% empty %}
+                                                <small class="text-muted">Aucun examen</small>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-info text-white">
+                                                <i class="fa fa-user-md"></i> {{ ord.consultation.medecin.noms|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{% url 'imprimer_ordonnance' ord.id %}" target="_blank" class="btn btn-primary btn-action" title="Imprimer">
+                                                <i class="fa fa-print"></i>
+                                            </a>
+                                            <a href="{% url 'modifier_ordonnance' ord.id %}" class="btn btn-warning btn-action text-white" title="Modifier">
+                                                <i class="fa fa-pencil-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">Aucune ordonnance disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function filterTable() {
+            let input = document.getElementById("searchInput");
+            let filter = input.value.toLowerCase();
+            let table = document.getElementById("ordonnanceTable");
+            let tr = table.getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName("td")[0];
+                if (td) {
+                    tr[i].style.display = td.innerText.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+                }
+            }
+        }
+    </script>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -1,131 +1,94 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="fr">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Tableau de Bord - JMC Hospital</title>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Tableau de Bord - Moyanoli ERP</title>
+    {% include 'back-end/includes/css.html'%}
+    <style>
+        :root { --hospital-blue: #007bff; --hospital-green: #10b981; --hospital-red: #ef4444; --hospital-orange: #f59e0b; }
+        .page-wrapper { background-color: #f4f7fe; padding-top: 60px; }
+        .dash-widget { border-radius: 15px; border: none; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; background: #fff; }
+        .dash-widget:hover { transform: translateY(-5px); }
+        .dash-widget-icon { width: 60px; height: 60px; line-height: 60px; border-radius: 12px; text-align: center; font-size: 24px; display: inline-block; margin-right: 15px; }
+        .medical-welcome { background: linear-gradient(to right, #007bff, #00d2ff); color: white; padding: 25px; border-radius: 15px; margin-bottom: 30px; }
+        .card-title { font-weight: 600; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html'%}
+        {% include 'back-end/includes/sidebar.html'%}
         
-        {% include 'back-end/includes/css.html'%}
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="medical-welcome">
+                    <h3>Bonjour, {{user.username}} !</h3>
+                    <p class="mb-0">Vue d'ensemble {{ fonctionKey|title }} - Moyanoli ERP</p>
+                </div>
 
-        <style>
-            /* Palette JMC Hospital */
-            :root {
-                --jmc-primary: #006064;    /* Teal profond */
-                --jmc-secondary: #00838f;  /* Teal moyen */
-                --jmc-accent: #0277bd;     /* Bleu institutionnel */
-                --jmc-bg: #f8fafc;
-            }
+                {% if fonctionKey == 'admin' or fonctionKey == 'receptionniste' %}
+                <div class="row">
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:rgba(0,123,255,0.1); color:#007bff;"><i class="fa fa-user-plus"></i></span><div class="dash-widget-info"><h3>{{ total_patients }}</h3><span>Total Patients</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:rgba(16,185,129,0.1); color:#10b981;"><i class="fa fa-money"></i></span><div class="dash-widget-info"><h3>{{ recettes_jour.usd|default:"0" }} $ / {{ recettes_jour.cdf|default:"0" }} FC</h3><span>Recettes (Jour)</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:rgba(239,68,68,0.1); color:#ef4444;"><i class="fa fa-arrow-circle-down"></i></span><div class="dash-widget-info"><h3>{{ depenses_jour.usd|default:"0" }} $ / {{ depenses_jour.cdf|default:"0" }} FC</h3><span>Dépenses (Jour)</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:rgba(245,158,11,0.1); color:#f59e0b;"><i class="fa fa-calendar-check-o"></i></span><div class="dash-widget-info"><h3>{{ consultations_jour }}</h3><span>Consultations</span></div></div></div></div>
+                </div>
+                {% endif %}
 
-            .page-wrapper { background-color: var(--jmc-bg); }
-            
-            /* Widget style */
-            .dash-widget {
-                border-radius: 12px;
-                border: 1px solid #e2e8f0;
-                transition: all 0.3s ease;
-            }
-            .dash-widget:hover { border-color: var(--jmc-primary); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+                {% if fonctionKey == 'infirmier' %}
+                <div class="row">
+                    <div class="col-md-4"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#e3f2fd; color:#1976d2;"><i class="fa fa-heartbeat"></i></span><div class="dash-widget-info"><h3>{{ total_patients }}</h3><span>Patients suivis</span></div></div></div></div>
+                    <div class="col-md-4"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#fff3e0; color:#ef6c00;"><i class="fa fa-stethoscope"></i></span><div class="dash-widget-info"><h3>{{ signes_vitaux_jour }}</h3><span>Signes vitaux (Jour)</span></div></div></div></div>
+                    <div class="col-md-4"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#e8f5e9; color:#388e3c;"><i class="fa fa-bed"></i></span><div class="dash-widget-info"><h3>{{ hospitalisations_en_cours }}</h3><span>En hospitalisation</span></div></div></div></div>
+                </div>
+                {% endif %}
 
-            .dash-widget-icon {
-                width: 55px; height: 55px; line-height: 55px;
-                border-radius: 10px;
-                font-size: 24px;
-            }
+                {% if fonctionKey == 'admin' %}
+                <div class="row">
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#e0f7fa; color:#00acc1;"><i class="fa fa-users"></i></span><div class="dash-widget-info"><h3>{{ total_utilisateurs }}</h3><span>Utilisateurs</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#f3e5f5; color:#7b1fa2;"><i class="fa fa-building"></i></span><div class="dash-widget-info"><h3>{{ total_entreprises }}</h3><span>Entreprises</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#ffebee; color:#d32f2f;"><i class="fa fa-exclamation-triangle"></i></span><div class="dash-widget-info"><h3>{{ alerte_rupture_stock }}</h3><span>Alertes Stock</span></div></div></div></div>
+                    <div class="col-md-3"><div class="card dash-widget"><div class="card-body"><span class="dash-widget-icon" style="background:#fff9c4; color:#fbc02d;"><i class="fa fa-medkit"></i></span><div class="dash-widget-info"><h3>{{ bloc_en_cours }}</h3><span>Blocs en cours</span></div></div></div></div>
+                </div>
+                {% endif %}
 
-            /* Icônes aux couleurs JMC */
-            .icon-patient { background: rgba(0, 96, 100, 0.1); color: var(--jmc-primary); }
-            .icon-appointment { background: rgba(2, 119, 189, 0.1); color: var(--jmc-accent); }
-            .icon-lab { background: rgba(245, 158, 11, 0.1); color: #d97706; }
-            .icon-pharmacy { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
-
-            /* Bannière de bienvenue */
-            .medical-welcome {
-                background: linear-gradient(135deg, var(--jmc-primary), var(--jmc-secondary));
-                color: white;
-                padding: 30px;
-                border-radius: 16px;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 15px rgba(0, 96, 100, 0.2);
-            }
-        </style>
-    </head>
-    
-    <body>
-        <div class="main-wrapper">
-            {% include 'back-end/includes/header.html'%}
-            {% include 'back-end/includes/sidebar.html'%}
-            
-            <div class="page-wrapper">
-                <div class="content container-fluid">
-                
-                    <div class="medical-welcome">
-                        <div class="row align-items-center">
-                            <div class="col-sm-8">
-                                <h3 class="font-weight-bold">Bienvenue, {{user.username}}</h3>
-                                <p class="mb-0 opacity-75">Tableau de bord de gestion JMC Hospital - Accès sécurisé</p>
-                            </div>
-                            <div class="col-sm-4 text-right d-none d-md-block">
-                                <i class="fa fa-stethoscope fa-3x" style="opacity: 0.3;"></i>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card shadow-sm border-0" style="border-radius: 15px;">
+                            <div class="card-body">
+                                <h4 class="card-title mb-4">Évolution des Consultations (7 derniers jours)</h4>
+                                <canvas id="activiteChart" style="max-height: 300px;"></canvas>
                             </div>
                         </div>
                     </div>
-
-                    <div class="row">
-                        {% if fonctionKey == 'admin' %}
-                        <div class="col-md-6 col-lg-3">
-                            <div class="card dash-widget">
-                                <div class="card-body">
-                                    <span class="dash-widget-icon icon-patient"><i class="fa fa-users"></i></span>
-                                    <div class="dash-widget-info">
-                                        <h3>{{utilisateurs}}</h3>
-                                        <span>Utilisateurs</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="card dash-widget">
-                                <div class="card-body">
-                                    <span class="dash-widget-icon icon-patient"><i class="fa fa-user-md"></i></span>
-                                    <div class="dash-widget-info">
-                                        <h3>{{total_patients}}</h3>
-                                        <span>Patients</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <div class="col-md-6 col-lg-3">
-                            <div class="card dash-widget">
-                                <div class="card-body">
-                                    <span class="dash-widget-icon icon-appointment"><i class="fa fa-calendar"></i></span>
-                                    <div class="dash-widget-info">
-                                        <h3>28</h3>
-                                        <span>RDV du jour</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-lg-3">
-                            <div class="card dash-widget">
-                                <div class="card-body">
-                                    <span class="dash-widget-icon icon-pharmacy"><i class="fa fa-exclamation-triangle"></i></span>
-                                    <div class="dash-widget-info">
-                                        <h3 class="text-danger">5</h3>
-                                        <span>Ruptures Stock</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                
                 </div>
             </div>
         </div>
-        
-        {% include 'back-end/includes/js.html'%}
-    </body>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('activiteChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ dates_graphe|safe }},
+                datasets: [{
+                    label: 'Consultations',
+                    data: {{ valeurs_graphe|safe }},
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderColor: '#007bff',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    </script>
+    
+    {% include 'back-end/includes/js.html'%}
+</body>
 </html>

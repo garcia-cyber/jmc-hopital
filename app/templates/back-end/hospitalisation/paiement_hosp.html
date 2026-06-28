@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Paiement Hospitalisation | {{ hosp.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .summary-card { background: #f8f9fe; border-left: 4px solid #5a8dee; }
+        .info-label { font-size: 0.85rem; color: #707e8c; }
+        .info-value { font-weight: 600; color: #2d3436; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="mb-0">Enregistrement de Paiement</h4>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb text-muted">
+                                <li class="breadcrumb-item">Hospitalisation</li>
+                                <li class="breadcrumb-item active">{{ hosp.patient.noms }}</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card shadow">
+                            <div class="card-body summary-card">
+                                <h5 class="card-title text-primary">Informations séjour</h5>
+                                <div class="mb-2"><span class="info-label">Lit :</span> <span class="info-value">{{ hosp.lit.nom_lit }}</span></div>
+                                <div class="mb-2"><span class="info-label">Catégorie :</span> <span class="info-value">{{ hosp.lit.chambre.type_chambre.libelle }}</span></div>
+                                <div class="mb-2"><span class="info-label">Date Entrée :</span> <span class="info-value">{{ hosp.date_entree|date:"d/m/Y" }}</span></div>
+                                <div class="mb-2"><span class="info-label">Durée :</span> <span class="info-value">{{ hosp.nombre_jours }} jours</span></div>
+                                <hr>
+                                <div class="mb-2">Coût Total : <strong>{{ hosp.cout_total }} USD</strong></div>
+                                <h4 class="text-danger mt-3">Reste à payer : {{ reste_a_payer }} USD</h4>
+                            </div>
+                        </div>
+
+                        <div class="card shadow mt-3">
+                            <div class="card-body">
+                                <h6 class="text-muted">Historique des versements</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm text-xs">
+                                        <thead><tr><th>Date</th><th>Montant</th></tr></thead>
+                                        <tbody>
+                                            {% for paiement in hosp.paiements.all %}
+                                            <tr>
+                                                <td>{{ paiement.date_paiement|date:"d/m/y" }}</td>
+                                                <td>{{ paiement.montant_verse|floatformat:2 }} USD</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr><td colspan="2" class="text-center">Aucun versement.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="card shadow">
+                            <div class="card-body">
+                                <form method="POST" id="formPaiement" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Montant Versé (USD)</label>
+                                            <input type="number" step="0.01" min="0" name="montant_verse" class="form-control" required placeholder="0.00">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Réduction (USD)</label>
+                                            <input type="number" step="0.01" min="0" name="montant_reduction" class="form-control" value="0" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Devise de réception</label>
+                                        <select name="devise" class="form-control">
+                                            <option value="USD">USD</option>
+                                            <option value="CDF">CDF</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Commentaire (facultatif)</label>
+                                        <textarea name="commentaire" class="form-control" rows="2"></textarea>
+                                    </div>
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-secondary mr-2">Annuler</a>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="la la-save"></i> Enregistrer le Paiement
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

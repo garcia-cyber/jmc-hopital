@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Saisie du Rapport - {{ prestation.libelle }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .form-card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; }
+        .patient-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <h3 class="page-title">Rédiger le rapport d'examen</h3>
+                </div>
+
+                <div class="card form-card">
+                    <div class="card-body">
+                        <div class="patient-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Patient :</strong> {{ demande.client.noms }}</p>
+                                    <p class="mb-0"><strong>ID Demande :</strong> #{{ demande.id }}</p>
+                                </div>
+                                <div class="col-md-6 text-md-right">
+                                    <p class="mb-1"><strong>Examen :</strong> {{ prestation.libelle }}</p>
+                                    <p class="mb-0"><strong>Catégorie :</strong> {{ prestation.categorie }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label class="font-weight-bold">Rapport médical détaillé :</label>
+                                <textarea name="rapport" class="form-control" rows="12" required placeholder="Saisissez ici les observations, les résultats de l'examen et la conclusion...">{{ resultat.rapport }}</textarea>
+                            </div>
+                            
+                            <div class="text-right mt-4">
+                                <a href="{% url 'liste_examens_technicien' %}" class="btn btn-secondary mr-2">Annuler</a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="fa fa-check-circle"></i> Valider le résultat
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -17,7 +17,6 @@
             <div class="page-wrapper">
                 <div class="content container-fluid">
                 
-                    <!-- Page Header -->
                     <div class="page-header">
                         <div class="row align-items-center">
                             <div class="col">
@@ -30,7 +29,6 @@
                         </div>
                     </div>
 
-                    <!-- Affichage des messages flash (Succès/Erreur) -->
                     {% if messages %}
                         <div class="row">
                             <div class="col-md-12">
@@ -46,7 +44,6 @@
                         </div>
                     {% endif %}
 
-                    <!-- Barre de Recherche Backend -->
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <form method="GET" action="" class="search-form">
@@ -65,7 +62,6 @@
                         </div>
                     </div>
 
-                    <!-- Liste des consultations -->
                     <div class="row">
                         <div class="col-md-12">
                             <div class="table-responsive">
@@ -84,25 +80,21 @@
                                     <tbody>
                                         {% for c in consultations %}
                                         <tr>
-                                            <!-- Date -->
                                             <td>
                                                 <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
                                                 <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
                                             </td>
                                             
-                                            <!-- Patient -->
                                             <td>
                                                 <span class="badge badge-light-info">{{ c.triage.patient.code_patient }}</span><br>
                                                 <strong>{{ c.triage.patient.noms }}</strong><br>
                                                 <small>{{ c.triage.patient.age }} ans</small>
                                             </td>
                                             
-                                            <!-- Médecin -->
                                             <td>
                                                 <i class="fa fa-user-md text-primary"></i> Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}
                                             </td>
                                             
-                                            <!-- Constantes du Triage -->
                                             <td>
                                                 <small>
                                                     <strong>T°:</strong> {{ c.triage.temperature }} °C <br>
@@ -112,23 +104,23 @@
                                                 </small>
                                             </td>
                                             
-                                            <!-- Données Cliniques (Motif & Diagnostic) -->
                                             <td>
                                                 <button class="btn btn-xs btn-outline-info btn-block mb-1" data-toggle="collapse" data-target="#clinique_{{ c.id }}">
                                                     <i class="fa fa-eye"></i> Voir Clinique
                                                 </button>
                                                 <div id="clinique_{{ c.id }}" class="collapse mt-2" style="min-width: 250px; font-size: 12px; background: #fdfdfd; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                                                     <strong>Motif :</strong> {{ c.motif_consultation }}<br><br>
+                                                    <strong>Antecedent :</strong> {{ c.antecedent }}<br><br>
                                                     <strong>Histoire maladie :</strong> {{ c.histoire_maladie }}<br><br>
-                                                    <strong>Examen physique :</strong> {{ c.examen_physique }}<br><br>
                                                     {% if c.complement_d_anamnese %}
                                                         <strong>Complément Anamnèse :</strong> {{ c.complement_d_anamnese }}<br><br>
                                                     {% endif %}
+                                                    <strong>Examen physique :</strong> {{ c.examen_physique }}<br><br>
+                                                    
                                                     <strong class="text-danger">Hypothèse Diag :</strong> {{ c.hypothese_diagnostique }}
                                                 </div>
                                             </td>
                                             
-                                            <!-- Examens -->
                                             <td>
                                                 {% if c.examens.all %}
                                                     <ul class="pl-3 mb-0" style="font-size: 12px;">
@@ -143,19 +135,20 @@
                                                         {% endfor %}
                                                     </ul>
                                                     <hr class="my-1">
-                                                    <small class="text-dark font-weight-bold">Total : {{ c.total_examens_a_payer }} USD/FC</small>
+                                                    {% if fonctionKey == 'admin' %}
+                                                    <small class="text-dark font-weight-bold">Total : {{ c.total_examens_a_payer }} USD/FC</small>{% endif%}
                                                 {% else %}
                                                     <span class="text-muted" style="font-size: 12px;">Aucun examen</span>
                                                 {% endif %}
                                             </td>
                                             
-                                            <!-- Statut final & Bouton d'urgence -->
                                             <td class="text-right">
-                                                <span class="badge badge-success mb-2 d-inline-block"><i class="fa fa-check-circle"></i> Clôturé</span>
-                                                <button class="btn btn-sm btn-danger btn-block mt-1" data-toggle="modal" data-target="#modal_urgence_{{ c.id }}" style="font-size: 11px; padding: 4px 8px;">
-                                                    <i class="fa fa-ambulance"></i> Ordo Urgence
-                                                </button>
-                                            </td>
+    <span class="badge badge-success mb-2 d-inline-block"><i class="fa fa-check-circle"></i> Clôturé</span>
+    
+    <a href="" class="btn btn-sm btn-danger btn-block mt-1" style="font-size: 11px; padding: 4px 8px;">
+        <i class="fa fa-ambulance"></i> Ordo Urgence
+    </a>
+</td>
                                         </tr>
                                         {% empty %}
                                         <tr>
@@ -169,7 +162,6 @@
                                 </table>
                             </div>
 
-                            <!-- Bloc Pagination Django -->
                             {% if consultations.has_other_pages %}
                             <div class="mt-4">
                                 <ul class="pagination justify-content-center">
@@ -195,15 +187,12 @@
                                 </ul>
                             </div>
                             {% endif %}
-
                         </div>
                     </div>
-                    
                 </div>
             </div>
         </div>
 
-        <!-- Modals de Prescription Réactifs d'Urgence (Générés proprement hors du tableau) -->
         {% for c in consultations %}
         <div class="modal fade" id="modal_urgence_{{ c.id }}" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
@@ -214,7 +203,7 @@
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
-                    <form method="POST" action="{% url 'prescrire_ordonnance_urgence_rapide' c.id %}">
+                    <form method="POST" action="{% url 'enregistrer_ordonnance_urgence' c.id %}">
                         {% csrf_token %}
                         <div class="modal-body">
                             <div class="alert alert-warning mb-3" style="color: #856404; background-color: #fff3cd; border-color: #ffeeba;">

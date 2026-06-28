@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Saisie Signes Vitaux - {{ session.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            
+            <div class="page-header">
+                <h3 class="page-title">Saisie des Signes Vitaux</h3>
+                <p>Patient : <strong>{{ session.patient.noms }}</strong> | Session du : {{ session.date_creation|date:"d/m/Y" }}</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary"><i class="fa fa-heartbeat"></i> Informations Médicales</h5>
+                            <hr>
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.temperature.label }}</label>
+                                        {{ form.temperature }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.poids.label }}</label>
+                                        {{ form.poids }}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.tension_arterielle.label }}</label>
+                                        {{ form.tension_arterielle }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.frequence_cardiaque.label }}</label>
+                                        {{ form.frequence_cardiaque }}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.frequence_respiratoire.label }}</label>
+                                        {{ form.frequence_respiratoire }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>{{ form.saturation_oxygene.label }}</label>
+                                        {{ form.saturation_oxygene }}
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg px-5">Enregistrer</button>
+                                    <a href="{% url 'liste_sessions_infirmier' %}" class="btn btn-secondary btn-lg px-5">Annuler</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

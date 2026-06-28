@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un Équipement</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        /* Force les champs à être responsives */
+        .form-control { width: 100% !important; }
+        .form-group { margin-bottom: 1.5rem; }
+        @media (max-width: 767px) {
+            .card-body { padding: 15px; }
+            .btn { width: 100%; margin-bottom: 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header">
+                <h3 class="page-title">Gestion du Matériel</h3>
+            </div>
+
+            <div class="row">
+                <div class="col-12 col-md-10 offset-md-1 col-lg-8 offset-lg-2">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Enregistrer un nouvel équipement</h5>
+                            <hr>
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>Nom de l'équipement</label>
+                                        {{ form.nom }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>Numéro de série</label>
+                                        {{ form.numero_serie }}
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>Catégorie</label>
+                                        {{ form.categorie }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>État actuel</label>
+                                        {{ form.etat }}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>Service assigné</label>
+                                        {{ form.service }}
+                                    </div>
+                                    <div class="col-12 col-md-6 form-group">
+                                        <label>Date d'acquisition</label>
+                                        {{ form.date_acquisition }}
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg">Enregistrer</button>
+                                    <a href="{% url 'liste_equipements' %}" class="btn btn-secondary btn-lg">Annuler</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Acte de Décès - Moyanoli Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .payment-card { max-width: 600px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .price-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="payment-card">
+                    <h3 class="page-title mb-4">Paiement - Acte de Décès</h3>
+                    
+                    <div class="alert alert-info">
+                        <strong>Patient :</strong> 
+                        {% if deces.patient %}{{ deces.patient.noms }}{% else %}{{ deces.nom_patient_externe }} (Externe){% endif %}
+                        <br>
+                        <strong>Date du décès :</strong> {{ deces.date_deces|date:"d/m/Y H:i" }}
+                    </div>
+
+                    <div class="price-box">
+                        <p class="mb-1">Prix officiel à payer :</p>
+                        <h4 class="text-success font-weight-bold">{{ prix_usd }} USD / {{ prix_cdf|floatformat:0 }} CDF</h4>
+                        <small class="text-muted">Taux : 1 USD = {{ taux }} CDF</small>
+                    </div>
+                    {% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label>Montant versé (USD ou CDF selon la devise)</label>
+                            <input type="number" step="0.01" name="montant_verse" class="form-control" placeholder="Entrez le montant" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Devise</label>
+                            <select name="devise" class="form-control" required>
+                                <option value="USD">USD (Min: {{ prix_usd }})</option>
+                                <option value="CDF">CDF (Min: {{ prix_cdf|floatformat:0 }})</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            Valider le paiement
+                        </button>
+                        <a href="{% url 'liste_deces' %}" class="btn btn-secondary w-100 mt-2">Annuler</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

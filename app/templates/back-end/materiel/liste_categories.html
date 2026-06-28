@@ -1,0 +1,80 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Liste des Catégories</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .search-input { margin-bottom: 20px; width: 100%; max-width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header d-flex flex-wrap justify-content-between align-items-center">
+                <h3 class="page-title mb-2">Gestion des Catégories</h3>
+                <a href="{% url 'ajouter_categorie' %}" class="btn btn-primary mb-2">
+                    <i class="fa fa-plus"></i> Ajouter une catégorie
+                </a>
+            </div>
+
+            <input type="text" id="searchInput" class="search-input" placeholder="Rechercher une catégorie...">
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered" id="catTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nom de la catégorie</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for cat in categories %}
+                                        <tr>
+                                            <td>{{ cat.id }}</td>
+                                            <td>{{ cat.nom }}</td>
+                                            <td class="text-right">
+                                                <button class="btn btn-sm btn-info"><i class="fa fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-danger"><i class="fa fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center">Aucune catégorie enregistrée.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+<script>
+    // Filtrage dynamique
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#catTable tbody tr');
+        rows.forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
+        });
+    });
+</script>
+</body>
+</html>

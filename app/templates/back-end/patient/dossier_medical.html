@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Dossier Médical Complet | {{ patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .profile-header { background: #fff; border-bottom: 2px solid #e3e6f0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .card-custom { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 12px; }
+        .nav-tabs-custom .nav-link { border: none; font-weight: 600; color: #6c757d; padding: 15px 25px; }
+        .nav-tabs-custom .nav-link.active { color: #007bff; border-bottom: 3px solid #007bff; background: transparent; }
+        .badge-vital { font-size: 0.9em; padding: 6px 12px; border-radius: 20px; }
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="profile-header">
+                    <h2 class="text-primary font-weight-bold">{{ patient.noms }}</h2>
+                    <p class="text-muted mb-0">
+                        <i class="fa fa-id-card"></i> Matricule: {{ patient.code_patient }} | 
+                        <i class="fa fa-user"></i> Âge: {{ patient.age }} ans
+                    </p>
+                </div>
+
+                <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#cons_tab"><i class="fa fa-stethoscope"></i> Consultations</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#sv_tab"><i class="fa fa-heartbeat"></i> Signes Vitaux</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hosp_tab"><i class="fa fa-bed"></i> Hospitalisations</a></li>
+                </ul>
+
+                <div class="tab-content pt-4">
+                    <div class="tab-pane fade show active" id="cons_tab">
+                        {% for cons in consultations %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                    <h5 class="text-info"><i class="fa fa-calendar"></i> {{ cons.date_creation|date:"d/m/Y H:i" }}</h5>
+                                    <span class="badge badge-primary">Médecin: {{ cons.medecin.username }}</span>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><h6>Motif</h6><p class="text-secondary">{{ cons.motif_consultation }}</p></div>
+                                    <div class="col-md-6"><h6>Diagnostic</h6><p class="font-weight-bold text-dark">{{ cons.hypothese_diagnostique }}</p></div>
+                                </div>
+                                
+                                {% if cons.examens.all %}
+                                <h6 class="text-primary mt-3"><i class="fa fa-flask"></i> Examens (Labo/Imagerie)</h6>
+                                <table class="table table-sm table-bordered">
+                                    <thead class="thead-light"><tr><th>Examen</th><th>Statut</th><th>Résultat</th></tr></thead>
+                                    <tbody>
+                                        {% for ex in cons.examens.all %}
+                                        <tr><td>{{ ex.prestation.libelle }}</td><td><span class="badge badge-secondary">{{ ex.get_statut_display }}</span></td><td>{{ ex.resultat|default:"En attente" }}</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% endif %}
+
+                                {% if cons.ordonnance_set.all %}
+                                <h6 class="text-danger mt-3"><i class="fa fa-file-prescription"></i> Ordonnances</h6>
+                                <div class="p-2 bg-light border-left border-danger">
+                                    {% for ord in cons.ordonnance_set.all %}
+                                        <ul class="list-unstyled mb-0">
+                                            {% for med in ord.medicaments.all %}
+                                            <li><i class="fa fa-caret-right"></i> <strong>{{ med.nom_medicament }}</strong> - {{ med.posologie }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-center">Aucune consultation.</p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="tab-pane fade" id="sv_tab">
+                        <div class="card card-custom">
+                            <div class="card-body p-0">
+                                <table class="table table-striped">
+                                    <thead><tr><th>Date</th><th>Temp.</th><th>TA</th><th>Pouls</th><th>Saturation</th></tr></thead>
+                                    <tbody>
+                                        {% for sv in signes_vitaux %}
+                                        <tr>
+                                            <td>{{ sv.date_prelevement|date:"d/m/Y H:i" }}</td>
+                                            <td>{{ sv.temperature }}°C</td>
+                                            <td>{{ sv.tension_arterielle }}</td>
+                                            <td>{{ sv.frequence_cardiaque }} bpm</td>
+                                            <td>{{ sv.saturation_oxygene }}%</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="hosp_tab">
+                        <div class="card card-custom">
+                            <div class="card-body p-0">
+                                <table class="table table-hover">
+                                    <thead><tr><th>Date Entrée</th><th>Lit</th><th>Motif</th><th>Statut</th></tr></thead>
+                                    <tbody>
+                                        {% for h in hospitalisations %}
+                                        <tr>
+                                            <td>{{ h.date_entree|date:"d/m/Y" }}</td>
+                                            <td>{{ h.lit.nom_lit }}</td>
+                                            <td>{{ h.motif_admission }}</td>
+                                            <td><span class="status-badge badge-info">{{ h.statut }}</span></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

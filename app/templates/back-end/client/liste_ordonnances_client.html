@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Historique des Ordonnances</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table-card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: none; }
+        .search-box { border-radius: 50px; padding: 10px 20px; border: 1px solid #ddd; width: 100%; max-width: 400px; margin-bottom: 20px; }
+        .patient-info { font-size: 0.85em; color: #6c757d; display: block; }
+        
+        @media (max-width: 767px) {
+            .page-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+            .btn { width: 100%; margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <h3 class="page-title">Historique des Ordonnances</h3>
+                    <a href="{% url 'liste_ordonnances_externes_client' %}" class="btn btn-primary">
+                        <i class="fa fa-refresh"></i> Actualiser
+                    </a>
+                </div>
+
+                <input type="text" id="searchOrdo" class="search-box" placeholder="Rechercher par patient ou médecin...">
+
+                <div class="card table-card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0" id="ordoTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th class="pl-4">Date</th>
+                                        <th>Patient (Infos)</th>
+                                        <th>Médecin</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ord in ordonnances %}
+                                    <tr>
+                                        <td class="pl-4">{{ ord.date_creation|date:"d/m/Y H:i" }}</td>
+                                        <td>
+                                            <div class="font-weight-bold">{{ ord.client.noms }}</div>
+                                            <span class="patient-info">
+                                                Âge: {{ ord.client.age|default:"-" }} | Tél: {{ ord.client.telephone|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>{{ ord.medecin.username }}</td>
+                                        <td class="text-center">
+                                            <a href="{% url 'consulter_ordonnance_externe' ord.id %}" class="btn btn-sm btn-outline-info">
+                                                <i class="fa fa-eye"></i> Consulter
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">Aucune ordonnance enregistrée.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    
+    <script>
+        document.getElementById('searchOrdo').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#ordoTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

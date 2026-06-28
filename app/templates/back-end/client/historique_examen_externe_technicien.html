@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Historique des Examens - {{ fonctionKey }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .table-card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: none; }
+        .table thead { background-color: #f1f4f9; color: #495057; }
+        .badge-status { padding: 5px 10px; border-radius: 50px; font-size: 0.75rem; }
+        .examen-row { border-bottom: 1px solid #eee; padding: 12px 0; }
+        .examen-row:last-child { border-bottom: none; }
+        .search-container { margin-bottom: 20px; }
+        .search-box { border-radius: 50px; padding: 10px 20px; border: 1px solid #ddd; width: 100%; max-width: 350px; outline: none; }
+        .rapport-box { background: #f8f9fa; padding: 8px; border-left: 3px solid #28a745; margin-top: 8px; font-size: 0.85rem; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <h3 class="page-title">Historique des examens : {{ fonctionKey }}</h3>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-box" placeholder="Rechercher un patient...">
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="histTable">
+                                <thead>
+                                    <tr>
+                                        <th class="pl-4">ID Demande</th>
+                                        <th>Patient</th>
+                                        <th>Date</th>
+                                        <th>Détails</th>
+                                        <th>Action</th> </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in historique_technique %}
+                                    <tr>
+                                        <td class="pl-4 font-weight-bold text-primary">#{{ item.id }}</td>
+                                        <td>
+                                            <div class="font-weight-bold">{{ item.patient }}</div>
+                                        </td>
+                                        <td>{{ item.date|date:"d M Y" }} <br> <small class="text-muted">{{ item.date|date:"H:i" }}</small></td>
+                                        <td>
+                                            {% for d in item.details %}
+                                            <div class="examen-row">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span><strong>{{ d.prestation.libelle }}</strong></span>
+                                                    {% if d.statut == 'TERMINE' %}
+                                                        <span class="badge badge-success badge-status">Terminé</span>
+                                                    {% else %}
+                                                        <span class="badge badge-warning badge-status">En attente</span>
+                                                    {% endif %}
+                                                </div>
+                                                {% if d.statut == 'TERMINE' and d.rapport %}
+                                                    <div class="rapport-box">{{ d.rapport|linebreaksbr }}</div>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% if is_medecin %}
+                                                <a href="{% url 'prescrire_ordonnance_client_externe' item.id %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fa fa-prescription"></i> Prescrire
+                                                </a>
+                                            {% else %}
+                                                <small class="text-muted">Accès restreint</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4">Aucun historique disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#histTable tbody tr');
+            rows.forEach(row => {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

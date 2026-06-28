@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Ordonnance - {{ ord.consultation.triage.patient.noms }} | Moyanoli</title>
+    
+    {% include 'back-end/includes/css.html' %}
+    
+    <style>
+        :root { --primary-color: #006064; }
+        .page-wrapper { background: #f0f2f5; padding: 20px; min-height: 100vh; }
+        .form-container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 8px solid var(--primary-color); }
+        
+        .header-form { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        h3 { border-left: 4px solid var(--primary-color); padding-left: 10px; color: var(--primary-color); margin-top: 30px; font-size: 1.1rem; }
+        
+        .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
+        .col-auto { width: 50px; text-align: center; }
+
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        .btn-add { background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
+        .btn-save { background: var(--primary-color); color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; height: 45px; width: 100%; }
+        
+        @media (max-width: 600px) {
+            .form-container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="form-container">
+                <div class="header-form">
+                    <h2 style="color: var(--primary-color); margin: 0;">Modification Ordonnance</h2>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col">
+                            <label>Type d'ordonnance</label>
+                            <select name="type_ordonnance" required>
+                                <option value="URGENCE" {% if ord.type_ordonnance == 'URGENCE' %}selected{% endif %}>Urgence</option>
+                                <option value="DEFINITIVE" {% if ord.type_ordonnance == 'DEFINITIVE' %}selected{% endif %}>Définitive</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label>Date</label>
+                            <input type="text" value="{{ ord.consultation.date_creation|date:'d/m/Y' }}" readonly>
+                        </div>
+                    </div>
+
+                    <h3>Médicaments</h3>
+                    <div id="zone-medicaments">
+                        {% for med in ord.medicaments.all %}
+                        <div class="row">
+                            <div class="col"><input type="text" name="nom_medicament[]" value="{{ med.nom }}" placeholder="Nom médicament" required></div>
+                            <div class="col"><input type="text" name="posologie[]" value="{{ med.posologie }}" placeholder="Posologie" required></div>
+                            <div class="col"><input type="text" name="duree[]" value="{{ med.duree }}" placeholder="Durée" required></div>
+                            <div class="col-auto"><button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="button" class="btn-add" onclick="ajouterLigne()">+ Ajouter un médicament</button>
+
+                    <h3>Observation</h3>
+                    <textarea name="observation" rows="3">{{ ord.observation }}</textarea>
+
+                    <div style="margin-top: 40px;">
+                        <button type="submit" class="btn-save">Enregistrer les modifications</button>
+                        <a href="javascript:history.back()" style="display:block; text-align:center; margin-top:20px; color:#666; text-decoration:none;">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function ajouterLigne() {
+            const zone = document.getElementById('zone-medicaments');
+            const div = document.createElement('div');
+            div.className = 'row';
+            div.innerHTML = `
+                <div class="col"><input type="text" name="nom_medicament[]" placeholder="Nom médicament" required></div>
+                <div class="col"><input type="text" name="posologie[]" placeholder="Posologie" required></div>
+                <div class="col"><input type="text" name="duree[]" placeholder="Durée" required></div>
+                <div class="col-auto"><button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></div>
+            `;
+            zone.appendChild(div);
+        }
+    </script>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

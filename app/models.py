@@ -7,6 +7,8 @@ from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.conf import settings 
 from django.db import transaction 
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 
@@ -371,6 +373,23 @@ class Consultation(models.Model):
     def est_accessible(self):
         return self.consultation_payee
 
+# ====================================================================
+class ClientExterne(models.Model):
+    # Juste le nécessaire pour identifier la personne de passage
+    noms = models.CharField(max_length=150, verbose_name="Nom complet")
+    TYPESEXE = [
+        ('M', 'Masculin') , 
+        ('F' , 'Feminin')
+    ]
+    sexe = models.CharField(max_length = 20 , choices = TYPESEXE , blank=True, null=True)
+    poids = models.CharField(max_length = 15 , blank=True, null=True)
+    age = models.CharField(max_length = 15 , blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    date_enregistrement = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.noms} (Externe)"
+    
 # 11. DEMANDE EXAMEN ===============================================
 class DemandeExamen(models.Model):
     STATUT = [
@@ -379,13 +398,11 @@ class DemandeExamen(models.Model):
         ('ANNULE', 'Annulé'),
     ]
     
-    consultation = models.ForeignKey(Consultation, related_name='examens', on_delete=models.CASCADE)
-    prestation = models.ForeignKey(Prestation, on_delete=models.PROTECT)
+    consultation = models.ForeignKey('Consultation', related_name='examens', on_delete=models.CASCADE)
+    prestation = models.ForeignKey('Prestation', on_delete=models.PROTECT)
     indication = models.TextField(blank=True, help_text="Note du médecin pour le technicien")
     resultat = models.TextField(blank=True, null=True)
     image_resultat = models.ImageField(upload_to='resultats_examens/', blank=True, null=True)
-    
-    # Informations sur la réalisation de l'examen
     technicien = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         related_name='examens_realises', 
@@ -399,14 +416,13 @@ class DemandeExamen(models.Model):
     quantite = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-        # Utilisation d'une structure sécurisée pour éviter les erreurs si la relation est nulle
         try:
-            nom_patient = self.consultation.triage.patient.noms
+            nom_patient = self.consultation.patient.noms  # ⚠️ adapte selon ton modèle Consultation
         except (AttributeError, ObjectDoesNotExist):
             nom_patient = "Patient inconnu"
-            
         return f"{self.prestation.libelle} pour {nom_patient}"
-
+    
+    
 class Ordonnance(models.Model):
     TYPE_CHOICES = [('URGENCE', 'Ordonnance d’Urgence'), ('DEFINITIVE', 'Ordonnance Définitive')]
     
@@ -1094,22 +1110,7 @@ class FicheAccouchement(models.Model):
         return f"Fiche Accouchement - {self.consultation.triage.patient.noms}"
 
 
-# ====================================================================
-class ClientExterne(models.Model):
-    # Juste le nécessaire pour identifier la personne de passage
-    noms = models.CharField(max_length=150, verbose_name="Nom complet")
-    TYPESEXE = [
-        ('M', 'Masculin') , 
-        ('F' , 'Feminin')
-    ]
-    sexe = models.CharField(max_length = 20 , choices = TYPESEXE , blank=True, null=True)
-    poids = models.CharField(max_length = 15 , blank=True, null=True)
-    age = models.CharField(max_length = 15 , blank=True, null=True)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
-    date_enregistrement = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.noms} (Externe)"
+
 
 class DemandeExamenExterne(models.Model):
     STATUT_CHOICES = [('EN_ATTENTE', 'En attente'), ('PAYE', 'Payé'), ('TERMINE', 'Terminé')]
@@ -1124,6 +1125,8 @@ class DemandeExamenExterne(models.Model):
 
     def __str__(self):
         return f"Demande pour {self.client.noms} - {self.statut}"
+    
+
 
 
 

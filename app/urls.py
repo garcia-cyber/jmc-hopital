@@ -18,10 +18,14 @@ urlpatterns =[
 
 
      # ================================
-     # PRESTATION 
+     # PRESTATION ET CONFIGURATION
      path('prestations/', views.gestion_prestations, name='gestion_prestations'),
      path('config/taux/', views.modifier_taux, name='modifier_taux'),
      path('prestations/modifier/<int:pk>/', views.modifier_prestation, name='modifier_prestation'),
+     path('enregistrer_hopital/',views.enregistrer_hopital, name = 'hopitalAdd') ,
+     path('hopitaux/', views.liste_hopitaux, name='hopital_liste'),
+     path('hopitaux/modifier/<int:id>/', views.modifier_hopital, name='modifier_hopital'),
+     path('hopitaux/supprimer/<int:id>/', views.supprimer_hopital, name='supprimer_hopital'),
 
      # =================================
      # SERVICE

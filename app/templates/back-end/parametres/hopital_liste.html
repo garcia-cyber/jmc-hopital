@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Liste des Hôpitaux | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .dataTables_filter { display: none; }
+        .badge-role {
+            background: #007bff;
+            color: #fff;
+            font-size: 0.85rem;
+            padding: 5px 10px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col-12">
+                            <h3 class="page-title">Paramètres - Liste des Hôpitaux</h3>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="{% url 'hopitalAdd' %}">Nouvel Hôpital</a></li>
+                                <li class="breadcrumb-item active">Liste</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fa fa-hospital-o text-primary"></i> Liste des Hôpitaux
+                                </h5>
+                                <span class="badge-role float-right">Connecté en tant que : {{ fonctionKey }}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row filter-row mb-3">
+                                    <div class="col-sm-6 col-md-12">  
+                                        <div class="form-group form-focus">
+                                            <input type="text" class="form-control floating" id="searchHospitalList" placeholder="Rechercher un hôpital...">
+                                            <label class="focus-label">Recherche rapide</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table table-striped custom-table mb-0" id="hospitalTable">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Nom</th>
+                                                
+                                              
+                                                <th class="text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for hopital in hopitaux %}
+                                            <tr>
+                                                <td><strong>{{ forloop.counter }}</strong></td>
+                                                <td>{{ hopital.nomH }}</td>
+                                                
+                                                <td class="text-right">
+                                                    <a href="{% url 'modifier_hopital' hopital.id %}" class="btn btn-sm btn-info">
+                                                        <i class="fa fa-edit"></i> Modifier
+                                                    </a>
+                                                    <a href="{% url 'supprimer_hopital' hopital.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Voulez-vous vraiment supprimer cet hôpital ?');">
+                                                        <i class="fa fa-trash"></i> Supprimer
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">Aucun hôpital enregistré.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        $(document).ready(function() {
+            if ($.fn.DataTable.isDataTable('#hospitalTable')) {
+                $('#hospitalTable').DataTable().destroy();
+            }
+            var table = $('#hospitalTable').DataTable({
+                "ordering": false,
+                "paging": true,
+                "searching": true,
+                "info": false
+            });
+            $('#searchHospitalList').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+        });
+    </script>
+</body>
+</html>

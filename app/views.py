@@ -2130,8 +2130,9 @@ def enregistrer_ordonnance_view(request, triage_id):
     triage = get_object_or_404(SigneVital, id=triage_id)
     consultation = get_object_or_404(Consultation, triage=triage)
     
+    
     # Récupération des examens liés à cette consultation
-    examens_termines = Examen.objects.filter(consultation=consultation, statut='TERMINE')
+    examens_termines = DemandeExamen.objects.filter(consultation=consultation, statut='TERMINE')
 
     if request.method == 'POST':
         form = OrdonnanceForm(request.POST)
@@ -5705,3 +5706,70 @@ def liste_equipements(request):
         'fonctionKey': fonction_key
     }
     return render(request, 'back-end/materiel/liste_equipements.html', context)
+
+# 
+# =======================================================================================================================
+# ENREGISTRE HOPITAL
+# =======================================================================================================================
+@login_required
+def enregistrer_hopital(request):
+    if request.method == 'POST':
+        form = HopitalForm(request.POST) # request.FILES si vous avez des images/fichiers
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Enregistrement effectué avec succès.")
+            form = HopitalForm()
+            # j vais mettre le lien pour la liste des hopitaux
+        else:
+            messages.error(request, "Erreur lors de l'enregistrement. Vérifiez les champs.")
+    else:
+        form = HopitalForm()
+
+    # Gestion de la fonction/rôle utilisateur
+    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(request, 'back-end/parametres/hopital.html', {'form': form , 'fonctionKey':fonction_key}) 
+
+#
+# ===================================================================================================
+# LISTE DES HOPITAUX
+# ===================================================================================================
+@login_required
+def liste_hopitaux(request):
+    hopitaux = Hopital.objects.all()
+    # Gestion de la fonction/rôle utilisateur
+    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(request, 'back-end/parametres/hopital_liste.html', {'hopitaux': hopitaux, 'fonctionKey': fonction_key}) 
+#
+# =======================================================================================================================
+# Modifier HOPITAL 
+# =======================================================================================================================
+@login_required
+def modifier_hopital(request, id):
+    hopital = get_object_or_404(Hopital, id=id) 
+    if request.method == 'POST':
+        form = HopitalForm(request.POST, instance=hopital)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Hôpital modifié avec succès.")
+            return redirect('hopital_liste')
+    else:
+        form = HopitalForm(instance=hopital)
+
+    # Gestion de la fonction/rôle utilisateur
+    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(request, 'back-end/parametres/hopital_modifier.html', {'form': form , 'fonctionKey':fonction_key})
+#
+# =======================================================================================================================
+# SUPPRIME HOPITAL
+# =======================================================================================================================
+def supprimer_hopital(request, id):
+    hopital = get_object_or_404(Hopital, id=id)
+    hopital.delete()
+    messages.success(request, "Hôpital supprimé avec succès.")
+    return redirect('hopital_liste')

@@ -3,203 +3,150 @@
 <html lang="fr">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Connexion Jmc</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Connexion | JMC Médical</title>
         
-        <link rel="shortcut icon" type="image/x-icon" href="{% static 'back-end/assets/img/favicon.png' %}">
         <link rel="stylesheet" href="{% static 'back-end/assets/css/bootstrap.min.css'%}">
         <link rel="stylesheet" href="{% static 'back-end/assets/css/font-awesome.min.css'%}">
         
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
 
-            body.account-page {
-                font-family: 'Inter', sans-serif;
-                background: linear-gradient(to top, #000, #0008), 
-                            url("{% static 'front-end/assets/dr/1.jpg' %}") no-repeat center center;
+            :root {
+                --primary-color: #0d6efd;
+                --bg-overlay: linear-gradient(135deg, rgba(10, 25, 47, 0.85), rgba(10, 25, 47, 0.75));
+                --input-border: #d1d9e6;
+            }
+
+            body {
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                background: var(--bg-overlay), url("{% static 'front-end/assets/img/dr/1.jpg' %}") no-repeat center center fixed;
                 background-size: cover;
-                background-attachment: fixed;
-                min-height: 100vh;
+                height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 margin: 0;
-                padding: 15px; /* Évite que la carte touche les bords sur mobile */
             }
 
-            .account-box {
+            .login-card {
                 background: #ffffff;
-                border-radius: 24px;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-                overflow: hidden;
                 width: 100%;
-                max-width: 420px;
-                position: relative;
-                border-top: 6px solid #007bff;
-            }
-
-            /* Filigrane médical */
-            .account-box::before {
-                content: "\f0f1"; 
-                font-family: "FontAwesome";
-                position: absolute;
-                bottom: -20px;
-                right: -10px;
-                font-size: 120px;
-                color: rgba(0, 123, 255, 0.03);
-                transform: rotate(-15deg);
-                pointer-events: none;
-            }
-
-            .account-wrapper {
-                padding: 40px 30px;
-                position: relative;
-                z-index: 1;
+                max-width: 400px;
+                padding: 40px;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             }
 
             .account-logo img {
-                max-height: 70px;
-                border-radius: 50%;
-                padding: 5px;
-                background: #fff;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                width: 80px;
+                height: 80px;
+                object-fit: cover;
+                border-radius: 15px;
+                margin-bottom: 20px;
             }
 
             .account-title {
-                font-size: 1.5rem;
                 font-weight: 700;
                 color: #1e293b;
-                margin-top: 15px;
-                text-align: center;
+                margin-bottom: 5px;
             }
 
             .account-subtitle {
                 color: #64748b;
-                font-size: 0.85rem;
-                margin-bottom: 25px;
-                text-align: center;
-            }
-
-            .medical-badge {
-                background: #e0f2fe;
-                color: #0369a1;
-                padding: 2px 8px;
-                border-radius: 20px;
-                font-size: 0.7rem;
-                font-weight: 700;
-                text-transform: uppercase;
-                display: inline-block;
-                margin-top: 5px;
+                font-size: 0.9rem;
+                margin-bottom: 30px;
             }
 
             .form-group label {
-                font-weight: 600;
-                color: #475569;
                 font-size: 0.85rem;
+                font-weight: 600;
+                color: #334155;
                 margin-bottom: 8px;
+                display: block;
             }
 
             .form-control {
+                border: 1.5px solid var(--input-border);
+                border-radius: 10px;
+                padding: 12px 16px;
+                transition: all 0.3s ease;
                 background: #f8fafc;
-                border: 2px solid #e2e8f0;
-                border-radius: 12px;
-                height: 50px;
-                font-size: 16px; /* Évite le zoom automatique sur iPhone */
             }
 
-            .account-btn {
-                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-                border: none;
-                border-radius: 12px;
-                color: white;
-                font-weight: 700;
-                height: 54px;
+            .form-control:focus {
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+                background: #fff;
+            }
+
+            .btn-login {
                 width: 100%;
-                box-shadow: 0 10px 15px -3px rgba(0, 123, 255, 0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
+                background: var(--primary-color);
+                color: white;
+                padding: 14px;
+                border-radius: 10px;
+                font-weight: 600;
+                border: none;
+                margin-top: 10px;
+                transition: transform 0.2s;
             }
 
-            .footer-text {
+            .btn-login:hover {
+                background: #0a58ca;
+                transform: translateY(-2px);
+            }
+
+            .footer-info {
+                margin-top: 25px;
                 font-size: 0.75rem;
                 color: #94a3b8;
-                margin-top: 30px;
                 text-align: center;
-            }
-
-            /* --- OPTIMISATION MOBILE (MEDIA QUERIES) --- */
-            @media (max-width: 480px) {
-                .account-wrapper {
-                    padding: 30px 20px; /* Moins d'espace interne sur petit écran */
-                }
-                
-                .account-title {
-                    font-size: 1.3rem;
-                }
-
-                .account-box {
-                    border-radius: 18px; /* Adoucir les coins sur mobile */
-                }
-
-                .form-control {
-                    height: 45px; /* Champs légèrement plus petits */
-                }
-                
-                .account-btn {
-                    height: 50px;
-                }
+                border-top: 1px solid #f1f5f9;
+                padding-top: 20px;
             }
         </style>
     </head>
-    <body class="account-page">
+    <body>
     
-        <div class="account-box">
-            <div class="account-wrapper">
-                <div class="text-center">
-                    <div class="account-logo">
-                        <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Moyanoli">  
-                    </div> 
-                    <h3 class="account-title">Connexion</h3>
-                    <div class="mb-4">
-                        <span class="medical-badge">Système</span>
-                    </div>
+        <div class="login-card">
+            <div class="text-center">
+                <div class="account-logo">
+                    <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo">
+                </div>
+                <h3 class="account-title">Espace Médical</h3>
+                <p class="account-subtitle">Connectez-vous à votre session JMC</p>
+            </div>
+
+            {% if msg %}
+            <div class="alert alert-danger" style="border-radius: 10px; font-size: 0.85rem;">
+                <i class="fa fa-info-circle"></i> {{ msg }}
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label>IDENTIFIANT</label>
+                    <input class="form-control" type="text" name="username" required>
                 </div>
                 
-                {% if msg %}
-                <div class="alert alert-danger text-center p-2" style="font-size: 0.8rem; border-radius: 10px;">
-                    <i class="fa fa-exclamation-circle"></i> {{ msg }}
+                <div class="form-group mb-4">
+                    <div class="d-flex justify-content-between">
+                        <label>MOT DE PASSE</label>
+                        <a href="#" class="small text-decoration-none text-primary">Oublié ?</a>
+                    </div>
+                    <input class="form-control" type="password" name="password" required>
                 </div>
-                {% endif %}
 
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="form-group">
-                        <label>Identifiant</label>
-                        <input class="form-control" type="text" name="username" placeholder="Utilisateur" required value="{{ form.username.value|default:'' }}">
-                    </div>
-                    
-                    <div class="form-group">
-                        <div class="d-flex justify-content-between">
-                            <label>Mot de passe</label>
-                            <a class="text-muted small" href="#" style="text-decoration:none;">Oublié ?</a>
-                        </div>
-                        <input class="form-control" type="password" name="password" placeholder="••••••••" required>
-                    </div>
+                <button class="btn-login" type="submit">
+                    SE CONNECTER
+                </button>
+            </form>
 
-                    <div class="form-group pt-2">
-                        <button class="btn account-btn" type="submit">
-                            <i class="fa fa-sign-in"></i> Connexion
-                        </button>
-                    </div>
-                </form>
-
-                <div class="footer-text">
-                    <i class="fa fa-hospital-o text-danger"></i> Jmc medical ERP &copy; 2026<br>
-                    <small><i class="fa fa-lock"></i> Session sécurisée (SSL)</small>
-                </div>
+            <div class="footer-info">
+                Jmc Medical ERP v2.0 &copy; 2026<br>
+                Accès autorisé au personnel médical uniquement
             </div>
         </div>
 

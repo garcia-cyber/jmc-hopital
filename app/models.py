@@ -9,7 +9,13 @@ from django.conf import settings
 from django.db import transaction 
 from django.core.exceptions import ObjectDoesNotExist
 
+# 0 Plusieurs Hopitaux
+class Hopital(models.Model):
+    nomH = models.CharField(max_length=30)
+    
 
+    def __str__(self):
+        return self.nomH
 
 
 

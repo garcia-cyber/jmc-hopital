@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Tableau de Bord - Moyanoli ERP</title>
+    <title>Tableau de Bord - JMC</title>
     {% include 'back-end/includes/css.html'%}
     <style>
         :root { --hospital-blue: #007bff; --hospital-green: #10b981; --hospital-red: #ef4444; --hospital-orange: #f59e0b; }
@@ -25,7 +25,7 @@
             <div class="content container-fluid">
                 <div class="medical-welcome">
                     <h3>Bonjour, {{user.username}} !</h3>
-                    <p class="mb-0">Vue d'ensemble {{ fonctionKey|title }} - Moyanoli ERP</p>
+                    <p class="mb-0">Vue d'ensemble {{ fonctionKey|title }} - JMC Medical</p>
                 </div>
 
                 {% if fonctionKey == 'admin' or fonctionKey == 'receptionniste' %}

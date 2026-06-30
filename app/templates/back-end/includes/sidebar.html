@@ -23,9 +23,13 @@
                     <li class="submenu">
                         <a href="#"><i class="la la-cog"></i> <span> Configuration </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
+
+                            <li><a href="{% url 'hopitalAdd' %}">hopital</a></li>
+                            <li><a href="{% url 'hopital_liste' %}">Liste hopital</a></li>
                             <li><a href="{% url 'gestion_prestations' %}">Prestations</a></li>
                             <li><a href="{% url 'modifier_taux' %}">Taux de change</a></li>
                             <li><a href="{% url 'gestion_services' %}">Services</a></li>
+
                         </ul>
                     </li>
                     <li class="submenu">

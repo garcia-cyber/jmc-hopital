@@ -636,3 +636,22 @@ class SigneVitalForm(forms.ModelForm):
             'frequence_respiratoire': 'Fréquence Respiratoire (RPM)',
             'saturation_oxygene': 'Saturation Oxygène (%)',
         }
+
+# ==============================================================================
+#
+class HopitalForm(forms.ModelForm) :
+    class Meta:
+        model = Hopital
+
+        fields = ['nomH']
+        widgets = {
+            'nomH' : forms.TextInput(attrs={'class':'form-control'}) 
+        } 
+
+    def clean_nomH(self):
+        nomH = self.cleaned_data.get('nomH')
+
+        if Hopital.objects.filter(nomH__iexact=nomH).exists():
+            raise forms.ValidationError(f" {nomH}' existe déjà.") 
+        return nomH 
+

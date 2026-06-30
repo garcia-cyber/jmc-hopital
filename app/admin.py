@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.utils import timezone
 from .models import *
 
+# 0. HOPITAL
+@admin.register(Hopital)
+class HopitalAdmin(admin.ModelAdmin):
+    list_display = ['nomH']
+
 # 1. CONFIGURATION ET ADMINISTRATION ====================================
 @admin.register(ConfigurationHopital)
 class ConfigurationHopitalAdmin(admin.ModelAdmin):

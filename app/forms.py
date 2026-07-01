@@ -98,12 +98,13 @@ class PrestationForm(forms.ModelForm):
     class Meta:
         model = Prestation
         # 1. On ajoute 'valeur_normale' dans la liste des champs
-        fields = ['libelle', 'categorie', 'prix', 'valeur_normale']
+        fields = ['libelle', 'categorie', 'prix', 'valeur_normale','hopital']
         
         # 2. On configure le widget Bootstrap pour le nouveau champ
         widgets = {
             'libelle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Goutte Épaisse'}),
             'categorie': forms.Select(attrs={'class': 'form-control', 'id': 'id_categorie'}),
+            'hopital': forms.Select(attrs={'class': 'form-control'}),
             'prix': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'valeur_normale': forms.TextInput(attrs={
                 'class': 'form-control', 

@@ -52,6 +52,7 @@ class Fonction(models.Model):
     fonctionKey = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
     userKey = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='user_fonction')
     autorisation = models.CharField(max_length=30, default='oui')
+    hopital = models.ForeignKey(Hopital , on_delete=models.SET_NULL, null = True , related_name= 'hopital_fonction') 
 
     def __str__(self):
         if self.userKey and self.fonctionKey:
@@ -86,6 +87,7 @@ class Prestation(models.Model):
     libelle = models.CharField(max_length=200, verbose_name="Libellé")
     categorie = models.CharField(max_length=10, choices=CATEGORIES, verbose_name="Catégorie")
     prix = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Prix (USD)")
+    hopital =  models.ForeignKey(Hopital, on_delete= models.SET_NULL , null = True , related_name = 'hopital_prestation') 
     valeur_normale = models.CharField(
         max_length=150, blank=True, null=True, 
         verbose_name="Valeur Normale / Référence (Labo uniquement)",

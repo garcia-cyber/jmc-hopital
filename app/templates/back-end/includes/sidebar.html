@@ -1,3 +1,4 @@
+
 <div class="sidebar" id="sidebar" style="background-color: #f8fafc;">
     <div class="sidebar-inner slimscroll">
         <div id="sidebar-menu" class="sidebar-menu">
@@ -10,13 +11,17 @@
                     </ul>
                 </li>
 
-                {% if fonctionKey == 'admin' %}
+                {% if fonctionKey == 'admin' or fonctionKey == 'gestionnaire' %}
                     <li class="menu-title"> <span>ADMINISTRATION</span> </li>
                     <li class="submenu">
                         <a href="#"><i class="la la-user-md"></i> <span> Personnel Médical</span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
+
                             <li><a href="{% url 'employeAdd' %}">Inscrire un utilisateur</a></li>
+                            {% if fonctionKey == 'admin' %}
                             <li><a href="{% url 'employeRead' %}">Liste du Personnel</a></li>
+                            {% endif %}
+
                             <li><a href="{% url 'liste_employe_poste' %}">Profil Utilisateur</a></li>
                         </ul>
                     </li>
@@ -491,3 +496,77 @@
         </div>
     </div>
 </div>
+
+<div id="overlay"></div>
+<style>
+@media (max-width: 992px) {
+    /* On force la position et la largeur */
+    #sidebar {
+        position: fixed !important;
+        left: -260px !important;
+        top: 60px !important;
+        width: 260px !important;
+        height: calc(100vh - 60px) !important;
+        background-color: #f8fafc !important;
+        z-index: 9999 !important;
+        transition: left 0.3s ease-in-out !important;
+        overflow-y: auto !important;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1) !important;
+        display: block !important; /* Force l'affichage */
+        margin-left: 0 !important; /* Annule d'éventuelles marges du template */
+    }
+
+    /* Quand il est actif, on le met à 0 */
+    #sidebar.active {
+        left: 0 !important;
+    }
+
+    /* Overlay pour fermer le menu */
+    #overlay {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 60px);
+        background: rgba(0,0,0,0.4);
+        z-index: 9998;
+    }
+
+    #overlay.active {
+        display: block;
+    }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const toggleBtn = document.getElementById("toggle_btn");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+    const body = document.body;
+
+    if (toggleBtn && sidebar && overlay) {
+        toggleBtn.addEventListener("click", function(e) {
+            // Empêche le template de gérer le clic lui-même
+            e.preventDefault();
+            e.stopPropagation(); 
+            
+            // Toggle de nos classes personnalisées
+            sidebar.classList.toggle("active");
+            overlay.classList.toggle("active");
+            
+            // Optionnel : supprimer les classes du template qui pourraient causer le conflit
+            body.classList.remove("slide-nav", "sidebar-opened");
+        });
+
+        // Fermer en cliquant sur l'overlay
+        overlay.addEventListener("click", function() {
+            sidebar.classList.remove("active");
+            overlay.classList.remove("active");
+        });
+    }
+});
+</script>
+
+

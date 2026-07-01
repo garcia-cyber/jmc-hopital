@@ -18,7 +18,7 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(Fonction)
 class FonctionAdmin(admin.ModelAdmin):
-    list_display = ('userKey', 'fonctionKey', 'autorisation')
+    list_display = ('userKey', 'fonctionKey', 'autorisation','hopital')
 
 # 2. GESTION DES PATIENTS ET SERVICES ==================================
 @admin.register(Patient)

@@ -1,5 +1,5 @@
 {% load static %}
-<header class="header-modern" style="background: #ffffff; height: 60px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; padding: 0 20px;">
+<header class="header-modern" style="background: #ffffff; height: 60px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; padding: 0 20px; position: relative; z-index: 1060;">
     <div class="header-left" style="display: flex; align-items: center;">
         <a href="{% url 'home' %}" class="logo">
             <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" width="45" height="45" alt="Moyanoli" style="border-radius: 8px;">
@@ -7,84 +7,26 @@
         <span style="font-weight: 700; font-size: 1.2rem; margin-left: 15px; color: #1e293b;">JMC Medical</span>
     </div>
 
-    <!-- Toggle visible en mobile -->
-    <a id="toggle_btn" href="javascript:void(0);" 
-       class="d-block d-lg-none" 
-       style="color: #64748b; margin-left: 20px; font-size: 1.4rem; z-index:1000;">
+    <!-- Bouton toggle visible uniquement sur mobile -->
+    <a id="toggle_btn" href="#" class="d-block d-lg-none" style="color: #64748b; margin-left: 20px; font-size: 1.4rem; z-index: 1000;">
         <i class="fa fa-bars"></i>
     </a>
 
-    <!-- Barre de recherche -->
-    <div class="top-nav-search d-none d-md-block" style="margin-left: 30px; flex-grow: 1; max-width: 400px;">
-        <form action="#" style="position: relative;">
-            <input class="form-control" type="text" placeholder="Rechercher un patient, un dossier..." 
-                   style="background: #f1f5f9; border: none; border-radius: 20px; padding-left: 15px;">
-            <button class="btn" type="submit" style="position: absolute; right: 10px; top: 0; color: #64748b;">
-                <i class="fa fa-search"></i>
-            </button>
-        </form>
-    </div>
-
-    <!-- Menu utilisateur -->
     <ul class="nav user-menu" style="list-style: none; display: flex; align-items: center; margin-left: auto;">
-        <li class="nav-item dropdown">
-            <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown" style="color: #64748b; position: relative; padding: 10px;">
-                <i class="fa fa-bell-o"></i> 
-                <span class="badge badge-pill bg-danger" style="position: absolute; top: 5px; right: 0; font-size: 10px;">3</span>
-            </a>
-        </li>
         <li class="nav-item dropdown has-arrow main-drop">
-            <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown" 
-               style="display: flex; align-items: center; color: #334155; text-decoration: none;">
-                <span class="user-img" style="position: relative; margin-right: 10px;">
-                    <img src="{% static 'back-end/assets/img/profiles/avatar-21.jpg' %}" width="35" height="35" alt="" style="border-radius: 50%;">
+            <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown" style="display: flex; align-items: center; color: #334155; text-decoration: none;">
+                <span class="user-img" style="margin-right: 10px;">
+                    <img src="{% static 'back-end/assets/img/profiles/avatar-21.jpg' %}" width="35" height="35" alt="User" style="border-radius: 50%;">
                 </span>
                 <div style="line-height: 1.2;">
                     <span style="font-weight: 600; display: block;">{{ user.username }}</span>
                     <span style="font-size: 0.75rem; color: #64748b;">Administrateur</span>
                 </div>
             </a>
-            <div class="dropdown-menu dropdown-menu-right" style="border-radius: 8px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <a class="dropdown-item" href="#"><i class="fa fa-user-circle-o mr-2"></i> Mon Profil</a>
-                <a class="dropdown-item" href="#"><i class="fa fa-cog mr-2"></i> Paramètres</a>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item text-danger" href="{% url 'deco' %}">
-                    <i class="fa fa-power-off mr-2"></i> Déconnexion
-                </a>
+            <div class="dropdown-menu dropdown-menu-right">
+                <a class="dropdown-item" href="#">Mon Profil</a>
+                <a class="dropdown-item" href="{% url 'deco' %}">Déconnexion</a>
             </div>
         </li>
     </ul>
 </header>
-
-<!-- Script pour activer le sidebar -->
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const toggleBtn = document.getElementById("toggle_btn");
-        const sidebar = document.getElementById("sidebar");
-
-        toggleBtn.addEventListener("click", function() {
-            sidebar.classList.toggle("active");
-        });
-    });
-</script>
-
-<style>
-    /* Sidebar caché en mobile */
-    #sidebar {
-        transition: all 0.3s ease;
-    }
-    @media (max-width: 992px) {
-        #sidebar {
-            position: fixed;
-            left: -250px;
-            top: 60px;
-            width: 250px;
-            height: 100%;
-            background: #f8fafc;
-            z-index: 999;
-        }
-        #sidebar.active {
-            left: 0;
-        }
-    }
-</style>

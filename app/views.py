@@ -306,9 +306,10 @@ def gestion_prestations(request):
     else:
         prestations_list = Prestation.objects.all().order_by('libelle')
 
-    # 2. Récupération du taux de change
+    # 2. Récupération du taux de change (Correction du type ici)
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else 2500.00
+    taux_valeur = config.taux_usd_en_cdf if config else 2500.00
+    taux = Decimal(str(taux_valeur)) # Conversion sécurisée pour le calcul financier
 
     # 3. Pagination (10 éléments par page)
     paginator = Paginator(prestations_list, 10)
@@ -329,23 +330,23 @@ def gestion_prestations(request):
     else:
         form = PrestationForm()
 
-    # 6. Gestion du rôle utilisateur
+    # 6. Gestion du rôle utilisateur (Vérification rétablie)
     role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     # 7. Préparation des catégories pour le modal de modification
-    # On récupère les tuples (code, nom) définis dans les CHOICES du modèle
     categories_list = Prestation._meta.get_field('categorie').choices
 
+    # 8. Contexte complet
     context = {
-        'prestations': prestations_obj, # On passe l'objet paginé
+        'prestations': prestations_obj,
         'form': form,
         'taux': taux,
         'fonctionKey': fonctionKey,
-        'categories_list': categories_list, # Indispensable pour la boucle dans le modal
+        'categories_list': categories_list,
     }
+    
     return render(request, 'back-end/prestation/list_prestation.html', context)
-
 # 13
 # ==================================================================================================
 #  VUE CONFIGURATION TAUX (Modification unique) ---
@@ -453,10 +454,12 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
-    # Optimisation : On charge les patients pour le tableau.
-    # Note : Si la liste devient très longue, pense à ajouter un paginator plus tard.
-    patients = Patient.objects.select_related('entreprise', 'created_by').all().order_by('-date_creation')
+    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').all().order_by('-date_creation')
     
+    # 1. Récupération des infos de l'utilisateur
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    
+    # 2. Gestion du formulaire POST
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
@@ -464,7 +467,10 @@ def enregistrement_patient(request):
                 patient = form.save(commit=False)
                 patient.created_by = request.user
                 
-                # Logique métier : Forcer le type si entreprise présente
+                # Affectation automatique de l'hôpital
+                if user_fonction and user_fonction.hopital:
+                    patient.hopital = user_fonction.hopital
+                
                 if patient.entreprise:
                     patient.type_patient = 'CONVENTIONNE'
                 
@@ -474,21 +480,35 @@ def enregistrement_patient(request):
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
         else:
-            # Affichage des erreurs de validation du formulaire
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field.capitalize()}: {error}")
     else:
         form = PatientForm()
 
-    # Gestion du rôle pour le menu et les accès
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+    # 3. RÉCUPÉRATION DES PATIENTS (Rétablie pour affichage)
+    # Si l'utilisateur est lié à un hôpital, on filtre. Sinon, on affiche tout (ou selon votre besoin).
+    # if user_fonction and user_fonction.hopital:
+    #     patients = Patient.objects.filter(hopital=user_fonction.hopital).select_related(
+    #         'entreprise', 'created_by', 'hopital'
+    #     ).order_by('-date_creation')
+    # else:
+    #     # On remet .all() ici pour que vous ne perdiez pas la vue de vos patients
+    #     patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').all().order_by('-date_creation')
+
+    patients = Patient.objects.select_related(
+        'entreprise', 'created_by', 'hopital'
+    ).all().order_by('-date_creation')
+
+    # 4. Contexte pour le template
+    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
+    hopital_user = user_fonction.hopital if user_fonction else None
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
         'form': form,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
     })
 # 18
 # ==================================================================================================
@@ -554,7 +574,7 @@ def payer_fiche(request, patient_id):
     
     # 0. Récupérer le taux de change
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2800.00')
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
 
     # 1. Récupérer la prestation "Fiche"
     try:

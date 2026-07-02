@@ -114,6 +114,7 @@
                                                     <th>Désignation</th>
                                                     <th>Catégorie</th>
                                                     <th>Valeur Normale (Labo)</th>
+                                                    <th>hopital</th>
                                                     <th>Prix (USD)</th>
                                                     <th>Prix (CDF)</th>
                                                     <th class="text-right" style="width: 100px;">Action</th>
@@ -143,6 +144,7 @@
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
                                                     </td>
+                                                    <td><span class="badge-usd">{{ item.hopital }}</span></td>
                                                     <td><span class="badge-usd">{{ item.prix }} $</span></td>
                                                     <td>
                                                         <span class="text-cdf">{{ item.prix_cdf|floatformat:0 }} FC</span>

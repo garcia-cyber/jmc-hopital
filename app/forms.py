@@ -113,12 +113,14 @@ class PrestationForm(forms.ModelForm):
             }),
         }
 
-    def clean_libelle(self):
-        """ Vérifie si une prestation avec ce libellé existe déjà (insensible à la casse) """
-        libelle = self.cleaned_data.get('libelle')
-        if Prestation.objects.filter(libelle__iexact=libelle).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError("Cette prestation existe déjà dans votre catalogue.")
-        return libelle
+    # def clean_libelle(self):
+    #     """ Vérifie si une prestation avec ce libellé existe déjà (insensible à la casse) """
+    #     libelle = self.cleaned_data.get('libelle')
+    #     if Prestation.objects.filter(libelle__iexact=libelle).exclude(pk=self.instance.pk).exists():
+    #         raise forms.ValidationError("Cette prestation existe déjà dans votre catalogue.")
+    #     return libelle
+
+    # BLOQUE POUR LA MISE EN JOURS 
 
     # 3. Optionnel : Sécurité bonus au niveau du formulaire
     def clean(self):
@@ -200,6 +202,8 @@ class PatientForm(forms.ModelForm):
             'service': forms.Select(attrs={
                 'class': 'form-control'
             }),
+
+          
         }
 
     def __init__(self, *args, **kwargs):
@@ -207,13 +211,13 @@ class PatientForm(forms.ModelForm):
         # Label par défaut pour la liste déroulante des services
         self.fields['service'].empty_label = "Sélectionner le service"
 
-    def clean_telephone(self):
-        telephone = self.cleaned_data.get('telephone')
-        # Vérification si le téléphone existe déjà pour un autre patient
-        # On exclut l'instance actuelle en cas de modification (self.instance.pk)
-        if Patient.objects.filter(telephone=telephone).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError("Ce numéro de téléphone est déjà attribué à un autre patient.")
-        return telephone
+    # def clean_telephone(self):
+    #     telephone = self.cleaned_data.get('telephone')
+    #     # Vérification si le téléphone existe déjà pour un autre patient
+    #     # On exclut l'instance actuelle en cas de modification (self.instance.pk)
+    #     if Patient.objects.filter(telephone=telephone).exclude(pk=self.instance.pk).exists():
+    #         raise forms.ValidationError("Ce numéro de téléphone est déjà attribué à un autre patient.")
+    #     return telephone
 
     def clean_noms(self):
         noms = self.cleaned_data.get('noms')

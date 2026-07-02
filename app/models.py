@@ -136,6 +136,7 @@ class Patient(models.Model):
     age = models.CharField(max_length=30)
     adresse = models.TextField()
     telephone = models.CharField(max_length=20)
+    hopital = models.ForeignKey(Hopital , on_delete=models.SET_NULL , related_name= 'patient_hopital', null = True) 
     
     # 2. Gestion financière
     type_patient = models.CharField(max_length=15, choices=TYPE_CHOICES, default='SIMPLE')

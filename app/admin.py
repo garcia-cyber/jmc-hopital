@@ -23,7 +23,7 @@ class FonctionAdmin(admin.ModelAdmin):
 # 2. GESTION DES PATIENTS ET SERVICES ==================================
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ('code_patient', 'noms', 'sexe', 'type_patient', 'est_en_regle_display')
+    list_display = ('code_patient', 'noms', 'sexe', 'type_patient', 'hopital','est_en_regle_display')
     list_filter = ('type_patient', 'sexe', 'service')
     search_fields = ('noms', 'code_patient')
 

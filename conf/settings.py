@@ -13,7 +13,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-temporary-key')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 # Autorise ton site Render et le local
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'jmc-hopital.onrender.com']
 
 # --- APPLICATIONS ---
 INSTALLED_APPS = [

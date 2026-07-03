@@ -78,7 +78,7 @@ admin.site.register(LigneMedicament)
 # 4. FINANCES ET FACTURATION ===========================================
 @admin.register(Paiement)
 class PaiementAdmin(admin.ModelAdmin):
-    list_display = ('id', 'patient', 'service', 'montant_verse', 'devise', 'caissier', 'date_paiement')
+    list_display = ('id', 'patient', 'service', 'montant_verse', 'devise', 'caissier', 'date_paiement','hopital')
     list_filter = ('service', 'devise', 'date_paiement')
     search_fields = ('patient__noms',)
 

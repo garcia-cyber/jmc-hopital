@@ -4,7 +4,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-temporary-key')
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'jmc-hopital.onrender.com']
 
@@ -19,6 +19,9 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap4',
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -57,10 +60,17 @@ DATABASES = {
     }
 }
 
+AUTH_PASSWORD_VALIDATORS = []
+
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Kinshasa'
 USE_I18N = True
 USE_TZ = False
+
+DATE_INPUT_FORMATS = [
+    '%d/%m/%Y',
+    '%Y-%m-%d',
+]
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']

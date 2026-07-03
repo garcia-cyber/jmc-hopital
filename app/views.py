@@ -99,41 +99,61 @@ def dashboard(request):
     if not request.user.is_authenticated:
         return redirect('login')
 
-    # Rôle
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else 'visiteur'
-    
+    user_hopital = role.hopital if role else None
     aujourdhui = timezone.now().date()
-    
-    # 1. Statistiques Globales
+
+    paiements_qs = Paiement.objects.all()
+    depenses_qs = Depense.objects.all()
+    consultations_qs = Consultation.objects.all()
+    hospitalisations_qs = Hospitalisation.objects.all()
+    blocs_qs = BlocOperatoire.objects.all()
+    accouchements_qs = CompteRenduAccouchement.objects.all()
+    produits_qs = ProduitPharmacie.objects.all()
+    entreprises_qs = Entreprise.objects.all()
+    patients_qs = Patient.objects.all()
+
+    if fonctionKey != 'admin' and user_hopital:
+        paiements_qs = paiements_qs.filter(hopital=user_hopital)
+        depenses_qs = depenses_qs.filter(hopital=user_hopital)
+        consultations_qs = consultations_qs.filter(hopital=user_hopital)
+        hospitalisations_qs = hospitalisations_qs.filter(hopital=user_hopital)
+        blocs_qs = blocs_qs.filter(hopital=user_hopital)
+        accouchements_qs = accouchements_qs.filter(hopital=user_hopital)
+        produits_qs = produits_qs.filter(hopital=user_hopital)
+        entreprises_qs = entreprises_qs.filter(hopital=user_hopital)
+        patients_qs = patients_qs.filter(hopital=user_hopital)
+        total_utilisateurs = User.objects.filter(user_fonction__hopital=user_hopital).distinct().count()
+    else:
+        total_utilisateurs = User.objects.count()
+
+    recettes_jour = paiements_qs.filter(date_paiement__date=aujourdhui).aggregate(
+        usd=Sum('montant_verse', filter=Q(devise='USD')),
+        cdf=Sum('montant_verse', filter=Q(devise='CDF'))
+    )
+
+    depenses_jour = depenses_qs.filter(date_depense__date=aujourdhui).aggregate(
+        usd=Sum('montant', filter=Q(devise='USD')),
+        cdf=Sum('montant', filter=Q(devise='CDF'))
+    )
+
     context = {
         'fonctionKey': fonctionKey,
-        'total_utilisateurs': User.objects.count(),
-        'total_entreprises': Entreprise.objects.count(),
-        'total_patients': Patient.objects.count(),
-        
-        # 2. Finance
-        'recettes_jour': Paiement.objects.filter(date_paiement__date=aujourdhui).aggregate(
-            usd=Sum('montant_verse', filter=Q(devise='USD')),
-            cdf=Sum('montant_verse', filter=Q(devise='CDF'))
-        ),
-        'depenses_jour': Depense.objects.filter(date_depense__date=aujourdhui).aggregate(
-            usd=Sum('montant', filter=Q(devise='USD')),
-            cdf=Sum('montant', filter=Q(devise='CDF'))
-        ),
-        
-        # 3. Activité Médicale
-        'consultations_jour': Consultation.objects.filter(date_creation__date=aujourdhui).count(),
-        'hospitalisations_en_cours': Hospitalisation.objects.filter(statut='EN_COURS').count(),
-        'bloc_en_cours': BlocOperatoire.objects.filter(statut='EN_COURS').count(),
-        'accouchements_jour': CompteRenduAccouchement.objects.filter(date_creation__date=aujourdhui).count(),
-        
-        # 4. Pharmacie : Alertes stocks (ex: produits avec stock < 5)
-        'alerte_rupture_stock': ProduitPharmacie.objects.filter(stock_initial__lt=5).count(),
+        'hopital_user': user_hopital,
+        'total_utilisateurs': total_utilisateurs,
+        'total_entreprises': entreprises_qs.count(),
+        'total_patients': patients_qs.count(),
+        'recettes_jour': recettes_jour,
+        'depenses_jour': depenses_jour,
+        'consultations_jour': consultations_qs.filter(date_creation__date=aujourdhui).count(),
+        'hospitalisations_en_cours': hospitalisations_qs.filter(statut='EN_COURS').count(),
+        'bloc_en_cours': blocs_qs.filter(statut='EN_COURS').count(),
+        'accouchements_jour': accouchements_qs.filter(date_creation__date=aujourdhui).count(),
+        'alerte_rupture_stock': produits_qs.filter(stock_initial__lt=5).count(),
     }
 
-    return render(request, 'back-end/index.html', context)
-# 5
+    return render(request, 'back-end/index.html', context)# 5
 # ===========================================================================
 # AJOUTER UTILISATEURS
 # ===========================================================================

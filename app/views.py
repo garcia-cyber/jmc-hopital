@@ -454,26 +454,25 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
-    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').all().order_by('-date_creation')
-    
-    # 1. Récupération des infos de l'utilisateur
     user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    
-    # 2. Gestion du formulaire POST
+    hopital_user = user_fonction.hopital if user_fonction else None
+
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
             try:
                 patient = form.save(commit=False)
                 patient.created_by = request.user
-                
-                # Affectation automatique de l'hôpital
-                if user_fonction and user_fonction.hopital:
-                    patient.hopital = user_fonction.hopital
-                
+
+                if hopital_user:
+                    patient.hopital = hopital_user
+                else:
+                    messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                    return redirect('enregistrement_patient')
+
                 if patient.entreprise:
                     patient.type_patient = 'CONVENTIONNE'
-                
+
                 patient.save()
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
                 return redirect('enregistrement_patient')
@@ -486,23 +485,11 @@ def enregistrement_patient(request):
     else:
         form = PatientForm()
 
-    # 3. RÉCUPÉRATION DES PATIENTS (Rétablie pour affichage)
-    # Si l'utilisateur est lié à un hôpital, on filtre. Sinon, on affiche tout (ou selon votre besoin).
-    # if user_fonction and user_fonction.hopital:
-    #     patients = Patient.objects.filter(hopital=user_fonction.hopital).select_related(
-    #         'entreprise', 'created_by', 'hopital'
-    #     ).order_by('-date_creation')
-    # else:
-    #     # On remet .all() ici pour que vous ne perdiez pas la vue de vos patients
-    #     patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').all().order_by('-date_creation')
-
-    patients = Patient.objects.select_related(
+    patients = Patient.objects.all().select_related(
         'entreprise', 'created_by', 'hopital'
-    ).all().order_by('-date_creation')
+    ).order_by('-date_creation')
 
-    # 4. Contexte pour le template
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
-    hopital_user = user_fonction.hopital if user_fonction else None
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
@@ -576,19 +563,34 @@ def payer_fiche(request, patient_id):
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
 
-    # 1. Récupérer la prestation "Fiche"
-    try:
-        prestation_fiche = Prestation.objects.get(categorie='ADM', libelle__icontains="Fiche")
-    except (Prestation.DoesNotExist, Prestation.MultipleObjectsReturned):
-        prestation_fiche = Prestation.objects.filter(categorie='ADM', libelle__icontains="Fiche").first()
+    # 1. Récupérer l'hôpital de l'utilisateur connecté
+    role = Fonction.objects.filter(userKey=request.user).select_related('hopital', 'fonctionKey').first()
+    hopital_user = role.hopital if role else None
+
+    # Sécurité : Vérifier si l'utilisateur est bien rattaché à un hôpital
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    # Sécurité : Vérifier si le patient appartient bien à l'hôpital de l'utilisateur
+    if patient.hopital != hopital_user:
+        messages.error(request, "Ce patient appartient à un autre hôpital. Vous ne pouvez pas encaisser sa fiche.")
+        return redirect('enregistrement_patient')
+
+    # 2. Récupérer la prestation "Fiche" spécifique à l'hôpital de l'utilisateur
+    prestation_fiche = Prestation.objects.filter(
+        categorie='ADM', 
+        libelle__icontains="Fiche", 
+        hopital=hopital_user
+    ).first()
         
     if not prestation_fiche:
-        messages.error(request, "La prestation 'Fiche' n'est pas configurée.")
+        messages.error(request, f"La prestation 'Fiche' n'est pas configurée pour votre hôpital ({hopital_user.nom}).")
         return redirect('enregistrement_patient')
     
     prix_fiche_usd = Decimal(str(prestation_fiche.prix))
 
-    # 2. Calcul du cumul déjà payé
+    # 3. Calcul du cumul déjà payé
     paiements_existants = Paiement.objects.filter(patient=patient, service='FICHE')
     total_deja_paye_usd = Decimal('0.00')
     
@@ -600,6 +602,7 @@ def payer_fiche(request, patient_id):
 
     reste_a_payer_usd = prix_fiche_usd - total_deja_paye_usd
 
+    # 4. Traitement du paiement
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant', 0))
         devise = request.POST.get('devise')
@@ -611,7 +614,6 @@ def payer_fiche(request, patient_id):
         if montant_test_usd > (reste_a_payer_usd + Decimal('0.01')):
             messages.error(request, f"Le montant dépasse le reste à payer ({reste_a_payer_usd:.2f} USD).")
         elif montant_saisi > 0:
-            # Enregistrement du paiement
             Paiement.objects.create(
                 patient=patient,
                 service='FICHE',
@@ -620,23 +622,19 @@ def payer_fiche(request, patient_id):
                 caissier=request.user
             )
             
-            # --- NOUVELLE LOGIQUE DE VÉRIFICATION ---
-            # On recalcule le total après le nouveau paiement
             nouveau_total_usd = total_deja_paye_usd + montant_test_usd
             
-            # Si le total atteint ou dépasse le prix (avec marge d'erreur 0.01)
             if nouveau_total_usd >= (prix_fiche_usd - Decimal('0.01')):
-                patient.fiche_payee = True  # Assure-toi que ce champ existe dans ton modèle Patient
+                patient.fiche_payee = True
                 patient.save()
-                messages.success(request, f"Paiement terminé. La fiche de {patient.noms} est maintenant validée.")
+                messages.success(request, f"Paiement terminé. La fiche de {patient.noms} est validée.")
             else:
-                messages.success(request, f"Paiement de {montant_saisi} {devise} enregistré. Reste : {(prix_fiche_usd - nouveau_total_usd):.2f} USD")
+                messages.success(request, f"Paiement enregistré. Reste à payer : {(prix_fiche_usd - nouveau_total_usd):.2f} USD")
             
             return redirect('enregistrement_patient')
 
-    # ... reste du contexte ...
-    role = Fonction.objects.filter(userKey = request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    # 5. Contexte
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     context = {
         'patient': patient,
@@ -646,10 +644,9 @@ def payer_fiche(request, patient_id):
         'prix_fiche': prix_fiche_usd,
         'libelle_prestation': prestation_fiche.libelle,
         'fonctionKey' : fonctionKey,
-        'deja_paye': patient.fiche_payee # Pour l'utiliser dans le template si besoin
+        'deja_paye': patient.fiche_payee 
     }
     return render(request, 'back-end/finance/payer_fiche.html', context)
-
 # 21
 # ==================================================================================================
 # HISTORIQUE DE PAIEMENT

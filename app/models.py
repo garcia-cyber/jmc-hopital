@@ -215,6 +215,7 @@ class Paiement(models.Model):
     date_paiement = models.DateTimeField(default=timezone.now)
     caissier = models.ForeignKey(User, on_delete=models.PROTECT)
     reste_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name="Dette / Reste à payer")
+    hopital = models.ForeignKey(Hopital , on_delete = models.SET_NULL, null = True , related_name="paiement_hopital")
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None

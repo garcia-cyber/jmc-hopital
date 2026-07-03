@@ -93,11 +93,13 @@
                                             {% if form.fonctionKey.errors %}
                                                 <small class="text-danger">{{ form.fonctionKey.errors }}</small>
                                             {% endif %}
+                                            <label class="font-weight-bold">Hopital<span class="text-danger">*</span></label>
+                                            {{form.hopital}}
                                         </div>
 
                                         <div class="alert alert-light border-0">
                                             <small class="text-muted">
-                                                <i class="la la-info-circle"></i> Cette action définira les permissions d'accès de <strong>{{ employe.username }}</strong> dans le système Moyanoli.
+                                                <i class="la la-info-circle"></i> Cette action définira les permissions d'accès de <strong>{{ employe.username }}</strong> dans le système JMC.
                                             </small>
                                         </div>
 

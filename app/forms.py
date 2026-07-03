@@ -72,12 +72,13 @@ class EmployeForm(forms.ModelForm):
 class FonctionForm(forms.ModelForm):
     class Meta:
         model = Fonction
-        fields = ['fonctionKey']
+        fields = ['fonctionKey','hopital']
         labels = {
             'fonctionKey': 'Rôle / Poste',
                     }
         widgets = {
             'fonctionKey': forms.Select(attrs={'class': 'form-control'}),
+            'hopital': forms.Select(attrs={'class': 'form-control'}),
             
         }
 

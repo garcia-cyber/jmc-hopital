@@ -307,6 +307,7 @@ class SessionSoins(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     date_creation = models.DateTimeField(auto_now_add=True)
     est_payee = models.BooleanField(default=False)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     @property
     def total_a_payer(self):
@@ -320,6 +321,7 @@ class LigneFacture(models.Model):
     prestation = models.ForeignKey(Prestation, on_delete=models.CASCADE)
     quantite = models.PositiveIntegerField(default=1)
     prix_facture = models.DecimalField(max_digits=10, decimal_places=2)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def save(self, *args, **kwargs):
         if not self.prix_facture:
@@ -339,6 +341,7 @@ class SigneVital(models.Model):
     infirmier = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     est_consulte = models.BooleanField(default=False)
     session = models.ForeignKey(SessionSoins, on_delete=models.CASCADE, related_name='signes_vitaux', null=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"Signes vitaux de {self.patient.noms} le {self.date_prelevement}"
@@ -365,6 +368,7 @@ class Consultation(models.Model):
     consultation_payee = models.BooleanField(default=False, verbose_name="Consultation payée")
 
     session = models.OneToOneField(SessionSoins, on_delete=models.CASCADE, null=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
 
     @property
@@ -396,6 +400,7 @@ class ClientExterne(models.Model):
     age = models.CharField(max_length = 15 , blank=True, null=True)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     date_enregistrement = models.DateTimeField(auto_now_add=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     def __str__(self):
         return f"{self.noms} (Externe)"
@@ -424,6 +429,7 @@ class DemandeExamen(models.Model):
     date_demande = models.DateTimeField(default=timezone.now)
     date_realisation = models.DateTimeField(null=True, blank=True)
     quantite = models.PositiveIntegerField(default=1)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         try:
@@ -441,6 +447,7 @@ class Ordonnance(models.Model):
     type_ordonnance = models.CharField(max_length=20, choices=TYPE_CHOICES, default='URGENCE')
     diagnostic = models.CharField(max_length=255, blank=True)
     observation = models.TextField(blank=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         # Utilisation d'une structure sécurisée pour éviter les erreurs de type DoesNotExist
@@ -457,6 +464,7 @@ class Medicament(models.Model):
     nom = models.CharField(max_length=255)
     posologie = models.CharField(max_length=255)
     duree = models.CharField(max_length=100)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     STATUT_CHOICES = [('EN_COURS', 'En cours'), ('STOPPE', 'Stoppé')]
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='EN_COURS')
@@ -488,6 +496,7 @@ class LigneMedicament(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_MEDOC, default='EN_COURS')
     motif_arret = models.TextField(blank=True, null=True, help_text="Pourquoi le médecin a changé ce médicament")
     date_modification = models.DateTimeField(default=timezone.now)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"{self.nom_medicament} - {self.statut}"
@@ -512,6 +521,7 @@ class Depense(models.Model):
     date_depense = models.DateTimeField(default=timezone.now)
     auteur = models.ForeignKey('auth.User', on_delete=models.PROTECT, verbose_name="Enregistré par")
     beneficiaire = models.CharField(max_length=150, blank=True, null=True, verbose_name="Bénéficiaire")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     class Meta:
         verbose_name = "Dépense"
@@ -551,6 +561,7 @@ class TypeChambre(models.Model):
     libelle = models.CharField(max_length=100)
     # Utilisation de DecimalField pour la précision monétaire
     prix_nuitée = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return self.libelle
@@ -560,6 +571,7 @@ class Chambre(models.Model):
     nom = models.CharField(max_length=50, default="Sans nom") 
     type_chambre = models.ForeignKey(TypeChambre, on_delete=models.CASCADE)
     est_active = models.BooleanField(default=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return self.nom
@@ -569,6 +581,7 @@ class Lit(models.Model):
     nom_lit = models.CharField(max_length=50)
     est_occupe = models.BooleanField(default=False)
     est_actif = models.BooleanField(default=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
 
     def __str__(self) :
@@ -597,6 +610,7 @@ class Hospitalisation(models.Model):
     
     # Champ pour suivre l'état de paiement en base
     est_payee = models.BooleanField(default=False)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def save(self, *args, **kwargs):
         """
@@ -663,6 +677,7 @@ class SuiviQuotidien(models.Model):
     ta = models.CharField(max_length=20, verbose_name="TA", default="N/A")
     pouls = models.CharField(max_length=20, verbose_name="Pouls", default="N/A")
     temp = models.CharField(max_length=20, verbose_name="Temp (°C)", default="N/A")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     class Meta:
         verbose_name = "Suivi Quotidien"
         verbose_name_plural = "Suivis Quotidiens"
@@ -681,6 +696,7 @@ class Kardex(models.Model):
     voie_administration = models.CharField(max_length=50 , null = True)
     date_prescription = models.DateTimeField(auto_now_add=True , null = True)
     est_actif = models.BooleanField(default=True , null = True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"{self.medicament} - {self.hospitalisation.patient.noms}"
@@ -696,6 +712,7 @@ class AdministrationKardex(models.Model):
     matin = models.BooleanField(default=False)
     midi = models.BooleanField(default=False)
     soir = models.BooleanField(default=False)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     class Meta:
         # Empêche d'avoir deux fois la même date pour le même médicament
@@ -708,6 +725,7 @@ class RendezVous(models.Model):
     date_rdv = models.DateTimeField()
     motif = models.CharField(max_length=200)
     note = models.TextField(blank=True, null=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Nouveau champ pour enregistrer l'utilisateur
     enregistre_par = models.ForeignKey(
@@ -742,6 +760,7 @@ class Entreprise(models.Model):
         null = True , 
         blank = True
     )
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return self.nom
@@ -762,6 +781,7 @@ class Maternite(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='dossiers_maternite')
     date_admission = models.DateTimeField(auto_now_add=True)
     terme_prevu = models.DateField()
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Utilisation des 'choices' ici
     groupe_sanguin = models.CharField(
@@ -790,6 +810,7 @@ class ConsultationMaternite(models.Model):
     hauteur_uterine = models.IntegerField(verbose_name="Hauteur utérine (cm)")
     bruits_cardiaques_foetaux = models.CharField(max_length=20, verbose_name="BCF")
     notes = models.TextField(blank=True, null=True, verbose_name="Notes médicales")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Médecin/Infirmier ayant fait la consultation
     effectue_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
@@ -832,6 +853,7 @@ class Deces(models.Model):
     etablissement = models.CharField(max_length=255, default="Hôpital Paradis Center")
     certifie_par = models.CharField(max_length=255, verbose_name="Nom du médecin")
     numero_cnom = models.CharField(max_length=50, verbose_name="Numéro CNOM du médecin")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Métadonnées
     notes = models.TextField(blank=True)
@@ -858,6 +880,7 @@ class Orientation(models.Model):
         ('ACCOUCHEMENT', 'Accouchement'),  # Ajout de l'option ici
         ('SORTIE', 'Sortie/Retour à domicile'),
     )
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     consultation = models.OneToOneField(
         Consultation, 
@@ -895,6 +918,7 @@ class SoinOccasionnel(models.Model):
     date_soin = models.DateTimeField(auto_now_add=True)
     effectue_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     est_effectue = models.BooleanField(default=False)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"Soin: {self.nom_patient} - {self.prestation.libelle}"
@@ -920,6 +944,7 @@ class ProduitPharmacie(models.Model):
     enregistre_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     date_enregistrement = models.DateTimeField(auto_now_add=True)
     stock_initial = models.PositiveIntegerField(default=0)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     class Meta:
         unique_together = ('nom', 'forme', 'dosage')
@@ -939,6 +964,7 @@ class LotPharmacie(models.Model):
     quantite_actuelle = models.PositiveIntegerField(default=0)
     date_peremption = models.DateField()
     date_entree = models.DateField(auto_now_add=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def save(self, *args, **kwargs):
         if not self.pk:
@@ -955,6 +981,7 @@ class LotPharmacie(models.Model):
 # --- 4. MOUVEMENT DE STOCK ---
 class MouvementStock(models.Model):
     TYPE_MOUVEMENT = (('ENTREE', 'Entrée'), ('SORTIE', 'Sortie'), ('AJUSTEMENT', 'Ajustement'))
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     lot = models.ForeignKey(LotPharmacie, on_delete=models.PROTECT, related_name='mouvements')
     type_mouvement = models.CharField(max_length=20, choices=TYPE_MOUVEMENT)
@@ -974,6 +1001,7 @@ class SortiePharmacie(models.Model):
     quantite_vendue = models.PositiveIntegerField()
     date_sortie = models.DateTimeField(auto_now_add=True)
     vendu_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def save(self, *args, **kwargs):
         # Utilisation de transaction pour éviter les erreurs de concurrence
@@ -1030,6 +1058,7 @@ class BlocOperatoire(models.Model):
     # Suivi
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='EN_ATTENTE')
     date_fin = models.DateTimeField(null=True, blank=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     prestation = models.ForeignKey(
         'Prestation', 
@@ -1048,6 +1077,7 @@ class BlocOperatoire(models.Model):
 
 class CompteRenduAccouchement(models.Model):
     consultation = models.OneToOneField(Consultation, on_delete=models.CASCADE, related_name='cr_accouchement')
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Liaison avec la prestation (Forfait Maternité)
     prestation = models.ForeignKey(
@@ -1076,6 +1106,7 @@ class FicheAccouchement(models.Model):
         on_delete=models.CASCADE,
         related_name='fiches_accouchement'
     )
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     prestation = models.ForeignKey(
         'Prestation',
         on_delete=models.SET_NULL,
@@ -1124,6 +1155,7 @@ class FicheAccouchement(models.Model):
 
 class DemandeExamenExterne(models.Model):
     STATUT_CHOICES = [('EN_ATTENTE', 'En attente'), ('PAYE', 'Payé'), ('TERMINE', 'Terminé')]
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # On lie à la personne de passage, pas au Patient du système
     client = models.ForeignKey(ClientExterne, on_delete=models.CASCADE, related_name='demandes')
@@ -1149,6 +1181,7 @@ class ExamenExterneResultat(models.Model):
     )
     # L'examen spécifique (ex: Hémogramme, Échographie abdominale)
     prestation = models.ForeignKey('Prestation', on_delete=models.CASCADE)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     # Détails du résultat
     statut = models.CharField(
@@ -1177,6 +1210,7 @@ class OrdonnanceExterne(models.Model):
     medecin = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     note_globale = models.TextField(blank=True, null=True, help_text="Instructions générales")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     class Meta:
         verbose_name = "Ordonnance Client Externe"
@@ -1191,6 +1225,7 @@ class OrdonnanceItem(models.Model):
     designation = models.CharField(max_length=255, verbose_name="Médicament ou Examen")
     posologie = models.TextField(verbose_name="Posologie / Instructions")
     quantite = models.CharField(max_length=50, blank=True, null=True, verbose_name="Quantité")
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"{self.designation} pour {self.ordonnance.client.noms}"
@@ -1213,6 +1248,7 @@ class OrdonnanceSortie(models.Model):
     
     # Médecin émetteur (optionnel, selon votre gestion des utilisateurs)
     medecin_nom = models.CharField(max_length=255, blank=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"Sortie - {self.hospitalisation.patient.noms}"
@@ -1252,6 +1288,7 @@ class Equipement(models.Model):
     
     date_acquisition = models.DateField()
     date_derniere_maintenance = models.DateTimeField(null=True, blank=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"{self.nom} - {self.numero_serie}"
@@ -1268,6 +1305,7 @@ class InterventionMaintenance(models.Model):
     date_reparation = models.DateTimeField(null=True, blank=True)
     repare = models.BooleanField(default=False)
     technicien = models.CharField(max_length=100, blank=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
 
     def __str__(self):
         return f"Maintenance sur {self.equipement.nom} - {'Réparé' if self.repare else 'En cours'}"

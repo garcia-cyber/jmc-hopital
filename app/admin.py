@@ -44,7 +44,7 @@ class EntrepriseAdmin(admin.ModelAdmin):
 # 3. CONSULTATIONS ET SOINS ============================================
 @admin.register(Consultation)
 class ConsultationAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'medecin', 'consultation_payee')
+    list_display = ('__str__', 'medecin', 'consultation_payee','hopital')
     list_filter = ('consultation_payee', 'date_creation')
 
 @admin.register(SigneVital)

@@ -35,11 +35,23 @@ def home(request):
 # CONNEXION DANS LE SYSTEME
 # =====================================================================
 def login(request):
-    # Si l'utilisateur est déjà connecté, on le redirige directement
     if request.user.is_authenticated:
-         return redirect('dashboard')
- 
+        return redirect('dashboard')
+
     msg = None
+    now = timezone.now()
+
+    lock_until = request.session.get('lock_until')
+    if lock_until:
+        lock_until_dt = parse_datetime(lock_until)
+        if lock_until_dt and now < lock_until_dt:
+            form = LoginForm()
+            msg = "Trop de tentatives. Réessayez dans 2 minutes."
+            return render(request, 'back-end/login.html', {'form': form, 'msg': msg})
+        else:
+            request.session.pop('lock_until', None)
+            request.session.pop('login_attempts', None)
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -47,23 +59,28 @@ def login(request):
             password = form.cleaned_data.get('password')
 
             user = authenticate(request, username=username, password=password)
-            
+
             if user is not None:
                 if user.is_active:
+                    request.session.pop('login_attempts', None)
+                    request.session.pop('lock_until', None)
                     auth_login(request, user)
                     return redirect('dashboard')
                 else:
                     msg = "Votre compte est désactivé."
             else:
-                msg = "Identifiants invalides. Veuillez réessayer. 🤞"
+                attempts = request.session.get('login_attempts', 0) + 1
+                request.session['login_attempts'] = attempts
+
+                if attempts >= 3:
+                    request.session['lock_until'] = (now + timedelta(minutes=2)).isoformat()
+                    msg = "Trop de tentatives. Le formulaire est bloqué pendant 2 minutes."
+                else:
+                    msg = "Identifiants invalides. Veuillez réessayer. 🤞"
     else:
         form = LoginForm()
 
-    # Note : On passe 'form' tel quel. Si c'est un POST invalide, 
-    # il contiendra les erreurs et les données saisies.
-    return render(request, 'back-end/login.html', {'form': form, 'msg': msg})  
-
-
+    return render(request, 'back-end/login.html', {'form': form, 'msg': msg})
 # 3
 # ==========================================================================
 # DECONNEXION
@@ -558,42 +575,36 @@ def modifier_patient(request, pk):
 @login_required
 def payer_fiche(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
-    
-    # 0. Récupérer le taux de change
+
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
 
-    # 1. Récupérer l'hôpital de l'utilisateur connecté
     role = Fonction.objects.filter(userKey=request.user).select_related('hopital', 'fonctionKey').first()
     hopital_user = role.hopital if role else None
 
-    # Sécurité : Vérifier si l'utilisateur est bien rattaché à un hôpital
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    # Sécurité : Vérifier si le patient appartient bien à l'hôpital de l'utilisateur
     if patient.hopital != hopital_user:
         messages.error(request, "Ce patient appartient à un autre hôpital. Vous ne pouvez pas encaisser sa fiche.")
         return redirect('enregistrement_patient')
 
-    # 2. Récupérer la prestation "Fiche" spécifique à l'hôpital de l'utilisateur
     prestation_fiche = Prestation.objects.filter(
-        categorie='ADM', 
-        libelle__icontains="Fiche", 
+        categorie='ADM',
+        libelle__icontains="Fiche",
         hopital=hopital_user
     ).first()
-        
+
     if not prestation_fiche:
         messages.error(request, f"La prestation 'Fiche' n'est pas configurée pour votre hôpital ({hopital_user.nom}).")
         return redirect('enregistrement_patient')
-    
+
     prix_fiche_usd = Decimal(str(prestation_fiche.prix))
 
-    # 3. Calcul du cumul déjà payé
     paiements_existants = Paiement.objects.filter(patient=patient, service='FICHE')
     total_deja_paye_usd = Decimal('0.00')
-    
+
     for p in paiements_existants:
         if p.devise == 'CDF':
             total_deja_paye_usd += p.montant_verse / taux
@@ -602,7 +613,6 @@ def payer_fiche(request, patient_id):
 
     reste_a_payer_usd = prix_fiche_usd - total_deja_paye_usd
 
-    # 4. Traitement du paiement
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant', 0))
         devise = request.POST.get('devise')
@@ -619,21 +629,21 @@ def payer_fiche(request, patient_id):
                 service='FICHE',
                 montant_verse=montant_saisi,
                 devise=devise,
-                caissier=request.user
+                caissier=request.user,
+                hopital=hopital_user
             )
-            
+
             nouveau_total_usd = total_deja_paye_usd + montant_test_usd
-            
+
             if nouveau_total_usd >= (prix_fiche_usd - Decimal('0.01')):
                 patient.fiche_payee = True
                 patient.save()
                 messages.success(request, f"Paiement terminé. La fiche de {patient.noms} est validée.")
             else:
                 messages.success(request, f"Paiement enregistré. Reste à payer : {(prix_fiche_usd - nouveau_total_usd):.2f} USD")
-            
+
             return redirect('enregistrement_patient')
 
-    # 5. Contexte
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     context = {
@@ -643,8 +653,8 @@ def payer_fiche(request, patient_id):
         'taux': taux,
         'prix_fiche': prix_fiche_usd,
         'libelle_prestation': prestation_fiche.libelle,
-        'fonctionKey' : fonctionKey,
-        'deja_paye': patient.fiche_payee 
+        'fonctionKey': fonctionKey,
+        'deja_paye': patient.fiche_payee,
     }
     return render(request, 'back-end/finance/payer_fiche.html', context)
 # 21
@@ -749,43 +759,47 @@ def imprimer_recu_direct(request, paiement_id):
 # ==================================================================================================
 @login_required
 def liste_attente_triage(request):
-    # 1. Récupération du taux et du prix de la fiche
     taux = ConfigurationHopital.get_taux()
-    # On cherche une prestation dont la catégorie est 'ADM' (Administratif) 
-    # et dont le libellé contient 'Fiche'
-    prestation_fiche = Prestation.objects.filter(categorie='ADM', libelle__icontains='Fiche').first()
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    prestation_fiche = Prestation.objects.filter(
+        categorie='ADM',
+        libelle__icontains='Fiche',
+        hopital=hopital_user
+    ).first()
+
     prix_fiche_usd = prestation_fiche.prix if prestation_fiche else Decimal('6.00')
 
-    patients_liste = Patient.objects.all().order_by('-date_creation')
-    
+    patients_liste = Patient.objects.filter(hopital=hopital_user).order_by('-date_creation')
+
     for patient in patients_liste:
-        # A. Règle métier : Qui doit payer ?
         if patient.type_patient != 'SIMPLE':
             patient.a_solde_fiche = True
-            patient.total_fiche_usd = 0
+            patient.total_fiche_usd = Decimal('0.00')
             patient.doit_payer_fiche = False
         else:
             patient.doit_payer_fiche = True
-            # B. Calcul du total versé par le patient pour le service FICHE
-            paiements = Paiement.objects.filter(patient=patient, service='FICHE')
+            paiements = Paiement.objects.filter(patient=patient, service='FICHE', hopital=hopital_user)
             total_paye_usd = sum([
                 p.montant_verse if p.devise == 'USD' else (p.montant_verse / taux)
                 for p in paiements
-            ])
-            
+            ], Decimal('0.00'))
+
             patient.total_fiche_usd = total_paye_usd
-            # C. Vérification du solde (Total >= Prix de la fiche)
             patient.a_solde_fiche = total_paye_usd >= prix_fiche_usd
-        
-        # D. Vérification signes vitaux
+
         patient.a_signes_vitaux_deja_pris = SigneVital.objects.filter(patient=patient).exists()
 
-    # Rôles
-    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
 
     return render(request, 'back-end/infirmerie/liste_attente.html', {
-        'patients': patients_liste, 
+        'patients': patients_liste,
         'taux': taux,
         'prix_fiche': prix_fiche_usd,
         'fonctionKey': fonctionKey
@@ -919,32 +933,33 @@ def liste_consultation_medecin(request):
     avec possibilité de filtrer selon la présence d'une session.
     """
 
-    # 1. Récupération du paramètre de filtrage (GET)
-    filtre = request.GET.get('filtre', 'tous')  
-    # valeurs possibles : 'tous', 'avec_session', 'sans_session'
+    filtre = request.GET.get('filtre', 'tous')
 
-    # 2. Base QuerySet : signes vitaux non consultés
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
     patients_prets = SigneVital.objects.filter(
-        est_consulte=False
+        est_consulte=False,
+        patient__hopital=hopital_user
     ).select_related(
-        'patient', 
-        'infirmier', 
+        'patient',
+        'infirmier',
         'session'
     ).prefetch_related(
         'session__items__prestation'
     ).order_by('date_prelevement')
 
-    # 3. Application du filtre
     if filtre == 'avec_session':
         patients_prets = patients_prets.filter(session__isnull=False)
     elif filtre == 'sans_session':
         patients_prets = patients_prets.filter(session__isnull=True)
 
-    # 4. Gestion du rôle utilisateur
-    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 5. Contexte pour le template
     context = {
         'fonctionKey': fonctionKey,
         'patients_prets': patients_prets,
@@ -952,7 +967,6 @@ def liste_consultation_medecin(request):
     }
 
     return render(request, 'back-end/medecin/liste_consultation.html', context)
-
 # 28
 # ==================================================================================================
 # MEDECIN MARQUER CONSULTER POUR N'EST PLUS VOIR DANS LA LISTE
@@ -976,54 +990,53 @@ def marquer_consulte(request, sv_id):
 
 @login_required
 def consultation_medicale(request, triage_id):
-    # 1. Récupération des données de base
     triage = get_object_or_404(SigneVital, id=triage_id)
-    
-    # On vérifie si une consultation a déjà été enregistrée pour ce triage
+
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    if triage.patient.hopital != hopital_user:
+        messages.error(request, "Ce patient appartient à un autre hôpital.")
+        return redirect('liste_consultation_medecin')
+
     consultation = Consultation.objects.filter(triage=triage).first()
 
-    # [SÉCURITÉ ANTI-DUBLON MODIFIÉE] 
-    # On bloque UNIQUEMENT si le triage est marqué consulté ET qu'une consultation existe déjà.
-    # Si le médecin vient de cliquer sur le bouton, 'consultation' est None, donc il peut entrer.
     if triage.est_consulte and consultation is not None:
         messages.warning(request, f"Le dossier de consultation pour {triage.patient.noms} a déjà été clôturé.")
         return redirect('liste_consultation_medecin')
 
     if request.method == 'POST':
-        # Double vérification de sécurité au cas où deux utilisateurs soumettent en même temps
         if consultation is not None:
             messages.error(request, "Erreur : Cette consultation a déjà été enregistrée par un autre utilisateur.")
             return redirect('liste_consultation_medecin')
 
-        # Initialisation du formulaire avec les données POST
         form = ConsultationForm(request.POST, instance=consultation)
-        
-        # Récupération des données manuelles (Tableaux dynamiques)
+
         examens_ids = request.POST.getlist('examens_ids')
         noms_medocs = request.POST.getlist('nom_medicament')
         posologies = request.POST.getlist('posologie')
         durees = request.POST.getlist('duree')
 
-        # 2. Validation
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # On vérifie si une consultation s'est créée entre temps
                     if Consultation.objects.filter(triage=triage).exists():
                         raise Exception("Ce patient a déjà été pris en charge entre-temps.")
 
-                    # A. Sauvegarde de la consultation clinique
                     consultation_obj = form.save(commit=False)
                     consultation_obj.triage = triage
                     consultation_obj.medecin = request.user
                     consultation_obj.save()
 
-                    # B. Gestion des Examens Paracliniques
                     DemandeExamen.objects.filter(consultation=consultation_obj, statut='EN_ATTENTE').delete()
                     for e_id in examens_ids:
-                        prestation = get_object_or_404(Prestation, id=e_id)
+                        prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
                         qty_value = request.POST.get(f'qty_{e_id}', 1)
-                        
+
                         DemandeExamen.objects.create(
                             consultation=consultation_obj,
                             prestation=prestation,
@@ -1031,19 +1044,18 @@ def consultation_medicale(request, triage_id):
                             statut='EN_ATTENTE'
                         )
 
-                    # C. Gestion de l'Ordonnance d'Urgence
                     if any(n.strip() for n in noms_medocs if n):
                         ordonnance, _ = Ordonnance.objects.get_or_create(
                             consultation=consultation_obj,
                             type_ordonnance='URGENCE'
                         )
                         LigneMedicament.objects.filter(ordonnance=ordonnance).delete()
-                        
+
                         for i, nom in enumerate(noms_medocs):
                             if nom and nom.strip():
                                 poso = posologies[i] if i < len(posologies) else ""
                                 dur = durees[i] if i < len(durees) else ""
-                                
+
                                 LigneMedicament.objects.create(
                                     ordonnance=ordonnance,
                                     nom_medicament=nom,
@@ -1052,7 +1064,6 @@ def consultation_medicale(request, triage_id):
                                     statut='EN_COURS'
                                 )
 
-                    # D. Mise à jour définitive du statut du Triage
                     triage.est_consulte = True
                     triage.save()
 
@@ -1063,30 +1074,23 @@ def consultation_medicale(request, triage_id):
                 messages.error(request, f"Une erreur technique est survenue : {str(e)}")
         else:
             messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
-    
+
     else:
-        # Mode GET : affichage normal
         form = ConsultationForm(instance=consultation)
 
-    # 3. Préparation du contexte
     examens_disponibles = Prestation.objects.filter(
-        categorie__in=['LABO', 'ECHO', 'RADIO']
+        categorie__in=['LABO', 'ECHO', 'RADIO'],
+        hopital=hopital_user
     ).order_by('categorie', 'libelle')
-    
-    role = None
-    try:
-        from .models import Fonction
-        role_obj = Fonction.objects.filter(userKey=request.user).first()
-        role = role_obj.fonctionKey.roleName if role_obj else None
-    except:
-        pass
-    
+
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
+
     context = {
         'triage': triage,
         'form': form,
         'examens_disponibles': examens_disponibles,
         'consultation': consultation,
-        'fonctionKey': role
+        'fonctionKey': fonctionKey
     }
     return render(request, 'back-end/medecin/consultation_medecin.html', context)
 
@@ -1289,14 +1293,20 @@ def encaisser_examens_prescrits(request, consultation_id):
 # ==================================================================================================
 @login_required
 def liste_attente_caisse(request):
-    # 1. On récupère les consultations qui ont des examens
-    # J'ai remis la structure de base complète
+    taux = ConfigurationHopital.get_taux()
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
     consultations_a_payer = Consultation.objects.filter(
-        examens__isnull=False
+        examens__isnull=False,
+        triage__patient__hopital=hopital_user
     ).distinct().order_by('-date_creation')
 
-    # 2. Annotation du total dû et du total payé
-    # J'utilise 'paiements' avec un 's' comme indiqué dans ton erreur FieldError
     consultations_a_payer = consultations_a_payer.annotate(
         total_a_payer=Coalesce(
             Sum(F('examens__prestation__prix') * F('examens__quantite')),
@@ -1308,15 +1318,12 @@ def liste_attente_caisse(request):
         )
     )
 
-    # 3. Calcul du reste à payer
     consultations_a_payer = consultations_a_payer.annotate(
         reste_a_payer=F('total_a_payer') - F('total_deja_paye')
     )
 
-    # 4. Filtrage : Seulement ceux qui ont un reste > 0
     consultations_a_payer = consultations_a_payer.filter(reste_a_payer__gt=0)
 
-    # 5. Gestion de la recherche
     query = request.GET.get('q')
     if query:
         consultations_a_payer = consultations_a_payer.filter(
@@ -1324,8 +1331,6 @@ def liste_attente_caisse(request):
             Q(triage__patient__code_patient__icontains=query)
         )
 
-    # 6. Gestion des rôles
-    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
 
     context = {
@@ -1333,7 +1338,7 @@ def liste_attente_caisse(request):
         'fonctionKey': fonctionKey,
         'query': query
     }
-    
+
     return render(request, 'back-end/caisse/liste_attente.html', context)
 
 # 36
@@ -1342,17 +1347,17 @@ def liste_attente_caisse(request):
 # ==================================================================================================
 @login_required
 def liste_examens_techniques(request):
-    # 1. Vérification du rôle
-    role_user = Fonction.objects.filter(userKey=request.user).first()
+    role_user = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     if not role_user or not role_user.fonctionKey:
         return redirect('dashboard')
 
+    hopital_user = role_user.hopital
     nom_role = role_user.fonctionKey.roleName.lower()
     fonctionKey = role_user.fonctionKey.roleName
 
-    # 2. Récupération des consultations avec examens
     consultations_payees = Consultation.objects.filter(
-        examens__isnull=False
+        examens__isnull=False,
+        triage__patient__hopital=hopital_user
     ).distinct().select_related('triage__patient', 'medecin').prefetch_related('examens__prestation')
 
     historique_technique = []
@@ -1365,18 +1370,17 @@ def liste_examens_techniques(request):
         for exam in examens_query:
             cat = str(exam.prestation.categorie).upper()
 
-            # 🔒 Blocage pour patient SIMPLE : examen visible seulement si un paiement existe
             if patient.type_patient == 'SIMPLE':
                 paiement_examen = Paiement.objects.filter(
                     patient=patient,
                     consultation=cons,
                     service__in=['LABO', 'ECHO', 'RADIO', 'EXAMENS'],
-                    montant_verse__gt=0   # ✅ condition : il a versé quelque chose
+                    montant_verse__gt=0,
+                    hopital=hopital_user
                 ).exists()
                 if not paiement_examen:
-                    continue  # Aucun paiement → examen non affiché
+                    continue
 
-            # 🎯 Filtrage par rôle du technicien
             if ('labo' in nom_role and cat == 'LABO') or \
                (('echo' in nom_role or 'echographe' in nom_role) and cat == 'ECHO') or \
                (('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO'):
@@ -1387,7 +1391,6 @@ def liste_examens_techniques(request):
                     'est_deja_fait': (exam.statut == 'TERMINE')
                 })
 
-        # 4. Ajout du patient si examens filtrés
         if examens_filtrés:
             a_des_examens_en_attente = any(not ex['est_deja_fait'] for ex in examens_filtrés)
 
@@ -1400,7 +1403,6 @@ def liste_examens_techniques(request):
                 'info_financiere': None
             }
 
-            # 💵 Infos financières selon type de patient
             if patient.type_patient == 'CONVENTIONNE' and patient.entreprise:
                 info_pat['info_financiere'] = f"Entreprise: {patient.entreprise.nom}"
             elif patient.type_patient == 'FIDELE':
@@ -1416,7 +1418,6 @@ def liste_examens_techniques(request):
                 'tout_traite': not a_des_examens_en_attente
             })
 
-    # 5. Rendu de la page
     context = {
         'historique_technique': historique_technique,
         'examens_presents': len(historique_technique) > 0,

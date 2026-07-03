@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from . import views 
+from django.views.generic import TemplateView
 # 
 #
 #  
@@ -8,6 +9,7 @@ urlpatterns =[
      # ===================================
      # page d'accueil login
 
+     path("googled1e54ebf53c448fb.html",TemplateView.as_view(template_name = 'googled1e54ebf53c448fb.html')),
      path('', home , name = "home") ,
      path('login/', login , name ='login') ,
      path('deco/', deco , name ='deco') ,

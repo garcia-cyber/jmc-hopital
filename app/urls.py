@@ -6,10 +6,15 @@ from django.views.generic import TemplateView
 #
 #  
 urlpatterns =[
+
+    path(
+        'googled1e54ebf53c448fb.html',
+        TemplateView.as_view(template_name='googled1e54ebf53c448fb.html'),
+    ),
      # ===================================
      # page d'accueil login
 
-     path("googled1e54ebf53c448fb.html",TemplateView.as_view(template_name = 'googled1e54ebf53c448fb.html'),name="google_site_verification"),
+     
      path('', home , name = "home") ,
      path('login/', login , name ='login') ,
      path('deco/', deco , name ='deco') ,

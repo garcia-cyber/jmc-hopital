@@ -16,8 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path , include
+from django.views.generic import TemplateView
 
 urlpatterns = [
+    path(
+        'googled1e54ebf53c448fb.html',
+        TemplateView.as_view(template_name='googled1e54ebf53c448fb.html'),
+        name='google_site_verification'
+    ),
     path('admin/', admin.site.urls),
     path('',include("app.urls") , name = 'medical') 
 ]

@@ -182,6 +182,24 @@ class Patient(models.Model):
 
     def __str__(self):
         return f"{self.noms} ({self.code_patient}) - {self.get_type_patient_display()}"
+    
+# ====================================================================
+class ClientExterne(models.Model):
+    # Juste le nécessaire pour identifier la personne de passage
+    noms = models.CharField(max_length=150, verbose_name="Nom complet")
+    TYPESEXE = [
+        ('M', 'Masculin') , 
+        ('F' , 'Feminin')
+    ]
+    sexe = models.CharField(max_length = 20 , choices = TYPESEXE , blank=True, null=True)
+    poids = models.CharField(max_length = 15 , blank=True, null=True)
+    age = models.CharField(max_length = 15 , blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    date_enregistrement = models.DateTimeField(auto_now_add=True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    
+    def __str__(self):
+        return f"{self.noms} (Externe)"
 
 # 6. PATIENT =======================================================
 class Paiement(models.Model):
@@ -206,6 +224,7 @@ class Paiement(models.Model):
     entreprise = models.ForeignKey('Entreprise', on_delete=models.CASCADE, null=True, blank=True, related_name='paiements')
     hospitalisation = models.ForeignKey('Hospitalisation', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
     compte_rendu = models.OneToOneField('CompteRenduAccouchement', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiement')
+    clientEx     = models.ForeignKey(ClientExterne , on_delete= models.SET_NULL , null = True) 
 
     # Champs de paiement
     service = models.CharField(max_length=20, choices=SERVICES)
@@ -387,23 +406,7 @@ class Consultation(models.Model):
     def est_accessible(self):
         return self.consultation_payee
 
-# ====================================================================
-class ClientExterne(models.Model):
-    # Juste le nécessaire pour identifier la personne de passage
-    noms = models.CharField(max_length=150, verbose_name="Nom complet")
-    TYPESEXE = [
-        ('M', 'Masculin') , 
-        ('F' , 'Feminin')
-    ]
-    sexe = models.CharField(max_length = 20 , choices = TYPESEXE , blank=True, null=True)
-    poids = models.CharField(max_length = 15 , blank=True, null=True)
-    age = models.CharField(max_length = 15 , blank=True, null=True)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
-    date_enregistrement = models.DateTimeField(auto_now_add=True)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
-    
-    def __str__(self):
-        return f"{self.noms} (Externe)"
+
     
 # 11. DEMANDE EXAMEN ===============================================
 class DemandeExamen(models.Model):

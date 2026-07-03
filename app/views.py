@@ -3560,21 +3560,25 @@ def modifier_type_patient(request, patient_id):
 # ==================================================================================================
 @login_required
 def enregistrer_soin_rapide(request):
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+
     if request.method == 'POST':
-        # Données du form
         nom_patient = request.POST.get('nom_patient')
         ids_prestations = request.POST.getlist('prestation_ids')
         reduction = Decimal(request.POST.get('reduction', '0.00'))
-        devise_paiement = request.POST.get('devise') # 'USD' ou 'CDF'
-        
-        # Récupération des prestations et calcul total
-        prestations = Prestation.objects.filter(id__in=ids_prestations)
+        devise_paiement = request.POST.get('devise')
+
+        prestations = Prestation.objects.filter(
+            id__in=ids_prestations,
+            hopital=user_hopital,
+            categorie='SOIN'
+        )
+
         total_brut = sum(p.prix for p in prestations)
-        
-        # Calcul du net à payer en USD
         net_usd = total_brut - reduction
-        
-        # Gestion de la devise de paiement
+
         if devise_paiement == 'CDF':
             taux = ConfigurationHopital.get_taux()
             montant_verse = net_usd * taux
@@ -3583,17 +3587,16 @@ def enregistrer_soin_rapide(request):
 
         try:
             with transaction.atomic():
-                # 1. Création paiement
                 paiement = Paiement.objects.create(
                     service='SOIN',
                     montant_verse=montant_verse,
                     montant_reduction=reduction,
                     devise=devise_paiement,
                     caissier=request.user,
-                    reste_a_payer=Decimal('0.00')
+                    reste_a_payer=Decimal('0.00'),
+                    hopital=user_hopital
                 )
-                
-                # 2. Création des soins
+
                 for p in prestations:
                     SoinOccasionnel.objects.create(
                         paiement=paiement,
@@ -3601,23 +3604,19 @@ def enregistrer_soin_rapide(request):
                         prestation=p,
                         effectue_par=request.user
                     )
-            
+
             messages.success(request, "Paiement enregistré !")
-            
-            
+            return redirect('soin_rapide')
 
         except Exception as e:
             messages.error(request, f"Erreur : {e}")
             return redirect('soin_rapide')
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/soins/soin_rapide.html', {
-        'prestations': Prestation.objects.filter(categorie='SOIN'),
-        'taux': ConfigurationHopital.get_taux() ,
-        'fonctionKey' : fonctionKey,
+        'prestations': Prestation.objects.filter(categorie='SOIN', hopital=user_hopital),
+        'taux': ConfigurationHopital.get_taux(),
+        'fonctionKey': fonctionKey,
     })
-
 
 #
 # =========================================================================================
@@ -4887,77 +4886,99 @@ def ajouter_paiement_dette(request, paiement_id):
 # =========================================================================================================== 
 @login_required
 def enregistrer_client_externe(request):
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+
     if request.method == 'POST':
         form = ClientExterneForm(request.POST)
         if form.is_valid():
-            client = form.save()
-            # On redirige vers la création de la demande en passant l'ID du client
+            client = form.save(commit=False)
+            if fonctionKey != 'admin' and user_hopital:
+                client.hopital = user_hopital
+            client.save()
             return redirect('creer_demande_examen', client_id=client.id)
     else:
         form = ClientExterneForm()
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    return render(request, 'back-end/client/enregistrer_client.html', {'form': form, 'fonctionKey' : fonctionKey})
-
+    return render(request, 'back-end/client/enregistrer_client.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 # 
 # ===========================================================================================================
-# ENREGISTREMENT EXEMAN DU PATIENT EXTERNE 
-# =========================================================================================================== 
+# ENREGISTREMENT DEMANDE EXAMEN EXTERNE POUR LES EXAMENS 
+# ===========================================================================================================     
+
 @login_required
 def creer_demande_examen(request, client_id):
-    client = get_object_or_404(ClientExterne, id=client_id)
-    
-    # 1. Gestion des rôles (Préservation de ta logique originale)
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
+    user_hopital = role.hopital if role else None
+
+    if fonctionKey != 'admin' and user_hopital:
+        client = get_object_or_404(ClientExterne, id=client_id, hopital=user_hopital)
+        prestations_labo = Prestation.objects.filter(categorie='LABO', hopital=user_hopital)
+        prestations_radio = Prestation.objects.filter(categorie='RADIO', hopital=user_hopital)
+        prestations_echo = Prestation.objects.filter(categorie='ECHO', hopital=user_hopital)
+    else:
+        client = get_object_or_404(ClientExterne, id=client_id)
+        prestations_labo = Prestation.objects.filter(categorie='LABO')
+        prestations_radio = Prestation.objects.filter(categorie='RADIO')
+        prestations_echo = Prestation.objects.filter(categorie='ECHO')
+
     if request.method == 'POST':
-        # 2. Récupération des IDs via les checkboxes
         ids_prestations = request.POST.getlist('prestations')
-        
+
         if ids_prestations:
-            # Création de la demande
-            demande = DemandeExamenExterne.objects.create(client=client)
-            demande.prestations.set(ids_prestations)
-            
-            # Calcul automatique du total
-            total = demande.prestations.aggregate(Sum('prix'))['prix__sum'] or 0
-            demande.total_a_payer = total
-            demande.save()
-            
+            if fonctionKey != 'admin' and user_hopital:
+                prestations_selectionnees = Prestation.objects.filter(
+                    id__in=ids_prestations,
+                    hopital=user_hopital
+                )
+            else:
+                prestations_selectionnees = Prestation.objects.filter(id__in=ids_prestations)
+
+            with transaction.atomic():
+                demande = DemandeExamenExterne.objects.create(
+                    client=client,
+                    hopital=user_hopital if fonctionKey != 'admin' else client.hopital
+                )
+                demande.prestations.set(prestations_selectionnees)
+                demande.total_a_payer = demande.prestations.aggregate(total=Sum('prix'))['total'] or Decimal('0.00')
+                demande.save()
+
             return redirect('liste_demandes_externes')
-    
-    # 3. Récupération des données pour le template avec le contrôle des rôles
+
     return render(request, 'back-end/client/creer_demande.html', {
         'client': client,
-        'fonctionKey': fonctionKey, # Réintégré
-        'prestations_labo': Prestation.objects.filter(categorie='LABO'),
-        'prestations_radio': Prestation.objects.filter(categorie='RADIO'),
-        'prestations_echo': Prestation.objects.filter(categorie='ECHO'),
+        'fonctionKey': fonctionKey,
+        'prestations_labo': prestations_labo,
+        'prestations_radio': prestations_radio,
+        'prestations_echo': prestations_echo,
     })
 
-#
-# ==================================================================================
-# LISTE DE DEMANDE EXAMEN
-# ==================================================================================
+# 
+# ===========================================================================================================
+# LISTE DES PATIENTS EXTERNE POUR LES EXAMENS 
+# =========================================================================================================== 
+
 @login_required
 def liste_demandes_externes(request):
-    # CORRECTION : Remplacement de 'date_creation' par 'date_demande'
-    # pour correspondre à la structure de votre modèle.
-    demandes = DemandeExamenExterne.objects.all().order_by('-date_demande')
-
-    # 1. Gestion des rôles
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    context = {
+    user_hopital = role.hopital if role else None
+
+    if fonctionKey != 'admin' and user_hopital:
+        demandes = DemandeExamenExterne.objects.filter(hopital=user_hopital).order_by('-date_demande')
+    else:
+        demandes = DemandeExamenExterne.objects.all().order_by('-date_demande')
+
+    return render(request, 'back-end/client/liste_demandes.html', {
         'demandes': demandes,
         'fonctionKey': fonctionKey
-    }
-    return render(request, 'back-end/client/liste_demandes.html', context)
+    })
 
 
 #
@@ -5130,16 +5151,19 @@ def historique_examen_externe_technicien(request):
 # PAIEMENT DES L'EXAMEN EXTERNE
 # ==================================================================================
 @login_required
+@login_required
 def encaisser_examen_externe(request, demande_id):
-    demande = get_object_or_404(DemandeExamenExterne, id=demande_id)
-    # Récupération du taux et conversion en Decimal pour la précision financière
-    taux = Decimal(str(ConfigurationHopital.get_taux()))
-    
-    # Gestion du rôle utilisateur
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    # Calcul du reste à payer
+    user_hopital = role.hopital if role else None
+
+    if fonctionKey != 'admin' and user_hopital:
+        demande = get_object_or_404(DemandeExamenExterne, id=demande_id, hopital=user_hopital)
+    else:
+        demande = get_object_or_404(DemandeExamenExterne, id=demande_id)
+
+    taux = Decimal(str(ConfigurationHopital.get_taux()))
+
     stats = demande.paiements.aggregate(
         total_verse=Sum('montant_verse'),
         total_reduit=Sum('montant_reduction')
@@ -5147,66 +5171,67 @@ def encaisser_examen_externe(request, demande_id):
     reste_a_payer = demande.total_a_payer - ((stats['total_verse'] or 0) + (stats['total_reduit'] or 0))
 
     if request.method == 'POST':
-        devise = request.POST.get('devise') 
+        devise = request.POST.get('devise')
         montant_saisi = Decimal(request.POST.get('montant_verse', 0))
         reduction = Decimal(request.POST.get('montant_reduction', 0))
-        
-        # Conversion du montant versé en USD si la devise est en CDF
+
         montant_verse_usd = (montant_saisi / taux) if devise == 'CDF' else montant_saisi
-        
-        # VÉRIFICATION : Le total ne doit pas dépasser le reste à payer (avec petite tolérance)
+
         if (montant_verse_usd + reduction) > (reste_a_payer + Decimal('0.01')):
             return render(request, 'back-end/client/encaisser_examen.html', {
-                'demande': demande, 
-                'reste_a_payer': reste_a_payer, 
+                'demande': demande,
+                'reste_a_payer': reste_a_payer,
                 'taux': taux,
                 'fonctionKey': fonctionKey,
                 'prestations': demande.prestations.all(),
                 'error': f"Le total dépasse le reste à payer ({reste_a_payer:.2f} $)."
             })
 
-        # Enregistrement du paiement
         Paiement.objects.create(
             demande_examen_externe=demande,
             service='EXAMEN_EXTERNE',
             montant_verse=montant_verse_usd,
             montant_reduction=reduction,
             caissier=request.user,
-            devise=devise
+            devise=devise,
+            hopital=user_hopital if fonctionKey != 'admin' else demande.hopital
         )
         return redirect('liste_facturation')
 
-    # Rendu initial de la page
     return render(request, 'back-end/client/encaisser_examen.html', {
         'demande': demande,
         'reste_a_payer': reste_a_payer,
-        'taux': taux, 
+        'taux': taux,
         'fonctionKey': fonctionKey,
         'prestations': demande.prestations.all()
     })
-
 #
 # ======================================================================================
 # LISTE DE FACTURATION 
 # ======================================================================================
 @login_required
 def liste_facturation(request):
-    # Récupération du taux et conversion en float pour le calcul
     taux_val = ConfigurationHopital.get_taux()
     taux = float(taux_val) if taux_val else 1.0
-    
-    # Définition d'un champ décimal commun pour éviter les erreurs de type
     decimal_field = DecimalField(max_digits=12, decimal_places=2)
 
-    # Calcul des totaux avec cast explicite pour chaque opération
-    demandes = DemandeExamenExterne.objects.annotate(
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+
+    demandes = DemandeExamenExterne.objects.all()
+
+    if fonctionKey != 'admin' and user_hopital:
+        demandes = demandes.filter(hopital=user_hopital)
+
+    demandes = demandes.annotate(
         total_verse=Coalesce(
-            Sum('paiements__montant_verse', output_field=decimal_field), 
-            Value(0.0, output_field=decimal_field)
+            Sum('paiements__montant_verse', output_field=decimal_field),
+            Value(0, output_field=decimal_field)
         ),
         total_reduit=Coalesce(
-            Sum('paiements__montant_reduction', output_field=decimal_field), 
-            Value(0.0, output_field=decimal_field)
+            Sum('paiements__montant_reduction', output_field=decimal_field),
+            Value(0, output_field=decimal_field)
         )
     ).annotate(
         reste_usd=ExpressionWrapper(
@@ -5215,15 +5240,11 @@ def liste_facturation(request):
         )
     ).prefetch_related('prestations').order_by('-date_demande')
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
     return render(request, 'back-end/client/liste_facturation.html', {
         'demandes': demandes,
         'taux': taux,
         'fonctionKey': fonctionKey
     })
-
 
 #
 # ===============================================================================================

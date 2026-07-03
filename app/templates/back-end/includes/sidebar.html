@@ -144,13 +144,13 @@
         <span>Patients Fidèles dette</span>
     </a>
 </li>
-<li class="submenu">
+{% comment %} <li class="submenu">
                         <a href="#"><i class="la la-wallet"></i> <span> Gestion Financière </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'dashboard_finance_depense' %}">Journal de Caisse</a></li>
                             <li><a href="{% url 'creer_depense' %}">Saisir une Dépense</a></li>
                         </ul>
-                    </li>
+                    </li> {% endcomment %}
                     <li class="menu-title">
     <span>Gestion Médicale</span>
 </li>
@@ -178,6 +178,15 @@
         <span>Nouvel Examen Externe</span>
     </a>
 </li>
+
+<li>
+    <a href="{% url 'liste_facturation' %}">
+        <i class="fa fa-user-plus"></i> 
+        <span>Examen Externe facture</span>
+    </a>
+</li>
+
+
 <li class="{% if request.resolver_match.url_name == 'liste_demandes_externes' %}active{% endif %}">
     <a href="{% url 'liste_demandes_externes' %}">
         <i class="fa fa-list"></i> <span>Liste des demandes</span>

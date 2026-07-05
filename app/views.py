@@ -4991,31 +4991,34 @@ def liste_demandes_externes(request):
 # ========================================================================================
 @login_required
 def liste_examens_technicien(request):
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     if not role_obj or not role_obj.fonctionKey:
         return render(request, 'back-end/error.html', {'message': "Accès refusé."})
 
-    # On récupère le nom de sa fonction (ex: "Laborantin", "Radiologue")
     role_name = role_obj.fonctionKey.roleName.upper()
-    
-    # On définit la catégorie à filtrer selon le rôle
-    # Vérifie bien que ces codes correspondent à tes choix dans Prestation.CATEGORIES
-    cat_cible = None
-    if 'LABO' in role_name: cat_cible = 'LABO'
-    elif 'RADIO' in role_name: cat_cible = 'RADIO'
-    elif 'ECHO' in role_name: cat_cible = 'ECHO'
+    user_hopital = role_obj.hopital
 
-    # Récupération des demandes qui contiennent au moins une prestation de cette catégorie
+    cat_cible = None
+    if 'LABO' in role_name:
+        cat_cible = 'LABO'
+    elif 'RADIO' in role_name:
+        cat_cible = 'RADIO'
+    elif 'ECHO' in role_name:
+        cat_cible = 'ECHO'
+
+    if not cat_cible:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+
     demandes = DemandeExamenExterne.objects.filter(
+        hopital=user_hopital,
         prestations__categorie=cat_cible
     ).distinct().order_by('-date_demande')
 
     historique_technique = []
 
     for dem in demandes:
-        # On ne garde que les examens de la catégorie du technicien
         examens_filtres = dem.prestations.filter(categorie=cat_cible)
-        
+
         if examens_filtres.exists():
             historique_technique.append({
                 'id': dem.id,
@@ -5030,7 +5033,6 @@ def liste_examens_technicien(request):
         'fonctionKey': role_obj.fonctionKey.roleName,
         'cat_cible': cat_cible
     })
-
 
 #
 # =========================================================================================================
@@ -5085,62 +5087,60 @@ def saisir_rapport(request, demande_id, prestation_id):
 # ========================================================================================================
 @login_required
 def historique_examen_externe_technicien(request):
-    # 1. Vérification du rôle
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     if not role_obj or not role_obj.fonctionKey:
         return render(request, 'back-end/error.html', {'message': "Accès refusé."})
 
     role_name = role_obj.fonctionKey.roleName.upper()
-    
-    # Déterminer si l'utilisateur est un médecin ou un technicien
-    is_medecin = 'MEDECIN' in role_name or 'DOCTEUR' in role_name
-    
-    # Définir la catégorie cible pour le technicien
-    cat_cible = None
-    if 'LABO' in role_name: cat_cible = 'LABO'
-    elif 'RADIO' in role_name: cat_cible = 'RADIO'
-    elif 'ECHO' in role_name: cat_cible = 'ECHO'
+    user_hopital = role_obj.hopital
 
-    # 2. Récupération des demandes
+    is_medecin = 'MEDECIN' in role_name or 'DOCTEUR' in role_name
+
+    cat_cible = None
+    if 'LABO' in role_name:
+        cat_cible = 'LABO'
+    elif 'RADIO' in role_name:
+        cat_cible = 'RADIO'
+    elif 'ECHO' in role_name:
+        cat_cible = 'ECHO'
+
     if is_medecin:
-        demandes = DemandeExamenExterne.objects.all().order_by('-date_demande')
+        demandes = DemandeExamenExterne.objects.filter(
+            hopital=user_hopital
+        ).order_by('-date_demande')
     elif cat_cible:
         demandes = DemandeExamenExterne.objects.filter(
+            hopital=user_hopital,
             prestations__categorie=cat_cible
         ).distinct().order_by('-date_demande')
     else:
-        # Si ce n'est ni médecin ni technicien reconnu
         return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
 
     historique_technique = []
 
     for dem in demandes:
-        # On récupère tous les examens de la demande
-        tous_les_examens = dem.prestations.all() 
-        
+        tous_les_examens = dem.prestations.all()
+
         details_examens = []
         for p in tous_les_examens:
-            # Recherche du résultat
             res = ExamenExterneResultat.objects.filter(demande=dem, prestation=p).first()
-            
+
             details_examens.append({
                 'prestation': p,
                 'statut': res.statut if res else 'EN_ATTENTE',
                 'id_resultat': res.id if res else None,
                 'rapport': res.rapport if res else None,
-                # Autorisation d'édition/visualisation : le médecin voit tout, le technicien seulement sa catégorie
                 'est_ma_categorie': is_medecin or (p.categorie == cat_cible)
             })
 
-        # Reconstruction de l'objet historique complet
         historique_technique.append({
             'id': dem.id,
-            'client': dem.client, # Informations complètes du client (objet)
-            'patient': dem.client.noms, # Gardé pour compatibilité
+            'client': dem.client,
+            'patient': dem.client.noms,
             'date': dem.date_demande,
             'details': details_examens,
             'medecin_demandeur': dem.medecin_demandeur if hasattr(dem, 'medecin_demandeur') else "Non spécifié",
-            'type_urgence': getattr(dem, 'urgence', 'Standard') # Exemple d'info supplémentaire
+            'type_urgence': getattr(dem, 'urgence', 'Standard')
         })
 
     return render(request, 'back-end/client/historique_examen_externe_technicien.html', {
@@ -5149,7 +5149,6 @@ def historique_examen_externe_technicien(request):
         'is_medecin': is_medecin,
         'cat_cible': cat_cible
     })
-
 # 
 # ==================================================================================
 # PAIEMENT DES L'EXAMEN EXTERNE

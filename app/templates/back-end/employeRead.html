@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Personnel Médical - Moyanoli ERP</title>
+        <title>Personnel Médical - JMC ERP</title>
         
         {% include 'back-end/includes/css.html'%}
 
@@ -117,15 +117,19 @@
                                                     <td><span class="badge badge-light">@{{ user.username }}</span></td>
                                                     <td>{{ user.date_joined|date:"d M Y" }}</td>
                                                     <td class="text-right">
+                                                        {% if fonctionKey == 'admin'%}
                                                         <a href="{% url 'ajouter_fonction' user.id %}" class="btn btn-info btn-action" title="Attribuer Fonction/Profil">
                                                             <i class="la la-user-tag"></i>
                                                         </a>
+                                                        {%endif%}
                                                         <a href="{% url 'modifier_user' user.id %}" class="btn btn-primary btn-action" title="Modifier">
                                                             <i class="la la-edit"></i>
                                                         </a>
+                                                         {% if fonctionKey == 'admin'%}
                                                         <a href="{% url 'force_pass' user.id %}" class="btn btn-warning btn-action text-white" title="Réinitialiser MDP" onclick="return confirm('Forcer la réinitialisation du mot de passe ?')">
                                                             <i class="la la-key"></i>
                                                         </a>
+                                                        {%endif%}
                                                     </td>
                                                 </tr>
                                                 {% empty %}

@@ -4,7 +4,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Affectations des Postes - Moyanoli ERP</title>
+        <title>Affectations des Postes - JMC ERP</title>
         
         {% include 'back-end/includes/css.html'%}
 
@@ -95,7 +95,9 @@
                                                     <th>Nom d'utilisateur</th>
                                                     <th>Date d'affectation</th>
                                                     <th>Statut</th>
+                                                    {% if fonctionKey == 'admin'%}
                                                     <th class="text-right">Action</th>
+                                                    {%endif%}
                                                 </tr>
                                             </thead>
                                             <tbody id="tableBody">
@@ -121,6 +123,7 @@
                                                             <span class="badge badge-danger-border"><i class="fa fa-circle text-danger mr-1"></i> Inactif</span>
                                                         {% endif %}
                                                     </td>
+                                                    {% if fonctionKey == 'admin'%}
                                                     <td class="text-right">
                                                         <!-- BOUTON SUPPRIMER -->
                                                         <a href="{% url 'supprimer_poste' poste.id %}" 
@@ -129,7 +132,10 @@
                                                            title="Supprimer l'affectation">
                                                             <i class="la la-trash-alt"></i>
                                                         </a>
+                                                       
                                                     </td>
+                                                    
+                                                    {%endif%}
                                                 </tr>
                                                 {% empty %}
                                                 <tr>

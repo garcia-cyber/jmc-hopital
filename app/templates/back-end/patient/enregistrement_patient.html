@@ -62,7 +62,6 @@
 
     <div class="page-wrapper">
         <div class="content container-fluid">
-
             <div class="page-header mb-4">
                 <div class="row align-items-center">
                     <div class="col-md-6 col-12">
@@ -142,24 +141,34 @@
                                         </a>
                                         <div class="dropdown-menu dropdown-menu-right">
                                             {% if not patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'payer_fiche' patient.id %}"><i class="fa fa-money"></i> Payer Fiche</a>
+                                                <a class="dropdown-item" href="{% url 'payer_fiche' patient.id %}"><i class="fa fa-money m-r-5"></i> Payer Fiche</a>
                                             {% else %}
-                                                <span class="dropdown-item text-muted"><i class="fa fa-check-circle"></i> Fiche réglée</span>
+                                                <span class="dropdown-item text-muted"><i class="fa fa-check-circle m-r-5"></i> Fiche réglée</span>
                                             {% endif %}
 
                                             {% if patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}"><i class="fa fa-stethoscope"></i> Nouvelle Session Soins</a>
+                                                <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}"><i class="fa fa-stethoscope m-r-5"></i> Nouvelle Session Soins</a>
+                                            {% endif %}
+
+                                            {% if patient.fiche_payee %}
+                                                {% if not patient.a_carte_fidelite %}
+                                                    <a class="dropdown-item" href="{% url 'paiement_prestation' patient.id %}"><i class="fa fa-credit-card m-r-5"></i> Payer Carte Fidélité</a>
+                                                {% else %}
+                                                    <span class="dropdown-item text-muted"><i class="fa fa-star m-r-5"></i> Carte Fidélité Active</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="dropdown-item text-muted"><i class="fa fa-lock m-r-5"></i> Payer Carte Fidélité (Bloqué)</span>
                                             {% endif %}
 
                                             <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history"></i> Hist. Paiements</a>
-                                            <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat"></i> Hist. Triage</a>
-                                            <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil"></i> Modifier</a>
+                                            <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history m-r-5"></i> Hist. Paiements</a>
+                                            <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat m-r-5"></i> Hist. Triage</a>
+                                            <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil m-r-5"></i> Modifier</a>
 
                                             {% if patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye"></i> Dossier Médical</a>
+                                                <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye m-r-5"></i> Dossier Médical</a>
                                             {% else %}
-                                                <span class="dropdown-item text-muted"><i class="fa fa-lock"></i> Dossier bloqué</span>
+                                                <span class="dropdown-item text-muted"><i class="fa fa-lock m-r-5"></i> Dossier bloqué</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -170,7 +179,6 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -228,9 +236,7 @@
                                 <select name="entreprise" id="id_entreprise" class="form-control form-select">
                                     <option value="">---------</option>
                                     {% for entreprise in entreprises %}
-                                        <option value="{{ entreprise.id }}" {% if request.POST.entreprise == entreprise.id|stringformat:"s" %}selected{% endif %}>
-                                            {{ entreprise.nom }}
-                                        </option>
+                                        <option value="{{ entreprise.id }}" {% if request.POST.entreprise == entreprise.id|stringformat:"s" %}selected{% endif %}>{{ entreprise.nom }}</option>
                                     {% endfor %}
                                 </select>
                             </div>

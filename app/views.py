@@ -494,6 +494,7 @@ def modifier_service(request, pk):
 def enregistrement_patient(request):
     user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = user_fonction.hopital if user_fonction else None
+    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
     if request.method == 'POST':
         form = PatientForm(request.POST)
@@ -502,10 +503,14 @@ def enregistrement_patient(request):
                 patient = form.save(commit=False)
                 patient.created_by = request.user
 
-                if hopital_user:
-                    patient.hopital = hopital_user
-                else:
+                if not hopital_user:
                     messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                    return redirect('enregistrement_patient')
+
+                patient.hopital = hopital_user
+
+                if patient.entreprise and patient.entreprise.hopital_id != hopital_user.id:
+                    messages.error(request, "Cette entreprise n'appartient pas à votre hôpital.")
                     return redirect('enregistrement_patient')
 
                 if patient.entreprise:
@@ -523,18 +528,18 @@ def enregistrement_patient(request):
     else:
         form = PatientForm()
 
-    patients = Patient.objects.all().select_related(
-        'entreprise', 'created_by', 'hopital'
-    ).order_by('-date_creation')
+    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
 
-    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
+    entreprises = Entreprise.objects.filter(hopital=hopital_user).order_by('nom') if hopital_user else Entreprise.objects.none()
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
         'form': form,
         'fonctionKey': fonctionKey,
         'hopital_user': hopital_user,
+        'entreprises': entreprises,
     })
+
 # 18
 # ==================================================================================================
 #  LISTE DES PATIENT(E)S 
@@ -2921,18 +2926,25 @@ def creer_ordonnance_view(request, consultation_id):
 # ======================================================================================
 @login_required
 def enregistrer_entreprise_view(request):
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+
     if request.method == 'POST':
         form = EntrepriseForm(request.POST)
         if form.is_valid():
-            form.save()
+            entreprise = form.save(commit=False)
+            entreprise.hopital = user_hopital
+            entreprise.save()
             messages.success(request, "L'entreprise a été enregistrée avec succès.")
-            return redirect('liste_entreprises') # Remplacez par votre URL de redirection
+            return redirect('liste_entreprises')
     else:
         form = EntrepriseForm()
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    return render(request, 'back-end/entreprise/enregistrer_entreprise.html', {'form': form , 'fonctionKey':fonctionKey})
+    return render(request, 'back-end/entreprise/enregistrer_entreprise.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 #
 # ======================================================================================
@@ -2940,11 +2952,21 @@ def enregistrer_entreprise_view(request):
 # ======================================================================================
 @login_required
 def liste_entreprises_view(request):
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
 
-    entreprises = Entreprise.objects.all().order_by('-date_enregistrement')
-    return render(request, 'back-end/entreprise/liste_entreprises.html', {'entreprises': entreprises, 'fonctionKey':fonctionKey})
+    entreprises = Entreprise.objects.all()
+
+    if fonctionKey != 'admin' and user_hopital:
+        entreprises = entreprises.filter(hopital=user_hopital)
+
+    entreprises = entreprises.order_by('-date_enregistrement')
+
+    return render(request, 'back-end/entreprise/liste_entreprises.html', {
+        'entreprises': entreprises,
+        'fonctionKey': fonctionKey
+    })
 
 
 
@@ -4683,25 +4705,25 @@ def creer_session_soins(request, patient_id):
 # ===================================================================================================================
 @login_required
 def liste_sessions(request):
-    # Récupération des sessions avec les relations nécessaires
-    sessions = SessionSoins.objects.prefetch_related('items__prestation', 'paiements').all().order_by('-date_creation')
-    
-    # Calcul dynamique des totaux pour chaque session
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    user_hopital = role_obj.hopital if role_obj else None
+
+    sessions = SessionSoins.objects.prefetch_related('items__prestation', 'paiements').all()
+
+    if fonction_key != "admin" and user_hopital:
+        sessions = sessions.filter(hopital=user_hopital)
+
+    sessions = sessions.order_by('-date_creation')
+
     for session in sessions:
-        # On récupère tous les paiements liés à la session
         paiements = session.paiements.all()
-        
         total_paye = paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
         total_red = paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
-        
-        # Attributs calculés pour l'affichage
+
         session.total_verse = total_paye
         session.total_reductions = total_red
         session.actuel_reste = max(0, session.total_a_payer - total_paye - total_red)
-
-    # 3. Gestion des droits d'accès (ton système de rôle)
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
 
     return render(request, 'back-end/consultation/liste_sessions.html', {
         'sessions': sessions,
@@ -5453,23 +5475,28 @@ def historique_entreprise(request, entreprise_id):
 # =========================================================================================
 @login_required
 def liste_patients_fideles(request):
-    # 1. Traitement du paiement (POST)
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+
     if request.method == 'POST':
         try:
             consultation_id = request.POST.get('consultation_id')
             montant_verse = Decimal(request.POST.get('montant', 0))
             reduction = Decimal(request.POST.get('reduction', 0))
             devise = request.POST.get('devise', 'USD')
-            
+
             cons = Consultation.objects.get(id=consultation_id)
-            
-            # Conversion en USD si le paiement est en CDF
+
+            if fonctionKey != 'admin' and user_hopital and cons.hopital != user_hopital:
+                messages.error(request, "Accès refusé.")
+                return redirect('liste_patients_fideles')
+
             montant_en_usd = montant_verse
             if devise == 'CDF':
                 taux = ConfigurationHopital.get_taux()
                 montant_en_usd = montant_verse / taux
 
-            # Création du paiement lié à CETTE consultation
             Paiement.objects.create(
                 consultation=cons,
                 patient=cons.triage.patient,
@@ -5485,7 +5512,6 @@ def liste_patients_fideles(request):
         except Exception as e:
             messages.error(request, f"Erreur lors du paiement : {e}")
 
-    # 2. Préparation des données pour l'affichage
     mois = timezone.now().month
     annee = timezone.now().year
 
@@ -5493,24 +5519,25 @@ def liste_patients_fideles(request):
         triage__patient__type_patient='FIDELE',
         date_creation__year=annee,
         date_creation__month=mois
-    ).prefetch_related('paiements', 'examens__prestation') 
+    ).prefetch_related('paiements', 'examens__prestation')
+
+    if fonctionKey != 'admin' and user_hopital:
+        consultations = consultations.filter(hopital=user_hopital)
 
     patients_data = []
     for cons in consultations:
         patient = cons.triage.patient
-        # Calcul du coût total des prestations pour cette consultation
         montant_total = sum(
-            ex.prestation.prix * ex.quantite 
-            for ex in cons.examens.all() 
+            ex.prestation.prix * ex.quantite
+            for ex in cons.examens.all()
             if ex.prestation
         )
-        
-        # Calcul du total payé + remise via related_name 'paiements'
+
         totaux = cons.paiements.aggregate(
-            paye=Sum('montant_verse'), 
+            paye=Sum('montant_verse'),
             remise=Sum('montant_reduction')
         )
-        
+
         paye = totaux['paye'] or 0
         remise = totaux['remise'] or 0
         reste_a_payer = montant_total - (paye + remise)
@@ -5522,11 +5549,6 @@ def liste_patients_fideles(request):
             'reste_a_payer': max(Decimal('0.00'), reste_a_payer)
         })
 
-    # 3. Vérification des droits
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    # 4. Rendu avec TOUTES les variables nécessaires
     return render(request, 'back-end/patient/liste_fideles.html', {
         'patients_data': patients_data,
         'mois': mois,
@@ -5534,59 +5556,62 @@ def liste_patients_fideles(request):
         'fonctionKey': fonctionKey
     })
 
-
 #
 # ================================================================================================
 # PRESCRIRE ORDONNANCE POUR LE CLIENT EXTERNE 
 # ================================================================================================
 @login_required
 def prescrire_ordonnance_client_externe(request, client_id):
-    """
-    Vue dédiée à la prescription pour les clients externes.
-    Utilise le suffixe _externe pour éviter tout conflit avec les patients internes.
-    """
-    # Récupération du client externe
+    # Récupération du rôle + hopital de l'utilisateur
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    if not role or not role.fonctionKey:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    fonctionKey = role.fonctionKey.roleName
+    user_hopital = role.hopital
+
+    # Récupération du client externe (on peut aussi s'assurer qu'il appartient au même hôpital)
     client = get_object_or_404(ClientExterne, id=client_id)
-    
+
+    # Vérifier que le client appartient au même hôpital (si vous enregistrez l'hôpital sur ClientExterne)
+    if user_hopital and hasattr(client, 'hopital') and client.hopital and client.hopital != user_hopital and fonctionKey != 'admin':
+        return render(request, 'back-end/error.html', {'message': "Accès refusé : client hors de votre hôpital."})
+
     if request.method == 'POST':
         try:
-            # 1. Création de l'en-tête de l'ordonnance
-            ordonnance = OrdonnanceExterne.objects.create(
-                client=client,
-                medecin=request.user,
-                note_globale=request.POST.get('note_globale', '').strip()
-            )
-            
-            # 2. Récupération des données du formulaire dynamique
-            designations = request.POST.getlist('designation[]')
-            posologies = request.POST.getlist('posologie[]')
-            quantites = request.POST.getlist('quantite[]')
-            
-            # 3. Enregistrement des items (médicaments/examens)
-            # On boucle sur la longueur de la liste la plus longue (designations)
-            for i in range(len(designations)):
-                designation = designations[i].strip()
-                if designation: # On n'enregistre que si le nom n'est pas vide
+            with transaction.atomic():
+                ordonnance = OrdonnanceExterne.objects.create(
+                    client=client,
+                    medecin=request.user,
+                    note_globale=request.POST.get('note_globale', '').strip()
+                )
+
+                designations = request.POST.getlist('designation[]')
+                posologies = request.POST.getlist('posologie[]')
+                quantites = request.POST.getlist('quantite[]')
+
+                for i in range(len(designations)):
+                    designation = designations[i].strip()
+                    if not designation:
+                        continue
                     OrdonnanceItem.objects.create(
                         ordonnance=ordonnance,
                         designation=designation,
                         posologie=posologies[i].strip() if i < len(posologies) else "",
                         quantite=quantites[i].strip() if i < len(quantites) else ""
                     )
-            
+
             messages.success(request, f"Ordonnance enregistrée pour {client.noms}.")
-            # Redirection vers la fiche du client externe (ajuste le nom selon ton projet)
             return redirect('detail_client_externe', client_id=client.id)
-            
+
         except Exception as e:
             messages.error(request, f"Une erreur est survenue lors de l'enregistrement : {e}")
-            return render(request, 'back-end/client/prescrire.html', {'client': client})
+            return render(request, 'back-end/client/prescrire.html', {'client': client, 'fonctionKey': fonctionKey})
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    # Si GET, on affiche simplement la page de prescription
-    return render(request, 'back-end/client/prescrire_ordonnance_client_externe.html', {'client': client , 'fonctionKey' : fonctionKey})
+    # GET : affichage
+    return render(request, 'back-end/client/prescrire_ordonnance_client_externe.html', {
+        'client': client,
+        'fonctionKey': fonctionKey
+    })
 
 #
 # ==========================================================================================================
@@ -5594,15 +5619,18 @@ def prescrire_ordonnance_client_externe(request, client_id):
 # ===========================================================================================================
 @login_required
 def detail_client_externe(request, client_id):
-    # 1. Récupération du client
-    client = get_object_or_404(ClientExterne, id=client_id)
-    
-    # 2. Récupération du rôle de l'utilisateur pour la sidebar/header
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
-    
-    # 3. Récupération optionnelle des ordonnances liées à ce client
-    # Cela te permettra d'afficher la liste des ordonnances sur la page de détail
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    if not role_obj or not role_obj.fonctionKey:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+
+    fonction_key = role_obj.fonctionKey.roleName
+    user_hopital = role_obj.hopital
+
+    if fonction_key != "admin":
+        client = get_object_or_404(ClientExterne, id=client_id, hopital=user_hopital)
+    else:
+        client = get_object_or_404(ClientExterne, id=client_id)
+
     ordonnances = client.ordonnances_externes.all()
 
     context = {
@@ -5610,7 +5638,7 @@ def detail_client_externe(request, client_id):
         'fonctionKey': fonction_key,
         'ordonnances': ordonnances,
     }
-    
+
     return render(request, 'back-end/client/detail_client.html', context)
 
 #
@@ -5619,13 +5647,17 @@ def detail_client_externe(request, client_id):
 # ===========================================================================================================
 @login_required
 def liste_ordonnances_externes_client(request):
-    # Récupère toutes les ordonnances, de la plus récente à la plus ancienne
-    ordonnances = OrdonnanceExterne.objects.all().order_by('-date_creation')
-    
-    # Récupération du rôle pour le menu
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
-    
+    user_hopital = role_obj.hopital if role_obj else None
+
+    ordonnances = OrdonnanceExterne.objects.all()
+
+    if fonction_key != "admin" and user_hopital:
+        ordonnances = ordonnances.filter(hopital=user_hopital)
+
+    ordonnances = ordonnances.order_by('-date_creation')
+
     return render(request, 'back-end/client/liste_ordonnances_client.html', {
         'ordonnances': ordonnances,
         'fonctionKey': fonction_key

@@ -759,11 +759,12 @@ class Entreprise(models.Model):
         max_digits=15,
         decimal_places=2,
         default=Decimal('0.00'),
-        verbose_name="Dette mensuelle", 
-        null = True , 
-        blank = True
+        verbose_name="Dette mensuelle",
+        null=True,
+        blank=True
     )
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    hopital = models.ForeignKey(Hopital, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.nom

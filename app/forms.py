@@ -176,56 +176,22 @@ class ServiceForm(forms.ModelForm):
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
-        # On exclut code_patient et created_by car ils sont gérés automatiquement dans le modèle
-        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'service']
-        
+        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'service', 'entreprise']
         widgets = {
-            'noms': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Nom, Post-nom et Prénom'
-            }),
-            'sexe': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'age': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: 25 ans ou 8 mois'
-            }),
-            'telephone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: +243...'
-            }),
-            'adresse': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Adresse de résidence'
-            }),
-            'service': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-
-          
+            'noms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom, Post-nom et Prénom'}),
+            'sexe': forms.Select(attrs={'class': 'form-select'}),
+            'age': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 25 ans ou 8 mois'}),
+            'telephone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: +243...'}),
+            'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Adresse de résidence'}),
+            'service': forms.Select(attrs={'class': 'form-select'}),
+            'entreprise': forms.Select(attrs={'class': 'form-select'}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super(PatientForm, self).__init__(*args, **kwargs)
-        # Label par défaut pour la liste déroulante des services
-        self.fields['service'].empty_label = "Sélectionner le service"
-
-    # def clean_telephone(self):
-    #     telephone = self.cleaned_data.get('telephone')
-    #     # Vérification si le téléphone existe déjà pour un autre patient
-    #     # On exclut l'instance actuelle en cas de modification (self.instance.pk)
-    #     if Patient.objects.filter(telephone=telephone).exclude(pk=self.instance.pk).exists():
-    #         raise forms.ValidationError("Ce numéro de téléphone est déjà attribué à un autre patient.")
-    #     return telephone
 
     def clean_noms(self):
         noms = self.cleaned_data.get('noms')
         if len(noms) < 3:
             raise forms.ValidationError("Le nom complet est trop court.")
-        return noms.upper() # On force le nom en majuscule pour l'uniformité
-
+        return noms.upper()
 # 1. Formulaire principal de la Consultation
 class ConsultationForm(forms.ModelForm):
     class Meta:

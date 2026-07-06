@@ -3,185 +3,259 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Patients - Moyanoli Médicale</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Patients - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .table-container { background: #ffffff; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-        .custom-table thead tr { background: #f8f9fe; }
-        .custom-table thead th { border: none !important; color: #718096; font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 1px; padding: 20px !important; }
-        .custom-table td { padding: 18px !important; vertical-align: middle !important; border-top: 1px solid #f1f5f9; }
-        .badge-modern { padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; }
-        .search-container { display: flex; align-items: center; justify-content: flex-end; gap: 15px; }
-        #customSearch { border-radius: 25px 0 0 25px; border: 1px solid #dee2e6; border-right: none; padding: 12px 20px; width: 250px; }
-        .search-addon { background: #fff; border-radius: 0 25px 25px 0; border: 1px solid #dee2e6; border-left: none; padding: 0 20px; color: #007bff; }
+        .page-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+            padding: 24px;
+        }
+        .section-title {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0;
+        }
+        .soft-badge {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .search-box {
+            border-radius: 30px;
+            padding-left: 18px;
+            min-height: 44px;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: #fff;
+            border-bottom: none;
+        }
+        .modal-header .close {
+            color: #fff;
+            opacity: 1;
+        }
+        .form-grid .form-group {
+            margin-bottom: 1rem;
+        }
+        .table thead th {
+            border-top: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #6b7280;
+        }
+        @media (max-width: 768px) {
+            .page-card { padding: 16px; }
+            .search-area { width: 100%; margin-top: 12px; }
+            .search-area .input-group { width: 100% !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="main-wrapper">
-        {% include 'back-end/includes/header.html' %}
-        {% include 'back-end/includes/sidebar.html' %}
-        
-        <div class="page-wrapper">
-            <div class="content container-fluid">
-                <div class="page-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h3 class="page-title">Gestion des Patients</h3>
-                            <ul class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="#">Accueil</a></li>
-                                <li class="breadcrumb-item active">Liste</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="search-container">
-                                <div class="input-group" style="width: auto;">
-                                    <input type="text" id="customSearch" class="form-control" placeholder="Rechercher...">
-                                    <div class="input-group-append">
-                                        <span class="input-group-text search-addon"><i class="fa fa-search"></i></span>
-                                    </div>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6 col-12">
+                        <h3 class="page-title section-title">Gestion des Patients</h3>
+                        <ul class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                            <li class="breadcrumb-item active">Liste</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 col-12 text-md-right mt-3 mt-md-0">
+                        <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-center">
+                            <div class="input-group search-area mr-md-3 mb-2 mb-md-0" style="max-width: 320px;">
+                                <input type="text" id="customSearch" class="form-control search-box" placeholder="Rechercher...">
+                                <div class="input-group-append">
+                                    <span class="input-group-text" style="border-radius: 0 30px 30px 0;">
+                                        <i class="fa fa-search"></i>
+                                    </span>
                                 </div>
-                                {% if fonctionKey == 'receptionniste' %}
-                                <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 25px; padding: 10px 20px;">
-                                    <i class="fa fa-plus"></i> Nouveau
-                                </a>
-                                {% endif %}
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="table-container">
-                            <div class="table-responsive">
-                                <table class="table custom-table" id="myTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Matricule</th>
-                                            <th>Patient</th>
-                                            <th>Contact</th>
-                                            <th>Âge</th>
-                                            <th>Service</th>
-                                            <th>Type</th>
-                                            <th>Auteur</th>
-                                            <th>Hopital</th>
-                                            <th class="text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for patient in patients %}
-                                        <tr>
-                                            <td><span class="badge badge-soft-info badge-modern" style="background:#eef2f7; color:#4a5568; font-family:monospace;">{{ patient.code_patient }}</span></td>
-                                            <td>
-                                                <div style="font-weight: 600; color: #2d3748;">{{ patient.noms }}</div>
-                                                <div style="font-size: 0.75rem; color: #a0aec0;">{{ patient.date_creation|date:"d/m/Y" }}</div>
-                                            </td>
-                                            <td>{{ patient.telephone }}</td>
-                                            <td>{{ patient.age }} ans</td>
-                                            <td><span class="badge badge-modern" style="color: #3182ce; background: #ebf8ff;">{{ patient.service }}</span></td>
-                                            <td>
-                                                <span class="badge badge-modern" style="color: #553c9a; background: #edecf9;">{{ patient.get_type_patient_display }}</span>
-                                                {% if patient.type_patient == 'CONVENTIONNE' and patient.entreprise %}
-                                                    <div style="font-size: 0.70rem; color: #718096; margin-top: 5px;">
-                                                        <i class="fa fa-building"></i> {{ patient.entreprise.nom }}
-                                                    </div>
-                                                {% endif %}
-                                            </td>
-                                            <td><i class="fa fa-user-circle-o mr-1"></i> {{ patient.created_by.username }}</td>
-                                            <td><i class="fa fa-user-circle-o mr-1"></i> {{ patient.hopital }}</td>
-                                            <td class="text-right">
-                                                <div class="dropdown dropdown-action">
-                                                    <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown"><i class="fa fa-ellipsis-v"></i></a>
-                                                    <div class="dropdown-menu dropdown-menu-right" style="border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-radius: 10px;">
-                                                        
-                                                        {% if not patient.fiche_payee %}
-                                                            
-                                                            <a class="dropdown-item" href="{% url 'payer_fiche' patient.id %}" style="color: #38a169;"><i class="fa fa-money m-r-5"></i> Payer Fiche</a>
-                                                        {% else %}
-                                                            <a class="dropdown-item" style="color: #a0aec0;"><i class="fa fa-check-circle m-r-5"></i> Fiche réglée</a>
-                                                        {% endif %}
-                                                        
-                                                        {% if patient.fiche_payee %}
-                                                            <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}" style="color: #2b6cb0;">
-                                                                <i class="fa fa-stethoscope m-r-5"></i> Nouvelle Session Soins
-                                                            </a>
-                                                        {% endif %}
-
-                                                        {% if patient.fiche_payee %}
-                                                            {% if not patient.a_carte_fidelite %}
-                                                                <a class="dropdown-item" href="{% url 'paiement_prestation' patient.id %}" style="color: #d69e2e;">
-                                                                    <i class="fa fa-credit-card m-r-5"></i> Payer Carte Fidélité
-                                                                </a>
-                                                            {% else %}
-                                                                <a class="dropdown-item" style="color: #a0aec0;"><i class="fa fa-star m-r-5"></i> Carte Fidélité Active</a>
-                                                            {% endif %}
-                                                        {% else %}
-                                                            <a class="dropdown-item" href="javascript:void(0)" onclick="alert('La fiche doit être soldée avant de payer la carte.');" style="color: #e53e3e; cursor: not-allowed;">
-                                                                <i class="fa fa-lock m-r-5"></i> Payer Carte Fidélité (Bloqué)
-                                                            </a>
-                                                        {% endif %}
-
-                                                        <div class="dropdown-divider"></div>
-                                                        <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history m-r-5"></i> Hist. Paiements</a>
-                                                        <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat m-r-5"></i> Hist. Triage</a>
-                                                        <div class="dropdown-divider"></div>
-                                                        <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil m-r-5"></i> Modifier</a>
-                                                        
-                                                        {% if patient.fiche_payee %}
-                                                            <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye m-r-5"></i> Dossier Médical</a>
-                                                        {% else %}
-                                                            <a class="dropdown-item" href="javascript:void(0)" onclick="alert('Paiement de la fiche requis.');" style="color: #e53e3e; cursor: not-allowed;">
-                                                                <i class="fa fa-lock m-r-5"></i> Dossier bloqué
-                                                            </a>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {% if fonctionKey == 'receptionniste' %}
+                            <button class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
+                                <i class="fa fa-plus"></i> Nouveau
+                            </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="page-card">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="myTable">
+                        <thead>
+                            <tr>
+                                <th>Matricule</th>
+                                <th>Patient</th>
+                                <th>Contact</th>
+                                <th>Âge</th>
+                                <th>Service</th>
+                                <th>Type</th>
+                                <th>Auteur</th>
+                                <th>Hopital</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td><span class="soft-badge badge-light">{{ patient.code_patient }}</span></td>
+                                <td>
+                                    <div class="font-weight-bold">{{ patient.noms }}</div>
+                                    <small class="text-muted">{{ patient.date_creation|date:"d/m/Y" }}</small>
+                                </td>
+                                <td>{{ patient.telephone }}</td>
+                                <td>{{ patient.age }}</td>
+                                <td><span class="soft-badge badge-info">{{ patient.service }}</span></td>
+                                <td>
+                                    <span class="soft-badge badge-secondary">{{ patient.get_type_patient_display }}</span>
+                                    {% if patient.type_patient == 'CONVENTIONNE' and patient.entreprise %}
+                                        <div class="mt-1 small text-muted">
+                                            <i class="fa fa-building"></i> {{ patient.entreprise.nom }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ patient.created_by.username }}</td>
+                                <td>{{ patient.hopital }}</td>
+                                <td class="text-right">
+                                    <div class="dropdown dropdown-action">
+                                        <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown">
+                                            <i class="fa fa-ellipsis-v"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            {% if not patient.fiche_payee %}
+                                                <a class="dropdown-item" href="{% url 'payer_fiche' patient.id %}"><i class="fa fa-money"></i> Payer Fiche</a>
+                                            {% else %}
+                                                <span class="dropdown-item text-muted"><i class="fa fa-check-circle"></i> Fiche réglée</span>
+                                            {% endif %}
+
+                                            {% if patient.fiche_payee %}
+                                                <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}"><i class="fa fa-stethoscope"></i> Nouvelle Session Soins</a>
+                                            {% endif %}
+
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history"></i> Hist. Paiements</a>
+                                            <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat"></i> Hist. Triage</a>
+                                            <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil"></i> Modifier</a>
+
+                                            {% if patient.fiche_payee %}
+                                                <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye"></i> Dossier Médical</a>
+                                            {% else %}
+                                                <span class="dropdown-item text-muted"><i class="fa fa-lock"></i> Dossier bloqué</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
+</div>
 
-    <div id="add_patient" class="modal fade" role="dialog">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Enregistrer un nouveau patient</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form action="{% url 'enregistrement_patient' %}" method="POST">
-                        {% csrf_token %}
-                        {{ form.as_p }}
-                        <div class="submit-section mt-4 text-center">
-                            <button type="submit" class="btn btn-primary" style="border-radius: 20px; padding: 10px 30px;">Enregistrer</button>
+<div id="add_patient" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enregistrer un nouveau patient</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="{% url 'enregistrement_patient' %}" method="POST">
+                    {% csrf_token %}
+                    <div class="row form-grid">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.noms.id_for_label }}">Nom complet</label>
+                                {{ form.noms }}
+                            </div>
                         </div>
-                    </form>
-                </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.sexe.id_for_label }}">Sexe</label>
+                                {{ form.sexe }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.age.id_for_label }}">Âge</label>
+                                {{ form.age }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.telephone.id_for_label }}">Téléphone</label>
+                                {{ form.telephone }}
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="{{ form.adresse.id_for_label }}">Adresse</label>
+                                {{ form.adresse }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.service.id_for_label }}">Service</label>
+                                {{ form.service }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_entreprise">Entreprise</label>
+                                <select name="entreprise" id="id_entreprise" class="form-control form-select">
+                                    <option value="">---------</option>
+                                    {% for entreprise in entreprises %}
+                                        <option value="{{ entreprise.id }}" {% if request.POST.entreprise == entreprise.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ entreprise.nom }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
-    {% include 'back-end/includes/js.html' %}
-    <script>
-        $(document).ready(function() {
-            var table = $('#myTable').DataTable({"dom": 'lrtip'});
-            $('#customSearch').on('keyup', function() { table.search(this.value).draw(); });
+{% include 'back-end/includes/js.html' %}
+<script>
+    $(document).ready(function() {
+        var table = $('#myTable').DataTable({ dom: 'lrtip', responsive: true });
+        $('#customSearch').on('keyup', function() {
+            table.search(this.value).draw();
         });
-    </script>
+    });
+</script>
 </body>
 </html>

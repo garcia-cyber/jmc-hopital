@@ -19,6 +19,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.core.exceptions import PermissionDenied
 
 
 # Create your views here.
@@ -3238,29 +3239,40 @@ def ajouter_consultation(request, dossier_id):
 @login_required
 def vue_paiement_carte_fidelite(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
-    
-    # 0. Récupérer le taux de change
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
+    if hopital_user and patient.hopital_id != hopital_user.id and fonctionKey != 'admin':
+        messages.error(request, "Accès refusé : patient hors de votre hôpital.")
+        return redirect('enregistrement_patient')
+
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config else Decimal('2800.00')
 
-    # 1. Récupérer la prestation "Carte de Fidélité"
-    # On cherche une prestation qui contient "Carte" dans le libellé et est administrative
     try:
-        prestation_carte = Prestation.objects.get(categorie='ADM', libelle__icontains="Carte")
+        prestation_carte = Prestation.objects.get(
+            categorie='ADM',
+            libelle__icontains="Carte",
+            hopital=patient.hopital
+        )
     except (Prestation.DoesNotExist, Prestation.MultipleObjectsReturned):
-        prestation_carte = Prestation.objects.filter(categorie='ADM', libelle__icontains="Carte").first()
-        
+        prestation_carte = Prestation.objects.filter(
+            categorie='ADM',
+            libelle__icontains="Carte",
+            hopital=patient.hopital
+        ).first()
+
     if not prestation_carte:
-        messages.error(request, "La prestation 'Carte de Fidélité' n'est pas configurée.")
+        messages.error(request, "La prestation 'Carte de Fidélité' n'est pas configurée pour cet hôpital.")
         return redirect('enregistrement_patient')
-    
+
     prix_carte_usd = Decimal(str(prestation_carte.prix))
 
-    # 2. Calcul du cumul des paiements déjà effectués pour la Carte
-    # On filtre sur le service 'CARTE' (Assurez-vous d'utiliser ce mot clé dans Paiement)
     paiements_existants = Paiement.objects.filter(patient=patient, service='CARTE')
     total_deja_paye_usd = Decimal('0.00')
-    
+
     for p in paiements_existants:
         if p.devise == 'CDF':
             total_deja_paye_usd += p.montant_verse / taux
@@ -3277,33 +3289,28 @@ def vue_paiement_carte_fidelite(request, patient_id):
         if devise == 'CDF':
             montant_test_usd = montant_saisi / taux
 
-        # Vérification si le montant dépasse le reste à payer
         if montant_test_usd > (reste_a_payer_usd + Decimal('0.01')):
             messages.error(request, f"Le montant dépasse le prix de la carte ({reste_a_payer_usd:.2f} USD restants).")
         elif montant_saisi > 0:
-            # Enregistrement du paiement
             Paiement.objects.create(
                 patient=patient,
-                service='CARTE', # Important pour le filtrage du cumul
+                service='CARTE',
                 montant_verse=montant_saisi,
                 devise=devise,
-                caissier=request.user
+                caissier=request.user,
+                hopital=patient.hopital
             )
-            
+
             nouveau_total_usd = total_deja_paye_usd + montant_test_usd
-            
-            # Vérification si la carte est totalement réglée
+
             if nouveau_total_usd >= (prix_carte_usd - Decimal('0.01')):
-                patient.a_carte_fidelite = True # Assurez-vous que ce champ existe dans Patient
+                patient.a_carte_fidelite = True
                 patient.save()
                 messages.success(request, f"Paiement terminé. La carte de {patient.noms} est activée.")
             else:
                 messages.success(request, f"Paiement de {montant_saisi} {devise} enregistré. Reste : {(prix_carte_usd - nouveau_total_usd):.2f} USD")
-            
-            return redirect('enregistrement_patient')
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+            return redirect('enregistrement_patient')
 
     context = {
         'patient': patient,
@@ -3316,7 +3323,6 @@ def vue_paiement_carte_fidelite(request, patient_id):
     }
     return render(request, 'back-end/patient/paiement_prestation.html', context)
 
-
 # 
 # ========================================================================================
 # PAYER DOSSIER MATERNITE
@@ -3324,33 +3330,41 @@ def vue_paiement_carte_fidelite(request, patient_id):
 @login_required
 def payer_dossier_maternite(request, dossier_id):
     dossier = get_object_or_404(Maternite, id=dossier_id)
-    
-    # Récupération des données pour le formulaire
-    prestation_mat = Prestation.objects.filter(categorie='MAT').first()
+    hopital_dossier = dossier.patient.hopital if dossier.patient else None
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
+    if hopital_user and hopital_dossier and hopital_user.id != hopital_dossier.id and fonctionKey != 'admin':
+        messages.error(request, "Accès refusé : ce dossier ne dépend pas de votre hôpital.")
+        return redirect('liste_admissions_maternite')
+
+    prestation_mat = Prestation.objects.filter(
+        categorie='MAT',
+        hopital=hopital_dossier
+    ).first()
+
     prix_referentiel = prestation_mat.prix if prestation_mat else Decimal('150.00')
+
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config else Decimal('2500.00')
-    
+
     if request.method == 'POST':
-        # On récupère les valeurs
         montant_raw = request.POST.get('montant', '0')
         reste_raw = request.POST.get('reste_a_payer', '0')
         devise = request.POST.get('devise', 'USD')
-        
+
         try:
-            # Conversion sécurisée en Decimal
             montant = Decimal(montant_raw)
             reste = Decimal(reste_raw)
-            
-            # Conversion du montant versé en USD pour comparaison
+
             montant_en_usd = montant if devise == 'USD' else (montant / taux)
-            
-            # Vérification de sécurité
+
             if montant_en_usd > prix_referentiel:
                 messages.error(request, f"Erreur : Le montant versé dépasse le forfait Maternité de {prix_referentiel} USD.")
                 return redirect('payer_dossier_maternite', dossier_id=dossier.id)
-            
-            # Création du paiement
+
             Paiement.objects.create(
                 patient=dossier.patient,
                 dossier_maternite=dossier,
@@ -3358,28 +3372,25 @@ def payer_dossier_maternite(request, dossier_id):
                 montant_verse=montant,
                 devise=devise,
                 reste_a_payer=reste,
-                caissier=request.user
+                caissier=request.user,
+                hopital=hopital_dossier
             )
-            
+
             messages.success(request, f"Paiement de {montant} {devise} enregistré avec succès.")
             return redirect('liste_admissions_maternite')
-            
+
         except (InvalidOperation, ValueError, TypeError):
-            # En cas de valeur non numérique, on renvoie une erreur
             messages.error(request, "Erreur : Format de montant invalide.")
             return redirect('payer_dossier_maternite', dossier_id=dossier.id)
-    
-    # Affichage de la page en GET
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/maternite/payer.html', {
-        'dossier': dossier, 
+        'dossier': dossier,
         'prix_max': prix_referentiel,
-        'taux': taux ,
-        'fonctionKey' : fonctionKey
+        'taux': taux,
+        'fonctionKey': fonctionKey
     })
-#  
+    
+    #  
 # =================================================================================================
 # ENREGISTREMENT DE L'ACTE DE DECES 
 # =================================================================================================
@@ -3476,16 +3487,28 @@ def imprimer_deces(request, deces_id):
 @login_required
 def enregistrer_paiement_deces(request, deces_id):
     deces = get_object_or_404(Deces, id=deces_id)
-    
-    # 1. VÉRIFICATION DU DOUBLON : Est-ce qu'un paiement existe déjà pour ce décès ?
+    hopital_deces = deces.patient.hopital if deces.patient else None
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
+    if hopital_user and hopital_deces and hopital_user.id != hopital_deces.id and fonctionKey != 'admin':
+        messages.error(request, "Accès refusé : ce décès ne dépend pas de votre hôpital.")
+        return redirect('liste_deces')
+
     if deces.paiements.exists():
         messages.warning(request, "Attention : Ce décès a déjà été réglé.")
         return redirect('liste_deces')
 
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config else Decimal('2500.00')
-    
-    prestation = Prestation.objects.filter(libelle__icontains="acte de deces").first()
+
+    prestation = Prestation.objects.filter(
+        libelle__icontains="acte de deces",
+        hopital=hopital_deces
+    ).first()
+
     prix_usd = prestation.prix if prestation else Decimal('0.00')
     prix_cdf = (prix_usd * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
 
@@ -3495,17 +3518,18 @@ def enregistrer_paiement_deces(request, deces_id):
             montant_verse = Decimal(request.POST.get('montant_verse', '0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         except:
             montant_verse = Decimal('0')
-            
+
         prix_requis = (prix_usd if devise == 'USD' else prix_cdf).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        
-        # 2. VÉRIFICATION DU MONTANT
-        if abs(montant_verse - prix_requis) > Decimal('0.05'): 
+
+        if abs(montant_verse - prix_requis) > Decimal('0.05'):
             messages.error(request, f"Paiement refusé : Le montant doit être de {prix_requis:.2f} {devise}.")
             return render(request, 'back-end/deces/payer.html', {
-                'deces': deces, 'prix_usd': prix_usd, 'prix_cdf': prix_cdf, 'taux': taux
+                'deces': deces,
+                'prix_usd': prix_usd,
+                'prix_cdf': prix_cdf,
+                'taux': taux
             })
 
-        # 3. CRÉATION DU PAIEMENT (Double sécurité au cas où deux clics simultanés arrivent)
         if not deces.paiements.exists():
             Paiement.objects.create(
                 patient=deces.patient if deces.patient else None,
@@ -3513,24 +3537,22 @@ def enregistrer_paiement_deces(request, deces_id):
                 service='DECES',
                 montant_verse=montant_verse,
                 devise=devise,
-                caissier=request.user
+                caissier=request.user,
+                hopital=hopital_deces
             )
             messages.success(request, "Paiement enregistré avec succès.")
         else:
             messages.error(request, "Erreur : Un paiement a été enregistré simultanément.")
-            
+
         return redirect('liste_deces')
 
-    # Affichage normal
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
     return render(request, 'back-end/deces/payer.html', {
-        'deces': deces, 'prix_usd': prix_usd, 'prix_cdf': prix_cdf, 
-        'taux': taux, 'fonctionKey': fonctionKey
+        'deces': deces,
+        'prix_usd': prix_usd,
+        'prix_cdf': prix_cdf,
+        'taux': taux,
+        'fonctionKey': fonctionKey
     })
-
-
 
 #
 # =========================================================================================
@@ -3538,16 +3560,19 @@ def enregistrer_paiement_deces(request, deces_id):
 # =========================================================================================
 @login_required
 def liste_patients_avec_carte(request):
-    # On filtre uniquement les patients dont a_carte_fidelite est True
-    patients_fideles = Patient.objects.filter(a_carte_fidelite=True).order_by('-date_creation')
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
+    hopital_user = role.hopital if role else None
+
+    patients_fideles = Patient.objects.filter(
+        a_carte_fidelite=True,
+        hopital=hopital_user
+    ).order_by('-date_creation') if hopital_user else Patient.objects.none()
+
     context = {
         'patients': patients_fideles,
-        'title': "Patients avec Carte de Fidélité" ,
-        'fonctionKey' : fonctionKey
+        'title': "Patients avec Carte de Fidélité",
+        'fonctionKey': fonctionKey
     }
     return render(request, 'back-end/patient/liste_patients_carte.html', context)
 
@@ -3557,24 +3582,35 @@ def liste_patients_avec_carte(request):
 # ==========================================================================================
 @login_required
 def modifier_type_patient(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-    
-    # RÈGLE : Bloquer l'accès si le type est déjà 'FIDELE'
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
+    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user) if hopital_user else None
+    if not patient:
+        messages.error(request, "Patient introuvable.")
+        return redirect('liste_patients_avec_carte')
+
     if patient.type_patient == 'FIDELE':
         messages.error(request, "Le statut 'Patient Fidèle' est définitif et ne peut plus être modifié.")
         return redirect('liste_patients_avec_carte')
-    
+
     if request.method == 'POST':
         nouveau_type = request.POST.get('type_patient')
+
+        if nouveau_type not in ['SIMPLE', 'FIDELE', 'CONVENTIONNE']:
+            messages.error(request, "Type de patient invalide.")
+            return redirect('modifier_type_patient', patient_id=patient.id)
+
         patient.type_patient = nouveau_type
         patient.save()
-        messages.success(request, f"Statut mis à jour.")
+        messages.success(request, "Statut mis à jour.")
         return redirect('liste_patients_avec_carte')
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    return render(request, 'back-end/patient/modifier_type.html', {'patient': patient , 'fonctionKey': fonctionKey})
+    return render(request, 'back-end/patient/modifier_type.html', {
+        'patient': patient,
+        'fonctionKey': fonctionKey
+    })
 
 #
 # ==================================================================================================
@@ -5353,55 +5389,33 @@ def modifier_ordonnance_urgence(request, pk):
 # ===================================================================================
 @login_required
 def liste_conventionnes_par_entreprise(request):
-    mois = timezone.now().month
-    annee = timezone.now().year
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
 
-    consultations = Consultation.objects.filter(
-        triage__patient__type_patient='CONVENTIONNE',
-        date_creation__year=annee,
-        date_creation__month=mois
-    ).select_related('triage__patient__entreprise').prefetch_related('examens__prestation')
+    patients_conventionnes = Patient.objects.filter(
+        type_patient='CONVENTIONNE',
+        hopital=hopital_user
+    ).select_related('entreprise', 'hopital').order_by('-date_creation') if hopital_user else Patient.objects.none()
 
     entreprises_data = {}
 
-    for cons in consultations:
-        patient = cons.triage.patient
+    for patient in patients_conventionnes:
         entreprise = patient.entreprise if patient.entreprise else None
         entreprise_nom = entreprise.nom if entreprise else "Sans entreprise"
-
-        montant_total = sum(
-            ex.prestation.prix * ex.quantite
-            for ex in cons.examens.all()
-            if ex.prestation and ex.prestation.prix
-        )
 
         if entreprise_nom not in entreprises_data:
             entreprises_data[entreprise_nom] = {
                 'patients': [],
-                'somme': 0,
                 'entreprise_obj': entreprise
             }
 
         entreprises_data[entreprise_nom]['patients'].append(patient)
-        entreprises_data[entreprise_nom]['somme'] += montant_total
-
-    # ✅ Mise à jour de la dette mensuelle dans Entreprise
-    for data in entreprises_data.values():
-        if data['entreprise_obj']:
-            data['entreprise_obj'].dette_mensuelle = data['somme']
-            data['entreprise_obj'].save()
-
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/entreprise/liste_conventionnes.html', {
         'entreprises_data': entreprises_data,
-        'mois': mois,
-        'annee': annee,
         'fonctionKey': fonctionKey
-    })
-
-#
+    })#
 # ==========================================================================================
 # PAEIMENT PAR ENTREPRISE LA DETTE 
 # ==========================================================================================

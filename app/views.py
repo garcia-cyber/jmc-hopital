@@ -1660,8 +1660,31 @@ def dashboard_finance(request):
     debut_semaine = debut_aujourdhui - timedelta(days=7)
     debut_mois = debut_aujourdhui.replace(day=1)
 
+    hopital_id = request.GET.get('hopital')
+    devise = request.GET.get('devise')
+    service = request.GET.get('service')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+
     paiements_qs = Paiement.objects.select_related('patient', 'caissier', 'hopital')
     depenses_qs = Depense.objects.select_related('auteur', 'hopital')
+
+    if hopital_id:
+        paiements_qs = paiements_qs.filter(hopital_id=hopital_id)
+        depenses_qs = depenses_qs.filter(hopital_id=hopital_id)
+
+    if devise:
+        paiements_qs = paiements_qs.filter(devise=devise)
+        depenses_qs = depenses_qs.filter(devise=devise)
+
+    if service:
+        paiements_qs = paiements_qs.filter(service=service)
+
+    if date_debut:
+        paiements_qs = paiements_qs.filter(date_paiement__date__gte=date_debut)
+
+    if date_fin:
+        paiements_qs = paiements_qs.filter(date_paiement__date__lte=date_fin)
 
     total_usd = paiements_qs.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
     total_cdf = paiements_qs.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
@@ -1672,37 +1695,16 @@ def dashboard_finance(request):
     restant_usd = float(total_usd) - float(depense_totale_usd)
     restant_cdf = float(total_cdf) - float(depense_totale_cdf)
 
-    aujourdhui_usd = paiements_qs.filter(
-        date_paiement__gte=debut_aujourdhui,
-        devise='USD'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+    aujourdhui_usd = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+    aujourdhui_cdf = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    aujourdhui_cdf = paiements_qs.filter(
-        date_paiement__gte=debut_aujourdhui,
-        devise='CDF'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+    semaine_usd = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+    semaine_cdf = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    semaine_usd = paiements_qs.filter(
-        date_paiement__gte=debut_semaine,
-        devise='USD'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+    mois_usd = paiements_qs.filter(date_paiement__gte=debut_mois, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+    mois_cdf = paiements_qs.filter(date_paiement__gte=debut_mois, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    semaine_cdf = paiements_qs.filter(
-        date_paiement__gte=debut_semaine,
-        devise='CDF'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
-
-    mois_usd = paiements_qs.filter(
-        date_paiement__gte=debut_mois,
-        devise='USD'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
-
-    mois_cdf = paiements_qs.filter(
-        date_paiement__gte=debut_mois,
-        devise='CDF'
-    ).aggregate(total=Sum('montant_verse'))['total'] or 0
-
-    recettes_par_hopital = Paiement.objects.values(
+    recettes_par_hopital = paiements_qs.values(
         'hopital__id',
         'hopital__nomH'
     ).annotate(
@@ -1710,7 +1712,7 @@ def dashboard_finance(request):
         total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
     ).order_by('hopital__nomH')
 
-    recettes_par_hopital_par_jour = Paiement.objects.annotate(
+    recettes_par_hopital_par_jour = paiements_qs.annotate(
         jour=TruncDay('date_paiement')
     ).values(
         'jour',
@@ -1721,7 +1723,7 @@ def dashboard_finance(request):
         total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
     ).order_by('jour', 'hopital__nomH')
 
-    depenses_par_hopital = Depense.objects.values(
+    depenses_par_hopital = depenses_qs.values(
         'hopital__id',
         'hopital__nomH'
     ).annotate(
@@ -1734,12 +1736,15 @@ def dashboard_finance(request):
         usd_service = paiements_qs.filter(service=code, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
         cdf_service = paiements_qs.filter(service=code, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
         services_stats.append({
+            'code': code,
             'nom': nom_service,
             'usd': usd_service,
             'cdf': cdf_service,
         })
 
     tous_les_paiements = paiements_qs.order_by('-date_paiement')
+
+    hopitaux = Paiement.objects.values('hopital__id', 'hopital__nomH').distinct().order_by('hopital__nomH')
 
     context = {
         'aujourdhui_usd': aujourdhui_usd,
@@ -1759,8 +1764,16 @@ def dashboard_finance(request):
         'recettes_par_hopital': recettes_par_hopital,
         'recettes_par_hopital_par_jour': recettes_par_hopital_par_jour,
         'depenses_par_hopital': depenses_par_hopital,
+        'hopitaux': hopitaux,
         'fonctionKey': fonctionKey,
         'titre_page': "Journal de Caisse & Finances - JMC",
+        'filtres': {
+            'hopital': hopital_id or '',
+            'devise': devise or '',
+            'service': service or '',
+            'date_debut': date_debut or '',
+            'date_fin': date_fin or '',
+        }
     }
     return render(request, 'back-end/finance/dashboard_finance.html', context)
 # ==================================================================================================

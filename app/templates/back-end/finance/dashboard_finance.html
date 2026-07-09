@@ -3,23 +3,136 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ titre_page }} - JMC</title>
     {% include 'back-end/includes/css.html' %}
+    <style>
+        .finance-page {
+            background: #f8fafc;
+        }
+
+        .finance-page .page-title {
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .finance-card {
+            border: 0;
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, .06);
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+
+        .finance-card .card-header {
+            border-bottom: 0;
+            padding: .9rem 1.1rem;
+        }
+
+        .finance-card .card-body {
+            padding: 1rem;
+        }
+
+        .stat-card {
+            border: 0;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+            height: 100%;
+            transition: transform .2s ease, box-shadow .2s ease;
+            background: #fff;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, .08);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            color: #fff;
+            margin-bottom: .8rem;
+        }
+
+        .stat-value {
+            font-size: 1.15rem;
+            line-height: 1.2;
+            margin-bottom: .1rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: .82rem;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .filter-box {
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .05);
+            border: 0;
+        }
+
+        .filter-box .form-control,
+        .filter-box .custom-select,
+        .filter-box select,
+        .filter-box input {
+            border-radius: 12px;
+            min-height: 42px;
+        }
+
+        .table thead th {
+            white-space: nowrap;
+            font-size: .92rem;
+        }
+
+        .table td,
+        .table th {
+            vertical-align: middle;
+        }
+
+        .badge-pill {
+            padding: .45rem .7rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .finance-page .page-title {
+                font-size: 1.15rem;
+            }
+
+            .finance-card .card-body,
+            .stat-card .card-body {
+                padding: .85rem;
+            }
+
+            .table {
+                font-size: .88rem;
+            }
+
+            .filter-box .row > div {
+                margin-bottom: .75rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="main-wrapper">
+    <div class="main-wrapper finance-page">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
         <div class="page-wrapper">
             <div class="content container-fluid">
 
-                <!-- Header -->
                 <div class="page-header">
-                    <div class="row">
-                        <div class="col">
-                            <h3 class="page-title"><i class="fa fa-wallet"></i> {{ titre_page }}</h3>
-                            <ul class="breadcrumb">
+                    <div class="row align-items-center">
+                        <div class="col-12">
+                            <h3 class="page-title mb-1"><i class="fa fa-wallet"></i> {{ titre_page }}</h3>
+                            <ul class="breadcrumb mb-0">
                                 <li class="breadcrumb-item"><a href="#">Gestion Financière</a></li>
                                 <li class="breadcrumb-item active">Journal des entrées</li>
                             </ul>
@@ -27,53 +140,104 @@
                     </div>
                 </div>
 
-                <!-- STATISTIQUES DES RECETTES -->
-                <h4 class="mb-3 text-secondary"><i class="fa fa-chart-line"></i> Statistiques des Recettes</h4>
-                <div class="row mb-2">
+                <div class="card filter-box mb-4">
+                    <div class="card-header bg-white">
+                        <strong><i class="fa fa-filter"></i> Filtres</strong>
+                    </div>
+                    <div class="card-body">
+                        <form method="get">
+                            <div class="row">
+                                <div class="col-12 col-md-3">
+                                    <label class="mb-1">Hôpital</label>
+                                    <select name="hopital" class="form-control">
+                                        <option value="">Tous</option>
+                                        {% for h in hopitaux %}
+                                            <option value="{{ h.hopital__id }}" {% if filtres.hopital == h.hopital__id|stringformat:"s" %}selected{% endif %}>
+                                                {{ h.hopital__nomH }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
 
-                    <div class="col-12 col-sm-6 col-md-4 mb-3">
-                        <div class="card dash-widget shadow-sm h-100" style="border-left: 4px solid #28a745; margin-bottom: 0;">
-                            <div class="card-body">
-                                <span class="dash-widget-icon bg-success"><i class="fa fa-calendar-day"></i></span>
-                                <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ aujourdhui_usd|default:0|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ aujourdhui_cdf|default:0|floatformat:2 }} CDF</h4>
-                                    <span class="widget-title text-muted small font-weight-bold">Aujourd'hui</span>
+                                <div class="col-12 col-md-3">
+                                    <label class="mb-1">Devise</label>
+                                    <select name="devise" class="form-control">
+                                        <option value="">Toutes</option>
+                                        <option value="USD" {% if filtres.devise == "USD" %}selected{% endif %}>USD</option>
+                                        <option value="CDF" {% if filtres.devise == "CDF" %}selected{% endif %}>CDF</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <label class="mb-1">Date début</label>
+                                    <input type="date" name="date_debut" class="form-control" value="{{ filtres.date_debut }}">
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <label class="mb-1">Date fin</label>
+                                    <input type="date" name="date_fin" class="form-control" value="{{ filtres.date_fin }}">
+                                </div>
+
+                                <div class="col-12 col-md-3 mt-3">
+                                    <label class="mb-1">Service</label>
+                                    <select name="service" class="form-control">
+                                        <option value="">Tous</option>
+                                        {% for s in services_stats %}
+                                            <option value="{{ s.code }}" {% if filtres.service == s.code %}selected{% endif %}>{{ s.nom }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-9 d-flex align-items-end mt-3">
+                                    <button type="submit" class="btn btn-primary mr-2">
+                                        <i class="fa fa-search"></i> Filtrer
+                                    </button>
+                                    <a href="{% url 'dashboard_finance' %}" class="btn btn-outline-secondary">
+                                        <i class="fa fa-undo"></i> Réinitialiser
+                                    </a>
                                 </div>
                             </div>
-                        </div>
+                        </form>
                     </div>
+                </div>
 
-                    <div class="col-12 col-sm-6 col-md-4 mb-3">
-                        <div class="card dash-widget shadow-sm" style="border-left: 4px solid #17a2b8; margin-bottom: 0;">
+                <h4 class="mb-3 text-secondary"><i class="fa fa-chart-line"></i> Statistiques des Recettes</h4>
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-3">
+                        <div class="card stat-card">
                             <div class="card-body">
-                                <span class="dash-widget-icon bg-info"><i class="fa fa-calendar-week"></i></span>
-                                <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ semaine_usd|default:0|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ semaine_cdf|default:0|floatformat:2 }} CDF</h4>
-                                    <span class="widget-title text-muted small font-weight-bold">7 derniers jours</span>
-                                </div>
+                                <div class="stat-icon bg-success"><i class="fa fa-calendar-day"></i></div>
+                                <div class="stat-value text-success">{{ aujourdhui_usd|default:0|floatformat:2 }} USD</div>
+                                <div class="stat-value text-info">{{ aujourdhui_cdf|default:0|floatformat:2 }} CDF</div>
+                                <div class="stat-label">Aujourd'hui</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-md-4 mb-3">
-                        <div class="card dash-widget shadow-sm" style="border-left: 4px solid #007bff; margin-bottom: 0;">
+                        <div class="card stat-card">
                             <div class="card-body">
-                                <span class="dash-widget-icon bg-primary"><i class="fa fa-calendar-alt"></i></span>
-                                <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ mois_usd|default:0|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ mois_cdf|default:0|floatformat:2 }} CDF</h4>
-                                    <span class="widget-title text-muted small font-weight-bold">Mois en cours</span>
-                                </div>
+                                <div class="stat-icon bg-info"><i class="fa fa-calendar-week"></i></div>
+                                <div class="stat-value text-success">{{ semaine_usd|default:0|floatformat:2 }} USD</div>
+                                <div class="stat-value text-info">{{ semaine_cdf|default:0|floatformat:2 }} CDF</div>
+                                <div class="stat-label">7 derniers jours</div>
                             </div>
                         </div>
                     </div>
 
+                    <div class="col-12 col-md-4 mb-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="stat-icon bg-primary"><i class="fa fa-calendar-alt"></i></div>
+                                <div class="stat-value text-success">{{ mois_usd|default:0|floatformat:2 }} USD</div>
+                                <div class="stat-value text-info">{{ mois_cdf|default:0|floatformat:2 }} CDF</div>
+                                <div class="stat-label">Mois en cours</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Bilan global -->
-                <div class="card shadow-sm mb-4 border">
+                <div class="card finance-card">
                     <div class="card-header bg-dark text-white">
                         <h5 class="card-title mb-0"><i class="fa fa-vault text-warning"></i> Coffre-fort : Bilan global de la caisse</h5>
                     </div>
@@ -107,8 +271,7 @@
                     </div>
                 </div>
 
-                <!-- Total par hôpital -->
-                <div class="card shadow-sm mb-4">
+                <div class="card finance-card">
                     <div class="card-header bg-success text-white">
                         <h5 class="card-title mb-0"><i class="fa fa-hospital"></i> Total des Recettes par Hôpital</h5>
                     </div>
@@ -140,8 +303,7 @@
                     </div>
                 </div>
 
-                <!-- Statistiques par hôpital -->
-                <div class="card shadow-sm mb-4">
+                <div class="card finance-card">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="card-title mb-0"><i class="fa fa-hospital"></i> Statistiques par Hôpital</h5>
                     </div>
@@ -189,8 +351,7 @@
                     </div>
                 </div>
 
-                <!-- Recettes par hôpital et par jour -->
-                <div class="card shadow-sm mb-4">
+                <div class="card finance-card">
                     <div class="card-header bg-info text-white">
                         <h5 class="card-title mb-0"><i class="fa fa-calendar"></i> Recettes par Hôpital et par Jour</h5>
                     </div>
@@ -226,9 +387,9 @@
 
                 <div class="row">
                     <div class="col-12 col-lg-4 mb-4">
-                        <div class="card shadow-sm h-100 mb-0">
-                            <div class="card-header bg-dark">
-                                <h5 class="card-title mb-0 text-white"><i class="fa fa-chart-pie"></i> Recettes par Service</h5>
+                        <div class="card finance-card h-100">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="card-title mb-0"><i class="fa fa-chart-pie"></i> Recettes par Service</h5>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
@@ -260,14 +421,14 @@
                     </div>
 
                     <div class="col-12 col-lg-8 mb-4">
-                        <div class="card card-table shadow-sm mb-0">
-                            <div class="card-header bg-primary">
-                                <h4 class="card-title mb-0 text-white"><i class="fa fa-list"></i> Historique des paiements encaissés</h4>
+                        <div class="card finance-card h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="card-title mb-0"><i class="fa fa-list"></i> Historique des paiements encaissés</h4>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body p-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover table-center mb-0 datatable text-nowrap">
-                                        <thead>
+                                        <thead class="bg-light">
                                             <tr>
                                                 <th>Réf / Date</th>
                                                 <th>Patient</th>

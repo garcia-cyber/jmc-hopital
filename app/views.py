@@ -2084,20 +2084,25 @@ def dashboard_chambres(request):
 @login_required
 def ajouter_type_chambre(request):
     """ Étape 1 : Enregistrer une catégorie (VIP, Commune, etc.) """
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
         form = TypeChambreForm(request.POST)
         if form.is_valid():
-            type_chambre = form.save()
+            type_chambre = form.save(commit=False)
+            type_chambre.hopital = hopital_user
+            type_chambre.save()
             messages.success(request, f"Le type de chambre '{type_chambre.libelle}' a été enregistré.")
-            # Redirection logique et fluide vers l'étape 2 (Ajout d'une pièce physique)
-            return redirect('ajouter_chambre') 
+            return redirect('ajouter_chambre')
     else:
         form = TypeChambreForm()
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
 
-    return render(request, 'back-end/hospitalisation/type_chambre_form.html', {'form': form , 'fonctionKey':fonctionKey})
-
+    return render(request, 'back-end/hospitalisation/type_chambre_form.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 # --------------------------------------------------------------------------------------------------
 # VUE : Deuxième étape de la configuration de l'infrastructure de soins.
@@ -2107,24 +2112,29 @@ def ajouter_type_chambre(request):
 @login_required
 def ajouter_chambre(request):
     """ Étape 2 : Enregistrer une chambre physique """
-    # Sécurité métier : Empêche l'enregistrement d'une chambre orpheline sans type associé.
     if not TypeChambre.objects.exists():
         messages.warning(request, "Vous devez d'abord créer un Type de chambre avant d'ajouter une chambre.")
         return redirect('ajouter_type_chambre')
 
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
         form = ChambreForm(request.POST)
         if form.is_valid():
-            chambre = form.save()
+            chambre = form.save(commit=False)
+            chambre.hopital = hopital_user
+            chambre.save()
             messages.success(request, f"La chambre {chambre.nom} a été enregistrée.")
-            # Redirection logique et fluide vers l'étape 3 (Ajout du mobilier / des lits)
             return redirect('ajouter_lit')
     else:
         form = ChambreForm()
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
 
-    return render(request, 'back-end/hospitalisation/chambre_form.html', {'form': form, 'fonctionKey':fonctionKey})
+    return render(request, 'back-end/hospitalisation/chambre_form.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 
 # --------------------------------------------------------------------------------------------------
@@ -2135,30 +2145,35 @@ def ajouter_chambre(request):
 @login_required
 def ajouter_lit(request):
     """ Étape 3 : Enregistrer un lit dans une chambre """
-    # Sécurité métier : Interdit de créer un lit s'il n'y a aucun local physique pour le recevoir.
     if not Chambre.objects.exists():
         messages.warning(request, "Vous devez d'abord créer une chambre avant d'y ajouter des lits.")
         return redirect('ajouter_chambre')
 
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
         form = LitForm(request.POST)
+        form.fields['chambre'].queryset = Chambre.objects.filter(hopital=hopital_user)
+
         if form.is_valid():
-            lit = form.save()
-            # CORRECTION : Remplacé .nom_ou_code par .nom_lit
+            lit = form.save(commit=False)
+            lit.hopital = hopital_user
+            lit.save()
+
             messages.success(request, f"Le lit '{lit.nom_lit}' a bien été ajouté à la {lit.chambre}.")
-            
-            # Optimisation UX
             if 'ajouter_autre' in request.POST:
                 return redirect('ajouter_lit')
             return redirect('dashboard_chambres')
     else:
         form = LitForm()
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+        form.fields['chambre'].queryset = Chambre.objects.filter(hopital=hopital_user)
 
-    return render(request, 'back-end/hospitalisation/lit_form.html', {'form': form , 'fonctionKey':fonctionKey})
-
+    return render(request, 'back-end/hospitalisation/lit_form.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 # --------------------------------------------------------------------------------------------------
 # VUE : Point d'entrée d'action unitaire et asynchrone (ou par redirection directe).
@@ -2168,11 +2183,15 @@ def ajouter_lit(request):
 @login_required
 def toggle_statut_lit(request, lit_id):
     """ Action rapide pour occuper/libérer un lit depuis le dashboard """
-    lit = get_object_or_404(Lit, id=lit_id)
-    # Bascule booléenne de l'état d'occupation du lit
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    lit = get_object_or_404(Lit, id=lit_id, hopital=hopital_user)
+
     lit.est_occupe = not lit.est_occupe
     lit.save()
-    messages.info(request, f"Le statut du lit {lit.nom_ou_code} a été modifié.")
+
+    messages.info(request, f"Le statut du lit {lit.nom_lit} a été modifié.")
     return redirect('dashboard_chambres')
 
 
@@ -2181,17 +2200,20 @@ def toggle_statut_lit(request, lit_id):
 # =====================================================================================================
 @login_required
 def enregistrer_ordonnance_view(request, triage_id):
-    triage = get_object_or_404(SigneVital, id=triage_id)
-    consultation = get_object_or_404(Consultation, triage=triage)
-    
-    
-    # Récupération des examens liés à cette consultation
-    examens_termines = DemandeExamen.objects.filter(consultation=consultation, statut='TERMINE')
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    triage = get_object_or_404(SigneVital, id=triage_id, patient__hopital=hopital_user)
+    consultation = get_object_or_404(Consultation, triage=triage, hopital=hopital_user)
+
+    examens_termines = DemandeExamen.objects.filter(
+        consultation=consultation,
+        statut='TERMINE',
+        hopital=hopital_user
+    ).select_related('prestation')
 
     if request.method == 'POST':
         form = OrdonnanceForm(request.POST)
-        
-        # Récupération des listes du formulaire
         noms = request.POST.getlist('nom_medicament[]')
         posologies = request.POST.getlist('posologie[]')
         durees = request.POST.getlist('duree[]')
@@ -2201,21 +2223,22 @@ def enregistrer_ordonnance_view(request, triage_id):
                 with transaction.atomic():
                     ordonnance = form.save(commit=False)
                     ordonnance.consultation = consultation
+                    ordonnance.hopital = hopital_user
                     ordonnance.save()
-                    
-                    # Enregistrement des lignes médicaments
+
                     for n, p, d in zip(noms, posologies, durees):
                         if n.strip():
                             LigneMedicament.objects.create(
                                 ordonnance=ordonnance,
                                 nom_medicament=n,
                                 posologie=p,
-                                duree=d
+                                duree=d,
+                                hopital=hopital_user
                             )
-                    
+
                     triage.est_consulte = True
                     triage.save()
-                    
+
                     messages.success(request, "Ordonnance enregistrée avec succès !")
                     return redirect('dashboard')
             except Exception as e:
@@ -2225,7 +2248,7 @@ def enregistrer_ordonnance_view(request, triage_id):
 
     return render(request, 'back-end/medecin/enregistrer_ordonnance.html', {
         'consultation': consultation,
-        'examens_termines': examens_termines, # C'est ici que l'info arrive dans le HTML
+        'examens_termines': examens_termines,
         'form': OrdonnanceForm()
     })
 #
@@ -2238,18 +2261,20 @@ def liste_ordonnances_delivrees_view(request):
     Affiche la liste des ordonnances (Modèle Ordonnance) prescrites par le médecin.
     Permet également de stopper un médicament spécifique.
     """
-    
-    # --- GESTION DES ACTIONS (POST) ---
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        
-        # Action pour stopper TOUTE l'ordonnance ou un médicament
+
         if action == 'stopper_medicament':
             ligne_id = request.POST.get('ligne_id')
             motif = request.POST.get('motif_arret', 'Arrêté par le médecin')
-            
+
             if ligne_id and ligne_id.isdigit():
-                ligne = LigneMedicament.objects.filter(id=int(ligne_id)).first()
+                ligne = LigneMedicament.objects.filter(id=int(ligne_id), hopital=hopital_user).first()
                 if ligne:
                     ligne.statut = 'STOPPE'
                     ligne.motif_arret = motif
@@ -2258,23 +2283,19 @@ def liste_ordonnances_delivrees_view(request):
                     messages.warning(request, f"Le médicament '{ligne.nom_medicament}' a été stoppé.")
             return redirect(request.path_info)
 
-    # --- REQUÊTE GET : AFFICHAGE DEPUIS LE MODÈLE ORDONNANCE ---
-    # On récupère toutes les ordonnances avec le patient lié, et on pré-charge ses médicaments
     ordonnances_medecin = Ordonnance.objects.select_related(
         'consultation__triage__patient'
     ).prefetch_related(
         'medicaments'
+    ).filter(
+        hopital=hopital_user
     ).order_by('-date_prescrite')
-
-    # Gestion du rôle utilisateur pour la sidebar
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     context = {
         'ordonnances_medecin': ordonnances_medecin,
         'fonctionKey': fonctionKey
     }
-    
+
     return render(request, 'back-end/medecin/liste_ordonnances_delivrees.html', context)
 #
 # ===========================================================================================
@@ -2307,29 +2328,36 @@ def liste_ordonnances_prescrites_view(request):
 # ============================================================================================
 @login_required
 def admettre_patient(request):
-    # Récupération du rôle pour le contexte (optimisation : on évite la requête si user n'est pas authentifié)
     fonctionKey = None
+    role = None
+    hopital_user = None
+
     if request.user.is_authenticated:
-        role = Fonction.objects.filter(userKey=request.user).first()
+        role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
         if role and role.fonctionKey:
             fonctionKey = role.fonctionKey.roleName
+        if role:
+            hopital_user = role.hopital
 
     if request.method == 'POST':
         form = HospitalisationForm(request.POST)
+        form.fields['patient'].queryset = Patient.objects.filter(hopital=hopital_user)
+        form.fields['lit'].queryset = Lit.objects.filter(hopital=hopital_user, est_occupe=False)
+
         if form.is_valid():
             patient = form.cleaned_data.get('patient')
-            
-            # Vérification de sécurité : le patient a-t-il payé sa fiche ?
+
             if not patient.fiche_payee:
                 messages.error(request, "Impossible d'admettre ce patient : fiche non payée.")
                 return render(request, 'back-end/hospitalisation/admettre.html', {
-                    'form': form, 
+                    'form': form,
                     'fonctionKey': fonctionKey
                 })
 
-            # Sauvegarde
             try:
-                hospitalisation = form.save()
+                hospitalisation = form.save(commit=False)
+                hospitalisation.hopital = hopital_user
+                hospitalisation.save()
                 messages.success(request, "Admission réussie et lit réservé.")
                 return redirect('liste_hospitalisations')
             except Exception as e:
@@ -2338,30 +2366,32 @@ def admettre_patient(request):
             messages.error(request, "Erreur lors de l'admission. Veuillez vérifier les champs du formulaire.")
     else:
         form = HospitalisationForm()
+        form.fields['patient'].queryset = Patient.objects.filter(hopital=hopital_user)
+        form.fields['lit'].queryset = Lit.objects.filter(hopital=hopital_user, est_occupe=False)
 
     return render(request, 'back-end/hospitalisation/admettre.html', {
-        'form': form, 
+        'form': form,
         'fonctionKey': fonctionKey
     })
-
 #
 # ===========================================================================================
 # LISTE DES PATIENT HOSPITALISE
 # ============================================================================================
 @login_required
 def liste_hospitalisations(request):
-    # 1. Requête optimisée (avec prefetch_related pour charger les paiements en une seule fois)
-    # Cela permet d'accéder à hosp.get_reste_a_payer() sans ralentir la page.
-    hospitalisations = Hospitalisation.objects.select_related(
-        'patient', 
-        'lit__chambre__type_chambre'
-    ).prefetch_related('paiements').order_by('-date_entree')
-
-    # 2. Gestion de vos rôles (votre logique d'origine)
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 3. Rendu avec toutes les informations nécessaires
+    hospitalisations = Hospitalisation.objects.select_related(
+        'patient',
+        'lit__chambre__type_chambre'
+    ).prefetch_related(
+        'paiements'
+    ).filter(
+        hopital=hopital_user
+    ).order_by('-date_entree')
+
     return render(request, 'back-end/hospitalisation/liste_hospitalisations.html', {
         'hospitalisations': hospitalisations,
         'fonctionKey': fonctionKey
@@ -2372,16 +2402,17 @@ def liste_hospitalisations(request):
 # =====================================================================================================
 @login_required
 def enregistrer_paiement_hospitalisation(request, hosp_id):
-    hosp = get_object_or_404(Hospitalisation, id=hosp_id)
-    
-    # Vérification : Le patient est-il déjà sorti ?
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+
     if hosp.statut != 'EN_COURS':
         messages.warning(request, "Cette hospitalisation est déjà clôturée ou annulée.")
         return redirect('liste_hospitalisations')
 
     if request.method == 'POST':
         try:
-            # 1. Récupération et conversion sécurisée des données
             try:
                 montant_brut = Decimal(request.POST.get('montant_verse', '0'))
                 reduction = Decimal(request.POST.get('montant_reduction', '0'))
@@ -2389,36 +2420,32 @@ def enregistrer_paiement_hospitalisation(request, hosp_id):
                 messages.error(request, "Veuillez saisir des montants valides.")
                 return redirect('payer_hospitalisation', hosp_id=hosp.id)
 
-            # Vérification : Paiement inutile
             if montant_brut < 0 or reduction < 0:
                 messages.error(request, "Les montants ne peuvent pas être négatifs.")
                 return redirect('payer_hospitalisation', hosp_id=hosp.id)
-            
+
             if montant_brut == 0 and reduction == 0:
                 messages.error(request, "Veuillez saisir un montant ou une réduction.")
                 return redirect('payer_hospitalisation', hosp_id=hosp.id)
 
             devise = request.POST.get('devise', 'USD')
-            
-            # 2. Conversion en USD
+
             montant_verse_usd = montant_brut
             reduction_usd = reduction
             if devise == 'CDF':
-                taux = ConfigurationHopital.get_taux() 
+                taux = ConfigurationHopital.get_taux()
                 if not taux or taux <= 0:
                     raise ValueError("Taux de change non configuré ou invalide.")
                 montant_verse_usd = montant_brut / Decimal(str(taux))
                 reduction_usd = reduction / Decimal(str(taux))
-            
-            # 3. Vérification du solde
+
             reste_actuel = hosp.get_reste_a_payer()
             total_paye_ce_coup_ci = montant_verse_usd + reduction_usd
-            
+
             if total_paye_ce_coup_ci > (reste_actuel + Decimal('0.01')):
                 messages.error(request, f"Le montant saisi dépasse le solde restant ({reste_actuel:.2f} USD).")
                 return redirect('payer_hospitalisation', hosp_id=hosp.id)
-            
-            # 4. Enregistrement
+
             Paiement.objects.create(
                 hospitalisation=hosp,
                 patient=hosp.patient,
@@ -2426,36 +2453,33 @@ def enregistrer_paiement_hospitalisation(request, hosp_id):
                 montant_verse=montant_verse_usd,
                 montant_reduction=reduction_usd,
                 devise=devise,
-                caissier=request.user
+                caissier=request.user,
+                hopital=hopital_user
             )
-            
-            # 5. Logique de libération (Automatisation)
+
             nouveau_reste = hosp.get_reste_a_payer()
             if nouveau_reste <= 0:
                 hosp.statut = 'TERMINE'
                 hosp.date_sortie = timezone.now()
                 hosp.est_payee = True
-                hosp.save() # Le save() déclenche la libération du lit via le modèle
+                hosp.save()
                 messages.success(request, "Paiement complet : Patient libéré, lit disponible.")
             else:
                 messages.success(request, "Paiement partiel enregistré avec succès.")
 
             return redirect('liste_hospitalisations')
-            
+
         except Exception as e:
             messages.error(request, f"Erreur critique lors du paiement : {str(e)}")
             return redirect('payer_hospitalisation', hosp_id=hosp.id)
 
-    # 6. Récupération des informations pour le template (GET)
-    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
+
     return render(request, 'back-end/hospitalisation/paiement_hosp.html', {
-        'hosp': hosp, 
+        'hosp': hosp,
         'reste_a_payer': hosp.get_reste_a_payer(),
         'fonctionKey': fonctionKey
     })
-
 
 
 
@@ -2466,39 +2490,42 @@ def enregistrer_paiement_hospitalisation(request, hosp_id):
 # ============================================================================================
 @login_required
 def dossier_medical_complet(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-    
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
+
     if not patient.fiche_payee:
         messages.error(request, "Accès refusé.")
         return redirect('liste_patients')
-    
-    # Consultations
+
     historique_consultations = Consultation.objects.filter(
-        triage__patient=patient
+        triage__patient=patient,
+        hopital=hopital_user
     ).order_by('-date_creation').prefetch_related(
-        'examens__prestation', 
+        'examens__prestation',
         'ordonnance_set__medicaments'
     ).select_related('triage', 'medecin')
-    
-    # Hospitalisations (on retire le prefetch qui causait l'erreur)
-    hospitalisations = Hospitalisation.objects.filter(patient=patient).order_by('-date_entree')
-    
-    # Signes vitaux (on s'assure que 'infirmier' existe ou on le retire)
-    signes_vitaux = SigneVital.objects.filter(patient=patient).order_by('-date_prelevement')
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    hospitalisations = Hospitalisation.objects.filter(
+        patient=patient,
+        hopital=hopital_user
+    ).order_by('-date_entree')
+
+    signes_vitaux = SigneVital.objects.filter(
+        patient=patient
+    ).order_by('-date_prelevement')
 
     context = {
         'patient': patient,
         'consultations': historique_consultations,
         'hospitalisations': hospitalisations,
         'signes_vitaux': signes_vitaux,
-        'fonctionKey':fonctionKey
+        'fonctionKey': fonctionKey
     }
-    
-    return render(request, 'back-end/patient/dossier_medical.html', context)
 
+    return render(request, 'back-end/patient/dossier_medical.html', context)
 
 #
 # ===========================================================================================
@@ -2506,36 +2533,41 @@ def dossier_medical_complet(request, patient_id):
 # ============================================================================================
 @login_required
 def detail_hospitalisation(request, pk):
-    # 1. Récupération de l'hospitalisation avec relations optimisées
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     hosp = get_object_or_404(
-        Hospitalisation.objects.select_related('patient', 'lit__chambre__type_chambre'), 
-        pk=pk
+        Hospitalisation.objects.select_related(
+            'patient',
+            'lit__chambre__type_chambre'
+        ),
+        pk=pk,
+        hopital=hopital_user
     )
 
-    # --- LOGIQUE DE CALENDRIER ---
-    # On commence à la date d'entrée et on va jusqu'à DEMAIN
     date_debut = hosp.date_entree.date()
     demain = timezone.now().date() + timedelta(days=1)
-    
+
     jours = []
     curr = date_debut
     while curr <= demain:
         jours.append(curr)
         curr += timedelta(days=1)
-    # -----------------------------
 
-    # 2. Récupération des ordonnances
     ordonnances = Ordonnance.objects.filter(
-        consultation__triage__patient=hosp.patient
+        consultation__triage__patient=hosp.patient,
+        hopital=hopital_user
     ).prefetch_related('medicaments').order_by('-date_prescrite')
-    
-    # 3. Préparation du Kardex
-    kardex_items = Kardex.objects.filter(hospitalisation=hosp).prefetch_related('administrations').order_by('-id')
-    
+
+    kardex_items = Kardex.objects.filter(
+        hospitalisation=hosp,
+        hopital=hopital_user
+    ).prefetch_related('administrations').order_by('-id')
+
     kardex_data = []
     for item in kardex_items:
         admins = {a.date_admin: a for a in item.administrations.all()}
-        
         row = {
             'id': item.id,
             'medicament': item.medicament,
@@ -2544,38 +2576,39 @@ def detail_hospitalisation(request, pk):
             'cellules': [{'date': jour, 'admin': admins.get(jour)} for jour in jours]
         }
         kardex_data.append(row)
-    
-    # 4. Gestion des suivis journaliers avec pagination
+
     suivis_list = hosp.suivis_journaliers.all().order_by('-date_suivi')
-    paginator = Paginator(suivis_list, 5) 
+    paginator = Paginator(suivis_list, 5)
     page_number = request.GET.get('page')
     suivis = paginator.get_page(page_number)
-    
-    # 5. Gestion des rôles
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 6. Rendu final
     return render(request, 'back-end/hospitalisation/detail.html', {
         'hosp': hosp,
         'ordonnances': ordonnances,
         'kardex_data': kardex_data,
-        'suivis': suivis, 
+        'suivis': suivis,
         'fonctionKey': fonctionKey,
         'jours': jours,
     })
 
-
 # ===========================================================================================
-
+@login_required
 def changer_statut_kardex(request, kardex_id):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
-        item = get_object_or_404(Kardex, id=kardex_id)
-        # Bascule entre True et False
-        item.est_actif = not item.est_actif 
+        item = get_object_or_404(
+            Kardex.objects.select_related('hospitalisation'),
+            id=kardex_id,
+            hopital=hopital_user
+        )
+
+        item.est_actif = not item.est_actif
         item.save()
-        # Redirection vers la même page de détail
+
         return redirect('detail_hospitalisation', pk=item.hospitalisation.id)
+
     return redirect('liste_hospitalisations')
 
 #
@@ -2584,33 +2617,27 @@ def changer_statut_kardex(request, kardex_id):
 # ============================================================================================
 @login_required
 def ajouter_suivi(request, pk):
-    # 1. Vérification des droits d'accès
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    # Redirection immédiate si non autorisé
+    hopital_user = role.hopital if role else None
+
     if fonctionKey not in ['infirmier', 'medecin', 'admin']:
         messages.error(request, "Accès refusé : vous n'êtes pas autorisé à modifier le suivi.")
         return redirect('detail_hospitalisation', pk=pk)
 
     if request.method == 'POST':
-        # 2. Récupération de l'hospitalisation
-        hosp = get_object_or_404(Hospitalisation, pk=pk)
-        
-        # 3. Récupération des données du formulaire
+        hosp = get_object_or_404(Hospitalisation, pk=pk, hopital=hopital_user)
+
         ta_val = request.POST.get('ta')
         pouls_val = request.POST.get('pouls')
         temp_val = request.POST.get('temp')
         etat = request.POST.get('etat_general')
         soins = request.POST.get('soins_effectues', '')
-        
-        # 4. Validation des champs obligatoires
+
         if all([ta_val, pouls_val, temp_val, etat]):
             try:
-                # Création d'une synthèse textuelle
                 synthese = f"TA: {ta_val} | Pouls: {pouls_val} | Temp: {temp_val}°C"
-                
-                # 5. Enregistrement dans les champs dédiés
+
                 SuiviQuotidien.objects.create(
                     hospitalisation=hosp,
                     infirmier=request.user,
@@ -2619,162 +2646,170 @@ def ajouter_suivi(request, pk):
                     temp=temp_val,
                     etat_general=etat,
                     constantes_du_jour=synthese,
-                    soins_effectues=soins
+                    soins_effectues=soins,
+                    hopital=hopital_user
                 )
-                
+
                 messages.success(request, "Le suivi quotidien a été enregistré avec succès.")
-                
             except Exception as e:
                 messages.error(request, f"Une erreur technique est survenue : {e}")
         else:
             messages.error(request, "Erreur : Veuillez remplir tous les champs obligatoires (TA, Pouls, Temp, État).")
-            
-        # Redirection finale après traitement du POST
-        return redirect('detail_hospitalisation', pk=pk)
-    
-    # Redirection si la méthode n'est pas POST
-    return redirect('detail_hospitalisation', pk=pk)
 
+        return redirect('detail_hospitalisation', pk=pk)
+
+    return redirect('detail_hospitalisation', pk=pk)
 #
 # ============================================================================================
 # KARDEX (FICHE DE TRAITEMENT)
 # ============================================================================================
 @login_required
 def ajouter_kardex(request, hosp_id):
-    hosp = get_object_or_404(Hospitalisation, id=hosp_id)
-    
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+
     if not hosp.est_actif:
         messages.error(request, "Impossible d'ajouter un traitement : hospitalisation terminée.")
         return redirect('detail_hospitalisation', pk=hosp.id)
-    
+
     if request.method == 'POST':
         medicament = request.POST.get('medicament')
         posologie = request.POST.get('posologie')
         voie = request.POST.get('voie')
-        
+
         if medicament and posologie:
-            with transaction.atomic(): # Assure que tout est créé ou rien
+            with transaction.atomic():
                 nouveau_kardex = Kardex.objects.create(
                     hospitalisation=hosp,
                     medicament=medicament,
                     posologie=posologie,
                     voie_administration=voie,
-                    est_actif=True
+                    est_actif=True,
+                    hopital=hopital_user
                 )
-                
-                # Création de l'administration initiale
+
                 AdministrationKardex.objects.create(
                     kardex=nouveau_kardex,
                     date_admin=timezone.now().date(),
-                    matin=False, midi=False, soir=False # Initialisé à False
+                    matin=False,
+                    midi=False,
+                    soir=False,
+                    hopital=hopital_user
                 )
+
             messages.success(request, "Médicament ajouté au Kardex.")
         else:
             messages.warning(request, "Champs manquants.")
-            
-    return redirect('detail_hospitalisation', pk=hosp.id)
 
+    return redirect('detail_hospitalisation', pk=hosp.id)
 #
 # ========================================================================================
 # ADMINISTRE LE KARDEX
 # ========================================================================================
 @login_required
 def marquer_administration(request, kardex_id):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
-        # 1. Récupérer le médicament concerné
-        kardex_item = get_object_or_404(Kardex, id=kardex_id)
-        
-        # 2. Récupérer la date envoyée par le formulaire (depuis le champ hidden)
+        kardex_item = get_object_or_404(
+            Kardex,
+            id=kardex_id,
+            hopital=hopital_user
+        )
+
         date_str = request.POST.get('date_cible')
         try:
             date_cible = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
             return redirect('detail_hospitalisation', pk=kardex_item.hospitalisation.id)
 
-        # 3. Créer ou récupérer l'enregistrement pour ce jour précis
-        # get_or_create s'occupe de créer une nouvelle ligne s'il n'en trouve pas
         admin, created = AdministrationKardex.objects.get_or_create(
             kardex=kardex_item,
-            date_admin=date_cible
+            date_admin=date_cible,
+            defaults={'hopital': hopital_user}
         )
-        
-        # 4. Mettre à jour les cases (True si coché, False sinon)
+
         admin.matin = 'matin' in request.POST
         admin.midi = 'midi' in request.POST
         admin.soir = 'soir' in request.POST
+        if hasattr(admin, 'hopital') and admin.hopital is None:
+            admin.hopital = hopital_user
         admin.save()
-        
-        # 5. Rediriger vers la page du patient
+
         return redirect('detail_hospitalisation', pk=kardex_item.hospitalisation.id)
-    
+
     return redirect('liste_hospitalisations')
-
-
 # 
 # ===========================================================================================
 #   GESTION DES RENDEZ-VOUS
 # ===========================================================================================
 @login_required
 def creer_rendez_vous(request, hosp_id):
-    hosp = get_object_or_404(Hospitalisation, id=hosp_id)
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
+
+    hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+
     if fonctionKey not in ['medecin', 'admin']:
         messages.error(request, "Accès refusé.")
         return redirect('detail_hospitalisation', pk=hosp.id)
-    
+
     if request.method == 'POST':
         date_rdv = request.POST.get('date_rdv')
         motif = request.POST.get('motif')
         note = request.POST.get('note')
-        
+
         if date_rdv and motif:
-            # VÉRIFICATION : Le rendez-vous existe-t-il déjà pour cette hospitalisation ?
             if RendezVous.objects.filter(hospitalisation=hosp).exists():
                 messages.warning(request, "Un rendez-vous est déjà planifié pour cette hospitalisation.")
                 return redirect('creer_ordonnance_sortie', hosp_id=hosp.id)
-            
-            # Création si aucun rendez-vous n'existe
+
             RendezVous.objects.create(
                 hospitalisation=hosp,
                 date_rdv=date_rdv,
                 motif=motif,
                 note=note,
-                enregistre_par=request.user
+                enregistre_par=request.user,
+                hopital=hopital_user
             )
             messages.success(request, "Rendez-vous enregistré avec succès.")
             return redirect('creer_ordonnance_sortie', hosp_id=hosp.id)
         else:
             messages.error(request, "Veuillez remplir la date et le motif.")
-            
+
     return render(request, 'back-end/hospitalisation/creer_rdv.html', {
         'hosp': hosp,
         'fonctionKey': fonctionKey
-    })
-
+    }) 
 #
 # ===============================================================================================
 # ORDONNANCE DE SORTIE 
 # ===============================================================================================
 @login_required
 def creer_ordonnance_sortie(request, hosp_id):
-    hosp = get_object_or_404(Hospitalisation, id=hosp_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+
     if request.method == 'POST':
-        # Logique pour sauvegarder l'ordonnance
         ordonnance = Ordonnance.objects.create(
             hospitalisation=hosp,
             type_ordonnance='SORTIE',
-            contenu=request.POST.get('contenu')
+            contenu=request.POST.get('contenu'),
+            hopital=hopital_user
         )
         return redirect('dossier_patient', hosp_id=hosp.id)
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    return render(request, 'back-end/hospitalisation/creer_ordonnance.html', {'hosp': hosp, 'fonctionKey':fonctionKey})
-
+    return render(request, 'back-end/hospitalisation/creer_ordonnance.html', {
+        'hosp': hosp,
+        'fonctionKey': fonctionKey
+    })
 
 #
 # ===========================================================================================
@@ -2782,17 +2817,18 @@ def creer_ordonnance_sortie(request, hosp_id):
 # ===========================================================================================
 @login_required
 def liste_rendez_vous(request):
-    # Récupérer tous les rendez-vous futurs ou récents
-    rendez_vous = RendezVous.objects.all().order_by('date_rdv')
-    
-    # On transmet la date actuelle pour comparer dans le template
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    rendez_vous = RendezVous.objects.filter(
+        hopital=hopital_user
+    ).order_by('date_rdv')
 
     return render(request, 'back-end/hospitalisation/liste_rdv.html', {
         'rendez_vous': rendez_vous,
-        'maintenant': timezone.now() ,
-        'fonctionKey' : fonctionKey
+        'maintenant': timezone.now(),
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -2818,37 +2854,42 @@ def liste_ordonnances_sortie(request):
 # ============================================================================================
 @login_required
 def update_kardex(request, kardex_id):
-    item = get_object_or_404(Kardex, id=kardex_id)
-    
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    item = get_object_or_404(
+        Kardex,
+        id=kardex_id,
+        hospitalisation__hopital=hopital_user
+    )
+
     if request.method == 'POST':
-        # Si c'est le bouton STOP qui est cliqué
         if 'stop_traitement' in request.POST:
             item.est_actif = False
             item.save()
-        # Sinon, c'est la mise à jour des cases à cocher
         else:
             item.matin = 'matin' in request.POST
             item.midi = 'midi' in request.POST
             item.soir = 'soir' in request.POST
             item.save()
-            
-    return redirect('detail_hospitalisation', pk=item.hospitalisation.id)
 
+    return redirect('detail_hospitalisation', pk=item.hospitalisation.id)
 #
 # ============================================================================================
 # METTRE FIN AU TRAITEMENT
 # ============================================================================================
 @login_required
 def finir_hospitalisation(request, hosp_id):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
-        hosp = get_object_or_404(Hospitalisation, id=hosp_id)
-        
-        # On désactive l'hospitalisation
+        hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+
         hosp.est_actif = False
-        # Si tu as un champ date_fin dans ton modèle Hospitalisation
-        hosp.date_fin = timezone.now() 
+        hosp.date_fin = timezone.now()
         hosp.save()
-        
+
     return redirect('detail_hospitalisation', pk=hosp_id)
 
 #
@@ -2857,17 +2898,20 @@ def finir_hospitalisation(request, hosp_id):
 # ============================================================================================
 @login_required
 def imprimer_ordonnance(request, ordonnance_id):
-    # Récupération de l'ordonnance avec ses relations pré-chargées
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
     ordonnance = get_object_or_404(
         Ordonnance.objects.select_related(
-            'consultation__triage__patient', 
+            'consultation__triage__patient',
             'consultation__medecin'
         ).prefetch_related(
-            'medicaments' # Utilisation du related_name
-        ), 
-        id=ordonnance_id
+            'medicaments'
+        ),
+        id=ordonnance_id,
+        hopital=hopital_user
     )
-    
+
     context = {'ord': ordonnance}
     return render(request, 'back-end/imprimer/print_ordonnance.html', context)
 
@@ -2878,55 +2922,53 @@ def imprimer_ordonnance(request, ordonnance_id):
 # ============================================================================================
 @login_required
 def creer_ordonnance_view(request, consultation_id):
-    # 1. Récupération sécurisée de la consultation
-    consultation = get_object_or_404(Consultation, id=consultation_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 2. Traitement du formulaire POST
+    consultation = get_object_or_404(Consultation, id=consultation_id, hopital=hopital_user)
+
     if request.method == 'POST':
         diagnostic = request.POST.get('diagnostic_final')
         contenu = request.POST.get('contenu_ordonnance')
         type_ord = request.POST.get('type_ordonnance')
-        
-        # Listes dynamiques des médicaments
+
         noms = request.POST.getlist('nom_medicament[]')
         posologies = request.POST.getlist('posologie[]')
         durees = request.POST.getlist('duree[]')
 
         try:
             with transaction.atomic():
-                # Mise à jour du diagnostic
                 consultation.diagnostic_final = diagnostic
                 consultation.save()
-                
-                # Création de l'ordonnance
+
                 ordonnance = Ordonnance.objects.create(
                     consultation=consultation,
                     observation=contenu,
-                    type_ordonnance=type_ord
+                    type_ordonnance=type_ord,
+                    hopital=hopital_user
                 )
-                
-                # Enregistrement des médicaments
+
                 for nom, pos, dur in zip(noms, posologies, durees):
-                    if nom.strip(): # On n'enregistre que si le nom est présent
+                    if nom.strip():
                         Medicament.objects.create(
                             ordonnance=ordonnance,
                             nom=nom,
                             posologie=pos,
-                            duree=dur
+                            duree=dur,
+                            hopital=hopital_user
                         )
-            
+
             messages.success(request, f"Ordonnance créée pour {consultation.triage.patient.noms}.")
-            return redirect('liste_attente_medecin') # Remplacez par votre vrai nom d'URL
-            
+            return redirect('liste_attente_medecin')
+
         except Exception as e:
             messages.error(request, f"Une erreur est survenue : {str(e)}")
 
-    # 3. Affichage du formulaire (GET)
-
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    return render(request, 'back-end/medecin/creer_ordonnance.html', {'c': consultation, 'fonctionKey': fonctionKey}) 
+    return render(request, 'back-end/medecin/creer_ordonnance.html', {
+        'c': consultation,
+        'fonctionKey': fonctionKey
+    }) 
 
 
 
@@ -3709,17 +3751,19 @@ def facture_print(request, paiement_id):
 # =========================================================================================
 @login_required
 def liste_soins_traitement(request):
-    # On filtre les soins créés aujourd'hui
-    aujourd_hui = timezone.now().date()
-    soins = SoinOccasionnel.objects.filter(date_soin__date=aujourd_hui).order_by('-date_soin')
-    
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    aujourd_hui = timezone.now().date()
+    soins = SoinOccasionnel.objects.filter(
+        date_soin__date=aujourd_hui,
+        hopital=hopital_user
+    ).order_by('-date_soin')
+
     return render(request, 'back-end/soins/liste_soins_traitement.html', {
-        'soins': soins , 
-        'fonctionKey' : fonctionKey
+        'soins': soins,
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -3728,7 +3772,10 @@ def liste_soins_traitement(request):
 # ============================================================================================
 @login_required
 def marquer_fait(request, soin_id):
-    soin = get_object_or_404(SoinOccasionnel, id=soin_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    soin = get_object_or_404(SoinOccasionnel, id=soin_id, hopital=hopital_user)
     soin.est_effectue = True
     soin.save()
     return redirect('liste_soins_traitement')
@@ -3763,22 +3810,27 @@ def historique_soins(request):
 @login_required
 def ajouter_produit(request):
     """Vue pour enregistrer une nouvelle référence de médicament en stock"""
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     if request.method == 'POST':
         form = ProduitPharmacieForm(request.POST)
         if form.is_valid():
-            form.save()
+            produit = form.save(commit=False)
+            produit.hopital = hopital_user
+            produit.save()
             messages.success(request, "Le produit a été enregistré avec succès.")
-            # Redirige vers la liste des produits ou la gestion de stock
-            return redirect('gestion_pharmacie') 
+            return redirect('gestion_pharmacie')
         else:
             messages.error(request, "Erreur lors de l'enregistrement. Vérifie les données.")
     else:
         form = ProduitPharmacieForm()
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    return render(request, 'back-end/pharmacie/ajouter_produit.html', {'form': form ,'fonctionKey':fonctionKey})
+    return render(request, 'back-end/pharmacie/ajouter_produit.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    })
 
 
 # 
@@ -3787,58 +3839,59 @@ def ajouter_produit(request):
 # ====================================================================================
 @login_required
 def gestion_pharmacie(request):
-    # 1. Annotation : Calcul des entrées et des sorties séparément
-    # On utilise 'les_lots__quantite_initiale' et 'les_lots__sorties__quantite_vendue'
-    # pour traverser les relations correctement.
-    produits = ProduitPharmacie.objects.annotate(
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    produits = ProduitPharmacie.objects.filter(
+        hopital=hopital_user
+    ).annotate(
         total_entrees=Sum('les_lots__quantite_initiale'),
         total_sorties=Sum('les_lots__sorties__quantite_vendue')
     ).annotate(
-        # 2. Calcul du stock réel : (Entrées - Sorties)
-        # Coalesce transforme les valeurs NULL en 0
         stock_reel=ExpressionWrapper(
             Coalesce('total_entrees', 0) - Coalesce('total_sorties', 0),
             output_field=IntegerField()
         )
     ).order_by('nom')
-    
-    # Calcul de la valeur totale pour chaque produit avant de passer au template
+
     for p in produits:
         p.valeur_totale = p.stock_reel * p.prix_vente_unitaire
-    
-    # Gestion des rôles
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
-    # Récupération du taux de change
+
     taux_change = ConfigurationHopital.get_taux()
 
     context = {
-        'produits': produits, 
+        'produits': produits,
         'fonctionKey': fonctionKey,
         'taux': taux_change
     }
-    
-    return render(request, 'back-end/pharmacie/gestion_stock.html', context)
 
+    return render(request, 'back-end/pharmacie/gestion_stock.html', context)
 #
 # ====================================================================================
 # GESTION DES STOCKS
 # ====================================================================================
 @login_required
 def ajouter_lot(request):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     if request.method == 'POST':
         form = LotPharmacieForm(request.POST)
         if form.is_valid():
-            form.save()
+            lot = form.save(commit=False)
+            lot.hopital = hopital_user
+            lot.save()
             messages.success(request, "Lot ajouté avec succès, stock mis à jour.")
             return redirect('gestion_pharmacie')
     else:
         form = LotPharmacieForm()
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    return render(request, 'back-end/pharmacie/ajouter_lot.html', {'form': form , 'fonctionKey':fonctionKey}) 
+    return render(request, 'back-end/pharmacie/ajouter_lot.html', {
+        'form': form,
+        'fonctionKey': fonctionKey
+    }) 
 
 #
 # =====================================================================================
@@ -3846,13 +3899,17 @@ def ajouter_lot(request):
 # =====================================================================================
 @login_required
 def enregistrer_vente(request):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             panier = data.get('panier_data', [])
             devise = data.get('devise', 'USD')
             montant_verse = Decimal(str(data.get('montant_verse', 0)))
-            
+
             if not panier:
                 return JsonResponse({'status': 'error', 'message': 'Le panier est vide.'})
             if montant_verse < 0:
@@ -3860,35 +3917,32 @@ def enregistrer_vente(request):
 
             taux = Decimal(str(ConfigurationHopital.get_taux()))
 
-            # Utilisation de la transaction pour garantir la cohérence
             with transaction.atomic():
                 montant_total = Decimal('0.00')
-                items_a_vendre = [] 
-                
-                # 1. Validation du stock et calcul du total
+                items_a_vendre = []
+
                 for item in panier:
-                    # select_for_update() verrouille le lot pour éviter les ventes simultanées
                     lot = LotPharmacie.objects.select_for_update().filter(
-                        produit_id=item['id'], 
+                        produit_id=item['id'],
+                        hopital=hopital_user,
                         quantite_actuelle__gte=int(item['qte'])
                     ).first()
-                    
+
                     if not lot:
-                        produit = ProduitPharmacie.objects.get(id=item['id'])
-                        return JsonResponse({'status': 'error', 'message': f'Stock insuffisant pour {produit.nom}'})
+                        produit = ProduitPharmacie.objects.filter(id=item['id'], hopital=hopital_user).first()
+                        nom_produit = produit.nom if produit else "Produit"
+                        return JsonResponse({'status': 'error', 'message': f'Stock insuffisant pour {nom_produit}'})
 
                     prix_u = Decimal(str(lot.produit.prix_vente_unitaire))
                     if devise == 'CDF':
                         prix_u *= taux
-                    
+
                     montant_total += (prix_u * int(item['qte']))
                     items_a_vendre.append({'lot': lot, 'qte': int(item['qte'])})
 
-                # 2. Validation financière
                 if montant_verse > montant_total:
                     return JsonResponse({'status': 'error', 'message': 'Le montant versé dépasse le total.'})
 
-                # 3. Création du paiement
                 reste_a_payer = montant_total - montant_verse
                 paiement = Paiement.objects.create(
                     montant_verse=montant_verse,
@@ -3898,18 +3952,16 @@ def enregistrer_vente(request):
                     reste_a_payer=reste_a_payer
                 )
 
-                # 4. Enregistrement des sorties
-                # IMPORTANT : Le save() de SortiePharmacie décrémente le stock une seule fois.
                 for item in items_a_vendre:
                     SortiePharmacie.objects.create(
-                        paiement=paiement, 
-                        lot=item['lot'], 
+                        paiement=paiement,
+                        lot=item['lot'],
                         quantite_vendue=item['qte'],
                         vendu_par=request.user
                     )
 
             return JsonResponse({
-                'status': 'success', 
+                'status': 'success',
                 'message': 'Vente validée avec succès.',
                 'dette': str(reste_a_payer)
             })
@@ -3917,14 +3969,11 @@ def enregistrer_vente(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-    # GET : Liste des produits
-    from django.db.models import Sum
-    produits = ProduitPharmacie.objects.annotate(
+    produits = ProduitPharmacie.objects.filter(
+        hopital=hopital_user
+    ).annotate(
         stock_reel=Sum('les_lots__quantite_actuelle')
     ).order_by('nom')
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/pharmacie/enregistrer_vente.html', {
         'produits': produits,
@@ -3932,14 +3981,16 @@ def enregistrer_vente(request):
         'fonctionKey': fonctionKey
     })
 
-
 #
 # =============================================================================================================================
 # DASHBOARD COTE PHARMACIE 
 # =============================================================================================================================
 @login_required
 def dashboard_ventes(request):
-    # 1. Gestion du filtre de période
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
+
     periode = request.GET.get('periode', 'jour')
     periodes_map = {
         'jour': TruncDay('date_paiement'),
@@ -3948,47 +3999,38 @@ def dashboard_ventes(request):
     }
     trunc_func = periodes_map.get(periode, TruncDay('date_paiement'))
 
-    # 2. Total Général ventilé par devise
-    # Assure-toi que 'devise' est bien un champ dans ton modèle Paiement
-    total_general = Paiement.objects.values('devise') \
-        .annotate(grand_total=Sum('montant_verse'))
+    paiements_base = Paiement.objects.filter(hopital=hopital_user)
+    sorties_base = SortiePharmacie.objects.filter(lot__hopital=hopital_user)
+    lots_base = LotPharmacie.objects.filter(hopital=hopital_user)
 
-    # 3. Ventes par Utilisateur (Traçabilité)
-    ventes_par_utilisateur = Paiement.objects.values('les_sorties__vendu_par__username', 'devise') \
-        .annotate(total_vendu=Sum('montant_verse')) \
-        .order_by('-total_vendu')
+    total_general = paiements_base.values('devise').annotate(
+        grand_total=Sum('montant_verse')
+    )
 
-    # 4. Stats des ventes regroupées par période et devise
-    stats_ventes = Paiement.objects.annotate(date_groupee=trunc_func) \
-        .values('date_groupee', 'devise') \
-        .annotate(total_periode=Sum('montant_verse')) \
-        .order_by('-date_groupee', 'devise')
+    ventes_par_utilisateur = paiements_base.values(
+        'les_sorties__vendu_par__username', 'devise'
+    ).annotate(
+        total_vendu=Sum('montant_verse')
+    ).order_by('-total_vendu')
 
-    # 5. Top 5 Produits par Bénéfice
-    top_benefices = SortiePharmacie.objects.values('lot__produit__nom') \
-        .annotate(
-            benefice_total=Sum(
-                (F('lot__produit__prix_vente_unitaire') - F('lot__produit__prix_achat_unitaire')) 
-                * F('quantite_vendue'),
-                output_field=DecimalField()
-            )
-        ).order_by('-benefice_total')[:5]
+    stats_ventes = paiements_base.annotate(date_groupee=trunc_func).values(
+        'date_groupee', 'devise'
+    ).annotate(
+        total_periode=Sum('montant_verse')
+    ).order_by('-date_groupee', 'devise')
 
-    # 6. Dettes en cours
-    dettes_en_cours = Paiement.objects.filter(reste_a_payer__gt=0) \
-        .prefetch_related('les_sorties__vendu_par')
+    top_benefices = sorties_base.values('lot__produit__nom').annotate(
+        benefice_total=Sum(
+            (F('lot__produit__prix_vente_unitaire') - F('lot__produit__prix_achat_unitaire')) * F('quantite_vendue'),
+            output_field=DecimalField()
+        )
+    ).order_by('-benefice_total')[:5]
 
-    # 7. Stocks critiques
-    produits_critiques = LotPharmacie.objects.filter(quantite_actuelle__lt=5) \
-        .select_related('produit')
+    dettes_en_cours = paiements_base.filter(reste_a_payer__gt=0).prefetch_related('les_sorties__vendu_par')
+    produits_critiques = lots_base.filter(quantite_actuelle__lt=5).select_related('produit')
 
-    # 8. KPIs du jour
     aujourdhui = timezone.now().date()
-    nombre_ventes = Paiement.objects.filter(date_paiement__date=aujourdhui).count()
-
-    # 9. Rôle
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+    nombre_ventes = paiements_base.filter(date_paiement__date=aujourdhui).count()
 
     context = {
         'stats_ventes': stats_ventes,
@@ -4002,24 +4044,26 @@ def dashboard_ventes(request):
         'fonctionKey': fonctionKey
     }
     return render(request, 'back-end/pharmacie/dashboard.html', context)
-
 # 
 # ==================================================================================================
 # LISTE DES VENTES
 # ==================================================================================================
 @login_required
 def liste_ventes(request):
-    # Correction ici : le chemin correct est les_sorties -> lot -> produit
-    ventes = Paiement.objects.filter(service='PHARMACIE') \
-                             .prefetch_related('les_sorties__lot__produit') \
-                             .order_by('-date_paiement')
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
 
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+    ventes = Paiement.objects.filter(
+        service='PHARMACIE',
+        hopital=hopital_user
+    ).prefetch_related(
+        'les_sorties__lot__produit'
+    ).order_by('-date_paiement')
 
     return render(request, 'back-end/pharmacie/liste_ventes.html', {
         'ventes': ventes,
-        'fonctionKey': fonctionKey 
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -4028,20 +4072,20 @@ def liste_ventes(request):
 # ===================================================================================================
 @login_required
 def details_facture(request, vente_id):
-    facture = get_object_or_404(Paiement, id=vente_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    facture = get_object_or_404(Paiement, id=vente_id, hopital=hopital_user)
     details = facture.les_sorties.select_related('lot__produit').all()
-    
+
     for item in details:
-        # Données du médicament
         produit = item.lot.produit
         item.nom_medicament = produit.nom
         item.forme_medicament = produit.forme
         item.dosage_medicament = produit.dosage
-        
-        # Calculs financiers
-        item.prix_unitaire = produit.prix_vente_unitaire 
+        item.prix_unitaire = produit.prix_vente_unitaire
         item.total_ligne = item.prix_unitaire * item.quantite_vendue
-        
+
     context = {
         'facture': facture,
         'details': details,
@@ -4054,54 +4098,68 @@ def details_facture(request, vente_id):
 # ===============================================================================================
 @csrf_exempt
 def valider_vente(request):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            panier = data.get('panier')
+            panier = data.get('panier', [])
             devise = data.get('devise')
 
-            # 1. Créer le paiement
-            paiement = Paiement.objects.create(devise=devise)
+            if not panier:
+                return JsonResponse({'success': False, 'message': 'Panier vide.'})
 
-            # 2. Enregistrer les sorties en utilisant le lot
-            for item in panier:
-                SortiePharmacie.objects.create(
-                    paiement=paiement,
-                    # ICI : utilise 'lot_id' au lieu de 'produit_id'
-                    lot_id=item['lot_id'], 
-                    quantite_vendue=item['quantite']
+            with transaction.atomic():
+                paiement = Paiement.objects.create(
+                    devise=devise,
+                    hopital=hopital_user,
+                    caissier=request.user
                 )
-            
+
+                for item in panier:
+                    lot = get_object_or_404(
+                        LotPharmacie,
+                        id=item['lot_id'],
+                        hopital=hopital_user
+                    )
+
+                    SortiePharmacie.objects.create(
+                        paiement=paiement,
+                        lot=lot,
+                        quantite_vendue=item['quantite'],
+                        vendu_par=request.user
+                    )
+
             return JsonResponse({'success': True})
-        
+
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)})
-            
-    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
 #
 # ===============================================================================================
 # ORIENTATIONS
 # ===============================================================================================
 @login_required
 def service_destinataire_view(request):
-    # 1. GESTION DE LA VALIDATION (Marquer comme traité)
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_nom = role_obj.fonctionKey.roleName.strip().lower() if (role_obj and role_obj.fonctionKey) else ""
+
     if request.method == 'POST' and request.POST.get('orientation_id'):
-        orientation = get_object_or_404(Orientation, id=request.POST.get('orientation_id'))
+        orientation = get_object_or_404(
+            Orientation,
+            id=request.POST.get('orientation_id'),
+            hopital=hopital_user
+        )
         orientation.est_admis = True
         orientation.save()
         return redirect('service_liste_attente')
 
-    # 2. IDENTIFICATION DU RÔLE
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonction_nom = role_obj.fonctionKey.roleName.strip().lower() if (role_obj and role_obj.fonctionKey) else ""
-
-    # 3. LOGIQUE DE FILTRAGE DES SERVICES
-    # Liste des services nécessitant une saisie de compte rendu
     services_avec_compte_rendu = ['bloc', 'accouchement']
     doit_saisir_compte_rendu = any(s in fonction_nom for s in services_avec_compte_rendu)
 
-    # Définition des destinations autorisées par rôle
     if 'pharmacien' in fonction_nom:
         destinations_autorisees = ['PHARMACIE']
     elif 'infirmier' in fonction_nom or 'medecin' in fonction_nom:
@@ -4111,10 +4169,10 @@ def service_destinataire_view(request):
     else:
         destinations_autorisees = []
 
-    # 4. RÉCUPÉRATION DES ORIENTATIONS
     orientations = Orientation.objects.filter(
         destination__in=destinations_autorisees,
-        est_admis=False
+        est_admis=False,
+        hopital=hopital_user
     ).select_related(
         'consultation__triage__patient',
         'consultation__medecin'
@@ -4122,9 +4180,8 @@ def service_destinataire_view(request):
         'consultation__ordonnance_set__medicaments'
     )
 
-    # 5. RENDU DU TEMPLATE
     return render(request, 'back-end/orientation/liste_attente.html', {
-        'orientations': orientations, 
+        'orientations': orientations,
         'fonctionKey': role_obj.fonctionKey.roleName if role_obj else "Invité",
         'doit_saisir_compte_rendu': doit_saisir_compte_rendu
     })
@@ -4136,13 +4193,12 @@ def service_destinataire_view(request):
 # ===============================================================================================
 @login_required
 def service_historique_view(request):
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
     fonction_nom = role_obj.fonctionKey.roleName.strip().lower() if (role_obj and role_obj.fonctionKey) else ""
     fonctionKey = role_obj.fonctionKey.roleName if role_obj else "Invité"
 
-    # 1. DÉFINITION DES DESTINATIONS AUTORISÉES SELON LE RÔLE
     if 'infirmier' in fonction_nom:
-        # Ajout de 'ACCOUCHEMENT' ici
         destinations_autorisees = ['SALLE_SOINS', 'BLOC_OPERATOIRE', 'ACCOUCHEMENT']
     elif 'pharmacien' in fonction_nom:
         destinations_autorisees = ['PHARMACIE']
@@ -4151,10 +4207,10 @@ def service_historique_view(request):
     else:
         destinations_autorisees = ['BLOC_OPERATOIRE'] if 'bloc' in fonction_nom else []
 
-    # 2. RÉCUPÉRATION DES ADMIS (HISTORIQUE)
     orientations = Orientation.objects.filter(
         destination__in=destinations_autorisees,
-        est_admis=True
+        est_admis=True,
+        hopital=hopital_user
     ).order_by('-date_orientation')
 
     return render(request, 'back-end/orientation/historique.html', {
@@ -4162,58 +4218,55 @@ def service_historique_view(request):
         'fonctionKey': fonctionKey
     })
 
-
 # 
 # ===================================================================================================
 # BLOC OPERATOIRE
 # ===================================================================================================
 @login_required
 def gerer_bloc_operatoire(request, consultation_id):
-    consultation = get_object_or_404(Consultation, id=consultation_id)
-    
-    # 1. Récupération ou création
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    consultation = get_object_or_404(
+        Consultation,
+        id=consultation_id,
+        hopital=hopital_user
+    )
+
     bloc, created = BlocOperatoire.objects.get_or_create(
         consultation=consultation,
         defaults={
             'constantes_pre_op': f"TA: {consultation.triage.tension_arterielle} | Pouls: {consultation.triage.frequence_cardiaque} | Temp: {consultation.triage.temperature}"
         }
     )
-    
-    # 2. Récupération des prestations de type Chirurgie pour le menu
+
     prestations_chir = Prestation.objects.filter(categorie='CHIR')
 
     if request.method == 'POST':
-        # Mise à jour des informations
         bloc.acte_realise = request.POST.get('acte_realise')
         bloc.statut = request.POST.get('statut', 'TERMINE')
         bloc.chirurgien = request.user
-        
-        # Sauvegarde de la prestation choisie
+
         prestation_id = request.POST.get('prestation_id')
         if prestation_id:
             bloc.prestation_id = prestation_id
-            
+
         if bloc.statut == 'TERMINE':
             bloc.date_fin = timezone.now()
-        
+
         bloc.save()
-        
-        # Suggestion : Facturation automatique ici si nécessaire
         messages.success(request, "Informations de bloc mises à jour avec succès.")
         return redirect('service_liste_attente')
-
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
     context = {
         'consultation': consultation,
         'bloc': bloc,
         'patient': consultation.triage.patient,
         'fonctionKey': fonctionKey,
-        'prestations_chir': prestations_chir, # Ajouté pour le template
+        'prestations_chir': prestations_chir,
     }
     return render(request, 'back-end/bloc/saisir_compte_rendu.html', context)
-
 
 #
 # ==================================================================================================
@@ -4268,26 +4321,29 @@ def historique_bloc_operatoire(request):
 # ===========================================================================================================
 @login_required
 def encaisser_bloc(request, bloc_id):
-    # 1. Vérification de l'existence de l'objet
-    bloc = get_object_or_404(BlocOperatoire, id=bloc_id)
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    bloc = get_object_or_404(
+        BlocOperatoire.objects.select_related('consultation__triage__patient', 'prestation'),
+        id=bloc_id,
+        consultation__hopital=hopital_user
+    )
     consultation = bloc.consultation
-    
-    # 2. Récupération de la configuration (Taux)
+
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500')
-    
-    # 3. Calcul du reste à payer (Calcul basé sur l'historique des paiements de ce bloc)
+
     prix_chirurgie = bloc.prestation.prix if bloc.prestation else Decimal('0.00')
     paiements_bloc = Paiement.objects.filter(bloc_op=bloc)
-    
+
     total_verse = paiements_bloc.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
     total_reductions = paiements_bloc.aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
-    
+
     reste_a_payer = max(Decimal('0.00'), prix_chirurgie - (total_verse + total_reductions))
 
-    # 4. Traitement du formulaire
     if request.method == 'POST':
-        # Vérification si le bloc est déjà totalement payé (sécurité supplémentaire)
         if reste_a_payer <= 0:
             messages.warning(request, "Ce bloc est déjà soldé.")
             return redirect('historique_paiements', patient_id=consultation.triage.patient.id)
@@ -4299,19 +4355,16 @@ def encaisser_bloc(request, bloc_id):
         except:
             messages.error(request, "Format de montant invalide.")
             return redirect('encaisser_bloc', bloc_id=bloc.id)
-        
-        # Conversion du montant versé en USD
+
         montant_verse_usd = montant_recu / taux if devise == 'CDF' else montant_recu
         total_a_deduire = montant_verse_usd + reduction_usd
-        
-        # VÉRIFICATION : Le paiement ne doit pas dépasser le reste à payer
+
         if total_a_deduire > (reste_a_payer + Decimal('0.01')):
             messages.error(request, f"Erreur : Le montant total ({total_a_deduire:.2f} USD) dépasse le reste à payer ({reste_a_payer:.2f} USD).")
             return redirect('encaisser_bloc', bloc_id=bloc.id)
-        
-        # Création du paiement
+
         nouveau_reste = reste_a_payer - total_a_deduire
-        
+
         Paiement.objects.create(
             patient=consultation.triage.patient,
             consultation=consultation,
@@ -4328,10 +4381,6 @@ def encaisser_bloc(request, bloc_id):
         messages.success(request, "Paiement du bloc opératoire enregistré avec succès.")
         return redirect('historique_paiements', patient_id=consultation.triage.patient.id)
 
-    # 5. Gestion des rôles (pour le template)
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
-
     context = {
         'bloc': bloc,
         'prix_chirurgie': prix_chirurgie,
@@ -4339,47 +4388,53 @@ def encaisser_bloc(request, bloc_id):
         'taux': taux,
         'fonctionKey': fonctionKey
     }
-    return render(request, 'back-end/caisse/encaisser_bloc.html', context) 
-
+    return render(request, 'back-end/caisse/encaisser_bloc.html', context)
 #
 # ====================================================================================================
 # REDIGER RAPPORT PAR LE MEDECIN
 # =====================================================================================================
 @login_required
 def rediger_compte_rendu(request, bloc_id):
-    bloc = get_object_or_404(BlocOperatoire, id=bloc_id)
-    
-    if request.method == 'POST':
-        # Enregistrement du rapport et finalisation
-        bloc.acte_realise = request.POST.get('acte_realise')
-        bloc.statut = 'TERMINE' # On passe l'opération à terminé
-        bloc.date_fin = timezone.now() # On horodate la fin
-        bloc.save()
-        return redirect('service_historique') 
-        
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
+    bloc = get_object_or_404(
+        BlocOperatoire.objects.select_related('consultation__triage__patient', 'prestation'),
+        id=bloc_id,
+        consultation__hopital=hopital_user
+    )
+
+    if request.method == 'POST':
+        bloc.acte_realise = request.POST.get('acte_realise')
+        bloc.statut = 'TERMINE'
+        bloc.date_fin = timezone.now()
+        bloc.save()
+        return redirect('service_historique')
+
     return render(request, 'back-end/bloc/rediger_rapport.html', {
-        'bloc': bloc, 
+        'bloc': bloc,
         'fonctionKey': fonctionKey
     })
-
 #
 # ===================================================================================================
 # VOIR LE RAPPORT REDIGER
 # ====================================================================================================
 @login_required
 def voir_rapport(request, bloc_id):
-    # Récupère l'objet bloc
-    bloc = get_object_or_404(BlocOperatoire, id=bloc_id)
-    
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
+    bloc = get_object_or_404(
+        BlocOperatoire.objects.select_related('consultation__triage__patient', 'prestation'),
+        id=bloc_id,
+        consultation__hopital=hopital_user
+    )
+
     return render(request, 'back-end/bloc/voir_rapport.html', {
-        'bloc': bloc ,
-        'fonctionKey' : fonctionKey
+        'bloc': bloc,
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -4388,9 +4443,17 @@ def voir_rapport(request, bloc_id):
 # =======================================================================================
 @login_required
 def saisir_fiche_accouchement_view(request, consultation_id):
-    consultation = get_object_or_404(Consultation, id=consultation_id)
-    # Récupère uniquement les prestations de type MAT (forfait maternité)
-    prestations = Prestation.objects.filter(categorie='MAT')
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    consultation = get_object_or_404(
+        Consultation,
+        id=consultation_id,
+        hopital=hopital_user
+    )
+
+    prestations = Prestation.objects.filter(categorie='MAT', hopital=hopital_user)
 
     if request.method == 'POST':
         prestation_id = request.POST.get('prestation_id')
@@ -4400,13 +4463,12 @@ def saisir_fiche_accouchement_view(request, consultation_id):
         score_apgar = request.POST.get('score_apgar')
         notes = request.POST.get('notes')
 
-        # Vérification des champs obligatoires
         if not prestation_id or not type_acc or not poids_bebe:
             messages.error(request, "Veuillez remplir tous les champs obligatoires.")
             return redirect('saisir_fiche_accouchement', consultation_id=consultation.id)
 
         try:
-            prestation = Prestation.objects.get(id=prestation_id)
+            prestation = get_object_or_404(Prestation, id=prestation_id, hopital=hopital_user, categorie='MAT')
 
             FicheAccouchement.objects.create(
                 consultation=consultation,
@@ -4421,14 +4483,8 @@ def saisir_fiche_accouchement_view(request, consultation_id):
             messages.success(request, "Fiche d'accouchement enregistrée avec succès.")
             return redirect('service_liste_attente')
 
-        except Prestation.DoesNotExist:
-            messages.error(request, "La prestation sélectionnée est invalide.")
         except Exception as e:
             messages.error(request, f"Erreur lors de l'enregistrement : {e}")
-
-    # Récupération du rôle de l'utilisateur
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
     return render(request, 'back-end/accouchement/saisir_fiche.html', {
         'consultation': consultation,
@@ -4436,89 +4492,96 @@ def saisir_fiche_accouchement_view(request, consultation_id):
         'fonctionKey': fonctionKey
     })
 
-
 #
 # ======================================================================================================
 #
 # ======================================================================================================
 @login_required
 def saisir_cr_accouchement_view(request, consultation_id):
-    consultation = get_object_or_404(Consultation, id=consultation_id)
-    # On récupère les prestations de la catégorie MAT (Forfait Maternité)
-    prestations = Prestation.objects.filter(categorie='MAT')
-    
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    consultation = get_object_or_404(
+        Consultation,
+        id=consultation_id,
+        hopital=hopital_user
+    )
+
+    prestations = Prestation.objects.filter(categorie='MAT', hopital=hopital_user)
+
     if request.method == 'POST':
         prestation_id = request.POST.get('prestation_id')
         type_acc = request.POST.get('type_accouchement')
         details = request.POST.get('details_acte')
-        
+
         if not prestation_id:
             messages.error(request, "Veuillez sélectionner un forfait de maternité.")
             return redirect('saisir_cr_accouchement', consultation_id=consultation.id)
 
         try:
             with transaction.atomic():
-                # 1. Enregistrement du Compte-rendu
+                prestation = get_object_or_404(
+                    Prestation,
+                    id=prestation_id,
+                    categorie='MAT',
+                    hopital=hopital_user
+                )
+
                 CompteRenduAccouchement.objects.create(
                     consultation=consultation,
-                    prestation=Prestation.objects.get(id=prestation_id),
+                    prestation=prestation,
                     type_accouchement=type_acc,
                     details_acte=details,
                     auteur=request.user
                 )
-                
-                # 2. Marquer l'orientation comme traitée
-                # On cherche l'orientation liée à cette consultation
+
                 orientation = consultation.orientation
                 if orientation:
                     orientation.est_admis = True
                     orientation.save()
-            
+
             messages.success(request, "Compte-rendu d'accouchement enregistré avec succès.")
             return redirect('service_liste_attente')
-            
+
         except Exception as e:
             messages.error(request, f"Erreur critique : {str(e)}")
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
     return render(request, 'back-end/accouchement/saisir_cr.html', {
         'consultation': consultation,
-        'prestations': prestations ,
-        'fonctionKey' : fonctionKey
+        'prestations': prestations,
+        'fonctionKey': fonctionKey
     })
-
 #
 # ====================================================================================================
 # LISTE DES FICHES ACCOUCHEMENT 
 # =====================================================================================================
 @login_required
 def liste_fiches_accouchement_view(request):
-    query = request.GET.get('q', '')
-    fiches = FicheAccouchement.objects.all().order_by('-date_creation')
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
-    # Recherche par patient ou notes
+    query = request.GET.get('q', '')
+    fiches = FicheAccouchement.objects.filter(
+        consultation__hopital=hopital_user
+    ).order_by('-date_creation')
+
     if query:
         fiches = fiches.filter(
             Q(consultation__triage__patient__noms__icontains=query) |
             Q(notes__icontains=query)
         )
 
-    # Pagination : 10 fiches par page
     paginator = Paginator(fiches, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Récupération du rôle de l'utilisateur
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
-
     return render(request, 'back-end/accouchement/liste_fiches.html', {
         'page_obj': page_obj,
-        'query': query , 
-        'fonctionKey' : fonctionKey
+        'query': query,
+        'fonctionKey': fonctionKey
     })
-
 #
 # =====================================================================================================
 # DETAIL DE LA FICHE D'ACCOUCHEMENT
@@ -4561,30 +4624,33 @@ def liste_cr_accouchement_view(request):
 # ====================================================================================================
 @login_required
 def payer_accouchement_view(request, cr_id):
-    cr = get_object_or_404(CompteRenduAccouchement, id=cr_id)
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    cr = get_object_or_404(
+        CompteRenduAccouchement.objects.select_related('consultation__triage__patient', 'prestation'),
+        id=cr_id,
+        consultation__hopital=hopital_user
+    )
+
     taux = ConfigurationHopital.get_taux()
-    
-    # 1. Calculer le reste à payer actuel pour ce compte-rendu
-    # Prix total du forfait
+
     total_forfait = cr.prestation.prix
-    # Somme des paiements déjà effectués
     paiements_precedents = Paiement.objects.filter(compte_rendu=cr)
     total_deja_paye = paiements_precedents.aggregate(Sum('montant_verse'))['montant_verse__sum'] or Decimal('0.00')
-    
-    # Reste à payer en USD
+
     reste_a_payer_usd = total_forfait - total_deja_paye
 
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant_verse', 0))
         montant_reduction = Decimal(request.POST.get('montant_reduction', 0))
         devise = request.POST.get('devise', 'USD')
-        
-        # 2. Conversion du montant saisi en USD pour comparaison
+
         montant_en_usd = montant_saisi
         if devise == 'CDF':
             montant_en_usd = montant_saisi / taux
-            
-        # 3. Vérification : le total (paiement + réduction) ne doit pas dépasser le reste
+
         if (montant_en_usd + montant_reduction) > reste_a_payer_usd:
             messages.error(request, f"Le montant saisi dépasse la dette restante ({reste_a_payer_usd:.2f} USD).")
         else:
@@ -4593,7 +4659,7 @@ def payer_accouchement_view(request, cr_id):
                     patient=cr.consultation.triage.patient,
                     compte_rendu=cr,
                     service='MATERNITE',
-                    montant_verse=montant_en_usd, # On enregistre en USD
+                    montant_verse=montant_en_usd,
                     montant_reduction=montant_reduction,
                     devise=devise,
                     caissier=request.user,
@@ -4604,10 +4670,6 @@ def payer_accouchement_view(request, cr_id):
                 return redirect('liste_cr_accouchement')
             except Exception as e:
                 messages.error(request, f"Erreur système : {e}")
-
-    # Récupération du rôle pour le template
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
 
     return render(request, 'back-end/accouchement/payer_cr.html', {
         'cr': cr,
@@ -4622,12 +4684,18 @@ def payer_accouchement_view(request, cr_id):
 # ====================================================================================================
 @login_required
 def voir_cr_accouchement_view(request, consultation_id):
-    # Récupère le compte-rendu associé à la consultation
-    cr = get_object_or_404(CompteRenduAccouchement, consultation__id=consultation_id)
-    
-    # Récupération du rôle pour le template (si nécessaire)
-    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if (role_obj and role_obj.fonctionKey) else "Invité"
+
+    cr = get_object_or_404(
+        CompteRenduAccouchement.objects.select_related(
+            'consultation__triage__patient',
+            'prestation'
+        ),
+        consultation__id=consultation_id,
+        consultation__hopital=hopital_user
+    )
 
     return render(request, 'back-end/accouchement/voir_cr.html', {
         'cr': cr,
@@ -4673,25 +4741,21 @@ def enregistrer_patient_entreprise(request):
 # =================================================================================================
 @login_required
 def creer_session_soins(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-    
-    # 1. Vérification du rôle utilisateur
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    
+
     if fonctionKey not in ['receptionniste', 'caissier', 'admin']:
         messages.error(request, "Accès refusé : droits insuffisants.")
         return redirect('liste_patients')
-    
-    # 2. Vérification : Fiche payée obligatoire
+
+    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
+
     if not getattr(patient, 'fiche_payee', False):
         messages.error(request, "Le patient doit d'abord payer sa fiche d'ouverture.")
         return redirect('enregistrement_patient')
 
-    # 3. Traitement du formulaire
     if request.method == 'POST':
-        # --- PROTECTION ANTI-DOUBLON ---
-        # Empêche la création d'une session identique dans les 10 dernières secondes
         seuil = timezone.now() - timedelta(seconds=10)
         doublon = SessionSoins.objects.filter(patient=patient, date_creation__gte=seuil).exists()
         if doublon:
@@ -4703,47 +4767,43 @@ def creer_session_soins(request, patient_id):
             messages.error(request, "Veuillez sélectionner au moins une prestation.")
             return redirect('creer_session_soins', patient_id=patient.id)
 
-        # Vérification des droits sur les prestations (Sexe)
-        autorisees_qs = Prestation.objects.filter(categorie='CONS')
+        autorisees_qs = Prestation.objects.filter(hopital=hopital_user, categorie='CONS')
         if patient.sexe == 'F':
-            autorisees_qs = autorisees_qs | Prestation.objects.filter(categorie='CONS_MAT')
-        
-        autorisees_ids = autorisees_qs.values_list('id', flat=True)
-        
+            autorisees_qs = autorisees_qs | Prestation.objects.filter(hopital=hopital_user, categorie='CONS_MAT')
+
+        autorisees_ids = set(autorisees_qs.values_list('id', flat=True))
+
         for p_id in prestation_ids:
             if int(p_id) not in autorisees_ids:
                 messages.error(request, "Erreur : Une prestation sélectionnée est invalide.")
                 return redirect('creer_session_soins', patient_id=patient.id)
 
-        # Création sécurisée
         try:
             with transaction.atomic():
-                session = SessionSoins.objects.create(patient=patient)
-                prestations = Prestation.objects.filter(id__in=prestation_ids)
-                
+                session = SessionSoins.objects.create(patient=patient, hopital=hopital_user)
+                prestations = Prestation.objects.filter(id__in=prestation_ids, hopital=hopital_user)
+
                 lignes = [
-                    LigneFacture(session=session, prestation=p, prix_facture=p.prix) 
+                    LigneFacture(session=session, prestation=p, prix_facture=p.prix, hopital=hopital_user)
                     for p in prestations
                 ]
                 LigneFacture.objects.bulk_create(lignes)
-                
+
                 messages.success(request, "Session créée avec succès.")
                 return redirect('paiement_session', session_id=session.id)
         except Exception as e:
             messages.error(request, f"Erreur critique lors de la création : {str(e)}")
 
-    # 4. Chargement des prestations autorisées pour l'affichage
     if patient.sexe == 'M':
-        prestations = Prestation.objects.filter(categorie='CONS')
+        prestations = Prestation.objects.filter(hopital=hopital_user, categorie='CONS')
     else:
-        prestations = Prestation.objects.filter(categorie__in=['CONS', 'CONS_MAT'])
-    
+        prestations = Prestation.objects.filter(hopital=hopital_user, categorie__in=['CONS', 'CONS_MAT'])
+
     return render(request, 'back-end/consultation/creer_session.html', {
         'patient': patient,
         'prestations': prestations,
         'fonctionKey': fonctionKey
     })
-
 #
 # ===================================================================================================================
 # LISTE DES SESSIONS
@@ -4780,33 +4840,30 @@ def liste_sessions(request):
 # ====================================================================================================================
 @login_required
 def payer_session(request, session_id):
-    """
-    Vue permettant d'encaisser un paiement pour une session de soins donnée.
-    """
-    # 1. Récupération de la session
-    session = get_object_or_404(SessionSoins, pk=session_id)
-    
-    # 2. Récupération du taux de change actuel
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    session = get_object_or_404(
+        SessionSoins.objects.select_related('patient'),
+        pk=session_id,
+        hopital=hopital_user
+    )
+
     taux = ConfigurationHopital.get_taux()
 
-    # 3. Vérification si déjà soldé
-    if session.est_payee:
+    if session.estpayee:
         messages.warning(request, "Cette session est déjà soldée.")
         return redirect('liste_sessions')
 
-    # 4. Traitement du paiement (POST)
     if request.method == 'POST':
         try:
             montant_saisi = Decimal(request.POST.get('montant', 0))
             reduction = Decimal(request.POST.get('reduction', 0))
             devise = request.POST.get('devise', 'USD')
 
-            # Conversion si CDF vers USD (base de données en USD)
             montant_verse = montant_saisi / taux if devise == 'CDF' else montant_saisi
 
-            # Création de l'objet Paiement 
-            # La logique métier (calcul du reste, mise à jour de la session) 
-            # est gérée automatiquement dans Paiement.save()
             Paiement.objects.create(
                 session=session,
                 patient=session.patient,
@@ -4814,28 +4871,20 @@ def payer_session(request, session_id):
                 montant_verse=montant_verse,
                 montant_reduction=reduction,
                 devise='USD',
-                caissier=request.user
+                caissier=request.user,
+                hopital=hopital_user
             )
-            
+
             messages.success(request, "Paiement et remise enregistrés avec succès.")
             return redirect('liste_sessions')
         except Exception as e:
             messages.error(request, f"Erreur lors du paiement : {str(e)}")
 
-    # 5. Calculs pour l'affichage (GET)
-    # Somme des versements et réductions déjà effectués
     total_deja_paye = session.paiements.aggregate(models.Sum('montant_verse'))['montant_verse__sum'] or 0
     total_reductions = session.paiements.aggregate(models.Sum('montant_reduction'))['montant_reduction__sum'] or 0
-    reste_a_payer = max(0, session.total_a_payer - total_deja_paye - total_reductions)
-    
-    # Calcul du reste en CDF pour l'affichage direct dans le template
+    reste_a_payer = max(0, session.totalapayer - total_deja_paye - total_reductions)
     reste_a_payer_cdf = float(reste_a_payer) * float(taux)
 
-    # 6. Vérification du rôle utilisateur
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    # 7. Rendu de la page
     return render(request, 'back-end/consultation/payer_session.html', {
         'session': session,
         'reste_a_payer': reste_a_payer,
@@ -4844,25 +4893,31 @@ def payer_session(request, session_id):
         'fonctionKey': fonctionKey
     })
 
-
 #
 # ==============================================================================================
 # DETAILS DE CONSULTATION 
 # ==============================================================================================
 @login_required
 def detail_consultation(request, session_id):
-    session = get_object_or_404(SessionSoins, id=session_id)
-    # On récupère tous les signes vitaux du patient lié à cette session
-    historique_signes = SigneVital.objects.filter(patient=session.patient).order_by('-date_prelevement')
-
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    session = get_object_or_404(
+        SessionSoins.objects.select_related('patient'),
+        id=session_id,
+        hopital=hopital_user
+    )
+
+    historique_signes = SigneVital.objects.filter(
+        patient=session.patient,
+        hopital=hopital_user
+    ).order_by('-dateprelevement')
 
     return render(request, 'back-end/consultation/details.html', {
         'session': session,
-        'historique_signes': historique_signes ,
-        'fonctionKey' : fonctionKey
+        'historique_signes': historique_signes,
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -4871,18 +4926,23 @@ def detail_consultation(request, session_id):
 # ===========================================================================================
 @login_required
 def liste_sessions_infirmier(request):
-    # On filtre uniquement les sessions qui ont au moins un paiement
-    # On précharge 'items__prestation' pour que le template puisse accéder aux noms
-    sessions = SessionSoins.objects.annotate(
-        a_un_paiement=Exists(Paiement.objects.filter(session=OuterRef('pk')))
-    ).filter(a_un_paiement=True).prefetch_related('items__prestation').order_by('-date_creation')
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    sessions = SessionSoins.objects.filter(
+        hopital=hopital_user
+    ).annotate(
+        a_un_paiement=Exists(
+            Paiement.objects.filter(session=OuterRef('pk'))
+        )
+    ).filter(
+        a_un_paiement=True
+    ).prefetch_related('items__prestation').order_by('-datecreation')
 
     return render(request, 'back-end/consultation/liste_sessions_infirmier.html', {
         'sessions': sessions,
-        'fonctionKey': fonctionKey    
+        'fonctionKey': fonctionKey
     })
 
 #
@@ -4891,8 +4951,16 @@ def liste_sessions_infirmier(request):
 # ===========================================================================================
 @login_required
 def saisir_signes_vitaux(request, session_id):
-    session = get_object_or_404(SessionSoins, id=session_id) 
-    
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    session = get_object_or_404(
+        SessionSoins.objects.select_related('patient'),
+        id=session_id,
+        hopital=hopital_user
+    )
+
     if request.method == 'POST':
         form = SigneVitalForm(request.POST)
         if form.is_valid():
@@ -4900,17 +4968,16 @@ def saisir_signes_vitaux(request, session_id):
             signes.session = session
             signes.patient = session.patient
             signes.infirmier = request.user
+            signes.hopital = hopital_user
             signes.save()
             return redirect('liste_sessions_infirmier')
     else:
         form = SigneVitalForm()
-    
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/consultation/saisie_signes.html', {
-        'form': form, 'session': session ,
-        'fonctionKey' : fonctionKey
+        'form': form,
+        'session': session,
+        'fonctionKey': fonctionKey
     })
 
 
@@ -4921,36 +4988,40 @@ def saisir_signes_vitaux(request, session_id):
 # ===============================================================================================
 @login_required
 def ajouter_paiement_dette(request, paiement_id):
-    paiement = get_object_or_404(Paiement, id=paiement_id)
-    
-    # On récupère le taux actuel (depuis ton modèle de configuration)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    paiement = get_object_or_404(Paiement, id=paiement_id, hopital=hopital_user)
+
     taux = Decimal(str(ConfigurationHopital.get_taux()))
 
     if request.method == 'POST':
         montant_saisi = Decimal(str(request.POST.get('montant')))
-        devise_paiement = request.POST.get('devise_paiement') # USD ou CDF
+        devise_paiement = request.POST.get('devise_paiement')
 
-        # 1. Conversion du montant saisi en USD (la devise de la vente)
         montant_en_usd = montant_saisi
         if devise_paiement == 'CDF':
             montant_en_usd = montant_saisi / taux
 
-        # 2. Vérification
         if montant_en_usd > paiement.reste_a_payer:
             messages.error(request, f"Le montant saisi ({montant_saisi} {devise_paiement}) dépasse la dette restante en USD.")
             return redirect('liste_ventes')
 
-        # 3. Sauvegarde
         with transaction.atomic():
             paiement.reste_a_payer -= montant_en_usd
             paiement.montant_verse += montant_en_usd
             paiement.save()
-            
+
             messages.success(request, "Dette mise à jour avec succès.")
-            
+
         return redirect('liste_ventes')
 
-
+    return render(request, 'back-end/consultation/ajouter_paiement_dette.html', {
+        'paiement': paiement,
+        'taux': taux,
+        'fonctionKey': fonctionKey
+    })
 # 
 # ===========================================================================================================
 # ENREGISTREMENT DU PATIENT EXTERNE POUR LES EXAMENS 

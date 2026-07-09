@@ -10,10 +10,10 @@
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-            
+
                 <!-- Header -->
                 <div class="page-header">
                     <div class="row">
@@ -27,46 +27,43 @@
                     </div>
                 </div>
 
-                <!-- 📊 STATISTIQUES DES RECETTES TEMPORELLES (ENTRÉES) -->
+                <!-- STATISTIQUES DES RECETTES -->
                 <h4 class="mb-3 text-secondary"><i class="fa fa-chart-line"></i> Statistiques des Recettes</h4>
                 <div class="row mb-2">
-                    
-                    <!-- AUJOURD'HUI -->
+
                     <div class="col-12 col-sm-6 col-md-4 mb-3">
                         <div class="card dash-widget shadow-sm h-100" style="border-left: 4px solid #28a745; margin-bottom: 0;">
                             <div class="card-body">
                                 <span class="dash-widget-icon bg-success"><i class="fa fa-calendar-day"></i></span>
                                 <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ aujourdhui_usd|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ aujourdhui_cdf|floatformat:2 }} CDF</h4>
+                                    <h4 class="text-success font-weight-bold mb-1">{{ aujourdhui_usd|default:0|floatformat:2 }} USD</h4>
+                                    <h4 class="text-info font-weight-bold mb-2">{{ aujourdhui_cdf|default:0|floatformat:2 }} CDF</h4>
                                     <span class="widget-title text-muted small font-weight-bold">Aujourd'hui</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- CETTE SEMAINE -->
                     <div class="col-12 col-sm-6 col-md-4 mb-3">
                         <div class="card dash-widget shadow-sm" style="border-left: 4px solid #17a2b8; margin-bottom: 0;">
                             <div class="card-body">
                                 <span class="dash-widget-icon bg-info"><i class="fa fa-calendar-week"></i></span>
                                 <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ semaine_usd|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ semaine_cdf|floatformat:2 }} CDF</h4>
+                                    <h4 class="text-success font-weight-bold mb-1">{{ semaine_usd|default:0|floatformat:2 }} USD</h4>
+                                    <h4 class="text-info font-weight-bold mb-2">{{ semaine_cdf|default:0|floatformat:2 }} CDF</h4>
                                     <span class="widget-title text-muted small font-weight-bold">7 derniers jours</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- CE MOIS -->
                     <div class="col-12 col-md-4 mb-3">
                         <div class="card dash-widget shadow-sm" style="border-left: 4px solid #007bff; margin-bottom: 0;">
                             <div class="card-body">
                                 <span class="dash-widget-icon bg-primary"><i class="fa fa-calendar-alt"></i></span>
                                 <div class="dash-widget-info">
-                                    <h4 class="text-success font-weight-bold mb-1">{{ mois_usd|floatformat:2 }} USD</h4>
-                                    <h4 class="text-info font-weight-bold mb-2">{{ mois_cdf|floatformat:2 }} CDF</h4>
+                                    <h4 class="text-success font-weight-bold mb-1">{{ mois_usd|default:0|floatformat:2 }} USD</h4>
+                                    <h4 class="text-info font-weight-bold mb-2">{{ mois_cdf|default:0|floatformat:2 }} CDF</h4>
                                     <span class="widget-title text-muted small font-weight-bold">Mois en cours</span>
                                 </div>
                             </div>
@@ -75,7 +72,7 @@
 
                 </div>
 
-                <!-- 🏦 BILAN COMPTABLE GLOBAL (Calcul du restant réel en caisse) -->
+                <!-- Bilan global -->
                 <div class="card shadow-sm mb-4 border">
                     <div class="card-header bg-dark text-white">
                         <h5 class="card-title mb-0"><i class="fa fa-vault text-warning"></i> Coffre-fort : Bilan global de la caisse</h5>
@@ -92,23 +89,17 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- LIGNE USD -->
                                     <tr>
                                         <td class="text-left font-weight-bold text-dark">Dollar Américain (USD)</td>
-                                        <td class="text-success font-weight-bold">{{ total_usd|floatformat:2 }} USD</td>
-                                        <td class="text-danger font-weight-bold">{{ depense_totale_usd|floatformat:2 }} USD</td>
-                                        <td class="bg-light font-weight-bold text-success h5 mb-0">
-                                            {{ restant_usd|floatformat:2 }} USD
-                                        </td>
+                                        <td class="text-success font-weight-bold">{{ total_usd|default:0|floatformat:2 }} USD</td>
+                                        <td class="text-danger font-weight-bold">{{ depense_totale_usd|default:0|floatformat:2 }} USD</td>
+                                        <td class="bg-light font-weight-bold text-success h5 mb-0">{{ restant_usd|default:0|floatformat:2 }} USD</td>
                                     </tr>
-                                    <!-- LIGNE CDF -->
                                     <tr>
                                         <td class="text-left font-weight-bold text-dark">Franc Congolais (CDF)</td>
-                                        <td class="text-info font-weight-bold">{{ total_cdf|floatformat:2 }} CDF</td>
-                                        <td class="text-danger font-weight-bold">{{ depense_totale_cdf|floatformat:2 }} CDF</td>
-                                        <td class="bg-light font-weight-bold text-info h5 mb-0">
-                                            {{ restant_cdf|floatformat:2 }} CDF
-                                        </td>
+                                        <td class="text-info font-weight-bold">{{ total_cdf|default:0|floatformat:2 }} CDF</td>
+                                        <td class="text-danger font-weight-bold">{{ depense_totale_cdf|default:0|floatformat:2 }} CDF</td>
+                                        <td class="bg-light font-weight-bold text-info h5 mb-0">{{ restant_cdf|default:0|floatformat:2 }} CDF</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -116,8 +107,124 @@
                     </div>
                 </div>
 
+                <!-- Total par hôpital -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0"><i class="fa fa-hospital"></i> Total des Recettes par Hôpital</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 text-nowrap">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Hôpital</th>
+                                        <th class="text-success">Total USD</th>
+                                        <th class="text-info">Total CDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for h in recettes_par_hopital %}
+                                    <tr>
+                                        <td class="font-weight-bold text-dark">{{ h.hopital__nomH|default:"-" }}</td>
+                                        <td class="text-success font-weight-bold">{{ h.total_usd|default:0|floatformat:2 }} USD</td>
+                                        <td class="text-info font-weight-bold">{{ h.total_cdf|default:0|floatformat:2 }} CDF</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted p-3">Aucune recette disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistiques par hôpital -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="card-title mb-0"><i class="fa fa-hospital"></i> Statistiques par Hôpital</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 text-nowrap">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Hôpital</th>
+                                        <th class="text-success">Recettes USD</th>
+                                        <th class="text-info">Recettes CDF</th>
+                                        <th class="text-danger">Dépenses USD</th>
+                                        <th class="text-danger">Dépenses CDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for h in recettes_par_hopital %}
+                                    <tr>
+                                        <td class="font-weight-bold text-dark">{{ h.hopital__nomH|default:"-" }}</td>
+                                        <td class="text-success font-weight-bold">{{ h.total_usd|default:0|floatformat:2 }} USD</td>
+                                        <td class="text-info font-weight-bold">{{ h.total_cdf|default:0|floatformat:2 }} CDF</td>
+                                        <td class="text-danger font-weight-bold">
+                                            {% for d in depenses_par_hopital %}
+                                                {% if d.hopital__id == h.hopital__id %}
+                                                    {{ d.depenses_usd|default:0|floatformat:2 }} USD
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td class="text-danger font-weight-bold">
+                                            {% for d in depenses_par_hopital %}
+                                                {% if d.hopital__id == h.hopital__id %}
+                                                    {{ d.depenses_cdf|default:0|floatformat:2 }} CDF
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted p-3">Aucune statistique par hôpital disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recettes par hôpital et par jour -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0"><i class="fa fa-calendar"></i> Recettes par Hôpital et par Jour</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 text-nowrap">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Hôpital</th>
+                                        <th class="text-success">USD</th>
+                                        <th class="text-info">CDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in recettes_par_hopital_par_jour %}
+                                    <tr>
+                                        <td>{{ r.jour|date:"d/m/Y" }}</td>
+                                        <td class="font-weight-bold">{{ r.hopital__nomH|default:"-" }}</td>
+                                        <td class="text-success font-weight-bold">{{ r.total_usd|default:0|floatformat:2 }} USD</td>
+                                        <td class="text-info font-weight-bold">{{ r.total_cdf|default:0|floatformat:2 }} CDF</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted p-3">Aucune recette disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
-                    <!-- 📊 VENTILATION DES ENTRÉES PAR SERVICE -->
                     <div class="col-12 col-lg-4 mb-4">
                         <div class="card shadow-sm h-100 mb-0">
                             <div class="card-header bg-dark">
@@ -137,8 +244,12 @@
                                             {% for s in services_stats %}
                                             <tr>
                                                 <td class="font-weight-bold text-secondary">{{ s.nom }}</td>
-                                                <td class="text-success font-weight-bold">{{ s.usd|floatformat:2 }} $</td>
-                                                <td class="text-info font-weight-bold">{{ s.cdf|floatformat:2 }} FC</td>
+                                                <td class="text-success font-weight-bold">{{ s.usd|default:0|floatformat:2 }} $</td>
+                                                <td class="text-info font-weight-bold">{{ s.cdf|default:0|floatformat:2 }} FC</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted p-3">Aucune statistique disponible.</td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
@@ -148,7 +259,6 @@
                         </div>
                     </div>
 
-                    <!-- 📜 JOURNAL DES TRANSACTIONS EN TEMPS RÉEL -->
                     <div class="col-12 col-lg-8 mb-4">
                         <div class="card card-table shadow-sm mb-0">
                             <div class="card-header bg-primary">
@@ -165,57 +275,78 @@
                                                 <th>Montant Versé</th>
                                                 <th>Dette / Reste</th>
                                                 <th>Caissier</th>
+                                                <th>Hôpital</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {% for p in paiements %}
                                             <tr>
-                                                <!-- Réf & Date -->
                                                 <td>
                                                     <span class="font-weight-bold text-primary">#{{ p.id }}</span><br>
                                                     <small class="text-muted">{{ p.date_paiement|date:"d/m/Y à H:i" }}</small>
                                                 </td>
-                                                
-                                                <!-- Patient -->
                                                 <td>
-                                                    <span class="font-weight-bold text-dark">{{ p.patient.noms }}</span>
+                                                    <span class="font-weight-bold text-dark">{{ p.patient.noms|default:"-" }}</span>
                                                 </td>
-                                                
-                                                <!-- Service -->
                                                 <td>
                                                     {% if p.service == 'FICHE' %}
                                                         <span class="badge badge-pill badge-secondary">Fiche</span>
+                                                    {% elif p.service == 'CONSULTATION' %}
+                                                        <span class="badge badge-pill badge-primary">Consultation</span>
                                                     {% elif p.service == 'LABO' %}
                                                         <span class="badge badge-pill badge-success">Labo</span>
                                                     {% elif p.service == 'ECHOGRAPHIE' %}
                                                         <span class="badge badge-pill badge-info">Échographie</span>
                                                     {% elif p.service == 'RADIO' %}
                                                         <span class="badge badge-pill badge-warning">Radio</span>
+                                                    {% elif p.service == 'SOIN' %}
+                                                        <span class="badge badge-pill badge-dark">Soins</span>
+                                                    {% elif p.service == 'MATERNITE' %}
+                                                        <span class="badge badge-pill badge-danger">Maternité</span>
+                                                    {% elif p.service == 'DECES' %}
+                                                        <span class="badge badge-pill badge-secondary">Décès</span>
+                                                    {% elif p.service == 'EXAMENS' %}
+                                                        <span class="badge badge-pill badge-info">Examens</span>
+                                                    {% elif p.service == 'CHIRURGIE' %}
+                                                        <span class="badge badge-pill badge-danger">Chirurgie</span>
+                                                    {% elif p.service == 'CARTE_FIDELITE' %}
+                                                        <span class="badge badge-pill badge-warning">Carte Fidélité</span>
+                                                    {% elif p.service == 'PHARMACIE' %}
+                                                        <span class="badge badge-pill badge-success">Pharmacie</span>
+                                                    {% elif p.service == 'EXAMEN_EXTERNE' %}
+                                                        <span class="badge badge-pill badge-primary">Examen Externe</span>
+                                                    {% elif p.service == 'ENTREPRISE' %}
+                                                        <span class="badge badge-pill badge-dark">Entreprise</span>
+                                                    {% elif p.service == 'HOSPITALISATION' %}
+                                                        <span class="badge badge-pill badge-info">Hospitalisation</span>
+                                                    {% else %}
+                                                        <span class="badge badge-pill badge-dark">Autre</span>
                                                     {% endif %}
                                                 </td>
-                                                
-                                                <!-- Montant Versé -->
                                                 <td class="font-weight-bold {% if p.devise == 'USD' %}text-success{% else %}text-info{% endif %}">
-                                                    {{ p.montant_verse|floatformat:2 }} {{ p.devise }}
+                                                    {{ p.montant_verse|default:0|floatformat:2 }} {{ p.devise }}
                                                 </td>
-                                                
-                                                <!-- Dette / Reste à payer -->
                                                 <td>
-                                                    {% if p.reste_a_payer > 0 %}
+                                                    {% if p.reste_a_payer and p.reste_a_payer > 0 %}
                                                         <span class="text-danger font-weight-bold">{{ p.reste_a_payer|floatformat:2 }} {{ p.devise }}</span>
                                                     {% else %}
                                                         <span class="text-muted font-italic" style="font-size: 11px;">Soldé</span>
                                                     {% endif %}
                                                 </td>
-                                                
-                                                <!-- Caissier -->
                                                 <td>
-                                                    <small class="badge badge-light"><i class="fa fa-user"></i> {{ p.caissier.username }}</small>
+                                                    <small class="badge badge-light">
+                                                        <i class="fa fa-user"></i> {{ p.caissier.username|default:"-" }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <small class="badge badge-light">
+                                                        <i class="fa fa-hospital"></i> {{ p.hopital.nomH|default:"-" }}
+                                                    </small>
                                                 </td>
                                             </tr>
                                             {% empty %}
                                             <tr>
-                                                <td colspan="6" class="text-center text-muted p-4">
+                                                <td colspan="7" class="text-center text-muted p-4">
                                                     Aucune transaction enregistrée dans le journal.
                                                 </td>
                                             </tr>

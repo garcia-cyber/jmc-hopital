@@ -1645,94 +1645,124 @@ def uniquement_resultats_examens(request, patient_id):
 # ==================================================================================================
 @login_required
 def dashboard_finance(request):
-    # --- GESTION DES DATES --- 
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    role = Fonction.objects.select_related('fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    if fonctionKey != 'admin':
+        messages.error(request, "Accès refusé : réservée à l'administration.")
+        return redirect('home')
+
     maintenant = timezone.now()
-    
-    # Aujourd'hui à minuit (00:00:00)
     debut_aujourdhui = maintenant.replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Début de la semaine (7 jours glissants)
     debut_semaine = debut_aujourdhui - timedelta(days=7)
-    
-    # Début du mois (Le 1er du mois en cours à 00:00:00)
     debut_mois = debut_aujourdhui.replace(day=1)
 
-    # --- 1. CALCUL DES ENTRÉES GLOBALES (PAIEMENTS - TOUT HISTORIQUE) ---
-    total_usd = Paiement.objects.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-    total_cdf = Paiement.objects.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0.00
+    paiements_qs = Paiement.objects.select_related('patient', 'caissier', 'hopital')
+    depenses_qs = Depense.objects.select_related('auteur', 'hopital')
 
-    # --- 2. CALCUL DES SORTIES GLOBALES (DÉPENSES - TOUT HISTORIQUE) ---
-    depense_totale_usd = Depense.objects.filter(devise='USD').aggregate(total=Sum('montant'))['total'] or 0.00
-    depense_totale_cdf = Depense.objects.filter(devise='CDF').aggregate(total=Sum('montant'))['total'] or 0.00
+    total_usd = paiements_qs.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+    total_cdf = paiements_qs.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    # --- 3. CALCUL DU SOLDE RESTANT REEL EN CAISSE ---
+    depense_totale_usd = depenses_qs.filter(devise='USD').aggregate(total=Sum('montant'))['total'] or 0
+    depense_totale_cdf = depenses_qs.filter(devise='CDF').aggregate(total=Sum('montant'))['total'] or 0
+
     restant_usd = float(total_usd) - float(depense_totale_usd)
     restant_cdf = float(total_cdf) - float(depense_totale_cdf)
 
-    # --- 4. STATISTIQUES DES ENTRÉES PAR PÉRIODES (USD et CDF) ---
-    # Aujourd'hui
-    recette_aujourdhui_usd = Paiement.objects.filter(date_paiement__gte=debut_aujourdhui, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-    recette_aujourdhui_cdf = Paiement.objects.filter(date_paiement__gte=debut_aujourdhui, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0.00
+    aujourdhui_usd = paiements_qs.filter(
+        date_paiement__gte=debut_aujourdhui,
+        devise='USD'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    # Cette Semaine
-    recette_semaine_usd = Paiement.objects.filter(date_paiement__gte=debut_semaine, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-    recette_semaine_cdf = Paiement.objects.filter(date_paiement__gte=debut_semaine, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0.00
+    aujourdhui_cdf = paiements_qs.filter(
+        date_paiement__gte=debut_aujourdhui,
+        devise='CDF'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    # Ce Mois
-    recette_mois_usd = Paiement.objects.filter(date_paiement__gte=debut_mois, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-    recette_mois_cdf = Paiement.objects.filter(date_paiement__gte=debut_mois, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0.00
+    semaine_usd = paiements_qs.filter(
+        date_paiement__gte=debut_semaine,
+        devise='USD'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    # --- 5. CALCUL DES ENTRÉES PAR SERVICE ET PAR DEVISE (TOUT HISTORIQUE) ---
+    semaine_cdf = paiements_qs.filter(
+        date_paiement__gte=debut_semaine,
+        devise='CDF'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+
+    mois_usd = paiements_qs.filter(
+        date_paiement__gte=debut_mois,
+        devise='USD'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+
+    mois_cdf = paiements_qs.filter(
+        date_paiement__gte=debut_mois,
+        devise='CDF'
+    ).aggregate(total=Sum('montant_verse'))['total'] or 0
+
+    recettes_par_hopital = Paiement.objects.values(
+        'hopital__id',
+        'hopital__nomH'
+    ).annotate(
+        total_usd=Sum('montant_verse', filter=Q(devise='USD')),
+        total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
+    ).order_by('hopital__nomH')
+
+    recettes_par_hopital_par_jour = Paiement.objects.annotate(
+        jour=TruncDay('date_paiement')
+    ).values(
+        'jour',
+        'hopital__id',
+        'hopital__nomH'
+    ).annotate(
+        total_usd=Sum('montant_verse', filter=Q(devise='USD')),
+        total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
+    ).order_by('jour', 'hopital__nomH')
+
+    depenses_par_hopital = Depense.objects.values(
+        'hopital__id',
+        'hopital__nomH'
+    ).annotate(
+        depenses_usd=Sum('montant', filter=Q(devise='USD')),
+        depenses_cdf=Sum('montant', filter=Q(devise='CDF')),
+    ).order_by('hopital__nomH')
+
     services_stats = []
     for code, nom_service in Paiement.SERVICES:
-        usd_service = Paiement.objects.filter(service=code, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-        cdf_service = Paiement.objects.filter(service=code, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0.00
-        
+        usd_service = paiements_qs.filter(service=code, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+        cdf_service = paiements_qs.filter(service=code, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
         services_stats.append({
             'nom': nom_service,
             'usd': usd_service,
-            'cdf': cdf_service
+            'cdf': cdf_service,
         })
 
-    # --- 6. LISTE DES PAIEMENTS COMPLETS ---
-    tous_les_paiements = Paiement.objects.select_related('patient', 'caissier').order_by('-date_paiement')
+    tous_les_paiements = paiements_qs.order_by('-date_paiement')
 
-    # Extraction du rôle pour la sidebar
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
-
-    # --- 7. ENVOI AU TEMPLATE ---
     context = {
-        # Entrées globales (Historique total des paiements reçus)
+        'aujourdhui_usd': aujourdhui_usd,
+        'aujourdhui_cdf': aujourdhui_cdf,
+        'semaine_usd': semaine_usd,
+        'semaine_cdf': semaine_cdf,
+        'mois_usd': mois_usd,
+        'mois_cdf': mois_cdf,
         'total_usd': total_usd,
         'total_cdf': total_cdf,
-        
-        # Sorties globales (Historique total des dépenses effectuées)
         'depense_totale_usd': depense_totale_usd,
         'depense_totale_cdf': depense_totale_cdf,
-        
-        # Net physique restant dans le coffre (Entrées - Sorties)
         'restant_usd': restant_usd,
         'restant_cdf': restant_cdf,
-        
-        # Stats temporelles des entrées : USD
-        'aujourdhui_usd': recette_aujourdhui_usd,
-        'semaine_usd': recette_semaine_usd,
-        'mois_usd': recette_mois_usd,
-        
-        # Stats temporelles des entrées : CDF
-        'aujourdhui_cdf': recette_aujourdhui_cdf,
-        'semaine_cdf': recette_semaine_cdf,
-        'mois_cdf': recette_mois_cdf,
-        
-        # Tables et meta
         'services_stats': services_stats,
         'paiements': tous_les_paiements,
+        'recettes_par_hopital': recettes_par_hopital,
+        'recettes_par_hopital_par_jour': recettes_par_hopital_par_jour,
+        'depenses_par_hopital': depenses_par_hopital,
         'fonctionKey': fonctionKey,
-        'titre_page': "Journal de Caisse & Finances - Moyanoli"
+        'titre_page': "Journal de Caisse & Finances - JMC",
     }
     return render(request, 'back-end/finance/dashboard_finance.html', context)
-
 # ==================================================================================================
 # #41 : FINANCE GESTION DE DETTE 
 # ==================================================================================================

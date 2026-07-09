@@ -10,16 +10,44 @@
         .badge-labo { background-color: #e6f7ed; color: #1f7a42; border: 1px solid #c2eed4; }
         .badge-echo { background-color: #fff9db; color: #926c00; border: 1px solid #ffe8cc; }
         .badge-radio { background-color: #fff0f1; color: #b82c39; border: 1px solid #ffccd1; }
-        .exam-card { border-left: 4px solid #3498db; background: #f8f9fa; padding: 8px; margin-bottom: 8px; border-radius: 4px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
-        .btn-exam { padding: 2px 8px; font-size: 0.75rem; }
+        .exam-card {
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .exam-info { flex: 1; }
+        .btn-exam { padding: 2px 8px; font-size: 0.75rem; margin-top: 4px; }
         .status-locked { color: #7f8c8d; font-size: 0.9rem; font-weight: bold; }
+        .result-text {
+            display: block;
+            margin-top: 4px;
+            color: #212529;
+            font-size: 0.82rem;
+        }
+        .image-link {
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .empty-result {
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
                 <div class="page-header d-flex justify-content-between align-items-center mb-4">
@@ -43,31 +71,60 @@
                                     {% for c in consultations_en_attente %}
                                     <tr>
                                         <td class="align-middle">{{ c.triage.date_prelevement|date:"d/m/Y H:i" }}</td>
-                                        <td class="align-middle"><strong>{{ c.triage.patient.noms }}</strong></td>
+                                        <td class="align-middle">
+                                            <strong>{{ c.triage.patient.noms }}</strong>
+                                        </td>
                                         <td class="align-middle">
                                             {% for exam in c.examens.all %}
                                                 {% if exam.statut == 'TERMINE' %}
                                                 <div class="exam-card">
-                                                    <div>
+                                                    <div class="exam-info">
                                                         <span class="badge {% if exam.prestation.categorie == 'LABO' %}badge-labo{% elif exam.prestation.categorie == 'RADIO' %}badge-radio{% else %}badge-echo{% endif %}">
                                                             {{ exam.prestation.categorie }}
                                                         </span>
                                                         <strong>{{ exam.prestation.libelle }}</strong>
+
+                                                        {% if exam.resultat %}
+                                                            <span class="result-text">
+                                                                <strong>Résultat :</strong> {{ exam.resultat }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="empty-result">Aucun résultat texte saisi</span>
+                                                        {% endif %}
+
+                                                        {% if exam.image_resultat %}
+                                                            <a href="{{ exam.image_resultat.url }}" target="_blank" class="btn btn-outline-secondary btn-exam image-link">
+                                                                <i class="fa fa-image"></i> Voir image
+                                                            </a>
+                                                        {% endif %}
                                                     </div>
-                                                    <a href="{% url 'imprimer_resultat' exam.id %}" target="_blank" class="btn btn-outline-info btn-exam"><i class="fa fa-print"></i></a>
+
+                                                    <a href="{% url 'imprimer_resultat' exam.id %}" target="_blank" class="btn btn-outline-info btn-exam">
+                                                        <i class="fa fa-print"></i>
+                                                    </a>
                                                 </div>
                                                 {% endif %}
+                                            {% empty %}
+                                                <small class="text-muted">Aucun résultat disponible</small>
                                             {% endfor %}
                                         </td>
                                         <td class="text-center align-middle">
                                             {% if c.ordonnance_set.exists %}
                                                 <div class="status-locked"><i class="fa fa-lock"></i> Verrouillé</div>
-                                                <a href="{% url 'imprimer_consultation' c.id %}" target="_blank" class="btn btn-success btn-sm mt-2"><i class="fa fa-print"></i> Tout imprimer</a>
+                                                <a href="{% url 'imprimer_consultation' c.id %}" target="_blank" class="btn btn-success btn-sm mt-2">
+                                                    <i class="fa fa-print"></i> Tout imprimer
+                                                </a>
                                             {% else %}
                                                 <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal{{ c.id }}">
                                                     <i class="fa fa-pencil-alt"></i> Traiter
                                                 </button>
                                             {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center p-4 text-muted">
+                                            Aucune consultation en attente.
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -89,10 +146,12 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="enregistrer_ordonnance">
                     <input type="hidden" name="consultation_id" value="{{ c.id }}">
+
                     <div class="modal-header" style="background: #2c3e50; color: white;">
                         <h5 class="modal-title">Traitement : {{ c.triage.patient.noms }}</h5>
                         <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                     </div>
+
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6 form-group">
@@ -116,7 +175,7 @@
                                         <option value="">-- Choisir une destination --</option>
                                         <option value="PHARMACIE">Pharmacie</option>
                                         <option value="Hospitalisation">Hospitalisation</option>
-                                        <option value="ACCOUCHEMENT">ACCOUCHEMENT</option>
+                                        <option value="ACCOUCHEMENT">Accouchement</option>
                                         <option value="BLOC_OPERATOIRE">Bloc Opératoire</option>
                                         <option value="SORTIE">Sortie</option>
                                     </select>
@@ -125,7 +184,7 @@
                                     <input type="text" name="observation_orientation" class="form-control" placeholder="Observations">
                                 </div>
                             </div>
-                            
+
                             <div class="row mt-3" id="zone-lit-{{ c.id }}" style="display:none;">
                                 <div class="col-md-6">
                                     <label class="font-weight-bold">Date d'entrée</label>
@@ -156,6 +215,7 @@
                         </div>
                         <button type="button" class="btn btn-info btn-sm mt-2" onclick="ajouterLigne('{{ c.id }}')">+ Ajouter médicament</button>
                     </div>
+
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
                         <button type="submit" class="btn btn-success">Valider le Traitement</button>

@@ -754,30 +754,35 @@ def historique_paiements(request, patient_id):
 @login_required
 def imprimer_recu_direct(request, paiement_id):
     paiement = get_object_or_404(Paiement, id=paiement_id)
-    
-    # 🛠️ CORRECTION 1 : Suppression des 11 heures de décalage artificiel
-    # Django gère déjà le fuseau horaire via les filtres de template ou l'heure locale
-    date_reelle = paiement.date_paiement 
 
-    # 🛠️ CORRECTION 2 : Traçabilité des examens spécifiques à ce paiement
+    date_reelle = paiement.date_paiement
+
     examens_associes = []
-    if paiement.consultation and paiement.service in ['LABO', 'RADIO', 'ECHOGRAPHIE']:
-        # On extrait les examens payés (statut libéré) liés à cette consultation précise
+    nom_prestation = None
+
+    if paiement.consultation and paiement.service in ['LABO', 'RADIO', 'ECHOGRAPHIE', 'EXAMENS']:
         examens_payes = paiement.consultation.examens.filter(
             statut__in=['EN_COURS', 'TERMINE']
         ).select_related('prestation')
-        
+
         for exam in examens_payes:
-            examens_associes.append({
-                'libelle': exam.prestation.libelle,
-                'prix': exam.prestation.prix
-            })
+            if exam.prestation:
+                examens_associes.append({
+                    'libelle': exam.prestation.libelle,
+                    'prix': exam.prestation.prix
+                })
+
+        if paiement.service == 'EXAMENS' and examens_associes:
+            nom_prestation = examens_associes[0]['libelle']
+        elif examens_payes.exists() and examens_payes.first().prestation:
+            nom_prestation = examens_payes.first().prestation.libelle
 
     context = {
         'paiement': paiement,
         'patient': paiement.patient,
         'date_paiement_fix': date_reelle,
-        'examens_ticket': examens_associes,  # Envoyé au template du ticket
+        'examens_ticket': examens_associes,
+        'nom_prestation': nom_prestation,
     }
     return render(request, 'back-end/finance/ticket_paiement.html', context)
 # 23

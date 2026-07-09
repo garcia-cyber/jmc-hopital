@@ -8,36 +8,78 @@
     {% include 'back-end/includes/css.html' %}
     <style>
         .finance-page {
-            background: #f8fafc;
+            background:
+                radial-gradient(circle at top left, rgba(13, 110, 253, .10), transparent 30%),
+                radial-gradient(circle at top right, rgba(220, 53, 69, .08), transparent 28%),
+                #f4f7fb;
+            min-height: 100vh;
         }
 
         .finance-page .page-title {
-            font-weight: 700;
+            font-weight: 800;
             letter-spacing: .2px;
+            color: #0f172a;
+        }
+
+        .finance-shell {
+            padding-top: .25rem;
         }
 
         .form-card {
             border: 0;
-            border-radius: 16px;
-            box-shadow: 0 8px 28px rgba(15, 23, 42, .08);
+            border-radius: 22px;
             overflow: hidden;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .10);
+            background: rgba(255, 255, 255, .92);
+            backdrop-filter: blur(8px);
         }
 
         .form-card .card-header {
             border-bottom: 0;
-            padding: .9rem 1.1rem;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
         }
 
         .form-card .card-body {
-            padding: 1.25rem;
+            padding: 1.35rem;
         }
 
-        .info-box {
-            border-radius: 14px;
-            background: #e9f5ff;
-            border: 1px solid #cfe7ff;
-            padding: 12px 14px;
-            margin-bottom: 16px;
+        .balance-box {
+            border-radius: 18px;
+            background: linear-gradient(135deg, #eaf4ff 0%, #f7fbff 100%);
+            border: 1px solid #d6e8ff;
+            padding: 1rem 1.1rem;
+            margin-bottom: 1.15rem;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+        }
+
+        .balance-title {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: .55rem;
+        }
+
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .35rem 0;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .balance-row strong {
+            color: #0f172a;
+        }
+
+        .alert-soft {
+            border: 0;
+            border-radius: 16px;
+            padding: .95rem 1rem;
+            box-shadow: 0 10px 25px rgba(220, 53, 69, .08);
         }
 
         .field-error {
@@ -46,19 +88,52 @@
             margin-top: .35rem;
         }
 
+        .form-floating > .form-control,
+        .form-floating > .form-select {
+            border-radius: 14px;
+        }
+
         .form-control,
-        select,
+        .form-select,
         textarea {
-            border-radius: 12px !important;
-            min-height: 44px;
+            border-radius: 14px !important;
+            border: 1px solid #dbe4f0;
+        }
+
+        .form-control:focus,
+        .form-select:focus,
+        textarea:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .12);
         }
 
         textarea.form-control {
             min-height: 120px;
         }
 
+        .actions {
+            display: flex;
+            gap: .75rem;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
         .btn-action {
-            min-width: 160px;
+            min-width: 170px;
+            border-radius: 14px;
+            padding: .75rem 1rem;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, .18);
+        }
+
+        .btn-cancel {
+            border-radius: 14px;
+            padding: .75rem 1rem;
+        }
+
+        .muted-note {
+            font-size: .88rem;
+            color: #64748b;
         }
 
         @media (max-width: 767.98px) {
@@ -66,14 +141,15 @@
                 padding: 1rem;
             }
 
-            .btn-action {
-                width: 100%;
-                min-width: auto;
+            .actions {
+                flex-direction: column-reverse;
+                align-items: stretch;
             }
 
+            .btn-action,
             .btn-cancel {
                 width: 100%;
-                margin-bottom: .75rem;
+                min-width: auto;
             }
         }
     </style>
@@ -84,13 +160,13 @@
         {% include 'back-end/includes/sidebar.html' %}
 
         <div class="page-wrapper">
-            <div class="content container-fluid">
+            <div class="content container-fluid finance-shell">
 
-                <div class="page-header">
-                    <div class="row">
+                <div class="page-header mb-3">
+                    <div class="row align-items-center">
                         <div class="col-12">
-                            <h3 class="page-title"><i class="fa fa-money-bill-wave"></i> {{ titre_page }}</h3>
-                            <ul class="breadcrumb">
+                            <h3 class="page-title mb-1"><i class="fa fa-money-bill-wave text-danger"></i> {{ titre_page }}</h3>
+                            <ul class="breadcrumb mb-0">
                                 <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
                                 <li class="breadcrumb-item active">Nouvelle dépense</li>
                             </ul>
@@ -99,24 +175,41 @@
                 </div>
 
                 <div class="row justify-content-center">
-                    <div class="col-12 col-lg-7 col-xl-6">
+                    <div class="col-12 col-xl-7 col-lg-8">
                         <div class="card form-card">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-0">Formulaire de Décaissement</h5>
+                            <div class="card-header text-white">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="card-title mb-0 font-weight-bold">Formulaire de Décaissement</h5>
+                                        <small class="opacity-75">Saisissez une sortie de caisse selon votre périmètre d’accès</small>
+                                    </div>
+                                    <span class="badge badge-light px-3 py-2">Dépense</span>
+                                </div>
                             </div>
 
                             <div class="card-body">
-
-                                <div class="info-box">
-                                    <strong>Solde disponible :</strong><br>
-                                    USD : {{ solde_disponible_usd|floatformat:2 }} USD<br>
-                                    CDF : {{ solde_disponible_cdf|floatformat:2 }} CDF
+                                <div class="balance-box">
+                                    <div class="balance-title">
+                                        <i class="fa fa-wallet text-primary"></i>
+                                        <span>Solde disponible</span>
+                                    </div>
+                                    <div class="balance-row">
+                                        <span>USD</span>
+                                        <strong>{{ solde_disponible_usd|floatformat:2 }} USD</strong>
+                                    </div>
+                                    <div class="balance-row">
+                                        <span>CDF</span>
+                                        <strong>{{ solde_disponible_cdf|floatformat:2 }} CDF</strong>
+                                    </div>
+                                    <div class="muted-note mt-2">
+                                        Le montant sera vérifié automatiquement selon la devise choisie.
+                                    </div>
                                 </div>
 
                                 {% if form.non_field_errors %}
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <div class="alert alert-danger alert-soft alert-dismissible fade show" role="alert">
                                         {% for error in form.non_field_errors %}
-                                            <div><i class="fa fa-exclamation-triangle"></i> {{ error }}</div>
+                                            <div><i class="fa fa-exclamation-triangle mr-1"></i> {{ error }}</div>
                                         {% endfor %}
                                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
@@ -129,16 +222,20 @@
 
                                     <div class="row">
                                         <div class="col-12 col-md-8 mb-3">
-                                            <label class="font-weight-bold text-secondary">Motif / Catégorie <span class="text-danger">*</span></label>
-                                            {{ form.motif }}
+                                            <div class="form-floating">
+                                                {{ form.motif }}
+                                                <label for="{{ form.motif.id_for_label }}">Motif / Catégorie <span class="text-danger">*</span></label>
+                                            </div>
                                             {% if form.motif.errors %}
                                                 <div class="field-error">{{ form.motif.errors.0 }}</div>
                                             {% endif %}
                                         </div>
 
                                         <div class="col-12 col-md-4 mb-3">
-                                            <label class="font-weight-bold text-secondary">Devise <span class="text-danger">*</span></label>
-                                            {{ form.devise }}
+                                            <div class="form-floating">
+                                                {{ form.devise }}
+                                                <label for="{{ form.devise.id_for_label }}">Devise <span class="text-danger">*</span></label>
+                                            </div>
                                             {% if form.devise.errors %}
                                                 <div class="field-error">{{ form.devise.errors.0 }}</div>
                                             {% endif %}
@@ -146,32 +243,38 @@
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="font-weight-bold text-secondary">Montant à décaisser <span class="text-danger">*</span></label>
-                                        {{ form.montant }}
+                                        <div class="form-floating">
+                                            {{ form.montant }}
+                                            <label for="{{ form.montant.id_for_label }}">Montant à décaisser <span class="text-danger">*</span></label>
+                                        </div>
                                         {% if form.montant.errors %}
                                             <div class="field-error">{{ form.montant.errors.0 }}</div>
                                         {% endif %}
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="font-weight-bold text-secondary">Bénéficiaire / Fournisseur</label>
-                                        {{ form.beneficiaire }}
+                                        <div class="form-floating">
+                                            {{ form.beneficiaire }}
+                                            <label for="{{ form.beneficiaire.id_for_label }}">Bénéficiaire / Fournisseur</label>
+                                        </div>
                                         {% if form.beneficiaire.errors %}
                                             <div class="field-error">{{ form.beneficiaire.errors.0 }}</div>
                                         {% endif %}
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="font-weight-bold text-secondary">Description / Justification</label>
-                                        {{ form.description }}
+                                        <div class="form-floating">
+                                            {{ form.description }}
+                                            <label for="{{ form.description.id_for_label }}">Description / Justification</label>
+                                        </div>
                                         {% if form.description.errors %}
                                             <div class="field-error">{{ form.description.errors.0 }}</div>
                                         {% endif %}
                                     </div>
 
-                                    <hr>
+                                    <hr class="my-4">
 
-                                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center">
+                                    <div class="actions">
                                         <a href="{% url 'dashboard_finance' %}" class="btn btn-light border btn-cancel">
                                             <i class="fa fa-arrow-left"></i> Annuler
                                         </a>
@@ -180,7 +283,6 @@
                                         </button>
                                     </div>
                                 </form>
-
                             </div>
                         </div>
                     </div>

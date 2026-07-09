@@ -1021,6 +1021,7 @@ def consultation_medicale(request, triage_id):
 
     role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
 
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
@@ -1057,9 +1058,11 @@ def consultation_medicale(request, triage_id):
                     consultation_obj = form.save(commit=False)
                     consultation_obj.triage = triage
                     consultation_obj.medecin = request.user
+                    consultation_obj.hopital = hopital_user
                     consultation_obj.save()
 
                     DemandeExamen.objects.filter(consultation=consultation_obj, statut='EN_ATTENTE').delete()
+
                     for e_id in examens_ids:
                         prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
                         qty_value = request.POST.get(f'qty_{e_id}', 1)
@@ -1068,14 +1071,20 @@ def consultation_medicale(request, triage_id):
                             consultation=consultation_obj,
                             prestation=prestation,
                             quantite=qty_value,
-                            statut='EN_ATTENTE'
+                            statut='EN_ATTENTE',
+                            hopital=hopital_user
                         )
 
                     if any(n.strip() for n in noms_medocs if n):
                         ordonnance, _ = Ordonnance.objects.get_or_create(
                             consultation=consultation_obj,
-                            type_ordonnance='URGENCE'
+                            type_ordonnance='URGENCE',
+                            defaults={'hopital': hopital_user}
                         )
+                        if not ordonnance.hopital:
+                            ordonnance.hopital = hopital_user
+                            ordonnance.save()
+
                         LigneMedicament.objects.filter(ordonnance=ordonnance).delete()
 
                         for i, nom in enumerate(noms_medocs):
@@ -1088,7 +1097,8 @@ def consultation_medicale(request, triage_id):
                                     nom_medicament=nom,
                                     posologie=poso,
                                     duree=dur,
-                                    statut='EN_COURS'
+                                    statut='EN_COURS',
+                                    hopital=hopital_user
                                 )
 
                     triage.est_consulte = True
@@ -1110,17 +1120,13 @@ def consultation_medicale(request, triage_id):
         hopital=hopital_user
     ).order_by('categorie', 'libelle')
 
-    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
-
-    context = {
+    return render(request, 'back-end/medecin/consultation_medecin.html', {
         'triage': triage,
         'form': form,
         'examens_disponibles': examens_disponibles,
         'consultation': consultation,
         'fonctionKey': fonctionKey
-    }
-    return render(request, 'back-end/medecin/consultation_medecin.html', context)
-
+    })
 
 
 
@@ -1375,85 +1381,83 @@ def liste_attente_caisse(request):
 @login_required
 def liste_examens_techniques(request):
     role_user = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    if not role_user or not role_user.fonctionKey:
+    if not role_user or not role_user.fonctionKey or not role_user.hopital:
         return redirect('dashboard')
 
     hopital_user = role_user.hopital
-    nom_role = role_user.fonctionKey.roleName.lower()
+    nom_role = (role_user.fonctionKey.roleName or "").lower()
     fonctionKey = role_user.fonctionKey.roleName
 
-    consultations_payees = Consultation.objects.filter(
-        examens__isnull=False,
-        triage__patient__hopital=hopital_user
-    ).distinct().select_related('triage__patient', 'medecin').prefetch_related('examens__prestation')
+    consultations = Consultation.objects.select_related(
+        'triage__patient',
+        'medecin'
+    ).prefetch_related(
+        'examens__prestation'
+    ).filter(
+        examens__isnull=False
+    ).distinct().order_by('-date_creation')
 
     historique_technique = []
 
-    for cons in consultations_payees:
+    for cons in consultations:
         patient = cons.triage.patient
-        examens_query = cons.examens.all()
         examens_filtrés = []
 
-        for exam in examens_query:
-            cat = str(exam.prestation.categorie).upper()
+        for exam in cons.examens.all():
+            if exam.hopital_id and exam.hopital_id != hopital_user.id:
+                continue
+
+            if exam.prestation and exam.prestation.hopital_id and exam.prestation.hopital_id != hopital_user.id:
+                continue
+
+            cat = str(exam.prestation.categorie).upper() if exam.prestation else ""
 
             if patient.type_patient == 'SIMPLE':
                 paiement_examen = Paiement.objects.filter(
                     patient=patient,
                     consultation=cons,
                     service__in=['LABO', 'ECHO', 'RADIO', 'EXAMENS'],
-                    montant_verse__gt=0,
-                    hopital=hopital_user
+                    montant_verse__gt=0
                 ).exists()
                 if not paiement_examen:
                     continue
 
             if ('labo' in nom_role and cat == 'LABO') or \
                (('echo' in nom_role or 'echographe' in nom_role) and cat == 'ECHO') or \
-               (('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO'):
-
+               (('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO') or \
+               ('technicien' in nom_role):
                 examens_filtrés.append({
                     'id_examen': exam.id,
-                    'libelle': exam.prestation.libelle,
-                    'est_deja_fait': (exam.statut == 'TERMINE')
+                    'libelle': exam.prestation.libelle if exam.prestation else 'Examen',
+                    'est_deja_fait': exam.statut == 'TERMINE'
                 })
 
         if examens_filtrés:
-            a_des_examens_en_attente = any(not ex['est_deja_fait'] for ex in examens_filtrés)
-
-            info_pat = {
-                'nom': patient.noms,
-                'code': patient.code_patient,
-                'type': patient.get_type_patient_display(),
-                'genre': patient.get_sexe_display(),
-                'age': patient.age,
-                'info_financiere': None
-            }
-
-            if patient.type_patient == 'CONVENTIONNE' and patient.entreprise:
-                info_pat['info_financiere'] = f"Entreprise: {patient.entreprise.nom}"
-            elif patient.type_patient == 'FIDELE':
-                info_pat['info_financiere'] = "Patient Fidèle"
-            elif patient.type_patient == 'SIMPLE':
-                info_pat['info_financiere'] = "Examen affiché car paiement partiel effectué"
-
             historique_technique.append({
                 'consultation_id': cons.id,
-                'patient': info_pat,
+                'patient': {
+                    'nom': patient.noms,
+                    'code': patient.code_patient,
+                    'type': patient.get_type_patient_display(),
+                    'genre': patient.get_sexe_display(),
+                    'age': patient.age,
+                    'info_financiere': (
+                        "Patient simple" if patient.type_patient == "SIMPLE" else
+                        "Patient fidèle" if patient.type_patient == "FIDELE" else
+                        "Patient conventionné"
+                    ),
+                },
                 'examens': examens_filtrés,
                 'medecin': cons.medecin.username if cons.medecin else "Généraliste",
-                'tout_traite': not a_des_examens_en_attente
+                'tout_traite': not any(not ex['est_deja_fait'] for ex in examens_filtrés)
             })
 
-    context = {
+    return render(request, 'back-end/technique/liste_examens_payes.html', {
         'historique_technique': historique_technique,
         'examens_presents': len(historique_technique) > 0,
         'titre_page': "Examens à réaliser",
         'fonctionKey': fonctionKey
-    }
-
-    return render(request, 'back-end/technique/liste_examens_payes.html', context)
-
+    })
 
 
 # 37

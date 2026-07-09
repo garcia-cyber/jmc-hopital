@@ -524,25 +524,26 @@ class Depense(models.Model):
     date_depense = models.DateTimeField(default=timezone.now)
     auteur = models.ForeignKey('auth.User', on_delete=models.PROTECT, verbose_name="Enregistré par")
     beneficiaire = models.CharField(max_length=150, blank=True, null=True, verbose_name="Bénéficiaire")
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    hopital = models.ForeignKey(Hopital, on_delete=models.SET_NULL, null=True)
 
     class Meta:
         verbose_name = "Dépense"
         verbose_name_plural = "Dépenses"
 
     def clean(self):
-        # Correction 1 : Retrait de l'import circulaire de Paiement (on l'appelle directement)
-        # Correction 2 : Utilisation d'un entier 0 à la place du float 0.0 pour éviter le TypeError avec Decimal
-        total_entrees = Paiement.objects.filter(devise=self.devise).aggregate(
-            total=Sum('montant_verse')
-        )['total'] or 0
+        paiement_qs = Paiement.objects.filter(devise=self.devise)
+        depense_qs = Depense.objects.filter(devise=self.devise)
 
-        toutes_les_depenses = Depense.objects.filter(devise=self.devise)
+        if self.hopital_id:
+            paiement_qs = paiement_qs.filter(hopital_id=self.hopital_id)
+            depense_qs = depense_qs.filter(hopital_id=self.hopital_id)
+
+        total_entrees = paiement_qs.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
         if self.pk:
-            toutes_les_depenses = toutes_les_depenses.exclude(pk=self.pk)
-            
-        total_sorties = toutes_les_depenses.aggregate(total=Sum('montant'))['total'] or 0
+            depense_qs = depense_qs.exclude(pk=self.pk)
 
+        total_sorties = depense_qs.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
         solde_disponible = total_entrees - total_sorties
 
         if self.montant > solde_disponible:
@@ -557,7 +558,7 @@ class Depense(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Dépense {self.id} - {self.montant} {self.devise} ({self.get_motif_display()})"
+        return f"Dépense {self.id} - {self.montant} {self.devise}"
 
 # 15. HOSPITALISATION ET CHAMBRES ==================================
 class TypeChambre(models.Model):

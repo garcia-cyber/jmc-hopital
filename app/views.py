@@ -1782,51 +1782,34 @@ def dashboard_finance(request):
 @login_required
 def creer_depense(request):
     role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    hopital_user = role.hopital if role and hasattr(role, 'hopital') else None
+    hopital_user_id = role.hopital_id if role and role.hopital_id else None
 
-    def get_qs_autorises(devise=None):
-        paiements_qs = Paiement.objects.all()
-        depenses_qs = Depense.objects.all()
+    is_admin = fonctionKey in ['admin', 'Admin', 'ADMIN', 'Administrateur']
 
-        if fonctionKey != 'admin':
-            if hopital_user:
-                paiements_qs = paiements_qs.filter(hopital=hopital_user)
-                depenses_qs = depenses_qs.filter(hopital=hopital_user)
+    def qs_hopital(model_qs, devise):
+        qs = model_qs.filter(devise=devise)
+        if not is_admin:
+            if hopital_user_id:
+                qs = qs.filter(hopital_id=hopital_user_id)
             else:
-                paiements_qs = paiements_qs.none()
-                depenses_qs = depenses_qs.none()
+                qs = qs.none()
+        return qs
 
-        if devise:
-            paiements_qs = paiements_qs.filter(devise=devise)
-            depenses_qs = depenses_qs.filter(devise=devise)
+    def solde_par_devise(devise):
+        total_entrees = qs_hopital(Paiement.objects.all(), devise).aggregate(
+            total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
+        )['total']
 
-        return paiements_qs, depenses_qs
+        total_sorties = qs_hopital(Depense.objects.all(), devise).aggregate(
+            total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
+        )['total']
 
-    total_entrees_usd = Decimal('0.00')
-    total_sorties_usd = Decimal('0.00')
-    total_entrees_cdf = Decimal('0.00')
-    total_sorties_cdf = Decimal('0.00')
+        return total_entrees - total_sorties
 
-    paiements_usd, depenses_usd = get_qs_autorises('USD')
-    paiements_cdf, depenses_cdf = get_qs_autorises('CDF')
-
-    total_entrees_usd = paiements_usd.aggregate(
-        total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
-    )['total']
-    total_sorties_usd = depenses_usd.aggregate(
-        total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
-    )['total']
-
-    total_entrees_cdf = paiements_cdf.aggregate(
-        total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
-    )['total']
-    total_sorties_cdf = depenses_cdf.aggregate(
-        total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
-    )['total']
-
-    solde_disponible_usd = total_entrees_usd - total_sorties_usd
-    solde_disponible_cdf = total_entrees_cdf - total_sorties_cdf
+    solde_disponible_usd = solde_par_devise('USD')
+    solde_disponible_cdf = solde_par_devise('CDF')
 
     if request.method == 'POST':
         form = DepenseForm(request.POST)
@@ -1834,47 +1817,33 @@ def creer_depense(request):
             depense = form.save(commit=False)
             depense.auteur = request.user
 
-            devise_saisie = depense.devise
-            montant_demande = Decimal(depense.montant)
-
-            if fonctionKey != 'admin':
-                if not hopital_user:
+            if not is_admin:
+                if not hopital_user_id:
                     form.add_error(None, "Impossible de déterminer l'hôpital du gestionnaire.")
-                else:
-                    depense.hopital = hopital_user
+                    context = {
+                        'form': form,
+                        'titre_page': "Enregistrer une Sortie de Caisse",
+                        'fonctionKey': fonctionKey,
+                        'solde_disponible_usd': solde_disponible_usd,
+                        'solde_disponible_cdf': solde_disponible_cdf,
+                    }
+                    return render(request, 'back-end/finance/creer_depense.html', context)
+                depense.hopital_id = hopital_user_id
 
-            paiements_qs, depenses_qs = get_qs_autorises(devise_saisie)
+            try:
+                depense.full_clean()
+                depense.save()
+                messages.success(request, "La dépense a été enregistrée avec succès !")
+                return redirect('dashboard_finance_depense')
 
-            total_entrees = paiements_qs.aggregate(
-                total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
-            )['total']
-            total_sorties = depenses_qs.aggregate(
-                total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
-            )['total']
-
-            solde_disponible = total_entrees - total_sorties
-
-            if montant_demande > solde_disponible:
-                form.add_error(
-                    None,
-                    f"Opération refusée. Solde de caisse insuffisant en {devise_saisie}. "
-                    f"Disponible : {solde_disponible:.2f} {devise_saisie}. "
-                    f"Montant demandé : {montant_demande:.2f} {devise_saisie}."
-                )
-            else:
-                try:
-                    depense.full_clean()
-                    depense.save()
-                    messages.success(request, "La dépense a été enregistrée avec succès !")
-                    return redirect('dashboard_finance_depense')
-                except ValidationError as e:
-                    if hasattr(e, 'message_dict'):
-                        for _, errors in e.message_dict.items():
-                            for error in errors:
-                                form.add_error(None, error)
-                    else:
-                        for error in e.messages:
+            except ValidationError as e:
+                if hasattr(e, 'message_dict'):
+                    for _, errors in e.message_dict.items():
+                        for error in errors:
                             form.add_error(None, error)
+                else:
+                    for error in e.messages:
+                        form.add_error(None, error)
     else:
         form = DepenseForm()
 

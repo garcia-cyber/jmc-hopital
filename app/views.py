@@ -1781,58 +1781,95 @@ def dashboard_finance(request):
 # ==================================================================================================
 @login_required
 def creer_depense(request):
-    # Extraction du rôle pour la sidebar
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role and hasattr(role, 'hopital') else None
+
+    def get_qs_autorises(devise=None):
+        paiements_qs = Paiement.objects.all()
+        depenses_qs = Depense.objects.all()
+
+        if fonctionKey != 'admin':
+            if hopital_user:
+                paiements_qs = paiements_qs.filter(hopital=hopital_user)
+                depenses_qs = depenses_qs.filter(hopital=hopital_user)
+            else:
+                paiements_qs = paiements_qs.none()
+                depenses_qs = depenses_qs.none()
+
+        if devise:
+            paiements_qs = paiements_qs.filter(devise=devise)
+            depenses_qs = depenses_qs.filter(devise=devise)
+
+        return paiements_qs, depenses_qs
+
+    total_entrees_usd = Decimal('0.00')
+    total_sorties_usd = Decimal('0.00')
+    total_entrees_cdf = Decimal('0.00')
+    total_sorties_cdf = Decimal('0.00')
+
+    paiements_usd, depenses_usd = get_qs_autorises('USD')
+    paiements_cdf, depenses_cdf = get_qs_autorises('CDF')
+
+    total_entrees_usd = paiements_usd.aggregate(
+        total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
+    )['total']
+    total_sorties_usd = depenses_usd.aggregate(
+        total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
+    )['total']
+
+    total_entrees_cdf = paiements_cdf.aggregate(
+        total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
+    )['total']
+    total_sorties_cdf = depenses_cdf.aggregate(
+        total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
+    )['total']
+
+    solde_disponible_usd = total_entrees_usd - total_sorties_usd
+    solde_disponible_cdf = total_entrees_cdf - total_sorties_cdf
 
     if request.method == 'POST':
         form = DepenseForm(request.POST)
         if form.is_valid():
-            # 1. On crée l'objet en mémoire sans le sauvegarder immédiatement en BDD
             depense = form.save(commit=False)
-            # 2. On lui attribue automatiquement l'utilisateur connecté comme auteur
             depense.auteur = request.user
-            
-            # --- VÉRIFICATION STRICTE DU SOLDE DISPONIBLE ---
-            devise_saisie = depense.devise  # USD ou CDF
-            
-            # On force tout en float pour sécuriser les calculs mathématiques
-            montant_demande_float = float(depense.montant)
 
-            # Calcule toutes les entrées (Paiements) pour cette devise
-            res_entrees = Paiement.objects.filter(devise=devise_saisie).aggregate(
-                total=Coalesce(Sum('montant_verse'), 0, output_field=DecimalField())
+            devise_saisie = depense.devise
+            montant_demande = Decimal(depense.montant)
+
+            if fonctionKey != 'admin':
+                if not hopital_user:
+                    form.add_error(None, "Impossible de déterminer l'hôpital du gestionnaire.")
+                else:
+                    depense.hopital = hopital_user
+
+            paiements_qs, depenses_qs = get_qs_autorises(devise_saisie)
+
+            total_entrees = paiements_qs.aggregate(
+                total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
             )['total']
-            
-            # Calcule toutes les sorties (Dépenses) déjà validées pour cette devise
-            res_sorties = Depense.objects.filter(devise=devise_saisie).aggregate(
-                total=Coalesce(Sum('montant'), 0, output_field=DecimalField())
+            total_sorties = depenses_qs.aggregate(
+                total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
             )['total']
 
-            # Conversion mathématique brute et sécurisée en float
-            total_entrees_float = float(res_entrees) if res_entrees else 0.0
-            total_sorties_float = float(res_sorties) if res_sorties else 0.0
+            solde_disponible = total_entrees - total_sorties
 
-            # Calcul du solde en float (Plus aucun risque de conflit)
-            solde_disponible_float = total_entrees_float - total_sorties_float
-
-            # Blocage manuel si la somme demandée est supérieure à la caisse
-            if montant_demande_float > solde_disponible_float:
-                form.add_error(None, f"Opération refusée. Solde de caisse insuffisant en {devise_saisie}. Disponible : {solde_disponible_float:.2f} {devise_saisie}. Montant demandé : {montant_demande_float:.2f} {devise_saisie}.")
+            if montant_demande > solde_disponible:
+                form.add_error(
+                    None,
+                    f"Opération refusée. Solde de caisse insuffisant en {devise_saisie}. "
+                    f"Disponible : {solde_disponible:.2f} {devise_saisie}. "
+                    f"Montant demandé : {montant_demande:.2f} {devise_saisie}."
+                )
             else:
                 try:
-                    # 3. On force l'exécution du clean() du modèle au cas où d'autres validations existent
                     depense.full_clean()
                     depense.save()
-                    
-                    # Message de succès et redirection vers la bonne vue de journal
                     messages.success(request, "La dépense a été enregistrée avec succès !")
                     return redirect('dashboard_finance_depense')
-                    
                 except ValidationError as e:
-                    # 4. Si une autre validation du modèle échoue, on récupère l'erreur pour l'afficher
                     if hasattr(e, 'message_dict'):
-                        for field, errors in e.message_dict.items():
+                        for _, errors in e.message_dict.items():
                             for error in errors:
                                 form.add_error(None, error)
                     else:
@@ -1845,9 +1882,10 @@ def creer_depense(request):
         'form': form,
         'titre_page': "Enregistrer une Sortie de Caisse",
         'fonctionKey': fonctionKey,
+        'solde_disponible_usd': solde_disponible_usd,
+        'solde_disponible_cdf': solde_disponible_cdf,
     }
     return render(request, 'back-end/finance/creer_depense.html', context)
-
 
 # ==================================================================================================
 # 42 : FINANCE GESTION DE DETTE  JOURNAL
@@ -1858,24 +1896,29 @@ def dashboard_finance_depense(request):
     Tableau de bord financier : Journal des entrées,
     statistiques temporelles et bilan global du coffre (USD / CDF).
     """
-    # 1. Gestion du rôle pour la sidebar Moyanoli
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role and hasattr(role, 'hopital') else None
 
-    # 2. Filtrage temporel (Aujourd'hui, Cette semaine, Ce mois)
     maintenant = timezone.now()
     debut_aujourdhui = maintenant.replace(hour=0, minute=0, second=0, microsecond=0)
     debut_semaine = debut_aujourdhui - timezone.timedelta(days=maintenant.weekday())
     debut_mois = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # --- ENTRÉES (PAIEMENTS) ---
-    paiements_tous = Paiement.objects.all().order_by('-date_paiement')
-
-    # Utilisation de Decimal('0.00') et output_field pour éviter le mélange de types
     zero_decimal = Decimal('0.00')
 
-    # Statistiques temporelles des entrées
-    recettes_stats = Paiement.objects.aggregate(
+    paiements_qs = Paiement.objects.all().order_by('-date_paiement')
+    depenses_qs = Depense.objects.all()
+
+    if fonctionKey != 'admin':
+        if hopital_user:
+            paiements_qs = paiements_qs.filter(hopital=hopital_user)
+            depenses_qs = depenses_qs.filter(hopital=hopital_user)
+        else:
+            paiements_qs = paiements_qs.none()
+            depenses_qs = depenses_qs.none()
+
+    recettes_stats = paiements_qs.aggregate(
         auj_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_aujourdhui, devise='USD')), zero_decimal, output_field=DecimalField()),
         auj_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_aujourdhui, devise='CDF')), zero_decimal, output_field=DecimalField()),
         sem_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_semaine, devise='USD')), zero_decimal, output_field=DecimalField()),
@@ -1884,55 +1927,49 @@ def dashboard_finance_depense(request):
         mois_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_mois, devise='CDF')), zero_decimal, output_field=DecimalField()),
     )
 
-    # Totaux globaux des entrées
-    total_entrees = Paiement.objects.aggregate(
+    total_entrees = paiements_qs.aggregate(
         usd=Coalesce(Sum('montant_verse', filter=Q(devise='USD')), zero_decimal, output_field=DecimalField()),
         cdf=Coalesce(Sum('montant_verse', filter=Q(devise='CDF')), zero_decimal, output_field=DecimalField())
     )
 
-    # --- SORTIES (DÉPENSES) ---
-    total_depenses = Depense.objects.aggregate(
+    total_depenses = depenses_qs.aggregate(
         usd=Coalesce(Sum('montant', filter=Q(devise='USD')), zero_decimal, output_field=DecimalField()),
         cdf=Coalesce(Sum('montant', filter=Q(devise='CDF')), zero_decimal, output_field=DecimalField())
     )
 
-    # --- CALCUL DU SOLDE NET EN COFFRE ---
     restant_usd = total_entrees['usd'] - total_depenses['usd']
     restant_cdf = total_entrees['cdf'] - total_depenses['cdf']
 
-    # --- VENTILATION PAR SERVICE ---
     services_liste = ['FICHE', 'LABO', 'ECHOGRAPHIE', 'RADIO']
     services_stats = []
     for s in services_liste:
-        s_usd = Paiement.objects.filter(service=s, devise='USD').aggregate(t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField()))['t']
-        s_cdf = Paiement.objects.filter(service=s, devise='CDF').aggregate(t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField()))['t']
+        s_usd = paiements_qs.filter(service=s, devise='USD').aggregate(
+            t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField())
+        )['t']
+        s_cdf = paiements_qs.filter(service=s, devise='CDF').aggregate(
+            t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField())
+        )['t']
         services_stats.append({'nom': s, 'usd': s_usd, 'cdf': s_cdf})
 
     context = {
         'titre_page': "Journal Général de Caisse",
         'fonctionKey': fonctionKey,
-        'paiements': paiements_tous,
-        
-        # Variables Recettes Temporelles
+        'paiements': paiements_qs,
         'aujourdhui_usd': recettes_stats['auj_usd'],
         'aujourdhui_cdf': recettes_stats['auj_cdf'],
         'semaine_usd': recettes_stats['sem_usd'],
         'semaine_cdf': recettes_stats['sem_cdf'],
         'mois_usd': recettes_stats['mois_usd'],
         'mois_cdf': recettes_stats['mois_cdf'],
-        
-        # Variables Bilan Coffre-Fort
         'total_usd': total_entrees['usd'],
         'total_cdf': total_entrees['cdf'],
         'depense_totale_usd': total_depenses['usd'],
         'depense_totale_cdf': total_depenses['cdf'],
         'restant_usd': restant_usd,
         'restant_cdf': restant_cdf,
-        
         'services_stats': services_stats,
     }
     return render(request, 'back-end/finance/journal_caisse.html', context)
-
 # ==================================================================================================
 # 43 : RESULTAT DU LABO RADIO ET ECHO PAR LE MEDECIN
 # ==================================================================================================

@@ -3,21 +3,92 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ titre_page }} - JMC</title>
     {% include 'back-end/includes/css.html' %}
+    <style>
+        .finance-page {
+            background: #f8fafc;
+        }
+
+        .finance-page .page-title {
+            font-weight: 700;
+            letter-spacing: .2px;
+        }
+
+        .form-card {
+            border: 0;
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, .08);
+            overflow: hidden;
+        }
+
+        .form-card .card-header {
+            border-bottom: 0;
+            padding: .9rem 1.1rem;
+        }
+
+        .form-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .info-box {
+            border-radius: 14px;
+            background: #e9f5ff;
+            border: 1px solid #cfe7ff;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+        }
+
+        .field-error {
+            font-size: .85rem;
+            color: #dc3545;
+            margin-top: .35rem;
+        }
+
+        .form-control,
+        select,
+        textarea {
+            border-radius: 12px !important;
+            min-height: 44px;
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+        }
+
+        .btn-action {
+            min-width: 160px;
+        }
+
+        @media (max-width: 767.98px) {
+            .form-card .card-body {
+                padding: 1rem;
+            }
+
+            .btn-action {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .btn-cancel {
+                width: 100%;
+                margin-bottom: .75rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="main-wrapper">
+    <div class="main-wrapper finance-page">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-            
-                <!-- Header -->
+
                 <div class="page-header">
                     <div class="row">
-                        <div class="col">
+                        <div class="col-12">
                             <h3 class="page-title"><i class="fa fa-money-bill-wave"></i> {{ titre_page }}</h3>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
@@ -28,18 +99,24 @@
                 </div>
 
                 <div class="row justify-content-center">
-                    <div class="col-md-8 col-lg-6">
-                        <div class="card shadow-sm border">
+                    <div class="col-12 col-lg-7 col-xl-6">
+                        <div class="card form-card">
                             <div class="card-header bg-primary text-white">
                                 <h5 class="card-title mb-0">Formulaire de Décaissement</h5>
                             </div>
+
                             <div class="card-body">
-                                
-                                <!-- ⚠️ Gestion des blocages et erreurs de Solde de caisse insuffisant -->
+
+                                <div class="info-box">
+                                    <strong>Solde disponible :</strong><br>
+                                    USD : {{ solde_disponible_usd|floatformat:2 }} USD<br>
+                                    CDF : {{ solde_disponible_cdf|floatformat:2 }} CDF
+                                </div>
+
                                 {% if form.non_field_errors %}
                                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                         {% for error in form.non_field_errors %}
-                                            <i class="fa fa-exclamation-triangle"></i> {{ error }}
+                                            <div><i class="fa fa-exclamation-triangle"></i> {{ error }}</div>
                                         {% endfor %}
                                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
@@ -47,39 +124,58 @@
                                     </div>
                                 {% endif %}
 
-                                <form method="POST" autocomplete="off">
+                                <form method="POST" autocomplete="off" novalidate>
                                     {% csrf_token %}
-                                    
+
                                     <div class="row">
-                                        <div class="col-sm-8 mb-3">
+                                        <div class="col-12 col-md-8 mb-3">
                                             <label class="font-weight-bold text-secondary">Motif / Catégorie <span class="text-danger">*</span></label>
                                             {{ form.motif }}
+                                            {% if form.motif.errors %}
+                                                <div class="field-error">{{ form.motif.errors.0 }}</div>
+                                            {% endif %}
                                         </div>
-                                        <div class="col-sm-4 mb-3">
+
+                                        <div class="col-12 col-md-4 mb-3">
                                             <label class="font-weight-bold text-secondary">Devise <span class="text-danger">*</span></label>
                                             {{ form.devise }}
+                                            {% if form.devise.errors %}
+                                                <div class="field-error">{{ form.devise.errors.0 }}</div>
+                                            {% endif %}
                                         </div>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="font-weight-bold text-secondary">Montant à décaisser <span class="text-danger">*</span></label>
                                         {{ form.montant }}
+                                        {% if form.montant.errors %}
+                                            <div class="field-error">{{ form.montant.errors.0 }}</div>
+                                        {% endif %}
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="font-weight-bold text-secondary">Bénéficiaire / Fournisseur</label>
                                         {{ form.beneficiaire }}
+                                        {% if form.beneficiaire.errors %}
+                                            <div class="field-error">{{ form.beneficiaire.errors.0 }}</div>
+                                        {% endif %}
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="font-weight-bold text-secondary">Description / Justification</label>
                                         {{ form.description }}
+                                        {% if form.description.errors %}
+                                            <div class="field-error">{{ form.description.errors.0 }}</div>
+                                        {% endif %}
                                     </div>
 
                                     <hr>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <a href="{% url 'dashboard_finance' %}" class="btn btn-light border"><i class="fa fa-arrow-left"></i> Annuler</a>
-                                        <button type="submit" class="btn btn-danger font-weight-bold">
+
+                                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center">
+                                        <a href="{% url 'dashboard_finance' %}" class="btn btn-light border btn-cancel">
+                                            <i class="fa fa-arrow-left"></i> Annuler
+                                        </a>
+                                        <button type="submit" class="btn btn-danger font-weight-bold btn-action">
                                             <i class="fa fa-check-circle"></i> Valider le Décaissement
                                         </button>
                                     </div>

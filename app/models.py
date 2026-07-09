@@ -1329,6 +1329,7 @@ class VideoRoom(models.Model):
     name = models.CharField(max_length=150, unique=True)
     room_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_video_rooms')
+    allowed_users = models.ManyToManyField(User, blank=True, related_name="allowed_video_rooms")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 

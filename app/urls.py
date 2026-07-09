@@ -273,4 +273,5 @@ urlpatterns =[
     #
     path("video/<str:room_name>/", views.video_call_room, name="video_call_room"),
     path("video/create/", views.create_video_room, name="create_video_room"),
+    path("video-room/<uuid:room_id>/add-colleague/", views.add_colleague_to_room, name="add_colleague_to_room")
  ]

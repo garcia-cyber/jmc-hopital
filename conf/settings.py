@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "crispy_forms",
     "crispy_bootstrap4",
     "channels",
+    "video"
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"

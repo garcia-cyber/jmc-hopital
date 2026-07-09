@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ajouter des collègues - {{ room.name }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        body {
+            background: #f4f7fb;
+        }
+
+        .page-shell {
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .invite-card {
+            border: 0;
+            border-radius: 20px;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .12);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .invite-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: #fff;
+            padding: 16px 20px;
+        }
+
+        .invite-body {
+            padding: 20px;
+        }
+
+        .info-box {
+            border-radius: 14px;
+            background: #eef6ff;
+            border: 1px solid #d6e8ff;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+        }
+
+        .members-box {
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            padding: 14px 16px;
+        }
+
+        .members-list .list-group-item {
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .form-select, .btn {
+            border-radius: 12px;
+        }
+
+        @media (max-width: 767.98px) {
+            .invite-body {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid page-shell">
+            <div class="row justify-content-center">
+                <div class="col-12 col-xl-8 col-lg-9">
+                    <div class="card invite-card">
+                        <div class="invite-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h4 class="mb-1">Ajouter des collègues</h4>
+                                <small>Room : {{ room.name }}</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-primary px-3 py-2">
+                                    {{ room.room_id }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="invite-body">
+                            <div class="info-box">
+                                <strong>Créée par :</strong> {{ room.created_by.username }}<br>
+                                <strong>Statut :</strong>
+                                {% if room.is_active %}
+                                    active
+                                {% else %}
+                                    inactive
+                                {% endif %}
+                            </div>
+
+                            {% if colleagues %}
+                                <form method="post" class="mb-4">
+                                    {% csrf_token %}
+
+                                    <div class="mb-3">
+                                        <label for="user_id" class="form-label">Choisir un collègue</label>
+                                        <select name="user_id" id="user_id" class="form-select" required>
+                                            <option value="">-- Sélectionner --</option>
+                                            {% for user in colleagues %}
+                                                {% if user.id not in existing_member_ids %}
+                                                    <option value="{{ user.id }}">
+                                                        {{ user.username }}
+                                                    </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success">
+                                        Ajouter
+                                    </button>
+                                    <a href="{% url 'video_call_room' room.room_id %}" class="btn btn-secondary">
+                                        Retour à l'appel
+                                    </a>
+                                </form>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    Aucun collègue disponible pour le moment.
+                                </div>
+
+                                <a href="{% url 'video_call_room' room.room_id %}" class="btn btn-secondary">
+                                    Retour à l'appel
+                                </a>
+                            {% endif %}
+
+                            <div class="members-box">
+                                <h5 class="mb-3">Collègues déjà autorisés</h5>
+
+                                <ul class="list-group members-list">
+                                    {% for member in room.allowed_users.all %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>{{ member.username }}</span>
+                                        </li>
+                                    {% empty %}
+                                        <li class="list-group-item">Aucun collègue ajouté.</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <input type="hidden" id="roomId" value="{{ room.room_id }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models.functions import Coalesce , Length ,TruncDay, TruncWeek, TruncMonth
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse , HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -6035,24 +6035,18 @@ def supprimer_hopital(request, id):
 # ===================================================================================================================
 @login_required
 def video_call_room(request, room_name):
-    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    hopital_user = role.hopital if role and role.hopital_id else None
-    is_admin = fonctionKey in ['admin', 'Admin', 'ADMIN', 'Administrateur']
+    # Utilisez 'room_name' pour récupérer la salle
+    room = get_object_or_404(VideoRoom, name=room_name)
+    
+    # Vérification de sécurité : l'utilisateur a-t-il le droit d'être là ?
+    # Si vous avez un champ ManyToMany 'allowed_users'
+    if request.user != room.created_by and not room.allowed_users.filter(id=request.user.id).exists():
+        return HttpResponseForbidden("Vous n'avez pas accès à cette salle.")
 
-    room, created = VideoRoom.objects.get_or_create(
-        name=room_name,
-        defaults={"created_by": request.user}
-    )
-
-    context = {
+    return render(request, "back-end/video_call/room.html", {
         "room": room,
         "room_name": room.name,
-        "fonctionKey": fonctionKey,
-        "hopital_user": hopital_user,
-        "is_admin": is_admin,
-    }
-    return render(request, "back-end/video_call/room.html", context)
+    })
 
 
 #
@@ -6061,11 +6055,31 @@ def video_call_room(request, room_name):
 # ===================================================================================================
 @login_required
 def create_video_room(request):
-    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    room = VideoRoom.objects.create(
-        name=f"room-{request.user.id}",
-        created_by=request.user
+    room_name = "salle-generale"
+    room, created = VideoRoom.objects.get_or_create(
+        name=room_name,
+        defaults={"created_by": request.user}
     )
     return redirect("video_call_room", room_name=room.name)
+
+@login_required
+def add_colleague_to_room(request, room_id):
+    room = get_object_or_404(VideoRoom, id=room_id) # Utilisez 'id' (ou le nom de votre clé primaire)
+
+    if request.user != room.created_by:
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        user_id = request.POST.get("user_id")
+        colleague = get_object_or_404(User, id=user_id)
+        room.allowed_users.add(colleague)
+        # Redirection corrigée : on utilise le 'name' pour correspondre à la vue 'video_call_room'
+        return redirect("video_call_room", room_name=room.name)
+
+    colleagues = User.objects.filter(is_active=True).exclude(id=request.user.id)
+    return render(request, "back-end/video_call/add_colleague.html", {
+        "room": room,
+        "colleagues": colleagues,
+    })
+
+ 

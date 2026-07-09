@@ -266,4 +266,11 @@ urlpatterns =[
     path('categorie/ajouter/', views.ajouter_categorie, name='ajouter_categorie'),
     path('equipements/', views.liste_equipements, name='liste_equipements'),
     path('equipement/ajouter/', views.ajouter_equipement, name='ajouter_equipement'),
+
+
+    # =============================================
+    # APPEL VIDEO
+    #
+    path("video/<str:room_name>/", views.video_call_room, name="video_call_room"),
+    path("video/create/", views.create_video_room, name="create_video_room"),
  ]

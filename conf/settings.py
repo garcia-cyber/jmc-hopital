@@ -22,10 +22,12 @@ INSTALLED_APPS = [
     "app",
     "crispy_forms",
     "crispy_bootstrap4",
+    "channels",
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+ASGI_APPLICATION = "conf.asgi.application"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

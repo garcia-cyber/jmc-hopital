@@ -6028,3 +6028,44 @@ def supprimer_hopital(request, id):
     hopital.delete()
     messages.success(request, "Hôpital supprimé avec succès.")
     return redirect('hopital_liste')
+
+#
+# ===================================================================================================================
+# APPEL VIDEO 
+# ===================================================================================================================
+@login_required
+def video_call_room(request, room_name):
+    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role and role.hopital_id else None
+    is_admin = fonctionKey in ['admin', 'Admin', 'ADMIN', 'Administrateur']
+
+    room, created = VideoRoom.objects.get_or_create(
+        name=room_name,
+        defaults={"created_by": request.user}
+    )
+
+    context = {
+        "room": room,
+        "room_name": room.name,
+        "fonctionKey": fonctionKey,
+        "hopital_user": hopital_user,
+        "is_admin": is_admin,
+    }
+    return render(request, "back-end/video_call/room.html", context)
+
+
+#
+# ===================================================================================================
+# DIRIGE VERS LA SALLE 
+# ===================================================================================================
+@login_required
+def create_video_room(request):
+    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    room = VideoRoom.objects.create(
+        name=f"room-{request.user.id}",
+        created_by=request.user
+    )
+    return redirect("video_call_room", room_name=room.name)

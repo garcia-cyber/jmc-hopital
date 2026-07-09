@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.conf import settings 
 from django.db import transaction 
 from django.core.exceptions import ObjectDoesNotExist
+import uuid
 
 # 0 Plusieurs Hopitaux
 class Hopital(models.Model):
@@ -1314,3 +1315,22 @@ class InterventionMaintenance(models.Model):
 
     def __str__(self):
         return f"Maintenance sur {self.equipement.nom} - {'Réparé' if self.repare else 'En cours'}"
+    
+
+
+
+# ===========================================================================================================
+# 
+# 
+#
+# appel video
+#
+class VideoRoom(models.Model):
+    name = models.CharField(max_length=150, unique=True)
+    room_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_video_rooms')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name

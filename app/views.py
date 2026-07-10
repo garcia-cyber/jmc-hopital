@@ -4,7 +4,7 @@ from .models import *
 from django.contrib.auth import authenticate , login as auth_login , logout ,update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import SetPasswordForm ,UserChangeForm
+from django.contrib.auth.forms import SetPasswordForm ,UserChangeForm , PasswordChangeForm
 from django.contrib import messages
 from django.db.models import Q , Sum ,Prefetch , Count , ExpressionWrapper , OuterRef, Subquery , F , Value ,DecimalField, FloatField ,IntegerField ,Exists
 from decimal import Decimal , ROUND_HALF_UP , InvalidOperation
@@ -6042,10 +6042,14 @@ def video_call_room(request, room_name):
     # Si vous avez un champ ManyToMany 'allowed_users'
     if request.user != room.created_by and not room.allowed_users.filter(id=request.user.id).exists():
         return HttpResponseForbidden("Vous n'avez pas accès à cette salle.")
+    # Gestion de la fonction/rôle utilisateur
+    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
 
     return render(request, "back-end/video_call/room.html", {
         "room": room,
         "room_name": room.name,
+        'fonctionKey': fonction_key
     })
 
 
@@ -6080,6 +6084,32 @@ def add_colleague_to_room(request, room_id):
     return render(request, "back-end/video_call/add_colleague.html", {
         "room": room,
         "colleagues": colleagues,
+    })
+
+#
+# ========================================================================================================================
+# CHANGE MOT DE PASSE 
+# ========================================================================================================================
+@login_required
+def change_password(request):
+    if request.method == "POST":
+        form = CustomPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Mot de passe modifié avec succès.")
+            return redirect("change_password")
+        else:
+            messages.error(request, "Corrige les erreurs ci-dessous.")
+    else:
+        form = CustomPasswordChangeForm(request.user)
+
+    role_obj = Fonction.objects.filter(userKey=request.user).first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(request, "back-end/accounts/change_password.html", {
+        "form": form,
+        "fonctionKey": fonction_key
     })
 
  

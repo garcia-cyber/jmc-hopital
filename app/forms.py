@@ -627,3 +627,23 @@ class HopitalForm(forms.ModelForm) :
             raise forms.ValidationError(f" {nomH}' existe déjà.") 
         return nomH 
 
+
+# ============================================================================================
+#
+from django.contrib.auth.forms import PasswordChangeForm
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        self.fields["old_password"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Mot de passe actuel",
+        })
+        self.fields["new_password1"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Nouveau mot de passe",
+        })
+        self.fields["new_password2"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Confirmer le nouveau mot de passe",
+        })

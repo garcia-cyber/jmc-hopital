@@ -3915,20 +3915,37 @@ def gestion_pharmacie(request):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    produits = ProduitPharmacie.objects.filter(
-        hopital=hopital_user
-    ).annotate(
-        total_entrees=Sum('les_lots__quantite_initiale'),
-        total_sorties=Sum('les_lots__sorties__quantite_vendue')
-    ).annotate(
-        stock_reel=ExpressionWrapper(
-            Coalesce('total_entrees', 0) - Coalesce('total_sorties', 0),
-            output_field=IntegerField()
-        )
-    ).order_by('nom')
+    if not hopital_user:
+        produits = ProduitPharmacie.objects.none()
+    else:
+        entrees_subquery = LotPharmacie.objects.filter(
+            produit_id=OuterRef('pk'),
+            hopital=hopital_user
+        ).values('produit_id').annotate(
+            total_entrees=Coalesce(Sum('quantite_initiale'), 0)
+        ).values('total_entrees')[:1]
 
-    for p in produits:
-        p.valeur_totale = p.stock_reel * p.prix_vente_unitaire
+        sorties_subquery = SortiePharmacie.objects.filter(
+            lot__produit_id=OuterRef('pk'),
+            lot__hopital=hopital_user
+        ).values('lot__produit_id').annotate(
+            total_sorties=Coalesce(Sum('quantite_vendue'), 0)
+        ).values('total_sorties')[:1]
+
+        produits = ProduitPharmacie.objects.filter(
+            hopital=hopital_user
+        ).annotate(
+            total_entrees=Coalesce(Subquery(entrees_subquery, output_field=IntegerField()), 0),
+            total_sorties=Coalesce(Subquery(sorties_subquery, output_field=IntegerField()), 0),
+        ).annotate(
+            stock_reel=ExpressionWrapper(
+                F('total_entrees') - F('total_sorties'),
+                output_field=IntegerField()
+            )
+        ).order_by('nom')
+
+        for p in produits:
+            p.valeur_totale = p.stock_reel * p.prix_vente_unitaire
 
     taux_change = ConfigurationHopital.get_taux()
 

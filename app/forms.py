@@ -476,7 +476,6 @@ class ProduitPharmacieForm(forms.ModelForm):
 class LotPharmacieForm(forms.ModelForm):
     class Meta:
         model = LotPharmacie
-        # Remplace 'quantite' par les nouveaux noms de champs
         fields = ['produit', 'numero_lot', 'quantite_initiale', 'date_peremption']
         widgets = {
             'produit': forms.Select(attrs={'class': 'form-control'}),
@@ -484,6 +483,14 @@ class LotPharmacieForm(forms.ModelForm):
             'quantite_initiale': forms.NumberInput(attrs={'class': 'form-control'}),
             'date_peremption': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        hopital = kwargs.pop('hopital', None)
+        super().__init__(*args, **kwargs)
+        if hopital:
+            self.fields['produit'].queryset = ProduitPharmacie.objects.filter(hopital=hopital)
+        else:
+            self.fields['produit'].queryset = ProduitPharmacie.objects.none()
 
 
 # ==========================================================================================

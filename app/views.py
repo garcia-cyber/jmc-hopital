@@ -3950,7 +3950,7 @@ def ajouter_lot(request):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     if request.method == 'POST':
-        form = LotPharmacieForm(request.POST)
+        form = LotPharmacieForm(request.POST, hopital=hopital_user)
         if form.is_valid():
             lot = form.save(commit=False)
             lot.hopital = hopital_user
@@ -3958,13 +3958,15 @@ def ajouter_lot(request):
             messages.success(request, "Lot ajouté avec succès, stock mis à jour.")
             return redirect('gestion_pharmacie')
     else:
-        form = LotPharmacieForm()
+        form = LotPharmacieForm(hopital=hopital_user)
+
+    lots = LotPharmacie.objects.filter(hopital=hopital_user).select_related('produit').order_by('-id')
 
     return render(request, 'back-end/pharmacie/ajouter_lot.html', {
         'form': form,
-        'fonctionKey': fonctionKey
-    }) 
-
+        'fonctionKey': fonctionKey,
+        'lots': lots
+    })
 #
 # =====================================================================================
 # VENTE DE PRODUIT 
@@ -4016,11 +4018,13 @@ def enregistrer_vente(request):
                     return JsonResponse({'status': 'error', 'message': 'Le montant versé dépasse le total.'})
 
                 reste_a_payer = montant_total - montant_verse
+
                 paiement = Paiement.objects.create(
                     montant_verse=montant_verse,
                     devise=devise,
                     service='PHARMACIE',
                     caissier=request.user,
+                    hopital=hopital_user,
                     reste_a_payer=reste_a_payer
                 )
 
@@ -4052,7 +4056,6 @@ def enregistrer_vente(request):
         'taux_actuel': float(ConfigurationHopital.get_taux()),
         'fonctionKey': fonctionKey
     })
-
 #
 # =============================================================================================================================
 # DASHBOARD COTE PHARMACIE 
@@ -4129,15 +4132,12 @@ def liste_ventes(request):
     ventes = Paiement.objects.filter(
         service='PHARMACIE',
         hopital=hopital_user
-    ).prefetch_related(
-        'les_sorties__lot__produit'
     ).order_by('-date_paiement')
 
     return render(request, 'back-end/pharmacie/liste_ventes.html', {
         'ventes': ventes,
         'fonctionKey': fonctionKey
     })
-
 #
 # ===================================================================================================
 # FACTURATION DES VENTES PRODUITS

@@ -13,34 +13,41 @@
             box-shadow: 0 6px 24px rgba(0,0,0,0.06);
             padding: 24px;
         }
+
         .section-title {
             font-weight: 700;
             color: #1f2937;
             margin-bottom: 0;
         }
+
         .soft-badge {
             padding: 6px 12px;
             border-radius: 999px;
             font-size: 12px;
             font-weight: 600;
         }
+
         .search-box {
             border-radius: 30px;
             padding-left: 18px;
             min-height: 44px;
         }
+
         .modal-header {
             background: linear-gradient(135deg, #2563eb, #3b82f6);
             color: #fff;
             border-bottom: none;
         }
+
         .modal-header .close {
             color: #fff;
             opacity: 1;
         }
+
         .form-grid .form-group {
             margin-bottom: 1rem;
         }
+
         .table thead th {
             border-top: none;
             font-size: 12px;
@@ -48,10 +55,29 @@
             letter-spacing: .5px;
             color: #6b7280;
         }
+
         @media (max-width: 768px) {
-            .page-card { padding: 16px; }
-            .search-area { width: 100%; margin-top: 12px; }
-            .search-area .input-group { width: 100% !important; }
+            .page-card {
+                padding: 16px;
+            }
+
+            .search-area {
+                width: 100%;
+                margin-top: 12px;
+                max-width: 100% !important;
+            }
+
+            .search-area .input-group {
+                width: 100% !important;
+            }
+
+            .search-area .input-group-text {
+                border-radius: 0 30px 30px 0 !important;
+            }
+
+            .page-header .row > div {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -71,9 +97,10 @@
                             <li class="breadcrumb-item active">Liste</li>
                         </ul>
                     </div>
-                    <div class="col-md-6 col-12 text-md-right mt-3 mt-md-0">
-                        <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-center">
-                            <div class="input-group search-area mr-md-3 mb-2 mb-md-0" style="max-width: 320px;">
+
+                    <div class="col-md-6 col-12 mt-3 mt-md-0">
+                        <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-center w-100">
+                            <div class="input-group search-area mb-2 mb-md-0 mr-md-3 w-100" style="max-width: 320px;">
                                 <input type="text" id="customSearch" class="form-control search-box" placeholder="Rechercher...">
                                 <div class="input-group-append">
                                     <span class="input-group-text" style="border-radius: 0 30px 30px 0;">
@@ -81,8 +108,9 @@
                                     </span>
                                 </div>
                             </div>
+
                             {% if fonctionKey == 'receptionniste' %}
-                            <button class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
+                            <button class="btn btn-primary w-100 w-md-auto" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
                                 <i class="fa fa-plus"></i> Nouveau
                             </button>
                             {% endif %}

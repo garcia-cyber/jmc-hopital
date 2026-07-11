@@ -368,7 +368,7 @@ class SigneVital(models.Model):
 
 
 
-# 10. CONSULTATION ==================================================
+# 10. CONSULTATION =============================================================================== 
 class Consultation(models.Model):
     # Propriété pour accéder facilement au patient
     @property
@@ -378,7 +378,7 @@ class Consultation(models.Model):
     triage = models.OneToOneField(SigneVital, db_index=True, on_delete=models.CASCADE)
     medecin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     motif_consultation = models.TextField(verbose_name="Motif")
-    antecedent = models.CharField(max_length  = 30 , null = True , blank = True)
+    antecedent = models.CharField(max_length  = 255 , null = True , blank = True)
     histoire_maladie = models.TextField(verbose_name="Histoire de la maladie")
     examen_physique = models.TextField(verbose_name="Examen physique")
     complement_d_anamnese = models.CharField(max_length=200, null=True)

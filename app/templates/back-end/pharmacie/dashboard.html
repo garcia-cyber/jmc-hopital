@@ -5,53 +5,197 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Pharmacie | JMC</title>
+
     {% include 'back-end/includes/css.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-    
+
     <style>
-        :root { --medical-blue: #0284c7; --bg-body: #f1f5f9; }
-        body { background-color: var(--bg-body) !important; font-family: 'Segoe UI', sans-serif; }
-        .card { border-radius: 16px; border: none; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 1.5rem; }
-        .stat-icon { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.2rem; }
-        .badge-urgent { background: #fee2e2; color: #dc2626; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 6px; }
-        .btn-filter.active { background-color: var(--medical-blue); color: white; }
-        /* Ajustements Responsive */
-        .dataTables_wrapper { width: 100%; overflow-x: auto; }
-        table.table-datatable { width: 100% !important; }
+        :root {
+            --medical-blue: #0284c7;
+            --bg-body: #f1f5f9;
+            --card-radius: 16px;
+        }
+
+        body {
+            background-color: var(--bg-body) !important;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .card {
+            border-radius: var(--card-radius);
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1rem;
+        }
+
+        .stat-card {
+            min-height: 110px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .badge-urgent {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .btn-filter.active {
+            background-color: var(--medical-blue) !important;
+            color: white !important;
+            border-color: var(--medical-blue) !important;
+        }
+
+        .content {
+            padding-bottom: 2rem;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+
+        table.table-datatable {
+            width: 100% !important;
+        }
+
+        .table thead th {
+            white-space: nowrap;
+        }
+
+        .table td, .table th {
+            vertical-align: middle;
+        }
+
+        @media (max-width: 767.98px) {
+            .page-title-wrap {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.75rem;
+            }
+
+            .btn-group {
+                width: 100%;
+            }
+
+            .btn-group .btn {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="fw-bold">Tableau de Bord - {{ fonctionKey }}</h4>
+
+                <div class="d-flex justify-content-between align-items-center mb-4 page-title-wrap">
+                    <div>
+                        <h4 class="fw-bold mb-1">Tableau de Bord - {{ fonctionKey }}</h4>
+                        <small class="text-muted">
+                            {% if est_admin %}
+                                Vue globale de tous les hôpitaux
+                            {% else %}
+                                Vue de votre hôpital connecté
+                            {% endif %}
+                        </small>
+                    </div>
+
                     <div class="btn-group">
-                        <a href="?periode=jour" class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'jour' %}active{% endif %}">Jour</a>
-                        <a href="?periode=semaine" class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'semaine' %}active{% endif %}">Semaine</a>
-                        <a href="?periode=mois" class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'mois' %}active{% endif %}">Mois</a>
+                        <a href="?periode=jour{% if request.GET.hopital_id %}&hopital_id={{ request.GET.hopital_id }}{% endif %}"
+                           class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'jour' %}active{% endif %}">
+                            Jour
+                        </a>
+                        <a href="?periode=semaine{% if request.GET.hopital_id %}&hopital_id={{ request.GET.hopital_id }}{% endif %}"
+                           class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'semaine' %}active{% endif %}">
+                            Semaine
+                        </a>
+                        <a href="?periode=mois{% if request.GET.hopital_id %}&hopital_id={{ request.GET.hopital_id }}{% endif %}"
+                           class="btn btn-outline-primary btn-filter {% if periode_actuelle == 'mois' %}active{% endif %}">
+                            Mois
+                        </a>
                     </div>
                 </div>
 
+                <form method="get" class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="periode" value="{{ periode_actuelle }}">
+
+                    <div class="col-12 col-md-5 col-lg-4">
+                        <label class="form-label fw-semibold">Hôpital</label>
+                        <select name="hopital_id" class="form-select" {% if not est_admin %}disabled{% endif %}>
+                            {% if est_admin %}
+                                <option value="">Tous les hôpitaux</option>
+                            {% endif %}
+                            {% for h in hopitaux %}
+                                <option value="{{ h.id }}" {% if hopital_actif and h.id == hopital_actif.id %}selected{% endif %}>
+                                    {{ h.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label class="form-label fw-semibold">Période</label>
+                        <select name="periode" class="form-select">
+                            <option value="jour" {% if periode_actuelle == 'jour' %}selected{% endif %}>Jour</option>
+                            <option value="semaine" {% if periode_actuelle == 'semaine' %}selected{% endif %}>Semaine</option>
+                            <option value="mois" {% if periode_actuelle == 'mois' %}selected{% endif %}>Mois</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-3 col-lg-2 d-grid">
+                        <button type="submit" class="btn btn-primary">Filtrer</button>
+                    </div>
+                </form>
+
                 <div class="row g-3 mb-4">
                     {% for t in total_general %}
-                    <div class="col-12 col-md-3">
-                        <div class="card p-3 bg-primary text-white">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card p-3 stat-card bg-primary text-white">
                             <small class="opacity-75">Total CA ({{ t.devise }})</small>
-                            <h4 class="fw-bold mb-0">{{ t.grand_total|floatformat:2 }}</h4>
+                            <h4 class="fw-bold mb-0 mt-2">{{ t.grand_total|floatformat:2 }}</h4>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card p-3 stat-card bg-primary text-white">
+                            <small class="opacity-75">Total CA</small>
+                            <h4 class="fw-bold mb-0 mt-2">0.00</h4>
                         </div>
                     </div>
                     {% endfor %}
-                    <div class="col-12 col-md-3">
-                        <div class="card p-3 d-flex flex-row align-items-center gap-3">
-                            <div class="stat-icon text-success bg-light"><i class="fas fa-notes-medical"></i></div>
-                            <div><small class="text-muted d-block">Transactions</small><h5 class="mb-0 fw-bold">{{ nb_ventes }}</h5></div>
+
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card p-3 stat-card d-flex flex-row align-items-center gap-3">
+                            <div class="stat-icon text-success bg-light">
+                                <i class="fas fa-notes-medical"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Transactions</small>
+                                <h5 class="mb-0 fw-bold">{{ nb_ventes }}</h5>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -59,63 +203,149 @@
                 <div class="row g-4">
                     <div class="col-12 col-lg-7">
                         <div class="card p-4">
-                            <h6 class="mb-3 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Évolution des Ventes</h6>
-                            <table class="table table-hover table-datatable">
-                                <thead><tr><th>Période</th><th>Devise</th><th>Total</th></tr></thead>
-                                <tbody>
-                                    {% for s in stats_ventes %}
-                                    <tr><td>{{ s.date_groupee|date:"d M Y" }}</td><td>{{ s.devise }}</td><td>{{ s.total_periode|floatformat:2 }}</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <h6 class="section-title mb-3">
+                                <i class="fas fa-chart-line me-2 text-primary"></i>Évolution des Ventes
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Période</th>
+                                            <th>Devise</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for s in stats_ventes %}
+                                        <tr>
+                                            <td>{{ s.date_groupee|date:"d M Y" }}</td>
+                                            <td>{{ s.devise }}</td>
+                                            <td>{{ s.total_periode|floatformat:2 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        
+
                         <div class="card p-4">
-                            <h6 class="mb-3 fw-bold text-warning"><i class="fas fa-file-invoice-dollar me-2"></i>Dettes en cours</h6>
-                            <table class="table table-hover table-datatable">
-                                <thead><tr><th>Facture</th><th>Reste</th><th>Vendeur</th></tr></thead>
-                                <tbody>
-                                    {% for dette in dettes_en_cours %}
-                                    <tr>
-                                        <td>#{{ dette.id }}</td>
-                                        <td class="text-danger fw-bold">{{ dette.reste_a_payer|floatformat:2 }}</td>
-                                        <td>{{ dette.les_sorties.first.vendu_par.username|default:"N/A" }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <h6 class="section-title mb-3 text-warning">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>Dettes en cours
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Facture</th>
+                                            <th>Reste</th>
+                                            <th>Vendeur</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dette in dettes_en_cours %}
+                                        <tr>
+                                            <td>#{{ dette.id }}</td>
+                                            <td class="text-danger fw-bold">{{ dette.reste_a_payer|floatformat:2 }}</td>
+                                            <td>{{ dette.les_sorties.first.vendu_par.username|default:"N/A" }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune dette en cours</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
                     <div class="col-12 col-lg-5">
                         <div class="card p-4 mb-3">
-                            <h6 class="mb-3 fw-bold text-success"><i class="fas fa-coins me-2"></i>Top 5 Bénéfices</h6>
-                            <table class="table table-hover table-datatable">
-                                <thead><tr><th>Produit</th><th>Profit</th></tr></thead>
-                                {% for p in top_benefices %}
-                                <tr><td>{{ p.lot__produit__nom }}</td><td class="text-success fw-bold">+{{ p.benefice_total|floatformat:2 }}</td></tr>
-                                {% endfor %}
-                            </table>
+                            <h6 class="section-title mb-3 text-success">
+                                <i class="fas fa-coins me-2"></i>Top 5 Bénéfices
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Profit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in top_benefices %}
+                                        <tr>
+                                            <td>{{ p.lot__produit__nom }}</td>
+                                            <td class="text-success fw-bold">+{{ p.benefice_total|floatformat:2 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="card p-4 mb-3">
-                            <h6 class="mb-3 fw-bold text-primary"><i class="fas fa-user-check me-2"></i>Ventes par Vendeur</h6>
-                            <table class="table table-hover table-datatable">
-                                <thead><tr><th>Vendeur</th><th>Total</th></tr></thead>
-                                {% for u in ventes_par_utilisateur %}
-                                <tr><td>{{ u.les_sorties__vendu_par__username }}</td><td>{{ u.total_vendu|floatformat:2 }} {{ u.devise }}</td></tr>
-                                {% endfor %}
-                            </table>
+                            <h6 class="section-title mb-3 text-primary">
+                                <i class="fas fa-user-check me-2"></i>Ventes par Vendeur
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Vendeur</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for u in ventes_par_utilisateur %}
+                                        <tr>
+                                            <td>{{ u.les_sorties__vendu_par__username|default:"N/A" }}</td>
+                                            <td>{{ u.total_vendu|floatformat:2 }} {{ u.devise }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune vente</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="card p-4">
-                            <h6 class="mb-3 fw-bold text-danger"><i class="fas fa-capsules me-2"></i>Urgence Stock</h6>
-                            <table class="table table-hover table-datatable">
-                                <thead><tr><th>Produit</th><th>Stock</th></tr></thead>
-                                {% for p in produits_critiques %}
-                                <tr><td>{{ p.produit.nom }}</td><td><span class="badge-urgent">{{ p.quantite_actuelle }}</span></td></tr>
-                                {% endfor %}
-                            </table>
+                            <h6 class="section-title mb-3 text-danger">
+                                <i class="fas fa-capsules me-2"></i>Urgence Stock
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Stock</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in produits_critiques %}
+                                        <tr>
+                                            <td>{{ p.produit.nom }}</td>
+                                            <td><span class="badge-urgent">{{ p.quantite_actuelle }}</span></td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Stock correct</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -127,19 +357,33 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    
+
     <script>
         $(document).ready(function() {
             $('.table-datatable').DataTable({
                 responsive: true,
-                "language": { 
-                    "search": "Rechercher :", 
-                    "paginate": { "next": "Suivant", "previous": "Précédent" },
-                    "info": "Affichage _START_ à _END_ sur _TOTAL_" 
+                autoWidth: false,
+                pageLength: 5,
+                language: {
+                    search: "Rechercher :",
+                    lengthMenu: "Afficher _MENU_ lignes",
+                    paginate: {
+                        next: "Suivant",
+                        previous: "Précédent"
+                    },
+                    info: "Affichage _START_ à _END_ sur _TOTAL_",
+                    zeroRecords: "Aucun résultat trouvé"
+                }
+            });
+
+            $('select[name="hopital_id"], select[name="periode"]').on('change', function () {
+                if (this.form) {
+                    this.form.submit();
                 }
             });
         });
     </script>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

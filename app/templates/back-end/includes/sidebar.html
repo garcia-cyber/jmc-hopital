@@ -61,7 +61,7 @@
 
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
 
-<li>
+{% comment %} <li>
     <a href="{% url 'gestion_pharmacie' %}">
         <i class="fa fa-cubes"></i> <span>État du Stock</span>
     </a>
@@ -71,9 +71,9 @@
     <a href="{% url 'ajouter_lot' %}">
         <i class="fa fa-plus-circle"></i> <span>Réception Fournisseur</span>
     </a>
-</li>
+</li> {% endcomment %}
 
-<li>
+{% comment %} <li>
     <a href="{% url 'ajouter_produit' %}">
         <i class="fa fa-pills"></i> <span>Créer un Médicament</span>
     </a>
@@ -82,7 +82,7 @@
     <a href="{% url 'enregistrer_vente' %}" class="nav-link">
         <i class="fa fa-shopping-cart"></i> <span>Enregistrer Vente</span>
     </a>
-</li>
+</li> {% endcomment %}
 
 <li>
     <a href="{% url 'dashboard_ventes' %}">
@@ -91,11 +91,11 @@
     </a>
 </li>
 
-<li class="nav-item">
+{% comment %} <li class="nav-item">
         <a class="nav-link" href="{% url 'liste_ventes' %}">
             <i class="fas fa-history me-2"></i> Historique Ventes
         </a>
-    </li>
+    </li> {% endcomment %}
     <li><a href="{% url 'liste_consultations' %}"><i class="la la-history"></i> <span>Historique Consultations</span></a></li>
 
              <li>

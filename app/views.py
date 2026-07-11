@@ -4067,6 +4067,30 @@ def dashboard_ventes(request):
     fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
 
     periode = request.GET.get('periode', 'jour')
+    hopital_id = request.GET.get('hopital_id')
+
+    est_admin = request.user.is_superuser or request.user.is_staff
+
+    if est_admin:
+        hopital_actif = None
+        if hopital_id:
+            hopital_actif = Hopital.objects.filter(id=hopital_id).first()
+        paiements_base = Paiement.objects.all()
+        sorties_base = SortiePharmacie.objects.all()
+        lots_base = LotPharmacie.objects.all()
+        hopitaux = Hopital.objects.all().order_by('nom')
+    else:
+        hopital_actif = hopital_user
+        paiements_base = Paiement.objects.filter(hopital=hopital_user)
+        sorties_base = SortiePharmacie.objects.filter(lot__hopital=hopital_user)
+        lots_base = LotPharmacie.objects.filter(hopital=hopital_user)
+        hopitaux = Hopital.objects.filter(id=hopital_user.id) if hopital_user else Hopital.objects.none()
+
+    if est_admin and hopital_actif:
+        paiements_base = paiements_base.filter(hopital=hopital_actif)
+        sorties_base = sorties_base.filter(lot__hopital=hopital_actif)
+        lots_base = lots_base.filter(hopital=hopital_actif)
+
     periodes_map = {
         'jour': TruncDay('date_paiement'),
         'semaine': TruncWeek('date_paiement'),
@@ -4074,13 +4098,9 @@ def dashboard_ventes(request):
     }
     trunc_func = periodes_map.get(periode, TruncDay('date_paiement'))
 
-    paiements_base = Paiement.objects.filter(hopital=hopital_user)
-    sorties_base = SortiePharmacie.objects.filter(lot__hopital=hopital_user)
-    lots_base = LotPharmacie.objects.filter(hopital=hopital_user)
-
     total_general = paiements_base.values('devise').annotate(
         grand_total=Sum('montant_verse')
-    )
+    ).order_by('devise')
 
     ventes_par_utilisateur = paiements_base.values(
         'les_sorties__vendu_par__username', 'devise'
@@ -4116,10 +4136,12 @@ def dashboard_ventes(request):
         'produits_critiques': produits_critiques,
         'nb_ventes': nombre_ventes,
         'periode_actuelle': periode,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'est_admin': est_admin,
+        'hopitaux': hopitaux,
+        'hopital_actif': hopital_actif,
     }
     return render(request, 'back-end/pharmacie/dashboard.html', context)
-# 
 # ==================================================================================================
 # LISTE DES VENTES
 # ==================================================================================================

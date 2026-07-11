@@ -1,546 +1,600 @@
 <!DOCTYPE html>
 <html lang="fr">
-    {% load static %}
+{% load static %}
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="JMC Hospital - Système Intégré de Gestion Hospitalière">
+    <meta name="author" content="JMC">
 
-    <head>
-        <!-- Meta -->
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <meta name="description" content="JMC Hospital - Système Intégré de Gestion Hospitalière">
-        <meta name="author" content="JMC">
-        
-        <!-- SITE TITLE -->
-        <title>JMC Hospital — ERP Médical</title>  
-        <link rel="shortcut icon" type="image/x-icon" href="{% static 'front-end/assets/img/dr/jmc.jpeg' %}">        
-        
-        <!-- Latest Bootstrap min CSS -->
-        <link rel="stylesheet" href="{% static 'front-end/assets/bootstrap/css/bootstrap.min.css' %}">       
-        <!-- Google Fonts -->
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800"> 
-        <!-- Font Awesome & Icons -->
-        <link rel="stylesheet" href="{% static 'front-end/assets/fonts/font-awesome.min.css' %}">
-        <link rel="stylesheet" href="{% static 'front-end/assets/fonts/themify-icons.css' %}">
-        <!--- Owl Carousel Css-->
-        <link rel="stylesheet" href="{% static 'front-end/assets/owlcarousel/css/owl.carousel.css' %}">
-        <link rel="stylesheet" href="{% static 'front-end/assets/owlcarousel/css/owl.theme.css' %}">
-        <!-- Animate & Magnific CSS -->
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/fonts.css' %}">     
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/animate.css' %}">                   
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/magnific-popup.css' %}">                    
-        <!-- Styles Métier de base -->                      
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/menu.css' %}">          
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/style.css' %}">         
-        <link rel="stylesheet" href="{% static 'front-end/assets/css/responsive.css' %}">    
-        <meta name="google-site-verification" content="gcV3ZIJr8-zuXttrBbKiDmd-fnJcrpVAdtGNhlxtnlw" />
+    <title>JMC Hospital — ERP Médical</title>
 
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'front-end/assets/img/dr/jmc.jpeg' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800">
+    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/themify-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/owlcarousel/css/owl.carousel.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/owlcarousel/css/owl.theme.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/fonts.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/animate.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/magnific-popup.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/menu.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/responsive.css' %}">
 
-        <!-- 🎨 DESIGN COMPLET — ARCHITECTURE LOGICIELLE MÉDICALE -->
-        <style>
-            :root {
-                --md-primary: #0284c7;       /* Bleu clinique moderne */
-                --md-primary-hover: #0369a1; 
-                --md-success: #0d9488;       /* Vert soin/pharmacie */
-                --md-success-hover: #0f766e;
-                --md-dark: #0f172a;          /* Slate très sombre pour le texte lisible */
-                --md-body: #f8fafc;          /* Fond de page très doux pour réduire la fatigue visuelle */
-                --md-muted: #64748b;
-                --radius-sm: 8px;
-                --radius-lg: 16px;
-                --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-                --shadow-md: 0 10px 15px -3px rgba(2, 132, 199, 0.06), 0 4px 6px -4px rgba(2, 132, 199, 0.06);
-                --shadow-lg: 0 20px 25px -5px rgba(2, 132, 199, 0.1), 0 8px 10px -6px rgba(2, 132, 199, 0.1);
-            }
+    <meta name="google-site-verification" content="gcV3ZIJr8-zuXttrBbKiDmd-fnJcrpVAdtGNhlxtnlw" />
 
-            body {
-                font-family: 'Poppins', sans-serif;
-                background-color: var(--md-body);
-                color: var(--md-dark);
-            }
+    <style>
+        :root {
+            --md-primary: #0284c7;
+            --md-primary-hover: #0369a1;
+            --md-dark: #0f172a;
+            --md-body: #f8fafc;
+            --md-muted: #64748b;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 10px 15px -3px rgba(2, 132, 199, 0.06), 0 4px 6px -4px rgba(2, 132, 199, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(2, 132, 199, 0.1), 0 8px 10px -6px rgba(2, 132, 199, 0.1);
+        }
 
-            /* --- Barre de Navigation Ultra Clean --- */
-            .site-navbar {
-                background: rgba(255, 255, 255, 0.85) !important;
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-                box-shadow: var(--shadow-sm);
-                padding: 15px 0;
-            }
-            .site-logo a {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .site-logo a img {
-                max-height: 45px;
-                width: auto;
-                border-radius: var(--radius-sm);
-            }
-            .site-menu .nav-link {
-                color: var(--md-muted) !important;
-                font-weight: 500 !important;
-                font-size: 0.95rem;
-                padding: 10px 15px !important;
-                transition: all 0.2s ease;
-            }
-            .site-menu .nav-link:hover, 
-            .site-menu li.active .nav-link {
-                color: var(--md-primary) !important;
-            }
-            .btn-nav-accent {
-                background: rgba(2, 132, 199, 0.1);
-                color: var(--md-primary) !important;
-                border-radius: var(--radius-sm);
-                font-weight: 600 !important;
-            }
-            .btn-nav-accent:hover {
-                background: var(--md-primary) !important;
-                color: white !important;
-            }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--md-body);
+            color: var(--md-dark);
+        }
 
-            /* --- Zone Hero Connectée --- */
-            .home_bg {
-                position: relative;
-                padding: 180px 0 140px 0;
-                background-size: cover;
-                background-position: center;
-            }
-            .home_bg::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(2, 132, 199, 0.75) 100%);
-                z-index: 1;
-            }
-            .hero-text {
-                position: relative;
-                z-index: 2;
-                max-width: 800px;
-                margin: 0 auto;
-            }
-            .hero-text h2 {
-                font-weight: 700;
-                font-size: 3.2rem;
-                line-height: 1.2;
-                color: #ffffff !important;
-                margin-bottom: 25px;
-                text-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .hero-text p {
-                font-size: 1.2rem;
-                color: rgba(241, 245, 249, 0.9) !important;
-                font-weight: 300;
-                margin-bottom: 40px;
-                line-height: 1.6;
-            }
-            .hero-buttons .btn-main {
-                background: var(--md-primary) !important;
-                color: white !important;
-                padding: 15px 35px;
-                border-radius: var(--radius-sm);
-                font-weight: 600;
-                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
-                transition: all 0.2s ease;
-                display: inline-block;
-                margin-right: 15px;
-            }
-            .hero-buttons .btn-main:hover {
-                background: var(--md-primary-hover) !important;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(2, 132, 199, 0.6);
-            }
-            .hero-buttons .btn-secondary {
-                background: transparent !important;
-                color: white !important;
-                border: 2px solid rgba(255,255,255,0.6) !important;
-                padding: 13px 35px;
-                border-radius: var(--radius-sm);
-                font-weight: 600;
-                transition: all 0.2s ease;
-                display: inline-block;
-            }
-            .hero-buttons .btn-secondary:hover {
-                border-color: white !important;
-                background: rgba(255,255,255,0.1) !important;
-                transform: translateY(-2px);
+        .site-navbar {
+            background: rgba(255, 255, 255, 0.92) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .navbar-brand {
+            gap: 10px;
+        }
+
+        .navbar-brand img {
+            max-height: 42px;
+            width: auto;
+            border-radius: var(--radius-sm);
+        }
+
+        .navbar-brand span {
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+        }
+
+        .site-navbar .nav-link {
+            color: var(--md-muted) !important;
+            font-weight: 500;
+            padding: .8rem 1rem;
+            border-radius: 10px;
+            transition: all .2s ease;
+        }
+
+        .site-navbar .nav-link:hover,
+        .site-navbar .nav-link:focus {
+            color: var(--md-primary) !important;
+            background: rgba(2, 132, 199, .08);
+        }
+
+        .site-navbar .dropdown-menu {
+            border: 0;
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            padding: .5rem;
+        }
+
+        .site-navbar .dropdown-item {
+            border-radius: 10px;
+            padding: .65rem .9rem;
+        }
+
+        .site-navbar .dropdown-item:hover {
+            background: rgba(2, 132, 199, .08);
+            color: var(--md-primary);
+        }
+
+        .btn-nav-accent {
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--md-primary) !important;
+            border-radius: var(--radius-sm);
+            font-weight: 600 !important;
+            border: 1px solid rgba(2, 132, 199, 0.18);
+        }
+
+        .btn-nav-accent:hover {
+            background: var(--md-primary) !important;
+            color: white !important;
+        }
+
+        .navbar-toggler {
+            border: 0;
+            box-shadow: none !important;
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+
+        .navbar-toggler-icon {
+            width: 1.35em;
+            height: 1.35em;
+        }
+
+        @media (max-width: 1199.98px) {
+            .site-navbar .navbar-collapse {
+                padding: 1rem 0 0.75rem;
             }
 
-            /* --- Section Compteurs Statistiques (KPI) --- */
-            .kpi-section {
-                position: relative;
-                z-index: 3;
-                margin-top: -60px;
-                padding-bottom: 60px;
-            }
-            .kpi-wrapper {
-                background: #ffffff;
-                border-radius: var(--radius-lg);
-                padding: 30px;
-                box-shadow: var(--shadow-lg);
-                border: 1px solid rgba(226, 232, 240, 0.8);
-            }
-            .kpi-item {
-                text-align: center;
-                padding: 15px;
-                border-right: 1px solid #f1f5f9;
-            }
-            .kpi-item:last-child {
-                border-right: none;
-            }
-            .kpi-icon {
-                font-size: 2rem;
-                color: var(--md-primary);
-                margin-bottom: 10px;
-            }
-            .kpi-number {
-                font-size: 2.2rem;
-                font-weight: 700;
-                color: var(--md-dark);
-                line-height: 1;
-                margin-bottom: 5px;
-            }
-            .kpi-label {
-                font-size: 0.85rem;
-                color: var(--md-muted);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                font-weight: 500;
+            .site-navbar .nav-item {
+                width: 100%;
             }
 
-            /* --- Titres de sections Pro --- */
-            .section-title {
-                margin-bottom: 60px;
-            }
-            .section-title h2 {
-                font-weight: 700;
-                color: var(--md-dark);
-                font-size: 2.2rem;
-                position: relative;
-                display: inline-block;
-                padding-bottom: 15px;
-            }
-            .section-title h2::after {
-                content: '';
-                position: absolute;
-                bottom: 0; left: 50%;
-                transform: translateX(-50%);
-                width: 50px; height: 4px;
-                background: var(--md-primary);
-                border-radius: 2px;
-            }
-            .section-title p {
-                color: var(--md-muted);
-                font-size: 1.1rem;
-                max-width: 600px;
-                margin: 15px auto 0 auto;
+            .site-navbar .btn {
+                width: 100%;
+                margin-top: .5rem;
             }
 
-            /* --- Grille des Modules Applicatifs (Cartes) --- */
-            .feature_area {
-                padding: 40px 0 100px 0;
+            .site-navbar .dropdown-menu {
+                border: 1px solid rgba(226, 232, 240, 0.9);
+                margin-top: .35rem;
             }
-            .single_feature {
-                background: #ffffff;
-                border-radius: var(--radius-lg);
-                padding: 45px 35px !important;
-                margin-bottom: 30px;
-                border: 1px solid rgba(226, 232, 240, 0.7);
-                box-shadow: var(--shadow-md);
-                transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-                position: relative;
-                overflow: hidden;
-                height: calc(100% - 30px);
-            }
-            .single_feature::before {
-                content: '';
-                position: absolute;
-                top: 0; left: 0; width: 4px; height: 100%;
-                background: var(--md-primary);
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            }
-            .single_feature:hover {
-                transform: translateY(-5px);
-                box-shadow: var(--shadow-lg);
-                border-color: rgba(2, 132, 199, 0.15);
-            }
-            .single_feature:hover::before {
-                opacity: 1;
-            }
-            .feature-icon-box {
-                width: 65px;
-                height: 65px;
-                background: rgba(2, 132, 199, 0.06);
-                border-radius: var(--radius-sm);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-bottom: 25px;
-                transition: all 0.3s ease;
-            }
-            .single_feature:hover .feature-icon-box {
-                background: var(--md-primary);
-            }
-            .feature-icon-box i {
-                font-size: 1.6rem;
-                color: var(--md-primary);
-                transition: all 0.3s ease;
-            }
-            .single_feature:hover .feature-icon-box i {
-                color: #ffffff;
-            }
-            .single_feature h4 {
-                font-size: 1.25rem;
-                font-weight: 600;
-                color: var(--md-dark);
-                margin-bottom: 12px;
-            }
-            .single_feature p {
-                font-size: 0.92rem;
-                color: var(--md-muted);
-                line-height: 1.6;
-                margin-bottom: 0;
-            }
+        }
 
-            /* --- Footer épuré --- */
-            .medical-footer {
-                background: #0f172a;
-                color: #94a3b8;
-                padding: 30px 0;
-                font-size: 0.9rem;
-                border-top: 1px solid #1e293b;
-            }
-            .medical-footer a {
-                color: #ffffff;
-                text-decoration: none;
-            }
-            .medical-footer a:hover {
-                color: var(--md-primary);
-            }
-        </style>
-    </head>
-    
-    <body data-spy="scroll" data-offset="80">
+        .home_bg {
+            position: relative;
+            padding: 180px 0 140px 0;
+            background-size: cover;
+            background-position: center;
+        }
 
-        <!-- START PRELOADER -->
-        <div class="preloader">
-            <div class="spinner">
-                <div class="double-bounce1"></div>
-                <div class="double-bounce2"></div>
+        .home_bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(2, 132, 199, 0.75) 100%);
+            z-index: 1;
+        }
+
+        .hero-text {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-text h2 {
+            font-weight: 700;
+            font-size: 3.2rem;
+            line-height: 1.2;
+            color: #ffffff !important;
+            margin-bottom: 25px;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            color: rgba(241, 245, 249, 0.9) !important;
+            font-weight: 300;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .hero-buttons .btn-main {
+            background: var(--md-primary) !important;
+            color: white !important;
+            padding: 15px 35px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+            transition: all 0.2s ease;
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .hero-buttons .btn-main:hover {
+            background: var(--md-primary-hover) !important;
+            transform: translateY(-2px);
+        }
+
+        .hero-buttons .btn-secondary {
+            background: transparent !important;
+            color: white !important;
+            border: 2px solid rgba(255,255,255,0.6) !important;
+            padding: 13px 35px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        .hero-buttons .btn-secondary:hover {
+            border-color: white !important;
+            background: rgba(255,255,255,0.1) !important;
+            transform: translateY(-2px);
+        }
+
+        .kpi-section {
+            position: relative;
+            z-index: 3;
+            margin-top: -60px;
+            padding-bottom: 60px;
+        }
+
+        .kpi-wrapper {
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .kpi-item {
+            text-align: center;
+            padding: 15px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .kpi-item:last-child {
+            border-right: none;
+        }
+
+        .kpi-icon {
+            font-size: 2rem;
+            color: var(--md-primary);
+            margin-bottom: 10px;
+        }
+
+        .kpi-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--md-dark);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .kpi-label {
+            font-size: 0.85rem;
+            color: var(--md-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .section-title {
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-weight: 700;
+            color: var(--md-dark);
+            font-size: 2.2rem;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 15px;
+        }
+
+        .section-title h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 4px;
+            background: var(--md-primary);
+            border-radius: 2px;
+        }
+
+        .section-title p {
+            color: var(--md-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 15px auto 0 auto;
+        }
+
+        .feature_area {
+            padding: 40px 0 100px 0;
+        }
+
+        .single_feature {
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 45px 35px !important;
+            margin-bottom: 30px;
+            border: 1px solid rgba(226, 232, 240, 0.7);
+            box-shadow: var(--shadow-md);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            height: calc(100% - 30px);
+        }
+
+        .single_feature::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--md-primary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .single_feature:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(2, 132, 199, 0.15);
+        }
+
+        .single_feature:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon-box {
+            width: 65px;
+            height: 65px;
+            background: rgba(2, 132, 199, 0.06);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .single_feature:hover .feature-icon-box {
+            background: var(--md-primary);
+        }
+
+        .feature-icon-box i {
+            font-size: 1.6rem;
+            color: var(--md-primary);
+            transition: all 0.3s ease;
+        }
+
+        .single_feature:hover .feature-icon-box i {
+            color: #ffffff;
+        }
+
+        .single_feature h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--md-dark);
+            margin-bottom: 12px;
+        }
+
+        .single_feature p {
+            font-size: 0.92rem;
+            color: var(--md-muted);
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        .medical-footer {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 30px 0;
+            font-size: 0.9rem;
+            border-top: 1px solid #1e293b;
+        }
+
+        .medical-footer a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .medical-footer a:hover {
+            color: var(--md-primary);
+        }
+    </style>
+</head>
+
+<body data-spy="scroll" data-offset="80">
+
+    <div class="preloader">
+        <div class="spinner">
+            <div class="double-bounce1"></div>
+            <div class="double-bounce2"></div>
+        </div>
+    </div>
+
+    <header class="site-navbar navbar navbar-expand-xl navbar-light sticky-top" role="banner">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo JMC Hospital">
+                <span class="fw-bold" style="color: var(--md-dark);">JMC <span style="color: var(--md-primary);">Hospital</span></span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Basculer la navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav ms-auto align-items-xl-center gap-xl-2 mt-3 mt-xl-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#modules">Modules App</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#kpi">Indicateurs</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="quickAccess" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Accès Rapide
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="quickAccess">
+                            <li><a class="dropdown-item" href="#"><i class="fa fa-user-md me-2"></i>Espace Médecin</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa fa-pills me-2"></i>Stocks Pharmacie</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fa fa-flask me-2"></i>Labo & Analyses</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item ms-xl-2">
+                        <a class="btn btn-primary px-3 rounded-3" href="{% url 'login' %}">
+                            <i class="fa fa-lock me-2"></i>Connexion ERP
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
-        <!-- END PRELOADER -->      
+    </header>
 
-        <!-- START NAVBAR -->
-        <div class="site-mobile-menu site-navbar-target">
-          <div class="site-mobile-menu-header">
-            <div class="site-mobile-menu-close mt-3">
-              <span class="icon-close2 js-menu-toggle"></span>
-            </div>
-          </div>
-          <div class="site-mobile-menu-body"></div>
-        </div>
-       
-        <header class="site-navbar js-sticky-header site-navbar-target" role="banner">
-          <div class="container">
-            <div class="row align-items-center">       
-              <div class="col-6 col-xl-3">
-                <h1 class="mb-0 site-logo">
-                    <a href="#" class="font-weight-bold text-decoration-none" style="color: var(--md-dark); font-size: 1.4rem; letter-spacing: -0.5px;">
-                        <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo JMC Hospital">
-                        JMC<span style="color: var(--md-primary);">Hospital</span>
-                    </a>
-                </h1>
-              </div>
-              <div class="col-12 col-md-9 d-none d-xl-block">
-                <nav class="site-navigation position-relative text-right" role="navigation">
-                  <ul class="site-menu main-menu js-clone-nav mr-auto d-none d-lg-block">
-                    <li class="active"><a href="#home" class="nav-link">Accueil</a></li>   
-                    <li><a class="nav-link" href="#modules">Modules App</a></li>
-                    <li><a class="nav-link" href="#kpi">Indicateurs</a></li>
-                    <li class="has-children">
-                      <a href="#" class="nav-link">Accès Rapide</a>
-                      <ul class="dropdown">
-                        <li><a href="#" class="nav-link"><i class="fa fa-user-md mr-2"></i>Espace Médecin</a></li>
-                        <li><a href="#" class="nav-link"><i class="fa fa-pills mr-2"></i>Stocks Pharmacie</a></li>
-                        <li><a href="#" class="nav-link"><i class="fa fa-flask mr-2"></i>Labo & Analyses</a></li>
-                      </ul>
-                    </li>                    
-                    <li><a class="nav-link btn-nav-accent ml-3" href="{% url 'login'%}"><i class="fa fa-lock mr-2"></i>Connexion ERP</a></li>                  
-                  </ul>
-                </nav>
-              </div>
-              <div class="col-6 d-inline-block d-xl-none ml-md-0 py-3" style="position: relative; top: 3px;">
-                <a href="#" class="site-menu-toggle js-menu-toggle float-right"><span class="icon-menu h3"></span></a>
-              </div>
-            </div>
-          </div>
-        </header>
-        <!-- END NAVBAR-->               
-    
-        <!-- START HOME (HERO) -->
-        <section id="home" class="home_bg" style="background-image: url({% static 'front-end/assets/img/dr/1.jpg' %});">
-            <div class="container">
-                <div class="row">
-                  <div class="col-lg-12 text-center">
+    <section id="home" class="home_bg" style="background-image: url({% static 'front-end/assets/img/dr/1.jpg' %});">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center">
                     <div class="hero-text">
-                        <span class="badge badge-pill badge-info px-3 py-2 mb-3 strings" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-weight: 500;">Version 2.0 — Production</span>
+                        <span class="badge badge-pill badge-info px-3 py-2 mb-3" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-weight: 500;">Version 2.0 — Production</span>
                         <h2>Système Intégré de Gestion Hospitalière</h2>
                         <p>Optimisez la prise en charge médicale, sécurisez le circuit du médicament et suivez vos flux financiers en temps réel.</p>
                         <div class="hero-buttons">
-                            <a href="#modules" class="btn-main text-decoration-none">Ouvrir les Modules</a>     
-                            <a href="#" class="btn-secondary text-decoration-none"><i class="fa fa-file-text-o mr-2"></i>Fiche Patient</a>     
-                        </div>
-                    </div>
-                  </div>
-                </div>
-            </div>
-        </section>
-        <!-- END HOME -->  
-
-        <!-- START KPI DASHBOARD STRIP -->
-        <section id="kpi" class="kpi-section">
-            <div class="container">
-                <div class="kpi-wrapper">
-                    <div class="row">
-                        <div class="col-6 col-md-3">
-                            <div class="kpi-item">
-                                <div class="kpi-icon"><i class="ti-user"></i></div>
-                                <div class="kpi-number">142</div>
-                                <div class="kpi-label">Patients admis</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="kpi-item">
-                                <div class="kpi-icon"><i class="ti-layout-grid2"></i></div>
-                                <div class="kpi-number">84%</div>
-                                <div class="kpi-label">Occupation lits</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="kpi-item">
-                                <div class="kpi-icon"><i class="ti-pulse"></i></div>
-                                <div class="kpi-number">18</div>
-                                <div class="kpi-label">Consultations en cours</div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="kpi-item">
-                                <div class="kpi-icon"><i class="ti-alert text-danger"></i></div>
-                                <div class="kpi-number">3</div>
-                                <div class="kpi-label">Urgences critiques</div>
-                            </div>
+                            <a href="#modules" class="btn-main text-decoration-none">Ouvrir les Modules</a>
+                            <a href="#" class="btn-secondary text-decoration-none"><i class="fa fa-file-text-o mr-2"></i>Fiche Patient</a>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
-        <!-- END KPI DASHBOARD STRIP -->
+        </div>
+    </section>
 
-        <!-- MODULES APPLICATIFS -->
-        <section id="modules" class="feature_area">
-            <div class="container"> 
+    <section id="kpi" class="kpi-section">
+        <div class="container">
+            <div class="kpi-wrapper">
                 <div class="row">
-                    <div class="col-12 section-title text-center">     
-                        <h2>Modules de Gestion Hospitalière</h2>
-                        <p>Une architecture logicielle modulaire pour couvrir l'intégralité de l'activité clinique et administrative.</p>
-                    </div>                  
-                </div>
-                
-                <div class="row">
-                    <!-- MODULE 1: Consultations -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.1s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-user-md"></i>
-                            </div>
-                            <h4>Gestion des Consultations</h4>
-                            <p>Dossier Médical Partagé (DMP), saisie des constantes cliniques, ordonnances électroniques et historique complet.</p>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-item">
+                            <div class="kpi-icon"><i class="ti-user"></i></div>
+                            <div class="kpi-number">142</div>
+                            <div class="kpi-label">Patients admis</div>
                         </div>
                     </div>
-                    
-                    <!-- MODULE 2: Pharmacie -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.2s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-pills"></i>
-                            </div>
-                            <h4>Gestion Pharmacie</h4>
-                            <p>Entrées/sorties de stock, inventaire valorisé, alertes automatiques de seuil critique et de péremption de lots.</p>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-item">
+                            <div class="kpi-icon"><i class="ti-layout-grid2"></i></div>
+                            <div class="kpi-number">84%</div>
+                            <div class="kpi-label">Occupation lits</div>
                         </div>
                     </div>
-                    
-                    <!-- MODULE 3: Laboratoire -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.3s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-flask"></i>
-                            </div>
-                            <h4>Analyses &amp; Laboratoire</h4>
-                            <p>Demandes d'examens interconnectées, saisie des paillasses, validation biologique et transmission sécurisée.</p>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-item">
+                            <div class="kpi-icon"><i class="ti-pulse"></i></div>
+                            <div class="kpi-number">18</div>
+                            <div class="kpi-label">Consultations en cours</div>
                         </div>
                     </div>
-                    
-                    <!-- MODULE 4: Finance -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.4s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-money"></i>
-                            </div>
-                            <h4>Facturation &amp; Encaissements</h4>
-                            <p>Émission automatisée des factures d'actes, gestion des prises en charge mutuelles et intégration API Mobile Money.</p>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-item">
+                            <div class="kpi-icon"><i class="ti-alert text-danger"></i></div>
+                            <div class="kpi-number">3</div>
+                            <div class="kpi-label">Urgences critiques</div>
                         </div>
                     </div>
-                    
-                    <!-- MODULE 5: Hospitalisation -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.5s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-bed"></i>
-                            </div>
-                            <h4>Admissions &amp; Lits</h4>
-                            <p>Cartographie en temps réel des lits par pavillon, planification des mouvements de patients et des sorties d'hospitalisation.</p>
-                        </div>
-                    </div>      
-                    
-                    <!-- MODULE 6: Rapports -->
-                    <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.6s">
-                        <div class="single_feature">
-                            <div class="feature-icon-box">
-                                <i class="fa fa-bar-chart"></i>
-                            </div>
-                            <h4>Statistiques &amp; Rapports</h4>
-                            <p>Génération instantanée des rapports d'activité SNIS, tableaux de bord financiers et indicateurs de performance clés.</p>
-                        </div>
-                    </div>              
                 </div>
             </div>
-        </section>
-        <!-- END MODULES APPLICATIFS -->
+        </div>
+    </section>
 
-        <!-- FOOTER CLASSIQUE -->
-        <footer class="medical-footer text-center">
-            <div class="container">
-                <p class="mb-0">&copy; 2026 <strong>JMC Hospital</strong>. Tous droits réservés. Système d'Information Hospitalier Sécurisé.</p>
+    <section id="modules" class="feature_area">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 section-title text-center">
+                    <h2>Modules de Gestion Hospitalière</h2>
+                    <p>Une architecture logicielle modulaire pour couvrir l'intégralité de l'activité clinique et administrative.</p>
+                </div>
             </div>
-        </footer>
-        
-        <!-- Scripts JS d'origine -->
-        <script src="{% static 'front-end/assets/js/jquery-1.12.4.min.js' %}"></script>
-        <script src="{% static 'front-end/assets/bootstrap/js/bootstrap.min.js' %}"></script>
-        <script src="{% static 'front-end/assets/js/modernizr-2.8.3.min.js' %}"></script>                                                                                                                                                                                                                                                               
-        <script src="{% static 'front-end/assets/owlcarousel/js/owl.carousel.min.js' %}"></script>                   
-        <script src="{% static 'front-end/assets/js/jquery.magnific-popup.min.js' %}"></script>          
-        <script src="{% static 'front-end/assets/js/jquery.mixitup.js' %}"></script>         
-        <script src="{% static 'front-end/assets/js/jquery.appear.js' %}"></script>                                                                          
-        <script src="{% static 'front-end/assets/js/jquery.inview.min.js' %}"></script>  
-        <script src="{% static 'front-end/assets/js/jquery.stellar.min.js' %}"></script>         
-        <script src="{% static 'front-end/assets/js/wow.min.js' %}"></script>    
-        <script src="{% static 'front-end/assets/js/menu.js' %}"></script>                                                                                                                                                                                                                                                   
-        <script src="{% static 'front-end/assets/js/jquery.sticky.js' %}"></script>      
-        <script src="{% static 'front-end/assets/js/form-contact.js' %}"></script>               
-        <script src="{% static 'front-end/assets/js/scrolltopcontrol.js' %}"></script>                                                                                                                                                                                                                                                   
-        <script src="{% static 'front-end/assets/js/scripts.js' %}"></script>        
-    </body>
+
+            <div class="row">
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.1s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-user-md"></i>
+                        </div>
+                        <h4>Gestion des Consultations</h4>
+                        <p>Dossier Médical Partagé (DMP), saisie des constantes cliniques, ordonnances électroniques et historique complet.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.2s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-pills"></i>
+                        </div>
+                        <h4>Gestion Pharmacie</h4>
+                        <p>Entrées/sorties de stock, inventaire valorisé, alertes automatiques de seuil critique et de péremption de lots.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.3s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-flask"></i>
+                        </div>
+                        <h4>Analyses &amp; Laboratoire</h4>
+                        <p>Demandes d'examens interconnectées, saisie des paillasses, validation biologique et transmission sécurisée.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.4s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-money"></i>
+                        </div>
+                        <h4>Facturation &amp; Encaissements</h4>
+                        <p>Émission automatisée des factures d'actes, gestion des prises en charge mutuelles et intégration API Mobile Money.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.5s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-bed"></i>
+                        </div>
+                        <h4>Admissions &amp; Lits</h4>
+                        <p>Cartographie en temps réel des lits par pavillon, planification des mouvements de patients et des sorties d'hospitalisation.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-sm-12 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.6s">
+                    <div class="single_feature">
+                        <div class="feature-icon-box">
+                            <i class="fa fa-bar-chart"></i>
+                        </div>
+                        <h4>Statistiques &amp; Rapports</h4>
+                        <p>Génération instantanée des rapports d'activité SNIS, tableaux de bord financiers et indicateurs de performance clés.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="medical-footer text-center">
+        <div class="container">
+            <p class="mb-0">&copy; 2026 <strong>JMC Hospital</strong>. Tous droits réservés. Système d'Information Hospitalier Sécurisé.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'front-end/assets/js/jquery-1.12.4.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/bootstrap/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/modernizr-2.8.3.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/owlcarousel/js/owl.carousel.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.magnific-popup.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.mixitup.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.appear.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.inview.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.stellar.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/wow.min.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/menu.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/jquery.sticky.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/form-contact.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/scrolltopcontrol.js' %}"></script>
+    <script src="{% static 'front-end/assets/js/scripts.js' %}"></script>
+</body>
 </html>

@@ -1,0 +1,264 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="JMC Hospital - Modification Consultation">
+    <meta name="author" content="JMC">
+
+    <title>Modifier consultation — JMC Hospital</title>
+
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'front-end/assets/img/dr/jmc.jpeg' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800">
+    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/font-awesome.min.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/themify-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/fonts.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/animate.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/magnific-popup.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/menu.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'front-end/assets/css/responsive.css' %}">
+
+    <style>
+        :root {
+            --md-primary: #0284c7;
+            --md-primary-hover: #0369a1;
+            --md-dark: #0f172a;
+            --md-body: #f8fafc;
+            --md-muted: #64748b;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 10px 15px -3px rgba(2, 132, 199, 0.06), 0 4px 6px -4px rgba(2, 132, 199, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(2, 132, 199, 0.1), 0 8px 10px -6px rgba(2, 132, 199, 0.1);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--md-body);
+            color: var(--md-dark);
+        }
+
+        .site-navbar {
+            background: rgba(255, 255, 255, 0.92) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .navbar-brand img {
+            max-height: 42px;
+            border-radius: var(--radius-sm);
+        }
+
+        .page-shell {
+            min-height: 100vh;
+            padding: 28px 0 60px;
+        }
+
+        .edit-card {
+            border: 0;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .edit-header {
+            background: linear-gradient(135deg, var(--md-primary) 0%, var(--md-primary-hover) 100%);
+            color: #fff;
+            padding: 22px 26px;
+        }
+
+        .edit-header h4 {
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .edit-header p {
+            margin-bottom: 0;
+            opacity: .9;
+        }
+
+        .edit-body {
+            padding: 26px;
+        }
+
+        .info-box {
+            background: #eef6ff;
+            border: 1px solid #d6e8ff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: #1e3a8a;
+            margin-bottom: 22px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 12px;
+            min-height: 46px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: rgba(2, 132, 199, .45);
+            box-shadow: 0 0 0 .2rem rgba(2, 132, 199, .12);
+        }
+
+        .btn-save {
+            border-radius: 12px;
+            min-height: 46px;
+            min-width: 160px;
+        }
+
+        .btn-cancel {
+            border-radius: 12px;
+            min-height: 46px;
+            min-width: 160px;
+        }
+
+        .alert {
+            border-radius: 12px;
+        }
+
+        .small-text {
+            color: var(--md-muted);
+            font-size: .92rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .edit-body {
+                padding: 18px;
+            }
+
+            .btn-save,
+            .btn-cancel {
+                width: 100%;
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-spy="scroll" data-offset="80">
+
+    <div class="preloader">
+        <div class="spinner">
+            <div class="double-bounce1"></div>
+            <div class="double-bounce2"></div>
+        </div>
+    </div>
+
+    <header class="site-navbar navbar navbar-expand-xl navbar-light sticky-top" role="banner">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo JMC Hospital">
+                <span class="fw-bold" style="color: var(--md-dark);">JMC <span style="color: var(--md-primary);">Hospital</span></span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Basculer la navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav ms-auto align-items-xl-center gap-xl-2 mt-3 mt-xl-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'liste_consultations_terminees' %}">Retour à la liste</a>
+                    </li>
+                    <li class="nav-item ms-xl-2">
+                        <a class="btn btn-outline-primary px-3 rounded-3" href="{% url 'logout' %}">
+                            <i class="fa fa-sign-out me-2"></i>Déconnexion
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid page-shell">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-xl-10">
+                        <div class="card edit-card">
+                            <div class="edit-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h4>Modifier la consultation</h4>
+                                    <p>Met à jour les informations autorisées pour cette consultation.</p>
+                                </div>
+                                <div>
+                                    <span class="badge bg-light text-primary px-3 py-2">
+                                        {{ fonctionKey|default:"Utilisateur" }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="edit-body">
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }} mb-3">
+                                            {{ message }}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <div class="info-box">
+                                    Consultation n° <strong>{{ consultation.id }}</strong>
+                                    {% if consultation.triage and consultation.triage.patient %}
+                                        — Patient : <strong>{{ consultation.triage.patient }}</strong>
+                                    {% endif %}
+                                </div>
+
+                                <form method="post">
+                                    {% csrf_token %}
+
+                                    <div class="row">
+                                        {% for field in form %}
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="{{ field.id_for_label }}" class="form-label">
+                                                    {{ field.label }}
+                                                </label>
+                                                {{ field }}
+                                                {% if field.help_text %}
+                                                    <div class="small-text mt-1">{{ field.help_text }}</div>
+                                                {% endif %}
+                                                {% if field.errors %}
+                                                    <div class="text-danger small mt-1">{{ field.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
+                                        <a href="{% url 'liste_consultations_terminees' %}" class="btn btn-light btn-cancel">
+                                            Annuler
+                                        </a>
+                                        <button type="submit" class="btn btn-primary btn-save">
+                                            Enregistrer les modifications
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -5,18 +5,18 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
         <title>JMC - Historique des Consultations</title>
-        
+
         {% include 'back-end/includes/css.html' %}
     </head>
     <body>
         <div class="main-wrapper">
-        
+
             {% include 'back-end/includes/header.html' %}
             {% include 'back-end/includes/sidebar.html' %}
-            
+
             <div class="page-wrapper">
                 <div class="content container-fluid">
-                
+
                     <div class="page-header">
                         <div class="row align-items-center">
                             <div class="col">
@@ -84,17 +84,17 @@
                                                 <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
                                                 <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
                                             </td>
-                                            
+
                                             <td>
                                                 <span class="badge badge-light-info">{{ c.triage.patient.code_patient }}</span><br>
                                                 <strong>{{ c.triage.patient.noms }}</strong><br>
                                                 <small>{{ c.triage.patient.age }} ans</small>
                                             </td>
-                                            
+
                                             <td>
                                                 <i class="fa fa-user-md text-primary"></i> Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}
                                             </td>
-                                            
+
                                             <td>
                                                 <small>
                                                     <strong>T°:</strong> {{ c.triage.temperature }} °C <br>
@@ -103,7 +103,7 @@
                                                     <strong>Pouls:</strong> {{ c.triage.frequence_cardiaque|default:"--" }} bpm
                                                 </small>
                                             </td>
-                                            
+
                                             <td>
                                                 <button class="btn btn-xs btn-outline-info btn-block mb-1" data-toggle="collapse" data-target="#clinique_{{ c.id }}">
                                                     <i class="fa fa-eye"></i> Voir Clinique
@@ -116,18 +116,20 @@
                                                         <strong>Complément Anamnèse :</strong> {{ c.complement_d_anamnese }}<br><br>
                                                     {% endif %}
                                                     <strong>Examen physique :</strong> {{ c.examen_physique }}<br><br>
-                                                    
+
                                                     <strong class="text-danger">Hypothèse Diag :</strong> {{ c.hypothese_diagnostique }}
                                                 </div>
                                             </td>
-                                            
+
                                             <td>
                                                 {% if c.examens.all %}
                                                     <ul class="pl-3 mb-0" style="font-size: 12px;">
                                                         {% for exam in c.examens.all %}
                                                             <li>
-                                                                {{ exam.prestation.libelle }} 
-                                                                {% if exam.quantite > 1 %}<small class="text-muted">(x{{ exam.quantite }})</small>{% endif %}
+                                                                {{ exam.prestation.libelle }}
+                                                                {% if exam.quantite > 1 %}
+                                                                    <small class="text-muted">(x{{ exam.quantite }})</small>
+                                                                {% endif %}
                                                                 <span class="badge {% if exam.statut == 'TERMINE' %}badge-success{% elif exam.statut == 'ANNULE' %}badge-danger{% else %}badge-warning{% endif %}" style="font-size: 10px;">
                                                                     {{ exam.get_statut_display }}
                                                                 </span>
@@ -136,19 +138,26 @@
                                                     </ul>
                                                     <hr class="my-1">
                                                     {% if fonctionKey == 'admin' %}
-                                                    <small class="text-dark font-weight-bold">Total : {{ c.total_examens_a_payer }} USD/FC</small>{% endif%}
+                                                        <small class="text-dark font-weight-bold">Total : {{ c.total_examens_a_payer }} USD/FC</small>
+                                                    {% endif %}
                                                 {% else %}
                                                     <span class="text-muted" style="font-size: 12px;">Aucun examen</span>
                                                 {% endif %}
                                             </td>
-                                            
+
                                             <td class="text-right">
-    <span class="badge badge-success mb-2 d-inline-block"><i class="fa fa-check-circle"></i> Clôturé</span>
-    
-    <a href="" class="btn btn-sm btn-danger btn-block mt-1" style="font-size: 11px; padding: 4px 8px;">
-        <i class="fa fa-ambulance"></i> Ordo Urgence
-    </a>
-</td>
+                                                <span class="badge badge-success mb-2 d-inline-block">
+                                                    <i class="fa fa-check-circle"></i> Clôturé
+                                                </span>
+
+                                                {% comment %} <a href="{% url 'modifier_consultation' c.id %}" class="btn btn-sm btn-warning btn-block mt-1" style="font-size: 11px; padding: 4px 8px;">
+                                                    <i class="fa fa-edit"></i> Modifier
+                                                </a> {% endcomment %}
+
+                                                {% comment %} <a href="#" class="btn btn-sm btn-danger btn-block mt-1" style="font-size: 11px; padding: 4px 8px;" data-toggle="modal" data-target="#modal_urgence_{{ c.id }}">
+                                                    <i class="fa fa-ambulance"></i> Ordo Urgence
+                                                </a> {% endcomment %}
+                                            </td>
                                         </tr>
                                         {% empty %}
                                         <tr>
@@ -210,12 +219,12 @@
                                 <strong>Patient :</strong> {{ c.triage.patient.noms }} ({{ c.triage.patient.code_patient }})<br>
                                 <small>État dégradé avant les résultats d'examens. Délivrez un traitement symptomatique immédiat.</small>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="font-weight-bold text-dark">Médicaments & Posologies d'Urgence</label>
                                 <textarea name="medicaments_text" class="form-control" rows="4" placeholder="Ex: Perfusion Paracétamol 1g Direct + Perfalgan IV..." required></textarea>
                             </div>
-                            
+
                             <div class="form-group mb-0">
                                 <label class="font-weight-bold text-dark">Observations / Justification médicale</label>
                                 <textarea name="observation" class="form-control" rows="2" placeholder="Ex: Pic de fièvre soudain à 39.8°C, vomissements sévères..."></textarea>

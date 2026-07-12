@@ -27,10 +27,37 @@
             font-weight: 600;
         }
 
-        .search-box {
-            border-radius: 30px;
+        .search-wrap {
+            width: 100%;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        .search-wrap form {
+            width: 100%;
+        }
+
+        .search-input-group {
+            width: 100%;
+            display: flex;
+            flex-wrap: nowrap;
+        }
+
+        .search-input-group .form-control {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 46px;
+            border-radius: 30px 0 0 30px;
             padding-left: 18px;
-            min-height: 44px;
+        }
+
+        .search-input-group .input-group-text {
+            border-radius: 0 30px 30px 0;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
         }
 
         .modal-header {
@@ -57,26 +84,23 @@
         }
 
         @media (max-width: 768px) {
-            .page-card {
-                padding: 16px;
-            }
-
-            .search-area {
-                width: 100%;
-                margin-top: 12px;
-                max-width: 100% !important;
-            }
-
-            .search-area .input-group {
+            .page-card { padding: 16px; }
+            .page-header .row > div { width: 100%; }
+            .search-wrap {
+                display: block !important;
                 width: 100% !important;
+                margin-top: 12px;
+                margin-bottom: 12px;
+                visibility: visible !important;
+                opacity: 1 !important;
+                height: auto !important;
             }
-
-            .search-area .input-group-text {
-                border-radius: 0 30px 30px 0 !important;
+            .search-input-group {
+                width: 100% !important;
+                display: flex !important;
             }
-
-            .page-header .row > div {
-                width: 100%;
+            .search-input-group .form-control {
+                width: 100% !important;
             }
         }
     </style>
@@ -98,24 +122,26 @@
                         </ul>
                     </div>
 
-                    <div class="col-md-6 col-12 mt-3 mt-md-0">
-                        <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-center w-100">
-                            <div class="input-group search-area mb-2 mb-md-0 mr-md-3 w-100" style="max-width: 320px;">
-                                <input type="text" id="customSearch" class="form-control search-box" placeholder="Rechercher...">
-                                <div class="input-group-append">
-                                    <span class="input-group-text" style="border-radius: 0 30px 30px 0;">
-                                        <i class="fa fa-search"></i>
-                                    </span>
-                                </div>
-                            </div>
-
-                            {% if fonctionKey == 'receptionniste' %}
-                            <button class="btn btn-primary w-100 w-md-auto" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
+                    <div class="col-md-6 col-12 mt-3 mt-md-0 text-md-right">
+                        {% if fonctionKey == 'receptionniste' %}
+                            <button class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
                                 <i class="fa fa-plus"></i> Nouveau
                             </button>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                     </div>
+                </div>
+
+                <div class="search-wrap">
+                    <form method="GET" action="">
+                        <div class="input-group search-input-group">
+                            <input type="text" id="customSearch" name="q" class="form-control" placeholder="Rechercher..." value="{{ request.GET.q }}">
+                            <div class="input-group-append">
+                                <span class="input-group-text">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -212,7 +238,7 @@
 </div>
 
 <div id="add_patient" class="modal fade" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Enregistrer un nouveau patient</h5>
@@ -224,43 +250,43 @@
                     <div class="row form-grid">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.noms.id_for_label }}">Nom complet</label>
+                                <label>Nom complet</label>
                                 {{ form.noms }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.sexe.id_for_label }}">Sexe</label>
+                                <label>Sexe</label>
                                 {{ form.sexe }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.age.id_for_label }}">Âge</label>
+                                <label>Âge</label>
                                 {{ form.age }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.telephone.id_for_label }}">Téléphone</label>
+                                <label>Téléphone</label>
                                 {{ form.telephone }}
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label for="{{ form.adresse.id_for_label }}">Adresse</label>
+                                <label>Adresse</label>
                                 {{ form.adresse }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.service.id_for_label }}">Service</label>
+                                <label>Service</label>
                                 {{ form.service }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="id_entreprise">Entreprise</label>
+                                <label>Entreprise</label>
                                 <select name="entreprise" id="id_entreprise" class="form-control form-select">
                                     <option value="">---------</option>
                                     {% for entreprise in entreprises %}
@@ -270,11 +296,8 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">
-                            Enregistrer
-                        </button>
+                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">Enregistrer</button>
                     </div>
                 </form>
             </div>
@@ -285,7 +308,11 @@
 {% include 'back-end/includes/js.html' %}
 <script>
     $(document).ready(function() {
-        var table = $('#myTable').DataTable({ dom: 'lrtip', responsive: true });
+        var table = $('#myTable').DataTable({
+            dom: 'rtip',
+            responsive: true
+        });
+
         $('#customSearch').on('keyup', function() {
             table.search(this.value).draw();
         });

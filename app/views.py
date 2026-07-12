@@ -4261,10 +4261,29 @@ def liste_ventes(request):
     hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
 
-    ventes = Paiement.objects.filter(
-        service='PHARMACIE',
-        hopital=hopital_user
-    ).order_by('-date_paiement')
+    ventes = Paiement.objects.filter(service='PHARMACIE', hopital=hopital_user).order_by('-date_paiement')
+
+    q = request.GET.get('q', '').strip()
+    devise = request.GET.get('devise', '').strip()
+    date_debut = request.GET.get('date_debut', '').strip()
+    date_fin = request.GET.get('date_fin', '').strip()
+
+    if q:
+        ventes = ventes.filter(
+            Q(service__icontains=q) |
+            Q(devise__icontains=q) |
+            Q(montant_verse__icontains=q) |
+            Q(reste_a_payer__icontains=q)
+        )
+
+    if devise in ['USD', 'CDF']:
+        ventes = ventes.filter(devise=devise)
+
+    if date_debut:
+        ventes = ventes.filter(date_paiement__date__gte=date_debut)
+
+    if date_fin:
+        ventes = ventes.filter(date_paiement__date__lte=date_fin)
 
     usd_ventes = ventes.filter(devise='USD')
     cdf_ventes = ventes.filter(devise='CDF')
@@ -4288,6 +4307,10 @@ def liste_ventes(request):
         'total_reduction_usd': total_reduction_usd,
         'total_reduction_cdf': total_reduction_cdf,
         'nb_ventes': ventes.count(),
+        'q': q,
+        'devise': devise,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
     })
 #
 # ===================================================================================================

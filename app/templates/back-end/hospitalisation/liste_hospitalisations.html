@@ -4,37 +4,133 @@
 <head>
     <meta charset="utf-8">
     <title>Suivi Hospitalisations | JMC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'back-end/includes/css.html' %}
     <style>
         .page-wrapper { background: #f4f7fa; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .search-box { width: 300px; border-radius: 25px; padding: 10px 20px; border: 1px solid #ddd; outline: none; }
-        .table thead { background: #f8f9fe; color: #707e8c; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
-        .table tbody td { padding: 20px; vertical-align: middle; }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .search-box {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 25px;
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+
+        .table thead {
+            background: #f8f9fe;
+            color: #707e8c;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .table tbody td {
+            padding: 20px;
+            vertical-align: middle;
+        }
+
         .btn-sm { border-radius: 6px; }
-        .avatar-info { background: #eef2ff; color: #5a8dee; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
-        .badge { padding: 0.5em 1em; border-radius: 50px; font-weight: 500; }
+
+        .avatar-info {
+            background: #eef2ff;
+            color: #5a8dee;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .badge {
+            padding: 0.5em 1em;
+            border-radius: 50px;
+            font-weight: 500;
+        }
+
         .text-debt { color: #dc3545; font-weight: bold; }
         .text-paid { color: #28a745; font-weight: bold; }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .search-input-wrap {
+            width: 100%;
+            max-width: 320px;
+        }
+
+        @media (max-width: 768px) {
+            .page-wrapper { padding: 10px !important; }
+            .content { padding: 0 !important; }
+            .search-input-wrap,
+            .search-box {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .header-top {
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                justify-content: stretch;
+                width: 100%;
+            }
+
+            .header-actions .btn,
+            .header-actions a {
+                width: 100%;
+            }
+
+            .table tbody td {
+                padding: 14px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
+
+                <div class="header-top">
                     <div>
                         <h4 class="mb-0">Suivi des Séjours</h4>
                         <small class="text-muted">Gestion complète des hospitalisations en cours.</small>
                     </div>
-                    <div class="d-flex">
-                        <input type="text" id="searchInput" class="search-box mr-2" placeholder="Rechercher par nom ou ID...">
+
+                    <div class="header-actions">
+                        <div class="search-input-wrap">
+                            <input type="text" id="searchInput" class="search-box" placeholder="Rechercher par nom ou ID...">
+                        </div>
+
                         {% if fonctionKey == 'medecin' %}
-                        <a href="{% url 'admettre_patient' %}" class="btn btn-primary"><i class="la la-plus"></i> Nouvelle Admission</a>
+                        <a href="{% url 'admettre_patient' %}" class="btn btn-primary">
+                            <i class="la la-plus"></i> Nouvelle Admission
+                        </a>
                         {% endif %}
                     </div>
                 </div>
@@ -47,6 +143,7 @@
                                     <tr>
                                         <th>Patient</th>
                                         <th>Lit / Catégorie</th>
+                                        <th>Hôpital</th>
                                         <th>Date Entrée</th>
                                         <th>Durée</th>
                                         <th>Coût Total</th>
@@ -66,6 +163,9 @@
                                             <div class="font-weight-bold">{{ hosp.lit.nom_lit }}</div>
                                             <span class="avatar-info">{{ hosp.lit.chambre.type_chambre.libelle }}</span>
                                         </td>
+                                        <td>
+                                            {{ hosp.hopital }}
+                                        </td>
                                         <td>{{ hosp.date_entree|date:"d M, Y" }}</td>
                                         <td><span class="badge badge-soft-dark">{{ hosp.nombre_jours }} j</span></td>
                                         <td>{{ hosp.cout_total|floatformat:0 }} USD</td>
@@ -79,36 +179,54 @@
                                             {% endwith %}
                                         </td>
                                         <td>
-                                            {% if hosp.statut == 'EN_COURS' %}<span class="badge badge-soft-success text-success">En cours</span>
-                                            {% elif hosp.statut == 'TERMINE' %}<span class="badge badge-soft-info text-info">Terminé</span>
-                                            {% else %}<span class="badge badge-soft-secondary text-secondary">Annulé</span>{% endif %}
+                                            {% if hosp.statut == 'EN_COURS' %}
+                                                <span class="badge badge-soft-success text-success">En cours</span>
+                                            {% elif hosp.statut == 'TERMINE' %}
+                                                <span class="badge badge-soft-info text-info">Terminé</span>
+                                            {% else %}
+                                                <span class="badge badge-soft-secondary text-secondary">Annulé</span>
+                                            {% endif %}
                                         </td>
                                         <td class="text-right">
                                             {% if hosp.statut == 'EN_COURS' %}
                                                 {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
-                                                    <a href="{% url 'modifier_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-warning" title="Modifier"><i class="la la-edit"></i></a>
+                                                    <a href="{% url 'modifier_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-warning" title="Modifier">
+                                                        <i class="la la-edit"></i>
+                                                    </a>
                                                 {% endif %}
-                                                
+
                                                 {% if fonctionKey == 'infirmier' or fonctionKey == 'medecin' %}
-                                                    <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-primary" title="Suivi"><i class="la la-stethoscope"></i></a>
+                                                    <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-primary" title="Suivi">
+                                                        <i class="la la-stethoscope"></i>
+                                                    </a>
                                                 {% endif %}
-                                                
+
                                                 {% if fonctionKey == 'receptionniste' or fonctionKey == 'admin' %}
-                                                    <a href="{% url 'payer_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-danger" title="Encaisser"><i class="la la-money-bill"></i></a>
-                                                    
+                                                    <a href="{% url 'payer_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-danger" title="Encaisser">
+                                                        <i class="la la-money-bill"></i>
+                                                    </a>
+
                                                     {% if hosp.get_reste_a_payer <= 0 %}
-                                                        <a href="{% url 'finir_hospitalisation' hosp.id %}" class="btn btn-sm btn-success" title="Valider Sortie"><i class="la la-door-open"></i></a>
+                                                        <a href="{% url 'finir_hospitalisation' hosp.id %}" class="btn btn-sm btn-success" title="Valider Sortie">
+                                                            <i class="la la-door-open"></i>
+                                                        </a>
                                                     {% else %}
-                                                        <button class="btn btn-sm btn-secondary" disabled title="Paiement incomplet"><i class="la la-lock"></i></button>
+                                                        <button class="btn btn-sm btn-secondary" disabled title="Paiement incomplet">
+                                                            <i class="la la-lock"></i>
+                                                        </button>
                                                     {% endif %}
                                                 {% endif %}
                                             {% else %}
-                                                <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-light" title="Voir"><i class="la la-eye"></i></a>
+                                                <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-light" title="Voir">
+                                                    <i class="la la-eye"></i>
+                                                </a>
                                             {% endif %}
                                         </td>
                                     </tr>
                                     {% empty %}
-                                    <tr><td colspan="8" class="text-center py-5">Aucune donnée disponible.</td></tr>
+                                    <tr>
+                                        <td colspan="9" class="text-center py-5">Aucune donnée disponible.</td>
+                                    </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -118,6 +236,7 @@
             </div>
         </div>
     </div>
+
     <script>
         document.getElementById('searchInput').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();
@@ -128,6 +247,7 @@
             });
         });
     </script>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

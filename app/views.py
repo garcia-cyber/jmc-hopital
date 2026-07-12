@@ -3869,7 +3869,8 @@ def enregistrer_soin_rapide(request):
                         paiement=paiement,
                         nom_patient=nom_patient,
                         prestation=p,
-                        effectue_par=request.user
+                        effectue_par=request.user,
+                        hopital=user_hopital
                     )
 
             messages.success(request, "Paiement enregistré !")
@@ -3884,7 +3885,6 @@ def enregistrer_soin_rapide(request):
         'taux': ConfigurationHopital.get_taux(),
         'fonctionKey': fonctionKey,
     })
-
 #
 # =========================================================================================
 # IMPRIMER FACTURE PATIENT OCCASIONNEL
@@ -3914,9 +3914,16 @@ def liste_soins_traitement(request):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     aujourd_hui = timezone.now().date()
+
     soins = SoinOccasionnel.objects.filter(
-        date_soin__date=aujourd_hui,
-        hopital=hopital_user
+        hopital=hopital_user,
+        est_effectue=False,
+        date_soin__date=aujourd_hui
+    ).select_related(
+        'paiement',
+        'prestation',
+        'effectue_par',
+        'hopital'
     ).order_by('-date_soin')
 
     return render(request, 'back-end/soins/liste_soins_traitement.html', {
@@ -5135,13 +5142,12 @@ def liste_sessions_infirmier(request):
         )
     ).filter(
         a_un_paiement=True
-    ).prefetch_related('items__prestation').order_by('-datecreation')
+    ).prefetch_related('items__prestation').order_by('-date_creation')
 
     return render(request, 'back-end/consultation/liste_sessions_infirmier.html', {
         'sessions': sessions,
         'fonctionKey': fonctionKey
     })
-
 #
 # ===========================================================================================
 # SIGNE VITAUX RELIE PAR UNE NOUVEL CONSULTATION

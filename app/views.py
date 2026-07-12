@@ -1142,53 +1142,139 @@ def consultation_medicale(request, triage_id):
 # ==================================================================================================
 @login_required
 def liste_consultations_terminees(request):
-    # Optimisation de la requête avec le bon nom de relation : 'examens'
     consultations = Consultation.objects.select_related(
-        'triage__patient',      
-        'medecin'               
+        'triage__patient',
+        'medecin'
     ).prefetch_related(
-        'examens__prestation'  # Utilise 'examens' car related_name='examens'
+        'examens__prestation'
     ).order_by('-date_creation')
 
     role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role else None
-    
+
     context = {
         'consultations': consultations,
         'fonctionKey': fonctionKey
     }
     return render(request, 'back-end/medecin/liste_consultations.html', context)
-
 #
 # ==============================================================================================
 # MODIFICATION DE LA CONSULTATION PAR LE MEDECIN 
 # ==============================================================================================
 @login_required
-def modifier_consultation(request, consultation_id):
-    # 1. Récupérer l'hôpital de l'utilisateur connecté
-    # Remplacez 'request.user.hopital' par le chemin réel vers l'hôpital de votre User
-    user_hopital = request.user.hopital 
+@login_required
+def modifier_consultation(request, triage_id):
+    triage = get_object_or_404(SigneVital, id=triage_id)
 
-    # 2. Récupérer la consultation et vérifier qu'elle appartient bien à cet hôpital
-    consultation = get_object_or_404(
-        Consultation, 
-        id=consultation_id, 
-        triage__patient__hopital=user_hopital
-    )
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    if triage.patient.hopital != hopital_user:
+        messages.error(request, "Ce patient appartient à un autre hôpital.")
+        return redirect('liste_consultation_medecin')
+
+    consultation = Consultation.objects.filter(triage=triage).first()
+
+    if consultation is None:
+        messages.error(request, "Aucune consultation trouvée pour ce patient.")
+        return redirect('liste_consultation_medecin')
+
+    examens_disponibles = Prestation.objects.filter(
+        hopital=hopital_user,
+        categorie__in=['LABO', 'RADIO', 'ECHO']
+    ).order_by('categorie', 'libelle')
+
+    examens_existant = DemandeExamen.objects.filter(
+        consultation=consultation,
+        hopital=hopital_user
+    ).select_related('prestation').order_by('date_demande')
 
     if request.method == 'POST':
-        # Ici, vous utilisez soit un ModelForm, soit vous mettez à jour les champs manuellement
-        # Exemple avec traitement manuel :
-        consultation.diagnostic = request.POST.get('diagnostic')
-        consultation.save()
-        
-        messages.success(request, "La consultation a été modifiée avec succès.")
-        return redirect('liste_consultations')
+        form = ConsultationForm(request.POST, instance=consultation)
 
-    context = {
-        'consultation': consultation
-    }
-    return render(request, 'back-end/medecin/modifier_consultation.html', context)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    consultation_obj = form.save(commit=False)
+                    consultation_obj.medecin = request.user
+                    consultation_obj.hopital = hopital_user
+                    consultation_obj.triage = triage
+                    consultation_obj.save()
+
+                    for exam in examens_existant:
+                        prestation_id = request.POST.get(f'exam_{exam.id}_prestation')
+                        quantite = request.POST.get(f'exam_{exam.id}_quantite')
+                        statut = request.POST.get(f'exam_{exam.id}_statut')
+                        indication = request.POST.get(f'exam_{exam.id}_indication')
+                        resultat = request.POST.get(f'exam_{exam.id}_resultat')
+                        date_realisation = request.POST.get(f'exam_{exam.id}_date_realisation')
+
+                        if prestation_id:
+                            prestation = get_object_or_404(
+                                Prestation,
+                                id=prestation_id,
+                                hopital=hopital_user,
+                                categorie__in=['LABO', 'RADIO', 'ECHO']
+                            )
+                            exam.prestation = prestation
+
+                        if quantite:
+                            exam.quantite = quantite
+                        if statut:
+                            exam.statut = statut
+                        if indication is not None:
+                            exam.indication = indication
+                        if resultat is not None:
+                            exam.resultat = resultat
+                        if date_realisation:
+                            exam.date_realisation = date_realisation
+
+                        exam.hopital = hopital_user
+                        exam.save()
+
+                    prestation_ids = request.POST.getlist('examens_ids')
+                    for prestation_id in prestation_ids:
+                        prestation = get_object_or_404(
+                            Prestation,
+                            id=prestation_id,
+                            hopital=hopital_user,
+                            categorie__in=['LABO', 'RADIO', 'ECHO']
+                        )
+
+                        DemandeExamen.objects.create(
+                            consultation=consultation_obj,
+                            prestation=prestation,
+                            quantite=request.POST.get(f'qty_{prestation_id}', 1),
+                            statut=request.POST.get(f'statut_{prestation_id}', 'EN_ATTENTE'),
+                            indication=request.POST.get(f'indication_{prestation_id}', ''),
+                            resultat=request.POST.get(f'resultat_{prestation_id}', ''),
+                            hopital=hopital_user,
+                            date_realisation=request.POST.get(f'date_realisation_{prestation_id}') or None
+                        )
+
+                messages.success(request, f"Consultation de {triage.patient.noms} modifiée avec succès !")
+                return redirect('liste_consultation_medecin')
+
+            except Exception as e:
+                messages.error(request, f"Une erreur technique est survenue : {str(e)}")
+        else:
+            messages.error(request, "Veuillez vérifier les erreurs du formulaire clinique.")
+    else:
+        form = ConsultationForm(instance=consultation)
+
+    return render(request, 'back-end/medecin/modifier_consultation.html', {
+        'triage': triage,
+        'form': form,
+        'consultation': consultation,
+        'examens_disponibles': examens_disponibles,
+        'examens_existant': examens_existant,
+        'fonctionKey': fonctionKey
+    })
 # 31
 # ==================================================================================================
 # MEDECIN  DETAILS CONSULTATION 

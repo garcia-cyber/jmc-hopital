@@ -1,264 +1,366 @@
-{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="JMC Hospital - Modification Consultation">
-    <meta name="author" content="JMC">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>JMC - Modifier Consultation</title>
 
-    <title>Modifier consultation — JMC Hospital</title>
-
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'front-end/assets/img/dr/jmc.jpeg' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/bootstrap/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800">
-    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/font-awesome.min.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/fonts/themify-icons.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/fonts.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/animate.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/magnific-popup.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/menu.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'front-end/assets/css/responsive.css' %}">
-
+    {% include 'back-end/includes/css.html' %}
     <style>
-        :root {
-            --md-primary: #0284c7;
-            --md-primary-hover: #0369a1;
-            --md-dark: #0f172a;
-            --md-body: #f8fafc;
-            --md-muted: #64748b;
-            --radius-sm: 8px;
-            --radius-lg: 16px;
-            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 10px 15px -3px rgba(2, 132, 199, 0.06), 0 4px 6px -4px rgba(2, 132, 199, 0.06);
-            --shadow-lg: 0 20px 25px -5px rgba(2, 132, 199, 0.1), 0 8px 10px -6px rgba(2, 132, 199, 0.1);
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--md-body);
-            color: var(--md-dark);
-        }
-
-        .site-navbar {
-            background: rgba(255, 255, 255, 0.92) !important;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .navbar-brand img {
-            max-height: 42px;
-            border-radius: var(--radius-sm);
-        }
-
-        .page-shell {
-            min-height: 100vh;
-            padding: 28px 0 60px;
-        }
-
-        .edit-card {
-            border: 0;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #fff;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .edit-header {
-            background: linear-gradient(135deg, var(--md-primary) 0%, var(--md-primary-hover) 100%);
-            color: #fff;
-            padding: 22px 26px;
-        }
-
-        .edit-header h4 {
-            margin-bottom: 6px;
-            font-weight: 700;
-        }
-
-        .edit-header p {
-            margin-bottom: 0;
-            opacity: .9;
-        }
-
-        .edit-body {
-            padding: 26px;
-        }
-
-        .info-box {
-            background: #eef6ff;
-            border: 1px solid #d6e8ff;
-            border-radius: 14px;
-            padding: 14px 16px;
-            color: #1e3a8a;
-            margin-bottom: 22px;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #334155;
-        }
-
-        .form-control,
-        .form-select {
-            border-radius: 12px;
-            min-height: 46px;
-            border: 1px solid #cbd5e1;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: rgba(2, 132, 199, .45);
-            box-shadow: 0 0 0 .2rem rgba(2, 132, 199, .12);
-        }
-
-        .btn-save {
-            border-radius: 12px;
-            min-height: 46px;
-            min-width: 160px;
-        }
-
-        .btn-cancel {
-            border-radius: 12px;
-            min-height: 46px;
-            min-width: 160px;
-        }
-
-        .alert {
-            border-radius: 12px;
-        }
-
-        .small-text {
-            color: var(--md-muted);
-            font-size: .92rem;
-        }
-
-        @media (max-width: 767.98px) {
-            .edit-body {
-                padding: 18px;
-            }
-
-            .btn-save,
-            .btn-cancel {
-                width: 100%;
-                min-width: 100%;
-            }
-        }
+        .constant-val { font-size: 16px; font-weight: bold; color: #1f2937; }
+        .section-title { border-left: 4px solid #dc3545; padding-left: 10px; font-weight: bold; color: #b21f2d; margin-bottom: 20px; }
     </style>
 </head>
+<body>
+<div class="main-wrapper">
 
-<body data-spy="scroll" data-offset="80">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
 
-    <div class="preloader">
-        <div class="spinner">
-            <div class="double-bounce1"></div>
-            <div class="double-bounce2"></div>
-        </div>
-    </div>
+    <div class="page-wrapper">
+        <div class="content container-fluid">
 
-    <header class="site-navbar navbar navbar-expand-xl navbar-light sticky-top" role="banner">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-                <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo JMC Hospital">
-                <span class="fw-bold" style="color: var(--md-dark);">JMC <span style="color: var(--md-primary);">Hospital</span></span>
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Basculer la navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="mainNavbar">
-                <ul class="navbar-nav ms-auto align-items-xl-center gap-xl-2 mt-3 mt-xl-0">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'liste_consultations_terminees' %}">Retour à la liste</a>
-                    </li>
-                    <li class="nav-item ms-xl-2">
-                        <a class="btn btn-outline-primary px-3 rounded-3" href="{% url 'logout' %}">
-                            <i class="fa fa-sign-out me-2"></i>Déconnexion
-                        </a>
-                    </li>
-                </ul>
+            <div class="page-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h3 class="page-title">Modifier la Consultation</h3>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'liste_consultations' %}">Consultations terminées</a></li>
+                            <li class="breadcrumb-item active">Modification</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-        </div>
-    </header>
 
-    <div class="main-wrapper">
-        {% include 'back-end/includes/header.html' %}
-        {% include 'back-end/includes/sidebar.html' %}
+            {% if messages %}
+                <div class="row">
+                    <div class="col-md-12">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
 
-        <div class="page-wrapper">
-            <div class="content container-fluid page-shell">
-                <div class="row justify-content-center">
-                    <div class="col-12 col-xl-10">
-                        <div class="card edit-card">
-                            <div class="edit-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div>
-                                    <h4>Modifier la consultation</h4>
-                                    <p>Met à jour les informations autorisées pour cette consultation.</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="card-title mb-0">
+                                <i class="fa fa-edit"></i> Modifier les données cliniques et les examens
+                            </h4>
+                        </div>
+                        <div class="card-body">
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h5 class="mb-2"><i class="fa fa-user text-primary"></i> Patient</h5>
+                                        <p class="mb-1"><strong>Nom :</strong> {{ triage.patient.noms }}</p>
+                                        <p class="mb-1"><strong>Code :</strong> {{ triage.patient.code_patient }}</p>
+                                        <p class="mb-0"><strong>Âge :</strong> {{ triage.patient.age }} ans</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span class="badge bg-light text-primary px-3 py-2">
-                                        {{ fonctionKey|default:"Utilisateur" }}
-                                    </span>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h5 class="mb-2"><i class="fa fa-user-md text-primary"></i> Médecin</h5>
+                                        <p class="mb-1"><strong>Consultation :</strong> {{ consultation.date_creation|date:"d/m/Y à H:i" }}</p>
+                                        <p class="mb-0"><strong>État :</strong>
+                                            {% if triage.est_consulte %}
+                                                <span class="badge badge-success">Clôturée</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">En cours</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="edit-body">
-                                {% if messages %}
-                                    {% for message in messages %}
-                                        <div class="alert alert-{{ message.tags }} mb-3">
-                                            {{ message }}
+                            <form method="post" id="consultationForm">
+                                {% csrf_token %}
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h5 class="mb-3 text-secondary">Données Cliniques</h5>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Motif de consultation</label>
+                                            <textarea name="motif_consultation" class="form-control" rows="3">{{ consultation.motif_consultation|default_if_none:'' }}</textarea>
                                         </div>
-                                    {% endfor %}
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Antécédent</label>
+                                            <input type="text" name="antecedent" class="form-control" value="{{ consultation.antecedent|default_if_none:'' }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Complément d'anamnèse</label>
+                                            <input type="text" name="complement_d_anamnese" class="form-control" value="{{ consultation.complement_d_anamnese|default_if_none:'' }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Histoire de la maladie</label>
+                                            <textarea name="histoire_maladie" class="form-control" rows="4">{{ consultation.histoire_maladie|default_if_none:'' }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Examen physique</label>
+                                            <textarea name="examen_physique" class="form-control" rows="4">{{ consultation.examen_physique|default_if_none:'' }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Hypothèse diagnostique</label>
+                                            <textarea name="hypothese_diagnostique" class="form-control" rows="4">{{ consultation.hypothese_diagnostique|default_if_none:'' }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <div class="row mb-2">
+                                    <div class="col">
+                                        <h5 class="mb-3 text-secondary">Examens Prescrits</h5>
+                                    </div>
+                                </div>
+
+                                {% if examens_existant %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover custom-table mb-0">
+                                            <thead class="thead-dark">
+                                                <tr>
+                                                    <th>Prestation</th>
+                                                    <th>Quantité</th>
+                                                    <th>Statut</th>
+                                                    <th>Indication</th>
+                                                    <th>Résultat</th>
+                                                    <th>Date réalisation</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for exam in examens_existant %}
+                                                    <tr>
+                                                        <td>
+                                                            <select name="exam_{{ exam.id }}_prestation" class="form-control">
+                                                                {% for p in examens_disponibles %}
+                                                                    <option value="{{ p.id }}" {% if exam.prestation_id == p.id %}selected{% endif %}>
+                                                                        {{ p.libelle }} - {{ p.get_categorie_display }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </td>
+                                                        <td style="width: 90px;">
+                                                            <input type="number" min="1" name="exam_{{ exam.id }}_quantite" class="form-control" value="{{ exam.quantite }}">
+                                                        </td>
+                                                        <td style="width: 140px;">
+                                                            <select name="exam_{{ exam.id }}_statut" class="form-control">
+                                                                <option value="EN_ATTENTE" {% if exam.statut == 'EN_ATTENTE' %}selected{% endif %}>En attente</option>
+                                                                <option value="TERMINE" {% if exam.statut == 'TERMINE' %}selected{% endif %}>Terminé</option>
+                                                                <option value="ANNULE" {% if exam.statut == 'ANNULE' %}selected{% endif %}>Annulé</option>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <textarea name="exam_{{ exam.id }}_indication" class="form-control" rows="2">{{ exam.indication|default_if_none:'' }}</textarea>
+                                                        </td>
+                                                        <td>
+                                                            <textarea name="exam_{{ exam.id }}_resultat" class="form-control" rows="2">{{ exam.resultat|default_if_none:'' }}</textarea>
+                                                        </td>
+                                                        <td style="width: 190px;">
+                                                            <input type="datetime-local" name="exam_{{ exam.id }}_date_realisation" class="form-control" value="{% if exam.date_realisation %}{{ exam.date_realisation|date:'Y-m-d\\TH:i' }}{% endif %}">
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        Aucun examen lié à cette consultation.
+                                    </div>
                                 {% endif %}
 
-                                <div class="info-box">
-                                    Consultation n° <strong>{{ consultation.id }}</strong>
-                                    {% if consultation.triage and consultation.triage.patient %}
-                                        — Patient : <strong>{{ consultation.triage.patient }}</strong>
-                                    {% endif %}
-                                </div>
+                                <hr>
 
-                                <form method="post">
-                                    {% csrf_token %}
-
-                                    <div class="row">
-                                        {% for field in form %}
-                                            <div class="col-12 col-md-6 mb-3">
-                                                <label for="{{ field.id_for_label }}" class="form-label">
-                                                    {{ field.label }}
-                                                </label>
-                                                {{ field }}
-                                                {% if field.help_text %}
-                                                    <div class="small-text mt-1">{{ field.help_text }}</div>
-                                                {% endif %}
-                                                {% if field.errors %}
-                                                    <div class="text-danger small mt-1">{{ field.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                        {% endfor %}
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h5 class="mb-3 text-secondary">Ajouter des examens</h5>
                                     </div>
 
-                                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
-                                        <a href="{% url 'liste_consultations_terminees' %}" class="btn btn-light btn-cancel">
-                                            Annuler
-                                        </a>
-                                        <button type="submit" class="btn btn-primary btn-save">
-                                            Enregistrer les modifications
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Filtrer par catégorie</label>
+                                            <select id="filter_categorie" class="form-control">
+                                                <option value="all">-- Toutes les catégories --</option>
+                                                <option value="LABO">LABO</option>
+                                                <option value="RADIO">RADIO</option>
+                                                <option value="ECHO">ECHO</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Prestation</label>
+                                            <select id="select_prestation" class="form-control">
+                                                <option value="">-- Choisir une prestation --</option>
+                                                {% for p in examens_disponibles %}
+                                                    <option value="{{ p.id }}" data-cat="{{ p.categorie }}">
+                                                        {{ p.libelle }} - {{ p.get_categorie_display }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" id="btn_add_examen" class="btn btn-info btn-block mb-3">
+                                            <i class="fa fa-plus"></i> Ajouter
                                         </button>
                                     </div>
-                                </form>
-                            </div>
+
+                                    <div class="col-md-12">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm custom-table">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th>Prestation</th>
+                                                        <th>Quantité</th>
+                                                        <th>Statut</th>
+                                                        <th>Indication</th>
+                                                        <th>Résultat</th>
+                                                        <th>Date réalisation</th>
+                                                        <th style="width: 50px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="wrapper_examens">
+                                                    <tr class="placeholder-row">
+                                                        <td colspan="7" class="text-center text-muted small py-3">
+                                                            Aucun examen ajouté pour le moment.
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-right mt-4">
+                                    <a href="{% url 'liste_consultations' %}" class="btn btn-secondary">
+                                        <i class="fa fa-times"></i> Annuler
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-save"></i> Enregistrer les modifications
+                                    </button>
+                                </div>
+                            </form>
+
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
+</div>
 
-    {% include 'back-end/includes/js.html' %}
+{% include 'back-end/includes/js.html' %}
+
+<script>
+$(document).ready(function() {
+    $('#filter_categorie').on('change', function() {
+        var selectedCat = $(this).val();
+        $('#select_prestation option').each(function() {
+            var cat = $(this).data('cat');
+            if ($(this).val() === '') {
+                $(this).show();
+            } else if (selectedCat === 'all' || selectedCat === cat) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        $('#select_prestation').val('');
+    });
+
+    $('#btn_add_examen').on('click', function() {
+        var prestationId = $('#select_prestation').val();
+        var prestationText = $('#select_prestation option:selected').text();
+
+        if (!prestationId) {
+            alert("Veuillez sélectionner une prestation.");
+            return;
+        }
+
+        $('.placeholder-row').remove();
+
+        var row = `
+            <tr id="new_exam_${prestationId}">
+                <td>
+                    <input type="hidden" name="examens_ids" value="${prestationId}">
+                    <strong>${prestationText}</strong>
+                </td>
+                <td style="width: 90px;">
+                    <input type="number" name="qty_${prestationId}" min="1" value="1" class="form-control form-control-sm">
+                </td>
+                <td style="width: 140px;">
+                    <select name="statut_${prestationId}" class="form-control form-control-sm">
+                        <option value="EN_ATTENTE">En attente</option>
+                        <option value="TERMINE">Terminé</option>
+                        <option value="ANNULE">Annulé</option>
+                    </select>
+                </td>
+                <td>
+                    <textarea name="indication_${prestationId}" class="form-control form-control-sm" rows="2"></textarea>
+                </td>
+                <td>
+                    <textarea name="resultat_${prestationId}" class="form-control form-control-sm" rows="2"></textarea>
+                </td>
+                <td style="width: 190px;">
+                    <input type="datetime-local" name="date_realisation_${prestationId}" class="form-control form-control-sm">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-exam">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $('#wrapper_examens').append(row);
+        $('#select_prestation').val('');
+    });
+
+    $(document).on('click', '.btn-remove-exam', function() {
+        $(this).closest('tr').remove();
+        if ($('#wrapper_examens tr').length === 0) {
+            $('#wrapper_examens').html(`
+                <tr class="placeholder-row">
+                    <td colspan="7" class="text-center text-muted small py-3">
+                        Aucun examen ajouté pour le moment.
+                    </td>
+                </tr>
+            `);
+        }
+    });
+});
+</script>
 </body>
 </html>

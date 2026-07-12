@@ -116,7 +116,6 @@
                                                         <strong>Complément Anamnèse :</strong> {{ c.complement_d_anamnese }}<br><br>
                                                     {% endif %}
                                                     <strong>Examen physique :</strong> {{ c.examen_physique }}<br><br>
-
                                                     <strong class="text-danger">Hypothèse Diag :</strong> {{ c.hypothese_diagnostique }}
                                                 </div>
                                             </td>
@@ -150,13 +149,13 @@
                                                     <i class="fa fa-check-circle"></i> Clôturé
                                                 </span>
 
-                                                {% comment %} <a href="{% url 'modifier_consultation' c.id %}" class="btn btn-sm btn-warning btn-block mt-1" style="font-size: 11px; padding: 4px 8px;">
+                                                <a href="{% url 'modifier_consultation' c.id %}" class="btn btn-sm btn-warning btn-block mt-1" style="font-size: 11px; padding: 4px 8px;">
                                                     <i class="fa fa-edit"></i> Modifier
-                                                </a> {% endcomment %}
+                                                </a>
 
-                                                {% comment %} <a href="#" class="btn btn-sm btn-danger btn-block mt-1" style="font-size: 11px; padding: 4px 8px;" data-toggle="modal" data-target="#modal_urgence_{{ c.id }}">
+                                                <a href="#" class="btn btn-sm btn-danger btn-block mt-1" style="font-size: 11px; padding: 4px 8px;" data-toggle="modal" data-target="#modal_urgence_{{ c.id }}">
                                                     <i class="fa fa-ambulance"></i> Ordo Urgence
-                                                </a> {% endcomment %}
+                                                </a>
                                             </td>
                                         </tr>
                                         {% empty %}

@@ -28,8 +28,10 @@
         </div>
         <div class="col-6 text-end">
             <h4>FACTURE</h4>
-            <p><strong>N°:</strong> #TRX-{{ facture.id|stringformat:"05d" }}<br>
-            <strong>Date:</strong> {{ facture.date_paiement|date:"d/m/Y H:i" }}</p>
+            <p>
+                <strong>N°:</strong> #TRX-{{ facture.id|stringformat:"05d" }}<br>
+                <strong>Date:</strong> {{ facture.date_paiement|date:"d/m/Y H:i" }}
+            </p>
         </div>
     </div>
 
@@ -46,8 +48,8 @@
             {% for item in details %}
             <tr>
                 <td>
-                    <strong>{{ item.lot.produit.nom }}</strong><br>
-                    <small class="text-muted">{{ item.lot.produit.dosage }} - {{ item.lot.produit.forme }}</small>
+                    <strong>{{ item.nom_medicament }}</strong><br>
+                    <small class="text-muted">{{ item.dosage_medicament }} - {{ item.forme_medicament }}</small>
                 </td>
                 <td class="text-center">{{ item.quantite_vendue }}</td>
                 <td class="text-end">{{ item.prix_unitaire|floatformat:2 }} {{ facture.devise }}</td>
@@ -60,7 +62,9 @@
     <div class="row mt-4 total-section">
         <div class="col-6"></div>
         <div class="col-6 text-end">
-            <h4 class="text-primary">Total : {{ facture.montant_verse|floatformat:2 }} {{ facture.devise }}</h4>
+            <p class="mb-1">Total vente : <strong>{{ total_vente|floatformat:2 }} {{ facture.devise }}</strong></p>
+            <p class="mb-1">Montant déjà payé : <strong>{{ montant_verse|floatformat:2 }} {{ facture.devise }}</strong></p>
+            <h4 class="text-primary">Reste à payer : {{ reste_a_payer|floatformat:2 }} {{ facture.devise }}</h4>
         </div>
     </div>
 

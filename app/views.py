@@ -4324,20 +4324,46 @@ def details_facture(request, vente_id):
     facture = get_object_or_404(Paiement, id=vente_id, hopital=hopital_user)
     details = facture.les_sorties.select_related('lot__produit').all()
 
+    taux = Decimal(str(ConfigurationHopital.get_taux()))
+    devise_facture = facture.devise
+    total_vente = Decimal('0.00')
+
     for item in details:
         produit = item.lot.produit
         item.nom_medicament = produit.nom
         item.forme_medicament = produit.forme
         item.dosage_medicament = produit.dosage
-        item.prix_unitaire = produit.prix_vente_unitaire
-        item.total_ligne = item.prix_unitaire * item.quantite_vendue
+
+        prix_source = Decimal(str(produit.prix_vente_unitaire))
+        devise_source = produit.devise if hasattr(produit, 'devise') and produit.devise else devise_facture
+
+        if devise_source != devise_facture:
+            if devise_source == 'USD' and devise_facture == 'CDF':
+                prix_affiche = prix_source * taux
+            elif devise_source == 'CDF' and devise_facture == 'USD':
+                prix_affiche = prix_source / taux
+            else:
+                prix_affiche = prix_source
+        else:
+            prix_affiche = prix_source
+
+        item.prix_unitaire = prix_affiche.quantize(Decimal('0.01'))
+        item.total_ligne = (item.prix_unitaire * item.quantite_vendue).quantize(Decimal('0.01'))
+        total_vente += item.total_ligne
+
+    total_vente = total_vente.quantize(Decimal('0.01'))
+    montant_verse = Decimal(str(facture.montant_verse)).quantize(Decimal('0.01'))
+    reste_a_payer = (total_vente - montant_verse).quantize(Decimal('0.01'))
 
     context = {
         'facture': facture,
         'details': details,
+        'total_vente': total_vente,
+        'montant_verse': montant_verse,
+        'reste_a_payer': reste_a_payer,
+        'taux': taux,
     }
     return render(request, 'back-end/pharmacie/facture_print.html', context)
-
 #
 # ===============================================================================================
 # VALIDER VENTE PHARMACIE

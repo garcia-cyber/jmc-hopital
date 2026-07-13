@@ -4178,7 +4178,6 @@ def dashboard_ventes(request):
 
     periode = request.GET.get('periode', 'jour')
     hopital_id = request.GET.get('hopital_id')
-
     est_admin = request.user.is_superuser or request.user.is_staff
 
     if est_admin:
@@ -4224,18 +4223,34 @@ def dashboard_ventes(request):
         total_periode=Sum('montant_verse')
     ).order_by('-date_groupee', 'devise')
 
+    benefice_expr = ExpressionWrapper(
+        (F('lot__produit__prix_vente_unitaire') - F('lot__produit__prix_achat_unitaire')) * F('quantite_vendue'),
+        output_field=DecimalField(max_digits=14, decimal_places=2)
+    )
     top_benefices = sorties_base.values('lot__produit__nom').annotate(
-        benefice_total=Sum(
-            (F('lot__produit__prix_vente_unitaire') - F('lot__produit__prix_achat_unitaire')) * F('quantite_vendue'),
-            output_field=DecimalField()
-        )
+        benefice_total=Sum(benefice_expr)
     ).order_by('-benefice_total')[:5]
 
     dettes_en_cours = paiements_base.filter(reste_a_payer__gt=0).prefetch_related('les_sorties__vendu_par')
     produits_critiques = lots_base.filter(quantite_actuelle__lt=5).select_related('produit')
 
     aujourdhui = timezone.now().date()
-    nombre_ventes = paiements_base.filter(date_paiement__date=aujourdhui).count()
+    ventes_du_jour = paiements_base.filter(date_paiement__date=aujourdhui)
+
+    chiffre_affaires_jour = ventes_du_jour.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    nombre_ventes_jour = ventes_du_jour.count()
+
+    repartition_jour = ventes_du_jour.values('devise').annotate(
+        total=Sum('montant_verse'),
+        nombre=Count('id')
+    ).order_by('devise')
+
+    repartition_globale = paiements_base.values('devise').annotate(
+        total=Sum('montant_verse'),
+        nombre=Count('id')
+    ).order_by('devise')
+
+    nombre_ventes = ventes_du_jour.count()
 
     context = {
         'stats_ventes': stats_ventes,
@@ -4250,6 +4265,10 @@ def dashboard_ventes(request):
         'est_admin': est_admin,
         'hopitaux': hopitaux,
         'hopital_actif': hopital_actif,
+        'chiffre_affaires_jour': chiffre_affaires_jour,
+        'nombre_ventes_jour': nombre_ventes_jour,
+        'repartition_jour': repartition_jour,
+        'repartition_globale': repartition_globale,
     }
     return render(request, 'back-end/pharmacie/dashboard.html', context)
 # ==================================================================================================

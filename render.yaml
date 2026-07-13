@@ -6,10 +6,10 @@ services:
     startCommand: "gunicorn conf.wsgi:application"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.14.5 # Modifiez selon votre version locale si nécessaire
+        value: 3.12.0
+      - key: DEBUG
+        value: False
       - key: SECRET_KEY
-        generateValue: true # Render génère automatiquement une clé secrète sécurisée unique pour la production
-    disk:
-      name: jmc-hospital-data
-      mountPath: /data
-      sizeGB: 1
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false

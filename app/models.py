@@ -1335,3 +1335,40 @@ class VideoRoom(models.Model):
 
     def __str__(self):
         return self.name
+
+
+#
+# ===============================================================================================
+#
+# GENERE RAPPORT 
+class RapportJournalierPersonnel(models.Model):
+    TYPE_CHOICES = [
+        ("personnel", "Rapport du personnel"),
+        ("service", "Rapport de service"),
+        ("direction", "Rapport de direction"),
+    ]
+
+    date_rapport = models.DateField(default=timezone.localdate)
+    type_rapport = models.CharField(max_length=20, choices=TYPE_CHOICES, default="personnel")
+    titre = models.CharField(max_length=255)
+    contenu = models.TextField()
+
+    auteur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="rapports_rediges")
+    hopital = models.ForeignKey("Hopital", on_delete=models.SET_NULL, null=True, blank=True, related_name="rapports_journaliers")
+    service = models.ForeignKey("Service", on_delete=models.SET_NULL, null=True, blank=True, related_name="rapports_journaliers")
+
+    nombre_personnel_present = models.PositiveIntegerField(default=0)
+    nombre_personnel_absent = models.PositiveIntegerField(default=0)
+    incidents_signales = models.PositiveIntegerField(default=0)
+    recommandations = models.TextField(blank=True, null=True)
+
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Rapport journalier du personnel"
+        verbose_name_plural = "Rapports journaliers du personnel"
+        ordering = ["-date_rapport", "-date_creation"]
+
+    def __str__(self):
+        return f"{self.hopital} - {self.titre} - {self.date_rapport}"

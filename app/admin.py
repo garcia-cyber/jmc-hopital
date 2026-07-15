@@ -514,3 +514,35 @@ class InterventionMaintenanceAdmin(admin.ModelAdmin):
     list_filter = ['repare', 'date_panne']
     search_fields = ['equipement__nom', 'technicien']
     list_editable = ['repare']
+
+
+
+@admin.register(RapportJournalierPersonnel)
+class RapportJournalierPersonnelAdmin(admin.ModelAdmin):
+    list_display = (
+        "date_rapport",
+        "titre",
+        "hopital",
+        "service",
+        "auteur",
+        "type_rapport",
+        "nombre_personnel_present",
+        "nombre_personnel_absent",
+        "incidents_signales",
+    )
+    list_filter = (
+        "date_rapport",
+        "type_rapport",
+        "hopital",
+        "service",
+    )
+    search_fields = (
+        "titre",
+        "contenu",
+        "recommandations",
+        "hopital__nomH",
+        "service__nom",
+        "auteur__username",
+    )
+    ordering = ("-date_rapport", "-date_creation")
+    date_hierarchy = "date_rapport"

@@ -7,6 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-temporary-key")
+# Utiliser True par défaut pour le développement local
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [
@@ -63,20 +64,25 @@ TEMPLATES = [
     },
 ]
 
-if DEBUG:
+# --- CONFIGURATION BASE DE DONNÉES ---
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    # Production (Render + Neon)
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True, # Neon nécessite SSL
+        )
+    }
+else:
+    # Développement (SQLite local)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
-    }
-else:
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=os.environ.get("DATABASE_URL"),
-            conn_max_age=600,
-            ssl_require=True,
-        )
     }
 
 AUTH_PASSWORD_VALIDATORS = []
@@ -86,11 +92,6 @@ TIME_ZONE = "Africa/Kinshasa"
 USE_I18N = True
 USE_TZ = False
 
-DATE_INPUT_FORMATS = [
-    "%d/%m/%Y",
-    "%Y-%m-%d",
-]
-
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -98,20 +99,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
-LOGIN_REDIRECT_URL = "/dashboard/"
-LOGIN_URL = "/login/"
-LOGOUT_REDIRECT_URL = "/home/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if DEBUG:
-    CSRF_COOKIE_SECURE = False
-    SESSION_COOKIE_SECURE = False
-    SECURE_SSL_REDIRECT = False
-    SECURE_BROWSER_XSS_FILTER = False
-    SECURE_CONTENT_TYPE_NOSNIFF = False
-    X_FRAME_OPTIONS = "SAMEORIGIN"
-else:
+# Configuration sécurité
+if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
@@ -119,10 +110,5 @@ else:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
-    CSRF_TRUSTED_ORIGINS = [
-        "https://jmc-hopital.onrender.com",
-    ]
+    CSRF_TRUSTED_ORIGINS = ["https://jmc-hopital.onrender.com"]
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_HSTS_SECONDS = 1209600
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True

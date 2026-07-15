@@ -654,3 +654,27 @@ class CustomPasswordChangeForm(PasswordChangeForm):
             "class": "form-control",
             "placeholder": "Confirmer le nouveau mot de passe",
         })
+
+
+# =================================================================================================
+#
+class RapportJournalierPersonnelForm(forms.ModelForm):
+    class Meta:
+        model = RapportJournalierPersonnel
+        fields = [
+            "date_rapport",
+            "type_rapport",
+            "titre",
+            "contenu",
+            "hopital",
+            "service",
+            "nombre_personnel_present",
+            "nombre_personnel_absent",
+            "incidents_signales",
+            "recommandations",
+        ]
+        widgets = {
+            "date_rapport": forms.DateInput(attrs={"type": "date"}),
+            "contenu": forms.Textarea(attrs={"rows": 5}),
+            "recommandations": forms.Textarea(attrs={"rows": 4}),
+        }

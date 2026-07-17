@@ -417,17 +417,27 @@ def modifier_taux(request):
 @login_required
 def modifier_prestation(request, pk):
     prestation = get_object_or_404(Prestation, pk=pk)
-    
+
     if request.method == 'POST':
-        # L'instance permet de mettre à jour l'objet existant au lieu d'en créer un nouveau
         form = PrestationForm(request.POST, instance=prestation)
         if form.is_valid():
             form.save()
             messages.success(request, f"La prestation '{prestation.libelle}' a été mise à jour.")
+            return redirect('gestion_prestations')
         else:
             messages.error(request, "Erreur lors de la mise à jour. Vérifiez les données.")
-            
-    return redirect('gestion_prestations')
+    else:
+        form = PrestationForm(instance=prestation)
+
+    # verification de la fonction
+    role = Fonction.objects.filter(userKey = request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role else None
+
+    return render(request, 'back-end/prestation/modifier_prestation.html', {
+        'form': form,
+        'prestation': prestation ,
+        'fonctionKey': fonctionKey
+    })
 
 # 15
 # ==================================================================================================

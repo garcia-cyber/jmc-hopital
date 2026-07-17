@@ -165,48 +165,6 @@
             transform: translateY(-1px);
         }
 
-        .modal-content {
-            border-radius: 18px;
-            overflow: hidden;
-            border: none;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-        }
-
-        .modal-header-pro {
-            background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
-            color: #fff;
-            border-bottom: none;
-            padding: 18px 24px;
-        }
-
-        .modal-header-pro .close {
-            color: #fff;
-            opacity: 1;
-            text-shadow: none;
-        }
-
-        .modal-body {
-            padding: 28px;
-        }
-
-        .form-control {
-            border-radius: 12px;
-            border: 1px solid #dbe3ee;
-            min-height: 46px;
-            box-shadow: none;
-        }
-
-        .form-control:focus {
-            border-color: #0d6efd;
-            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
-        }
-
-        .submit-btn {
-            border-radius: 999px;
-            padding: 10px 28px;
-            font-weight: 700;
-        }
-
         .empty-box {
             padding: 48px 20px;
             text-align: center;
@@ -325,80 +283,12 @@
                                                     <td><span class="badge-usd">{{ item.prix }} $</span></td>
                                                     <td><span class="text-cdf">{{ item.prix_cdf|floatformat:0 }} FC</span></td>
                                                     <td class="text-right">
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-primary action-btn"
-                                                                data-toggle="modal"
-                                                                data-target="#edit_prestation_{{ item.id }}">
+                                                        <a href="{% url 'modifier_prestation' item.id %}"
+                                                           class="btn btn-sm btn-outline-primary action-btn">
                                                             <i class="fa fa-pen mr-1"></i> Modifier
-                                                        </button>
+                                                        </a>
                                                     </td>
                                                 </tr>
-
-                                                <div id="edit_prestation_{{ item.id }}" class="modal custom-modal fade edit-prestation-modal" role="dialog">
-                                                    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header modal-header-pro">
-                                                                <div>
-                                                                    <h5 class="modal-title mb-1" style="font-weight: 800;">Modifier la prestation</h5>
-                                                                    <small style="opacity: .9;">{{ item.libelle }}</small>
-                                                                </div>
-                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                                    <span aria-hidden="true">&times;</span>
-                                                                </button>
-                                                            </div>
-
-                                                            <div class="modal-body">
-                                                                <form action="{% url 'modifier_prestation' item.id %}" method="POST">
-                                                                    {% csrf_token %}
-
-                                                                    <div class="row">
-                                                                        <div class="col-md-6">
-                                                                            <div class="form-group">
-                                                                                <label style="font-weight: 600;">Désignation</label>
-                                                                                <input type="text" name="libelle" class="form-control" value="{{ item.libelle }}" required>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div class="col-md-6">
-                                                                            <div class="form-group">
-                                                                                <label style="font-weight: 600;">Catégorie</label>
-                                                                                <select name="categorie" class="form-control select-categorie-edit" required>
-                                                                                    {% for val, name in categories_list %}
-                                                                                        <option value="{{ val }}" {% if item.categorie == val %}selected{% endif %}>{{ name }}</option>
-                                                                                    {% endfor %}
-                                                                                </select>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div class="col-12">
-                                                                            <div class="form-group bloc-valeur-normale-edit" style="display:none;">
-                                                                                <label style="font-weight: 600;">Valeur Normale / Référence (Labo)</label>
-                                                                                <input type="text" name="valeur_normale" class="form-control" value="{{ item.valeur_normale|default:'' }}" placeholder="Ex: 70-110 mg/dl ou Négatif">
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div class="col-md-6">
-                                                                            <div class="form-group">
-                                                                                <label style="font-weight: 600;">Prix en USD</label>
-                                                                                <input type="number" step="0.01" name="prix" class="form-control" value="{{ item.prix|stringformat:'.2f' }}" required>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div class="d-flex justify-content-end mt-4">
-                                                                        <button type="button" class="btn btn-light mr-2" data-dismiss="modal" style="border-radius: 999px; padding: 10px 22px;">
-                                                                            Annuler
-                                                                        </button>
-                                                                        <button type="submit" class="btn btn-primary submit-btn">
-                                                                            <i class="fa fa-save mr-1"></i> Enregistrer
-                                                                        </button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
                                             {% empty %}
                                                 <tr>
                                                     <td colspan="8">
@@ -447,12 +337,12 @@
         <div id="add_prestation" class="modal custom-modal fade" role="dialog">
             <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
                 <div class="modal-content">
-                    <div class="modal-header modal-header-pro">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); color: #fff; border-bottom: none; padding: 18px 24px;">
                         <div>
                             <h5 class="modal-title mb-1" style="font-weight: 800;">Nouvelle prestation</h5>
                             <small style="opacity: .9;">Ajouter une prestation au catalogue</small>
                         </div>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -478,7 +368,7 @@
                                 <button type="button" class="btn btn-light mr-2" data-dismiss="modal" style="border-radius: 999px; padding: 10px 22px;">
                                     Annuler
                                 </button>
-                                <button type="submit" class="btn btn-primary submit-btn">
+                                <button type="submit" class="btn btn-primary" style="border-radius: 999px; padding: 10px 28px; font-weight: 700;">
                                     <i class="fa fa-plus-circle mr-1"></i> Ajouter au catalogue
                                 </button>
                             </div>
@@ -510,26 +400,6 @@
 
             $selectAdd.on('change', gererAffichageAdd);
             gererAffichageAdd();
-
-            $('.edit-prestation-modal').each(function() {
-                const $modal = $(this);
-                const $selectEdit = $modal.find('.select-categorie-edit');
-                const $blocEdit = $modal.find('.bloc-valeur-normale-edit');
-
-                function gererAffichageEdit() {
-                    if ($selectEdit.val() === 'LABO') {
-                        $blocEdit.show();
-                    } else {
-                        $blocEdit.hide();
-                        $blocEdit.find('input').val('');
-                    }
-                }
-
-                $selectEdit.on('change', gererAffichageEdit);
-                $modal.on('show.bs.modal', function() {
-                    gererAffichageEdit();
-                });
-            });
         });
     </script>
 </body>

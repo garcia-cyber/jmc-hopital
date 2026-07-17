@@ -508,6 +508,17 @@
         <span>Changer le mot de passe</span>
     </a>
 </li>
+<li class="{% if request.resolver_match.url_name == 'creer_rapport_journalier' %}active{% endif %}">
+    <a href="{% url 'creer_rapport_journalier' %}">
+        <i class="fa fa-plus-circle"></i> <span>Créer un rapport</span>
+    </a>
+</li>
+
+<li class="{% if request.resolver_match.url_name == 'liste_rapports_journaliers' %}active{% endif %}">
+    <a href="{% url 'liste_rapports_journaliers' %}">
+        <i class="fa fa-list"></i> <span>Liste des rapports</span>
+    </a>
+</li>
 
                 <li class="menu-title"> <span>SESSION</span> </li>
                 <li><a href="{% url 'deco' %}" class="text-danger"><i class="la la-power-off"></i> <span>Déconnexion</span></a></li>

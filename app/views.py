@@ -6361,4 +6361,69 @@ def change_password(request):
         "fonctionKey": fonction_key
     })
 
- 
+#
+# ===========================================================================================================================
+# ENREGISTRE RAPPORT 
+# ===========================================================================================================================
+@login_required
+def creer_rapport_journalier(request):
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital", "fonctionKey").first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    if request.method == "POST":
+        form = RapportJournalierPersonnelForm(request.POST)
+        if form.is_valid():
+            rapport = form.save(commit=False)
+            rapport.auteur = request.user
+            rapport.hopital = hopital_user
+            rapport.save()
+            return redirect("liste_rapports_journaliers")
+    else:
+        form = RapportJournalierPersonnelForm()
+
+    return render(
+        request,
+        "back-end/rapport/creer_rapport.html",
+        {
+            "form": form,
+            "fonctionKey": fonction_key,
+        }
+    )
+# ===========================================================================================================================
+#  LISTE DES RAPPORTS
+# ===========================================================================================================================
+@login_required
+def liste_rapports_journaliers(request):
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    hopital_user = role_obj.hopital if role_obj else None
+
+    rapports = RapportJournalierPersonnel.objects.select_related(
+        "auteur", "hopital", "service"
+    )
+
+    if not (request.user.is_superuser or request.user.is_staff):
+        rapports = rapports.filter(hopital=hopital_user)
+
+    date_debut = request.GET.get("date_debut")
+    date_fin = request.GET.get("date_fin")
+    type_rapport = request.GET.get("type_rapport")
+
+    if date_debut:
+        rapports = rapports.filter(date_rapport__gte=date_debut)
+    if date_fin:
+        rapports = rapports.filter(date_rapport__lte=date_fin)
+    if type_rapport:
+        rapports = rapports.filter(type_rapport=type_rapport)
+
+    rapports = rapports.order_by("-date_rapport", "-date_creation")
+
+    return render(
+        request,
+        "back-end/rapport/liste_rapports_journaliers.html",
+        {
+            "rapports": rapports,
+            "fonctionKey": fonction_key,
+        }
+    )

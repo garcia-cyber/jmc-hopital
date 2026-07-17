@@ -4,6 +4,7 @@ from .models import *
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from datetime import date
+from django.utils import timezone
 
 # creation du formulaire d'authentification
 # ==========================================
@@ -662,11 +663,9 @@ class RapportJournalierPersonnelForm(forms.ModelForm):
     class Meta:
         model = RapportJournalierPersonnel
         fields = [
-            "date_rapport",
             "type_rapport",
             "titre",
             "contenu",
-            "hopital",
             "service",
             "nombre_personnel_present",
             "nombre_personnel_absent",
@@ -674,7 +673,12 @@ class RapportJournalierPersonnelForm(forms.ModelForm):
             "recommandations",
         ]
         widgets = {
-            "date_rapport": forms.DateInput(attrs={"type": "date"}),
-            "contenu": forms.Textarea(attrs={"rows": 5}),
-            "recommandations": forms.Textarea(attrs={"rows": 4}),
+            "contenu": forms.Textarea(attrs={"rows": 5, "class": "form-control"}),
+            "recommandations": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
+            "service": forms.Select(attrs={"class": "form-control"}),
+            "type_rapport": forms.Select(attrs={"class": "form-control"}),
+            "titre": forms.TextInput(attrs={"class": "form-control"}),
+            "nombre_personnel_present": forms.NumberInput(attrs={"class": "form-control"}),
+            "nombre_personnel_absent": forms.NumberInput(attrs={"class": "form-control"}),
+            "incidents_signales": forms.NumberInput(attrs={"class": "form-control"}),
         }

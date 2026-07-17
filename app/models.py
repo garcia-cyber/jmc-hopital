@@ -1348,7 +1348,7 @@ class RapportJournalierPersonnel(models.Model):
         ("direction", "Rapport de direction"),
     ]
 
-    date_rapport = models.DateField(default=timezone.localdate)
+    date_rapport = models.DateField(auto_now_add=True)
     type_rapport = models.CharField(max_length=20, choices=TYPE_CHOICES, default="personnel")
     titre = models.CharField(max_length=255)
     contenu = models.TextField()

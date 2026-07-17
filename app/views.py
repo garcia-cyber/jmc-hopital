@@ -4194,20 +4194,21 @@ def dashboard_ventes(request):
         hopital_actif = None
         if hopital_id:
             hopital_actif = Hopital.objects.filter(id=hopital_id).first()
+
         paiements_base = Paiement.objects.all()
         sorties_base = SortiePharmacie.objects.all()
         lots_base = LotPharmacie.objects.all()
-        hopitaux = Hopital.objects.all().order_by('nom')
+        hopitaux = Hopital.objects.all().order_by('nomH')
     else:
         hopital_actif = hopital_user
-        paiements_base = Paiement.objects.filter(hopital=hopital_user)
-        sorties_base = SortiePharmacie.objects.filter(lot__hopital=hopital_user)
-        lots_base = LotPharmacie.objects.filter(hopital=hopital_user)
+        paiements_base = Paiement.objects.filter(hopital=hopital_user) if hopital_user else Paiement.objects.none()
+        sorties_base = SortiePharmacie.objects.filter(hopital=hopital_user) if hopital_user else SortiePharmacie.objects.none()
+        lots_base = LotPharmacie.objects.filter(hopital=hopital_user) if hopital_user else LotPharmacie.objects.none()
         hopitaux = Hopital.objects.filter(id=hopital_user.id) if hopital_user else Hopital.objects.none()
 
     if est_admin and hopital_actif:
         paiements_base = paiements_base.filter(hopital=hopital_actif)
-        sorties_base = sorties_base.filter(lot__hopital=hopital_actif)
+        sorties_base = sorties_base.filter(hopital=hopital_actif)
         lots_base = lots_base.filter(hopital=hopital_actif)
 
     periodes_map = {
@@ -4237,6 +4238,7 @@ def dashboard_ventes(request):
         (F('lot__produit__prix_vente_unitaire') - F('lot__produit__prix_achat_unitaire')) * F('quantite_vendue'),
         output_field=DecimalField(max_digits=14, decimal_places=2)
     )
+
     top_benefices = sorties_base.values('lot__produit__nom').annotate(
         benefice_total=Sum(benefice_expr)
     ).order_by('-benefice_total')[:5]
@@ -4260,8 +4262,6 @@ def dashboard_ventes(request):
         nombre=Count('id')
     ).order_by('devise')
 
-    nombre_ventes = ventes_du_jour.count()
-
     context = {
         'stats_ventes': stats_ventes,
         'total_general': total_general,
@@ -4269,7 +4269,7 @@ def dashboard_ventes(request):
         'top_benefices': top_benefices,
         'dettes_en_cours': dettes_en_cours,
         'produits_critiques': produits_critiques,
-        'nb_ventes': nombre_ventes,
+        'nb_ventes': ventes_du_jour.count(),
         'periode_actuelle': periode,
         'fonctionKey': fonctionKey,
         'est_admin': est_admin,

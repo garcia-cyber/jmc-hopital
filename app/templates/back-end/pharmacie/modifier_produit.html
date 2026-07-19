@@ -1,0 +1,356 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Produit | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card { 
+            border: none; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.5rem;
+        }
+        .table thead th { 
+            border-top: none; 
+            text-transform: uppercase; 
+            font-size: 0.75rem; 
+            color: #6c757d; 
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            background: #f8f9fa;
+            padding: 1rem 0.75rem;
+        }
+        .table tbody td {
+            padding: 1rem 0.75rem;
+            vertical-align: middle;
+            border-color: #f0f0f0;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.005);
+            transition: all 0.2s ease;
+        }
+        .badge-status { 
+            padding: 0.5rem 0.8rem; 
+            border-radius: 50px; 
+            font-weight: 600; 
+            font-size: 0.70rem;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
+        }
+        .badge-rupture { background: #ffe0e0; color: #dc3545; }
+        .badge-faible { background: #fff3cd; color: #ffc107; }
+        .badge-ok { background: #d4edda; color: #28a745; }
+        
+        .search-box { 
+            margin-bottom: 25px; 
+            position: relative;
+        }
+        .search-box input {
+            border-radius: 50px;
+            border: 2px solid #e0e0e0;
+            padding-left: 45px;
+            transition: all 0.3s ease;
+        }
+        .search-box input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        }
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .currency-text { 
+            font-family: 'Courier New', monospace; 
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        
+        .action-buttons .btn {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.85rem;
+            margin: 0 2px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .action-buttons .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 4px solid;
+        }
+        .stats-card.total { border-left-color: #667eea; }
+        .stats-card.faible { border-left-color: #ffc107; }
+        .stats-card.rupture { border-left-color: #dc3545; }
+        
+        .stats-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        .stats-label {
+            font-size: 0.875rem;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-custom-success {
+            background: linear-gradient(135deg, #42e695 0%, #3bb2b8 100%);
+            border: none;
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-custom-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 230, 149, 0.4);
+            color: white;
+        }
+        
+        .medicament-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+        .medicament-details {
+            font-size: 0.80rem;
+            color: #a0aec0;
+        }
+        
+        .form-control-lg, .form-select-lg {
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .form-control-lg:focus, .form-select-lg:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card-header {
+                padding: 1rem;
+            }
+            .table-responsive {
+                border-radius: 0 0 12px 12px;
+            }
+            .table thead th {
+                font-size: 0.65rem;
+                padding: 0.75rem 0.5rem;
+            }
+            .table tbody td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
+            .action-buttons .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            .stats-value {
+                font-size: 1.5rem;
+            }
+            .search-box input {
+                padding-left: 40px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .d-flex.flex-wrap {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .stats-card {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="main-wrapper"> 
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- En-tête -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-primary font-weight-bold mb-0">
+                        <i class="fa fa-edit"></i> Modifier Produit
+                    </h3>
+                    <a href="{% url 'gestion_pharmacie' %}" class="btn btn-custom-success">
+                        <i class="fa fa-arrow-left"></i> <span class="d-none d-sm-inline">Retour</span>
+                    </a>
+                </div>
+
+                <!-- Statistiques -->
+                <div class="row">
+                    <div class="col-md-6 col-sm-6">
+                        <div class="stats-card total">
+                            <div class="stats-value">{{ stock_reel }} {{ produit.unite_mesure }}</div>
+                            <div class="stats-label">Stock Actuel</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-sm-6">
+                        <div class="stats-card rupture">
+                            <div class="stats-value">{{ valeur_totale|floatformat:2 }} $</div>
+                            <div class="stats-label">Valeur du Stock</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire -->
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="text-white mb-0">
+                            <i class="fa fa-pills"></i> Informations du produit
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="POST" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label for="nom" class="form-label font-weight-bold">
+                                        <i class="fa fa-tag"></i> Nom du produit *
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" 
+                                           id="nom" name="nom" value="{{ produit.nom }}" required>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="categorie" class="form-label font-weight-bold">
+                                        <i class="fa fa-layer-group"></i> Catégorie
+                                    </label>
+                                    <select class="form-select form-control-lg" id="categorie" name="categorie">
+                                        <option value="medicament" {% if produit.categorie == 'medicament' %}selected{% endif %}>Médicament</option>
+                                        <option value="consommable" {% if produit.categorie == 'consommable' %}selected{% endif %}>Consommable</option>
+                                        <option value="equipement" {% if produit.categorie == 'equipement' %}selected{% endif %}>Équipement</option>
+                                        <option value="autre" {% if produit.categorie == 'autre' %}selected{% endif %}>Autre</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label font-weight-bold">
+                                    <i class="fa fa-align-left"></i> Description
+                                </label>
+                                <textarea class="form-control form-control-lg" id="description" name="description" 
+                                          rows="3">{{ produit.description }}</textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="prix_achat_unitaire" class="form-label font-weight-bold">
+                                        <i class="fa fa-shopping-cart"></i> Prix d'achat ({{ taux }} FC) *
+                                    </label>
+                                    <input type="number" class="form-control form-control-lg" 
+                                           id="prix_achat_unitaire" name="prix_achat_unitaire" 
+                                           value="{{ produit.prix_achat_unitaire }}" 
+                                           step="0.01" min="0" required>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="prix_vente_unitaire" class="form-label font-weight-bold">
+                                        <i class="fa fa-tags"></i> Prix de vente ({{ taux }} FC) *
+                                    </label>
+                                    <input type="number" class="form-control form-control-lg" 
+                                           id="prix_vente_unitaire" name="prix_vente_unitaire" 
+                                           value="{{ produit.prix_vente_unitaire }}" 
+                                           step="0.01" min="0" required>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="unite_mesure" class="form-label font-weight-bold">
+                                        <i class="fa fa-balance-scale"></i> Unité de mesure
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" 
+                                           id="unite_mesure" name="unite_mesure" 
+                                           value="{{ produit.unite_mesure }}"
+                                           placeholder="ex: Boîte, Unité, ml...">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="seuil_alerte" class="form-label font-weight-bold">
+                                        <i class="fa fa-exclamation-triangle"></i> Seuil d'alerte
+                                    </label>
+                                    <input type="number" class="form-control form-control-lg" 
+                                           id="seuil_alerte" name="seuil_alerte" 
+                                           value="{{ produit.seuil_alerte }}" min="0">
+                                    <small class="text-muted">Stock minimum avant alerte</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="statut" class="form-label font-weight-bold">
+                                        <i class="fa fa-toggle-on"></i> Statut
+                                    </label>
+                                    <select class="form-select form-control-lg" id="statut" name="statut">
+                                        <option value="actif" {% if produit.statut == 'actif' %}selected{% endif %}>Actif</option>
+                                        <option value="inactif" {% if produit.statut == 'inactif' %}selected{% endif %}>Inactif</option>
+                                        <option value="epuise" {% if produit.statut == 'epuise' %}selected{% endif %}>Épuisé</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'gestion_pharmacie' %}" class="btn btn-secondary btn-lg">
+                                    <i class="fa fa-arrow-left"></i> Annuler
+                                </a>
+                                <button type="submit" class="btn btn-custom-success btn-lg">
+                                    <i class="fa fa-save"></i> Enregistrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialiser les tooltips Bootstrap si nécessaire
+        $(document).ready(function() {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

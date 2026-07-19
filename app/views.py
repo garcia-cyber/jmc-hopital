@@ -3995,7 +3995,7 @@ def ajouter_produit(request):
             produit = form.save(commit=False)
             produit.hopital = hopital_user
             produit.save()
-            messages.success(request, "Le produit a été enregistré avec succès.")
+            messages.success(request, "Le produit a été enregistré avec succès.") 
             return redirect('gestion_pharmacie')
         else:
             messages.error(request, "Erreur lors de l'enregistrement. Vérifie les données.")
@@ -4012,6 +4012,7 @@ def ajouter_produit(request):
 # ====================================================================================
 # LISTE DES MEDICAMENTS 
 # ====================================================================================
+
 @login_required
 def gestion_pharmacie(request):
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
@@ -4059,6 +4060,106 @@ def gestion_pharmacie(request):
     }
 
     return render(request, 'back-end/pharmacie/gestion_stock.html', context)
+
+#
+# ====================================================================================
+# MODIFIER MEDICAMENT
+# ====================================================================================
+@login_required
+def modifier_produit_pharmacie(request, produit_id):
+    """Vue pour modifier un produit de pharmacie"""
+    # Vérification des permissions
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    hopital_user = role.hopital if role else None
+    
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('gestion_pharmacie')
+    
+    # Récupération du produit avec vérification qu'il appartient à l'hôpital
+    produit = get_object_or_404(ProduitPharmacie, pk=produit_id, hopital=hopital_user)
+    
+    if request.method == 'POST':
+        # Récupération et validation des données du formulaire
+        produit.nom = request.POST.get('nom', produit.nom)
+        produit.description = request.POST.get('description', produit.description)
+        
+        # Conversion des prix en float
+        try:
+            produit.prix_achat_unitaire = float(request.POST.get('prix_achat_unitaire', produit.prix_achat_unitaire))
+            produit.prix_vente_unitaire = float(request.POST.get('prix_vente_unitaire', produit.prix_vente_unitaire))
+        except (ValueError, TypeError):
+            messages.error(request, "Prix invalide.")
+            return redirect('modifier_produit', produit_id=produit_id)
+        
+        produit.categorie = request.POST.get('categorie', produit.categorie)
+        produit.unite_mesure = request.POST.get('unite_mesure', produit.unite_mesure)
+        
+        try:
+            produit.seuil_alerte = int(request.POST.get('seuil_alerte', produit.seuil_alerte))
+        except (ValueError, TypeError):
+            produit.seuil_alerte = 0
+        
+        produit.statut = request.POST.get('statut', produit.statut)
+        produit.save()
+        
+        messages.success(request, "Produit modifié avec succès.")
+        return redirect('gestion_pharmacie')
+    
+    # Calcul du stock réel pour affichage dans le formulaire
+    entrees = LotPharmacie.objects.filter(
+        produit=produit,
+        hopital=hopital_user
+    ).aggregate(total_entrees=Coalesce(Sum('quantite_initiale'), 0))['total_entrees'] or 0
+    
+    sorties = SortiePharmacie.objects.filter(
+        lot__produit=produit,
+        lot__hopital=hopital_user
+    ).aggregate(total_sorties=Coalesce(Sum('quantite_vendue'), 0))['total_sorties'] or 0
+    
+    stock_reel = entrees - sorties
+    valeur_totale = stock_reel * float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+    
+    context = {
+        'produit': produit,
+        'stock_reel': stock_reel,
+        'valeur_totale': valeur_totale,
+        'fonctionKey': role.fonctionKey.roleName if role and role.fonctionKey else None,
+        'taux': ConfigurationHopital.get_taux()
+    }
+    
+    return render(request, 'back-end/pharmacie/modifier_produit.html', context)
+#
+# ====================================================================================
+# SUPPRIMER MEDICAMENT
+# ====================================================================================
+@login_required
+def supprimer_produit_pharmacie(request, produit_id):
+    """Vue pour supprimer un produit de pharmacie"""
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    hopital_user = role.hopital if role else None
+    
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('gestion_pharmacie')
+    
+    produit = get_object_or_404(ProduitPharmacie, pk=produit_id, hopital=hopital_user)
+    
+    if request.method == 'POST':
+        try:
+            produit.delete()
+            messages.success(request, "Produit supprimé avec succès.")
+            return redirect('gestion_pharmacie')
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la suppression: {str(e)}")
+    
+    context = {'produit': produit}
+    return render(request, 'back-end/pharmacie/confirmer_suppression.html', context)
+
 #
 # ====================================================================================
 # GESTION DES STOCKS

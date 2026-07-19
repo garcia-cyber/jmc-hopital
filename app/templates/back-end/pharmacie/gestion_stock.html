@@ -7,324 +7,581 @@
     <title>Gestion du Stock | JMC</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .card { 
-            border: none; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            overflow: hidden;
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
         }
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px 12px 0 0 !important;
-            padding: 1.5rem;
+
+        body {
+            background: #f8fafc;
         }
-        .table thead th { 
-            border-top: none; 
-            text-transform: uppercase; 
-            font-size: 0.75rem; 
-            color: #6c757d; 
-            letter-spacing: 0.5px;
-            font-weight: 700;
-            background: #f8f9fa;
-            padding: 1rem 0.75rem;
-        }
-        .table tbody td {
-            padding: 1rem 0.75rem;
-            vertical-align: middle;
-            border-color: #f0f0f0;
-        }
-        .table-hover tbody tr:hover {
-            background-color: #f8f9fa;
-            transform: scale(1.005);
-            transition: all 0.2s ease;
-        }
-        .badge-status { 
-            padding: 0.5rem 0.8rem; 
-            border-radius: 50px; 
-            font-weight: 600; 
-            font-size: 0.70rem;
-            display: inline-block;
-            min-width: 80px;
-            text-align: center;
-        }
-        .badge-rupture { background: #ffe0e0; color: #dc3545; }
-        .badge-faible { background: #fff3cd; color: #ffc107; }
-        .badge-ok { background: #d4edda; color: #28a745; }
-        
-        .search-box { 
-            margin-bottom: 25px; 
-            position: relative;
-        }
-        .search-box input {
-            border-radius: 50px;
-            border: 2px solid #e0e0e0;
-            padding-left: 45px;
-            transition: all 0.3s ease;
-        }
-        .search-box input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
-        }
-        .search-box i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-            font-size: 1.1rem;
-        }
-        
-        .currency-text { 
-            font-family: 'Courier New', monospace; 
-            font-weight: 700;
-            font-size: 0.95rem;
-        }
-        
-        .action-buttons .btn {
-            padding: 0.35rem 0.65rem;
-            font-size: 0.85rem;
-            margin: 0 2px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-        .action-buttons .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-        
-        .stats-card {
+
+        .page-header {
             background: white;
-            border-radius: 10px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            border-left: 4px solid;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
-        .stats-card.total { border-left-color: #667eea; }
-        .stats-card.faible { border-left-color: #ffc107; }
-        .stats-card.rupture { border-left-color: #dc3545; }
-        
-        .stats-value {
-            font-size: 1.75rem;
+
+        .page-title {
+            font-size: 1.5rem;
             font-weight: 700;
-            color: #2d3748;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
-        .stats-label {
-            font-size: 0.875rem;
-            color: #718096;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+
+        .page-title i {
+            color: var(--primary);
         }
-        
-        .btn-custom-success {
-            background: linear-gradient(135deg, #42e695 0%, #3bb2b8 100%);
-            border: none;
+
+        .btn-add {
+            background: var(--success);
             color: white;
-            padding: 0.6rem 1.25rem;
+            border: none;
+            padding: 0.75rem 1.5rem;
             border-radius: 8px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
         }
-        .btn-custom-success:hover {
+
+        .btn-add:hover {
+            background: #059669;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(66, 230, 149, 0.4);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
             color: white;
         }
-        
-        .medicament-name {
+
+        /* Stats Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .stat-card.total::after {
+            background: var(--primary);
+        }
+
+        .stat-card.faible::after {
+            background: var(--warning);
+        }
+
+        .stat-card.rupture::after {
+            background: var(--danger);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-card.total .stat-icon {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .stat-card.faible .stat-icon {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .stat-card.rupture .stat-icon {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1;
+        }
+
+        .stat-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        /* Search */
+        .search-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+        }
+
+        .search-box {
+            position: relative;
+            max-width: 500px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+            background: var(--gray-100);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-600);
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .table-header h5 {
+            margin: 0;
+            font-size: 1.125rem;
             font-weight: 600;
-            color: #2d3748;
-            font-size: 0.95rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .medicament-details {
-            font-size: 0.80rem;
-            color: #a0aec0;
+
+        .table-header i {
+            color: var(--primary);
         }
-        
-        /* Responsive */
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .table tbody tr {
+            transition: all 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.9375rem;
+        }
+
+        .product-details {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .badge-category {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .badge-stock {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .badge-stock.low {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-stock.ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-stock.critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .status-rupture {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-faible {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .status-ok {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .action-btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            margin: 0 0.25rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .action-btn.edit {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+        }
+
+        .action-btn.edit:hover {
+            background: #fde68a;
+            border-color: #f59e0b;
+        }
+
+        .action-btn.delete {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+
+        .action-btn.delete:hover {
+            background: #fecaca;
+            border-color: #ef4444;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--gray-600);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--gray-300);
+            margin-bottom: 1rem;
+        }
+
+        .price-tag {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
         @media (max-width: 768px) {
-            .card-header {
-                padding: 1rem;
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .stats-container {
+                grid-template-columns: 1fr;
             }
             .table-responsive {
-                border-radius: 0 0 12px 12px;
+                overflow-x: auto;
             }
-            .table thead th {
-                font-size: 0.65rem;
-                padding: 0.75rem 0.5rem;
-            }
-            .table tbody td {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.85rem;
-            }
-            .action-buttons .btn {
-                padding: 0.25rem 0.5rem;
-                font-size: 0.75rem;
-            }
-            .stats-value {
-                font-size: 1.5rem;
-            }
-            .search-box input {
-                padding-left: 40px;
-                font-size: 0.9rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .d-flex.flex-wrap {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            .stats-card {
-                text-align: center;
+            .table {
+                min-width: 800px;
             }
         }
     </style>
 </head>
-<body class="bg-light">
+<body>
     <div class="main-wrapper"> 
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <!-- En-tête -->
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <h3 class="text-primary font-weight-bold mb-0">
-                        <i class="fa fa-pills"></i> Inventaire Pharmacie
-                    </h3>
-                    <a href="{% url 'ajouter_lot' %}" class="btn btn-custom-success">
-                        <i class="fa fa-plus"></i> <span class="d-none d-sm-inline">Ajouter Lot</span>
+                <!-- Header -->
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fa fa-pills"></i>
+                        Inventaire Pharmacie
+                    </h1>
+                    <a href="{% url 'ajouter_lot' %}" class="btn-add">
+                        <i class="fa fa-plus"></i>
+                        <span>Ajouter Lot</span>
                     </a>
                 </div>
 
-                <!-- Statistiques -->
-                <div class="row">
-                    <div class="col-md-4 col-sm-6">
-                        <div class="stats-card total">
-                            <div class="stats-value">{{ total_produits }}</div>
-                            <div class="stats-label">Total Produits</div>
+                <!-- Stats -->
+                <div class="stats-container">
+                    <div class="stat-card total">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-boxes"></i>
+                            </div>
+                            <div class="stat-title">Total Produits</div>
                         </div>
+                        <div class="stat-value">{{ total_produits }}</div>
+                        <div class="stat-subtitle">références actives</div>
                     </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="stats-card faible">
-                            <div class="stats-value">{{ stock_faible }}</div>
-                            <div class="stats-label">Stock Faible</div>
+                    
+                    <div class="stat-card faible">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-title">Stock Faible</div>
                         </div>
+                        <div class="stat-value">{{ stock_faible }}</div>
+                        <div class="stat-subtitle">sous le seuil d'alerte</div>
                     </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="stats-card rupture">
-                            <div class="stats-value">{{ en_rupture }}</div>
-                            <div class="stats-label">En Rupture</div>
+                    
+                    <div class="stat-card rupture">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-times-circle"></i>
+                            </div>
+                            <div class="stat-title">En Rupture</div>
                         </div>
+                        <div class="stat-value">{{ en_rupture }}</div>
+                        <div class="stat-subtitle">nécessite réapprovisionnement</div>
                     </div>
                 </div>
 
-                <!-- Barre de recherche -->
-                <div class="search-box">
-                    <i class="fa fa-search"></i>
-                    <input type="text" id="searchStock" class="form-control form-control-lg" 
-                           placeholder="Rechercher par médicament ou catégorie..." 
-                           onkeyup="filterStock()">
+                <!-- Search -->
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fa fa-search"></i>
+                        <input type="text" id="searchStock" class="form-control" 
+                               placeholder="Rechercher un médicament, une catégorie..." 
+                               onkeyup="filterStock()">
+                    </div>
                 </div>
 
-                <!-- Tableau -->
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="text-white mb-0">
-                            <i class="fa fa-list"></i> Liste des Médicaments
+                <!-- Table -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h5>
+                            <i class="fa fa-list"></i>
+                            Liste des Médicaments
                         </h5>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="tableStock">
-                                <thead>
-                                    <tr>
-                                        <th style="min-width: 250px;">Médicament</th>
-                                        <th>Caté.</th>
-                                        <th>Prix (USD)</th>
-                                        <th>Prix (CDF)</th>
-                                        <th class="text-center">Stock</th>
-                                        <th class="text-center">Valeur (USD)</th>
-                                        <th class="text-center">Statut</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for produit in produits %}
-                                    <tr>
-                                        <td>
-                                            <div class="medicament-name">{{ produit.nom }}</div>
-                                            <div class="medicament-details">
-                                                {% if produit.forme %}{{ produit.forme }}{% endif %}
-                                                {% if produit.dosage %} | {{ produit.dosage }}{% endif %}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-light text-dark">
-                                                {{ produit.categorie|truncatechars:12 }}
-                                            </span>
-                                        </td>
-                                        <td class="currency-text">
-                                            <i class="fa fa-dollar-sign text-success"></i> 
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tableStock">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 280px;">Médicament</th>
+                                    <th>Catégorie</th>
+                                    <th>Prix (USD)</th>
+                                    <th>Prix (CDF)</th>
+                                    <th class="text-center">Stock</th>
+                                    <th class="text-center">Valeur (USD)</th>
+                                    <th class="text-center">Statut</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for produit in produits %}
+                                <tr>
+                                    <td>
+                                        <div class="product-name">{{ produit.nom }}</div>
+                                        <div class="product-details">
+                                            {% if produit.forme %}{{ produit.forme }}{% endif %}
+                                            {% if produit.dosage %} • {{ produit.dosage }}{% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge-category">
+                                            {{ produit.categorie|truncatechars:15 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="price-tag">
+                                            <i class="fa fa-dollar-sign text-success"></i>
                                             {{ produit.prix_vente_unitaire|floatformat:2 }}
-                                        </td>
-                                        <td class="currency-text text-secondary">
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="price-tag text-muted">
                                             {{ produit.prix_vente_cdf|floatformat:0 }} CDF
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if produit.stock_reel <= 0 %}badge-danger{% elif produit.stock_reel < 10 %}badge-warning{% else %}badge-success{% endif %} 
-                                                   font-weight-bold" style="min-width: 50px;">
-                                                {{ produit.stock_reel }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center font-weight-bold text-primary">
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if produit.stock_reel <= 5 %}
+                                            <span class="badge-stock critical">{{ produit.stock_reel }}</span>
+                                        {% elif produit.stock_reel < 10 %}
+                                            <span class="badge-stock low">{{ produit.stock_reel }}</span>
+                                        {% else %}
+                                            <span class="badge-stock ok">{{ produit.stock_reel }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="price-tag" style="color: var(--primary);">
                                             ${{ produit.valeur_totale|floatformat:2 }}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if produit.stock_reel <= 0 %}
-                                                <span class="badge badge-status badge-rupture">
-                                                    <i class="fa fa-exclamation-circle"></i> RUPTURE
-                                                </span>
-                                            {% elif produit.stock_reel < 10 %}
-                                                <span class="badge badge-status badge-faible">
-                                                    <i class="fa fa-exclamation-triangle"></i> FAIBLE
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-status badge-ok">
-                                                    <i class="fa fa-check-circle"></i> OK
-                                                </span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center action-buttons">
-                                            <a href="{% url 'modifier_produit' produit.id %}" 
-                                               class="btn btn-warning" 
-                                               title="Modifier"
-                                               data-toggle="tooltip">
-                                                <i class="fa fa-edit"></i>
-                                                <span class="d-none d-md-inline">Modifier</span>
-                                            </a>
-                                            <a href="{% url 'supprimer_produit' produit.id %}" 
-                                               class="btn btn-danger" 
-                                               title="Supprimer"
-                                               data-toggle="tooltip">
-                                                <i class="fa fa-trash"></i>
-                                                <span class="d-none d-md-inline">Supprimer</span>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="8" class="text-center py-5 text-muted">
-                                            <i class="fa fa-inbox fa-3x mb-3"></i>
-                                            <p class="mb-0">Aucun médicament enregistré.</p>
-                                            <small>Cliquez sur "Ajouter Lot" pour commencer.</small>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if produit.stock_reel <= 0 %}
+                                            <span class="status-badge status-rupture">
+                                                <i class="fa fa-exclamation-circle"></i> Rupture
+                                            </span>
+                                        {% elif produit.stock_reel < 10 %}
+                                            <span class="status-badge status-faible">
+                                                <i class="fa fa-exclamation-triangle"></i> Faible
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-ok">
+                                                <i class="fa fa-check-circle"></i> OK
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'modifier_produit' produit.id %}" 
+                                           class="action-btn edit" title="Modifier">
+                                            <i class="fa fa-edit"></i>
+                                            <span class="d-none d-md-inline">Modifier</span>
+                                        </a>
+                                        {% comment %} <a href="{% url 'supprimer_produit' produit.id %}" 
+                                           class="action-btn delete" title="Supprimer">
+                                            <i class="fa fa-trash"></i>
+                                            <span class="d-none d-md-inline">Supprimer</span>
+                                        </a> {% endcomment %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="empty-state">
+                                            <i class="fa fa-inbox"></i>
+                                            <p class="mb-2" style="font-size: 1.125rem;">Aucun médicament enregistré</p>
+                                            <small>Cliquez sur "Ajouter Lot" pour commencer</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -332,7 +589,6 @@
     </div>
 
     <script>
-        // Fonction de recherche
         function filterStock() {
             let input = document.getElementById("searchStock").value.toLowerCase().trim();
             let table = document.getElementById("tableStock");
@@ -353,11 +609,6 @@
                 }
             }
         }
-
-        // Initialiser les tooltips Bootstrap
-        $(document).ready(function() {
-            $('[data-toggle="tooltip"]').tooltip();
-        });
     </script>
     
     {% include 'back-end/includes/js.html' %}

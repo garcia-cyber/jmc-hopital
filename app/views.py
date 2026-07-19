@@ -4078,54 +4078,65 @@ def modifier_produit_pharmacie(request, produit_id):
         messages.error(request, "Accès non autorisé.")
         return redirect('gestion_pharmacie')
     
-    # Récupération du produit avec vérification qu'il appartient à l'hôpital
+    # Récupération du produit
     produit = get_object_or_404(ProduitPharmacie, pk=produit_id, hopital=hopital_user)
     
     if request.method == 'POST':
-        # Récupération et validation des données du formulaire
-        produit.nom = request.POST.get('nom', produit.nom)
-        produit.description = request.POST.get('description', produit.description)
-        
-        # Conversion des prix en float
         try:
-            produit.prix_achat_unitaire = float(request.POST.get('prix_achat_unitaire', produit.prix_achat_unitaire))
-            produit.prix_vente_unitaire = float(request.POST.get('prix_vente_unitaire', produit.prix_vente_unitaire))
-        except (ValueError, TypeError):
-            messages.error(request, "Prix invalide.")
+            with transaction.atomic():
+                # Récupération des champs texte
+                produit.nom = request.POST.get('nom', '').strip()
+                produit.forme = request.POST.get('forme', '').strip()
+                produit.dosage = request.POST.get('dosage', '').strip()
+                produit.categorie = request.POST.get('categorie', '').strip()
+                produit.devise = request.POST.get('devise', 'USD')
+                produit.unites_par_carton = int(request.POST.get('unites_par_carton', 1) or 1)
+                
+                # Conversion des prix en Decimal
+                produit.prix_achat_unitaire = Decimal(request.POST.get('prix_achat_unitaire', 0) or 0)
+                produit.prix_vente_unitaire = Decimal(request.POST.get('prix_vente_unitaire', 0) or 0)
+                
+                # Validation des champs obligatoires
+                if not produit.nom or not produit.forme or not produit.dosage:
+                    raise ValueError("Les champs nom, forme et dosage sont obligatoires.")
+                
+                if produit.prix_achat_unitaire < 0 or produit.prix_vente_unitaire < 0:
+                    raise ValueError("Les prix ne peuvent pas être négatifs.")
+                
+                if produit.unites_par_carton < 1:
+                    raise ValueError("L'unité par carton doit être au moins 1.")
+                
+                produit.save()
+                
+            messages.success(request, f"✅ Produit '{produit.nom}' modifié avec succès.")
+            return redirect('gestion_pharmacie')
+            
+        except ValueError as e:
+            messages.error(request, f"❌ Erreur: {str(e)}")
             return redirect('modifier_produit', produit_id=produit_id)
-        
-        produit.categorie = request.POST.get('categorie', produit.categorie)
-        produit.unite_mesure = request.POST.get('unite_mesure', produit.unite_mesure)
-        
-        try:
-            produit.seuil_alerte = int(request.POST.get('seuil_alerte', produit.seuil_alerte))
-        except (ValueError, TypeError):
-            produit.seuil_alerte = 0
-        
-        produit.statut = request.POST.get('statut', produit.statut)
-        produit.save()
-        
-        messages.success(request, "Produit modifié avec succès.")
-        return redirect('gestion_pharmacie')
+        except Exception as e:
+            messages.error(request, f"❌ Erreur inattendue: {str(e)}")
+            return redirect('modifier_produit', produit_id=produit_id)
     
-    # Calcul du stock réel pour affichage dans le formulaire
-    entrees = LotPharmacie.objects.filter(
-        produit=produit,
-        hopital=hopital_user
-    ).aggregate(total_entrees=Coalesce(Sum('quantite_initiale'), 0))['total_entrees'] or 0
-    
-    sorties = SortiePharmacie.objects.filter(
-        lot__produit=produit,
-        lot__hopital=hopital_user
-    ).aggregate(total_sorties=Coalesce(Sum('quantite_vendue'), 0))['total_sorties'] or 0
+    # Calcul du stock réel pour affichage
+    with transaction.atomic():
+        entrees = LotPharmacie.objects.filter(
+            produit=produit,
+            hopital=hopital_user
+        ).aggregate(total=Coalesce(Sum('quantite_initiale'), 0))['total'] or 0
+        
+        sorties = SortiePharmacie.objects.filter(
+            lot__produit=produit,
+            lot__hopital=hopital_user
+        ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
     
     stock_reel = entrees - sorties
-    valeur_totale = stock_reel * float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+    valeur_totale = float(produit.prix_vente_unitaire) * stock_reel if produit.prix_vente_unitaire else 0
     
     context = {
         'produit': produit,
         'stock_reel': stock_reel,
-        'valeur_totale': valeur_totale,
+        'valeur_totale': round(valeur_totale, 2),
         'fonctionKey': role.fonctionKey.roleName if role and role.fonctionKey else None,
         'taux': ConfigurationHopital.get_taux()
     }

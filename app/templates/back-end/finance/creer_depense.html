@@ -7,290 +7,552 @@
     <title>{{ titre_page }} - JMC</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .finance-page {
-            background:
-                radial-gradient(circle at top left, rgba(13, 110, 253, .10), transparent 30%),
-                radial-gradient(circle at top right, rgba(220, 53, 69, .08), transparent 28%),
-                #f4f7fb;
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --success-dark: #059669;
+            --success-light: #34d399;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .page-wrapper {
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
             min-height: 100vh;
+            padding: 1.5rem 0;
         }
 
-        .finance-page .page-title {
-            font-weight: 800;
-            letter-spacing: .2px;
-            color: #0f172a;
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .finance-shell {
-            padding-top: .25rem;
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
+            color: var(--success);
+        }
+
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--success);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-600);
         }
 
         .form-card {
-            border: 0;
-            border-radius: 22px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid var(--gray-200);
             overflow: hidden;
-            box-shadow: 0 18px 50px rgba(15, 23, 42, .10);
-            background: rgba(255, 255, 255, .92);
-            backdrop-filter: blur(8px);
         }
 
-        .form-card .card-header {
-            border-bottom: 0;
-            padding: 1rem 1.25rem;
-            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--success), var(--success-dark));
+            color: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 3px solid rgba(255,255,255,0.2);
         }
 
-        .form-card .card-body {
-            padding: 1.35rem;
+        .card-header-custom h5 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header-custom .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 2rem;
         }
 
         .balance-box {
-            border-radius: 18px;
-            background: linear-gradient(135deg, #eaf4ff 0%, #f7fbff 100%);
-            border: 1px solid #d6e8ff;
-            padding: 1rem 1.1rem;
-            margin-bottom: 1.15rem;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 2px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         .balance-title {
             display: flex;
             align-items: center;
-            gap: .5rem;
+            gap: 0.75rem;
+            font-size: 1rem;
             font-weight: 700;
-            color: #0f172a;
-            margin-bottom: .55rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
         }
 
-        .balance-row {
-            display: flex;
-            justify-content: space-between;
+        .balance-title i {
+            color: var(--success);
+            font-size: 1.25rem;
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
-            padding: .35rem 0;
+        }
+
+        .balance-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+        }
+
+        .balance-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             font-weight: 600;
-            color: #334155;
+            margin-bottom: 0.5rem;
         }
 
-        .balance-row strong {
-            color: #0f172a;
+        .balance-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            font-family: 'SF Mono', 'Monaco', monospace;
         }
 
-        .alert-soft {
-            border: 0;
-            border-radius: 16px;
-            padding: .95rem 1rem;
-            box-shadow: 0 10px 25px rgba(220, 53, 69, .08);
+        .balance-note {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .field-error {
-            font-size: .85rem;
-            color: #dc3545;
-            margin-top: .35rem;
+        .balance-note i {
+            color: var(--success);
         }
 
-        .form-floating > .form-control,
-        .form-floating > .form-select {
-            border-radius: 14px;
+        .form-section {
+            margin-bottom: 2rem;
         }
 
-        .form-control,
-        .form-select,
-        textarea {
-            border-radius: 14px !important;
-            border: 1px solid #dbe4f0;
+        .section-heading {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .form-control:focus,
-        .form-select:focus,
-        textarea:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .12);
+        .section-heading i {
+            color: var(--success);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .required {
+            color: var(--success);
+            margin-left: 2px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 0.9375rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            transition: all 0.2s;
+            color: var(--gray-700);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--success);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-300);
+        }
+
+        .input-group {
+            display: flex;
+        }
+
+        .input-group .form-control {
+            flex: 1;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .input-group-addon {
+            background: var(--gray-100);
+            border: 2px solid var(--gray-200);
+            border-left: none;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            border-radius: 0 10px 10px 0;
+        }
+
+        .input-group .form-control:focus + .input-group-addon {
+            border-color: var(--success);
         }
 
         textarea.form-control {
             min-height: 120px;
+            resize: vertical;
         }
 
-        .actions {
+        .form-help {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.375rem;
             display: flex;
-            gap: .75rem;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-help i {
+            font-size: 0.75rem;
+        }
+
+        .field-error {
+            font-size: 0.8125rem;
+            color: var(--danger);
+            margin-top: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .alert-soft {
+            background: #fef2f2;
+            border-left: 4px solid var(--danger);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            color: #991b1b;
+            font-size: 0.875rem;
+        }
+
+        .form-actions {
+            display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
         }
 
-        .btn-action {
-            min-width: 170px;
-            border-radius: 14px;
-            padding: .75rem 1rem;
-            box-shadow: 0 8px 20px rgba(220, 53, 69, .18);
+        .btn {
+            padding: 0.75rem 1.75rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .btn-cancel {
-            border-radius: 14px;
-            padding: .75rem 1rem;
+        .btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
         }
 
-        .muted-note {
-            font-size: .88rem;
-            color: #64748b;
+        .btn-secondary:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
         }
 
-        @media (max-width: 767.98px) {
-            .form-card .card-body {
-                padding: 1rem;
+        .btn-success-custom {
+            background: linear-gradient(135deg, var(--success), var(--success-dark));
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 1.25rem 1.5rem;
             }
-
-            .actions {
+            .card-header-custom {
+                padding: 1.25rem 1.5rem;
+            }
+            .card-body {
+                padding: 1.5rem;
+            }
+            .balance-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-actions {
                 flex-direction: column-reverse;
-                align-items: stretch;
+                gap: 0.75rem;
             }
-
-            .btn-action,
-            .btn-cancel {
+            .btn {
                 width: 100%;
-                min-width: auto;
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <div class="main-wrapper finance-page">
+    <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
         <div class="page-wrapper">
-            <div class="content container-fluid finance-shell">
-
-                <div class="page-header mb-3">
-                    <div class="row align-items-center">
-                        <div class="col-12">
-                            <h3 class="page-title mb-1"><i class="fa fa-money-bill-wave text-danger"></i> {{ titre_page }}</h3>
-                            <ul class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
-                                <li class="breadcrumb-item active">Nouvelle dépense</li>
-                            </ul>
-                        </div>
-                    </div>
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fa fa-money-bill-wave"></i>
+                        Nouvelle Dépense
+                    </h1>
+                    <ul class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
+                        <li class="breadcrumb-item active">Décaissement</li>
+                    </ul>
                 </div>
 
-                <div class="row justify-content-center">
-                    <div class="col-12 col-xl-7 col-lg-8">
-                        <div class="card form-card">
-                            <div class="card-header text-white">
-                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                    <div>
-                                        <h5 class="card-title mb-0 font-weight-bold">Formulaire de Décaissement</h5>
-                                        <small class="opacity-75">Saisissez une sortie de caisse selon votre périmètre d’accès</small>
+                <!-- Form -->
+                <div class="form-card">
+                    <div class="card-header-custom">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <h5>
+                                <i class="fa fa-file-invoice-dollar"></i>
+                                Formulaire de Décaissement
+                            </h5>
+                            <span class="badge">
+                                <i class="fa fa-tag"></i> Dépense
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Balance Box -->
+                        <div class="balance-box">
+                            <div class="balance-title">
+                                <i class="fa fa-wallet"></i>
+                                <span>Solde disponible</span>
+                            </div>
+                            <div class="balance-grid">
+                                <div class="balance-item">
+                                    <div class="balance-label">USD</div>
+                                    <div class="balance-value">{{ solde_disponible_usd|floatformat:2 }} $</div>
+                                </div>
+                                <div class="balance-item">
+                                    <div class="balance-label">CDF</div>
+                                    <div class="balance-value">{{ solde_disponible_cdf|floatformat:2 }} FC</div>
+                                </div>
+                            </div>
+                            <div class="balance-note">
+                                <i class="fa fa-info-circle"></i>
+                                <span>Le montant sera vérifié automatiquement selon la devise choisie</span>
+                            </div>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="alert-soft">
+                                {% for error in form.non_field_errors %}
+                                    <div><i class="fa fa-exclamation-triangle"></i> {{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <form method="POST" autocomplete="off" novalidate>
+                            {% csrf_token %}
+
+                            <!-- Section 1: Informations -->
+                            <div class="form-section">
+                                <div class="section-heading">
+                                    <i class="fa fa-clipboard-list"></i>
+                                    Informations de la dépense
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="motif" class="form-label">
+                                            Motif de la dépense <span class="required">*</span>
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="motif" 
+                                               name="motif" 
+                                               placeholder="Ex: Achat fournitures, Paiement électricité, Transport..." 
+                                               required>
+                                        <div class="form-help">
+                                            <i class="fa fa-lightbulb"></i>
+                                            Saisissez librement le motif de votre dépense
+                                        </div>
                                     </div>
-                                    <span class="badge badge-light px-3 py-2">Dépense</span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="devise" class="form-label">
+                                            Devise <span class="required">*</span>
+                                        </label>
+                                        <select class="form-control" id="devise" name="devise" required>
+                                            <option value="">Sélectionnez une devise</option>
+                                            <option value="USD">USD - Dollar Américain</option>
+                                            <option value="CDF">CDF - Franc Congolais</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="montant" class="form-label">
+                                            Montant à décaisser <span class="required">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   id="montant" 
+                                                   name="montant" 
+                                                   placeholder="0.00" 
+                                                   step="0.01" 
+                                                   min="0"
+                                                   required>
+                                            <div class="input-group-addon" id="currency-symbol">$</div>
+                                        </div>
+                                        <div class="form-help">
+                                            <i class="fa fa-exclamation-circle"></i>
+                                            Le symbole évoluera selon la devise choisie
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="card-body">
-                                <div class="balance-box">
-                                    <div class="balance-title">
-                                        <i class="fa fa-wallet text-primary"></i>
-                                        <span>Solde disponible</span>
-                                    </div>
-                                    <div class="balance-row">
-                                        <span>USD</span>
-                                        <strong>{{ solde_disponible_usd|floatformat:2 }} USD</strong>
-                                    </div>
-                                    <div class="balance-row">
-                                        <span>CDF</span>
-                                        <strong>{{ solde_disponible_cdf|floatformat:2 }} CDF</strong>
-                                    </div>
-                                    <div class="muted-note mt-2">
-                                        Le montant sera vérifié automatiquement selon la devise choisie.
+                            <!-- Section 2: Détails -->
+                            <div class="form-section">
+                                <div class="section-heading">
+                                    <i class="fa fa-user-tag"></i>
+                                    Détails complémentaires
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="beneficiaire" class="form-label">
+                                            Bénéficiaire / Fournisseur
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="beneficiaire" 
+                                               name="beneficiaire" 
+                                               placeholder="Nom de la personne ou de l'entreprise">
                                     </div>
                                 </div>
 
-                                {% if form.non_field_errors %}
-                                    <div class="alert alert-danger alert-soft alert-dismissible fade show" role="alert">
-                                        {% for error in form.non_field_errors %}
-                                            <div><i class="fa fa-exclamation-triangle mr-1"></i> {{ error }}</div>
-                                        {% endfor %}
-                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                {% endif %}
-
-                                <form method="POST" autocomplete="off" novalidate>
-                                    {% csrf_token %}
-
-                                    <div class="row">
-                                        <div class="col-12 col-md-8 mb-3">
-                                            <div class="form-floating">
-                                                {{ form.motif }}
-                                                <label for="{{ form.motif.id_for_label }}">Motif / Catégorie <span class="text-danger">*</span></label>
-                                            </div>
-                                            {% if form.motif.errors %}
-                                                <div class="field-error">{{ form.motif.errors.0 }}</div>
-                                            {% endif %}
-                                        </div>
-
-                                        <div class="col-12 col-md-4 mb-3">
-                                            <div class="form-floating">
-                                                {{ form.devise }}
-                                                <label for="{{ form.devise.id_for_label }}">Devise <span class="text-danger">*</span></label>
-                                            </div>
-                                            {% if form.devise.errors %}
-                                                <div class="field-error">{{ form.devise.errors.0 }}</div>
-                                            {% endif %}
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="description" class="form-label">
+                                            Description / Justification
+                                        </label>
+                                        <textarea class="form-control" 
+                                                  id="description" 
+                                                  name="description" 
+                                                  placeholder="Précisez les détails de cette dépense (optionnel)"></textarea>
+                                        <div class="form-help">
+                                            <i class="fa fa-info-circle"></i>
+                                            Ajoutez des précisions si nécessaire
                                         </div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <div class="form-floating">
-                                            {{ form.montant }}
-                                            <label for="{{ form.montant.id_for_label }}">Montant à décaisser <span class="text-danger">*</span></label>
-                                        </div>
-                                        {% if form.montant.errors %}
-                                            <div class="field-error">{{ form.montant.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <div class="form-floating">
-                                            {{ form.beneficiaire }}
-                                            <label for="{{ form.beneficiaire.id_for_label }}">Bénéficiaire / Fournisseur</label>
-                                        </div>
-                                        {% if form.beneficiaire.errors %}
-                                            <div class="field-error">{{ form.beneficiaire.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <div class="form-floating">
-                                            {{ form.description }}
-                                            <label for="{{ form.description.id_for_label }}">Description / Justification</label>
-                                        </div>
-                                        {% if form.description.errors %}
-                                            <div class="field-error">{{ form.description.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <hr class="my-4">
-
-                                    <div class="actions">
-                                        <a href="{% url 'dashboard_finance' %}" class="btn btn-light border btn-cancel">
-                                            <i class="fa fa-arrow-left"></i> Annuler
-                                        </a>
-                                        <button type="submit" class="btn btn-danger font-weight-bold btn-action">
-                                            <i class="fa fa-check-circle"></i> Valider le Décaissement
-                                        </button>
-                                    </div>
-                                </form>
+                                </div>
                             </div>
-                        </div>
+
+                            <hr style="border-top: 2px solid var(--gray-200); margin: 2rem 0;">
+
+                            <!-- Actions -->
+                            <div class="form-actions">
+                                <a href="{% url 'dashboard_finance' %}" class="btn btn-secondary">
+                                    <i class="fa fa-arrow-left"></i> Annuler
+                                </a>
+                                <button type="submit" class="btn btn-success-custom">
+                                    <i class="fa fa-check-circle"></i> Valider le Décaissement
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
+
+    <script>
+        // Change currency symbol based on selection
+        document.getElementById('devise').addEventListener('change', function() {
+            const symbol = document.getElementById('currency-symbol');
+            if (this.value === 'USD') {
+                symbol.textContent = '$';
+            } else if (this.value === 'CDF') {
+                symbol.textContent = 'FC';
+            }
+        });
+    </script>
 
     {% include 'back-end/includes/js.html' %}
 </body>

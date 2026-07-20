@@ -1,0 +1,381 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alertes de Stock | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i {
+            color: var(--danger);
+        }
+
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--danger);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-600);
+        }
+
+        .alert-count {
+            background: var(--danger);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: white;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--danger);
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
+
+        .btn-filter {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .alert-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            overflow: hidden;
+            border-left: 4px solid;
+        }
+
+        .alert-card.rupture { border-left-color: var(--danger); }
+        .alert-card.faible { border-left-color: var(--warning); }
+        .alert-card.peremption { border-left-color: #f97316; }
+
+        .alert-header {
+            padding: 1.25rem 1.5rem;
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .alert-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-title i {
+            font-size: 1.5rem;
+        }
+
+        .alert-card.rupture .alert-title i { color: var(--danger); }
+        .alert-card.faible .alert-title i { color: var(--warning); }
+        .alert-card.peremption .alert-title i { color: #f97316; }
+
+        .alert-body {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .product-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .product-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            flex: 1;
+        }
+
+        .stock-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9375rem;
+        }
+
+        .stock-badge.rupture {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .stock-badge.faible {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--success);
+            margin-bottom: 1rem;
+        }
+
+        .currency-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .currency-usd {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .currency-cdf {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        @media (max-width: 768px) {
+            .admin-header {
+                padding: 1.25rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-exclamation-triangle"></i>
+                                Alertes de Stock
+                                <span class="alert-count">{{ total_alertes }}</span>
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'admin_pharmacie_dashboard' %}">Dashboard Pharmacie</a></li>
+                                <li class="breadcrumb-item active">Alertes</li>
+                            </ul>
+                        </div>
+                        {% if role_utilisateur %}
+                        <div class="text-muted">
+                            <i class="fa fa-user-shield"></i>
+                            <strong>{{ role_utilisateur.roleName|title }}</strong>
+                            {% if hopital_selectionne %} • {{ hopital_selectionne.nomH }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Filtres -->
+                <form method="GET" class="filter-bar">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-hospital"></i> Hôpital
+                        </label>
+                        <select name="hopital" class="filter-select">
+                            <option value="">Tous</option>
+                            {% for hopital in hopitaux %}
+                            <option value="{{ hopital.id }}" {% if hopital_selectionne and hopital_selectionne.id == hopital.id %}selected{% endif %}>
+                                {{ hopital.nomH }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter">
+                        <i class="fa fa-filter"></i> Filtrer
+                    </button>
+                </form>
+
+                <!-- Alertes -->
+                {% if alertes %}
+                    {% for alerte in alertes %}
+                    <div class="alert-card {% if alerte.statut == 'rupture' %}rupture{% elif alerte.statut == 'faible' %}faible{% else %}peremption{% endif %}">
+                        <div class="alert-header">
+                            <div class="alert-title">
+                                {% if alerte.statut == 'rupture' %}
+                                <i class="fa fa-times-circle"></i>
+                                <strong>Rupture de stock</strong>
+                                {% elif alerte.statut == 'faible' %}
+                                <i class="fa fa-exclamation-triangle"></i>
+                                <strong>Stock faible</strong>
+                                {% else %}
+                                <i class="fa fa-clock"></i>
+                                <strong>Péremption proche</strong>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'admin_historique_produit' alerte.produit.id %}" class="btn-action btn-primary">
+                                <i class="fa fa-eye"></i> Voir historique
+                            </a>
+                        </div>
+                        <div class="alert-body">
+                            <div class="product-info">
+                                <div class="product-name">
+                                    {{ alerte.produit.nom }}
+                                    <div class="text-muted small mt-1">
+                                        {{ alerte.produit.forme }} • {{ alerte.produit.dosage }} • {{ alerte.produit.categorie }}
+                                        {% if alerte.devise %}
+                                            {% if alerte.devise == 'CDF' %}
+                                                <span class="currency-badge currency-cdf">CDF</span>
+                                            {% else %}
+                                                <span class="currency-badge currency-usd">USD</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if alerte.statut == 'peremption' %}
+                                <div>
+                                    <span class="badge badge-warning">
+                                        <i class="fa fa-clock"></i> {{ alerte.lots_peremption }} lot(s) à surveiller
+                                    </span>
+                                </div>
+                                {% else %}
+                                <div class="stock-badge {% if alerte.statut == 'rupture' %}rupture{% else %}faible{% endif %}">
+                                    <i class="fa fa-box"></i>
+                                    {% if alerte.statut == 'rupture' %}
+                                        RUPTURE (0 unité)
+                                    {% else %}
+                                        {{ alerte.stock }} / Seuil: {{ alerte.seuil_alerte }}
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa fa-check-circle"></i>
+                    <h3 class="mb-2">Aucune alerte !</h3>
+                    <p class="text-muted mb-0">Tous les stocks sont dans les normes. Aucun produit en rupture ou seuil critique.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

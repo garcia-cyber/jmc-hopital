@@ -20,6 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.core.exceptions import PermissionDenied
+from django.contrib.admin.views.decorators import staff_member_required
 
 
 # Create your views here.
@@ -6549,3 +6550,671 @@ def liste_rapports_journaliers(request):
             "fonctionKey": fonction_key,
         }
     )
+
+#
+# ==========================================================================================================================
+# PHARMACIE FILTRAGE ADMIN
+# ==========================================================================================================================
+@login_required
+@staff_member_required
+def admin_pharmacie_dashboard(request):
+    """Dashboard admin pour la gestion de la pharmacie"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    
+    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
+    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
+        # Pharmacien ne voit que son hôpital
+        hopital_selectionne = hopital_user
+    elif hopital_id:
+        # Admin peut filtrer par hôpital
+        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+    else:
+        # Par défaut, on prend l'hôpital de l'utilisateur
+        hopital_selectionne = hopital_user
+    
+    # Base queryset - Filtrage par hôpital
+    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    lots = LotPharmacie.objects.filter(hopital=hopital_selectionne)
+    sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
+    mouvements = MouvementStock.objects.filter(hopital=hopital_selectionne)
+    
+    # Filtres par date
+    if date_debut:
+        lots = lots.filter(date_entree__gte=date_debut)
+        sorties = sorties.filter(date_sortie__gte=date_debut)
+        mouvements = mouvements.filter(date_mouvement__gte=date_debut)
+    
+    if date_fin:
+        lots = lots.filter(date_entree__lte=date_fin)
+        sorties = sorties.filter(date_sortie__lte=date_fin)
+        mouvements = mouvements.filter(date_mouvement__lte=date_fin)
+    
+    # Statistiques globales
+    total_produits = produits.count()
+    total_lots = lots.count()
+    total_sorties = sorties.count()
+    
+    # Récupérer le taux de change depuis ConfigurationHopital
+    try:
+        from .models import ConfigurationHopital
+        config = ConfigurationHopital.objects.filter(hopital=hopital_selectionne).first()
+        taux_change = config.taux if config and hasattr(config, 'taux') else 2500
+    except:
+        taux_change = 2500  # Valeur par défaut
+    
+    # Calcul du stock et valeur totale - USD et CDF
+    stock_total = 0
+    valeur_stock_achat_usd = 0
+    valeur_stock_vente_usd = 0
+    valeur_stock_achat_cdf = 0
+    valeur_stock_vente_cdf = 0
+    
+    for produit in produits:
+        entrees = LotPharmacie.objects.filter(
+            produit=produit
+        ).aggregate(total=Coalesce(Sum('quantite_initiale'), 0))['total'] or 0
+        
+        sorties_prod = SortiePharmacie.objects.filter(
+            lot__produit=produit
+        ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
+        
+        stock = entrees - sorties_prod
+        stock_total += stock
+        
+        # Récupérer les prix
+        prix_achat = float(produit.prix_achat_unitaire) if produit.prix_achat_unitaire else 0
+        prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+        
+        # Vérifier la devise du produit
+        if produit.devise == 'CDF':
+            valeur_stock_achat_cdf += stock * prix_achat
+            valeur_stock_vente_cdf += stock * prix_vente
+        else:
+            valeur_stock_achat_usd += stock * prix_achat
+            valeur_stock_vente_usd += stock * prix_vente
+    
+    benefice_potentiel_usd = valeur_stock_vente_usd - valeur_stock_achat_usd
+    benefice_potentiel_cdf = valeur_stock_vente_cdf - valeur_stock_achat_cdf
+    
+    # Produits en rupture
+    produits_rupture = []
+    for produit in produits:
+        entrees = LotPharmacie.objects.filter(
+            produit=produit
+        ).aggregate(total=Coalesce(Sum('quantite_initiale'), 0))['total'] or 0
+        
+        sorties_prod = SortiePharmacie.objects.filter(
+            lot__produit=produit
+        ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
+        
+        if entrees - sorties_prod <= 0:
+            produits_rupture.append(produit)
+    
+    # Top 10 produits les plus vendus
+    top_ventes = []
+    for produit in produits:
+        quantite_vendue = SortiePharmacie.objects.filter(
+            lot__produit=produit
+        ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
+        
+        if quantite_vendue > 0:
+            prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+            chiffre = quantite_vendue * prix_vente
+            
+            top_ventes.append({
+                'produit': produit,
+                'quantite_vendue': quantite_vendue,
+                'chiffre_affaire': round(chiffre, 2),
+                'devise': produit.devise
+            })
+    
+    top_ventes = sorted(top_ventes, key=lambda x: x['quantite_vendue'], reverse=True)[:10]
+    
+    # Bénéfice réalisé (ventes effectives) - USD et CDF
+    benefice_realise_usd = 0
+    benefice_realise_cdf = 0
+    chiffre_affaire_total_usd = 0
+    chiffre_affaire_total_cdf = 0
+    
+    for sortie in sorties:
+        prix_achat = float(sortie.lot.produit.prix_achat_unitaire) if sortie.lot.produit.prix_achat_unitaire else 0
+        prix_vente = float(sortie.lot.produit.prix_vente_unitaire) if sortie.lot.produit.prix_vente_unitaire else 0
+        benefice = (prix_vente - prix_achat) * sortie.quantite_vendue
+        chiffre = prix_vente * sortie.quantite_vendue
+        
+        # Vérifier la devise
+        if sortie.lot.produit.devise == 'CDF':
+            benefice_realise_cdf += benefice
+            chiffre_affaire_total_cdf += chiffre
+        else:
+            benefice_realise_usd += benefice
+            chiffre_affaire_total_usd += chiffre
+    
+    # Liste des hôpitaux pour le filtre
+    hopitaux = Hopital.objects.all()
+    
+    # Si l'utilisateur n'est pas admin global, on limite la liste
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    context = {
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'total_produits': total_produits,
+        'total_lots': total_lots,
+        'total_sorties': total_sorties,
+        'stock_total': stock_total,
+        # USD
+        'valeur_stock_achat_usd': round(valeur_stock_achat_usd, 2),
+        'valeur_stock_vente_usd': round(valeur_stock_vente_usd, 2),
+        'benefice_potentiel_usd': round(benefice_potentiel_usd, 2),
+        'benefice_realise_usd': round(benefice_realise_usd, 2),
+        'chiffre_affaire_total_usd': round(chiffre_affaire_total_usd, 2),
+        # CDF
+        'valeur_stock_achat_cdf': round(valeur_stock_achat_cdf, 2),
+        'valeur_stock_vente_cdf': round(valeur_stock_vente_cdf, 2),
+        'benefice_potentiel_cdf': round(benefice_potentiel_cdf, 2),
+        'benefice_realise_cdf': round(benefice_realise_cdf, 2),
+        'chiffre_affaire_total_cdf': round(chiffre_affaire_total_cdf, 2),
+        'taux_change': taux_change,
+        'produits_rupture': len(produits_rupture),
+        'top_ventes': top_ventes,
+    }
+    
+    return render(request, 'back-end/pharmacie/pharmacie_dashboard.html', context)
+#
+# ==========================================================================================================================
+# HISTORIQUE PHARMACIE ADMIN
+# ==========================================================================================================================
+@login_required
+@staff_member_required
+def admin_historique_stock(request, produit_id=None):
+    """Historique complet des mouvements de stock par produit"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    type_mouvement = request.GET.get('type_mouvement')
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    
+    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
+    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
+        # Pharmacien ne voit que son hôpital
+        hopital_selectionne = hopital_user
+    elif hopital_id:
+        # Admin peut filtrer par hôpital
+        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+    else:
+        # Par défaut, on prend l'hôpital de l'utilisateur
+        hopital_selectionne = hopital_user
+    
+    # Produit spécifique ou tous - AVEC GESTION D'ERREUR
+    produit = None
+    if produit_id:
+        try:
+            produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
+            mouvements = MouvementStock.objects.filter(lot__produit=produit)
+        except ProduitPharmacie.DoesNotExist:
+            messages.error(request, "Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
+            return redirect('admin_historique_stock')
+    else:
+        mouvements = MouvementStock.objects.all()
+    
+    # Filtres
+    if hopital_selectionne:
+        mouvements = mouvements.filter(hopital=hopital_selectionne)
+    
+    if date_debut:
+        mouvements = mouvements.filter(date_mouvement__gte=date_debut)
+    
+    if date_fin:
+        mouvements = mouvements.filter(date_mouvement__lte=date_fin)
+    
+    if type_mouvement:
+        mouvements = mouvements.filter(type_mouvement=type_mouvement)
+    
+    # Tri par date décroissante
+    mouvements = mouvements.select_related(
+        'lot', 
+        'lot__produit', 
+        'effectue_par'
+    ).order_by('-date_mouvement')
+    
+    # Calcul des totaux par produit
+    resume_par_produit = {}
+    for mouvement in mouvements:
+        produit_nom = mouvement.lot.produit.nom
+        if produit_nom not in resume_par_produit:
+            resume_par_produit[produit_nom] = {
+                'produit': mouvement.lot.produit,
+                'entrees': 0,
+                'sorties': 0,
+                'ajustements': 0,
+                'total': 0
+            }
+        
+        if mouvement.type_mouvement == 'ENTREE':
+            resume_par_produit[produit_nom]['entrees'] += mouvement.quantite_unites
+            resume_par_produit[produit_nom]['total'] += mouvement.quantite_unites
+        elif mouvement.type_mouvement == 'SORTIE':
+            resume_par_produit[produit_nom]['sorties'] += abs(mouvement.quantite_unites)
+            resume_par_produit[produit_nom]['total'] += mouvement.quantite_unites
+        elif mouvement.type_mouvement == 'AJUSTEMENT':
+            resume_par_produit[produit_nom]['ajustements'] += mouvement.quantite_unites
+            resume_par_produit[produit_nom]['total'] += mouvement.quantite_unites
+    
+    # Liste des hôpitaux pour le filtre
+    hopitaux = Hopital.objects.all()
+    
+    # Si l'utilisateur n'est pas admin global, on limite la liste
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    context = {
+        'produit': produit,
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'type_mouvement': type_mouvement,
+        'mouvements': mouvements,
+        'resume_par_produit': resume_par_produit.values(),
+    }
+    
+    return render(request, 'back-end/pharmacie/pharmacie_historique.html', context)
+#
+# ====================================================================================================
+# BENEFICE PHARMACIE
+# =====================================================================================================
+@login_required
+@staff_member_required
+def admin_benefices_pharmacie(request):
+    """Analyse détaillée des bénéfices"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    mois = request.GET.get('mois')
+    annee = request.GET.get('annee', timezone.now().year)
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    
+    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
+    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
+        # Pharmacien ne voit que son hôpital
+        hopital_selectionne = hopital_user
+    elif hopital_id:
+        # Admin peut filtrer par hôpital
+        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+    else:
+        # Par défaut, on prend l'hôpital de l'utilisateur
+        hopital_selectionne = hopital_user
+    
+    # Toutes les sorties - Filtrage par hôpital
+    sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
+    
+    # Filtre par période
+    if mois:
+        sorties = sorties.filter(date_sortie__month=mois, date_sortie__year=annee)
+    else:
+        sorties = sorties.filter(date_sortie__year=annee)
+    
+    # Tous les produits - Filtrage par hôpital
+    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    
+    # Calcul par produit - USD et CDF
+    benefices_par_produit = []
+    for produit in produits:
+        sorties_produit = sorties.filter(lot__produit=produit)
+        quantite_vendue = sorties_produit.aggregate(
+            total=Coalesce(Sum('quantite_vendue'), 0)
+        )['total'] or 0
+        
+        if quantite_vendue > 0:
+            prix_achat = float(produit.prix_achat_unitaire) if produit.prix_achat_unitaire else 0
+            prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+            benefice_unitaire = prix_vente - prix_achat
+            benefice_total = benefice_unitaire * quantite_vendue
+            chiffre_affaire = prix_vente * quantite_vendue
+            marge = (benefice_total / chiffre_affaire * 100) if chiffre_affaire > 0 else 0
+            
+            benefices_par_produit.append({
+                'produit': produit,
+                'quantite_vendue': quantite_vendue,
+                'prix_achat': round(prix_achat, 2),
+                'prix_vente': round(prix_vente, 2),
+                'benefice_unitaire': round(benefice_unitaire, 2),
+                'benefice_total': round(benefice_total, 2),
+                'chiffre_affaire': round(chiffre_affaire, 2),
+                'marge': round(marge, 2),
+                'devise': produit.devise  # USD ou CDF
+            })
+    
+    # Tri par bénéfice total
+    benefices_par_produit = sorted(
+        benefices_par_produit, 
+        key=lambda x: x['benefice_total'], 
+        reverse=True
+    )
+    
+    # Séparer USD et CDF
+    benefices_usd = [x for x in benefices_par_produit if x['devise'] == 'USD']
+    benefices_cdf = [x for x in benefices_par_produit if x['devise'] == 'CDF']
+    
+    # Totaux USD
+    benefice_total_global_usd = sum(x['benefice_total'] for x in benefices_usd)
+    chiffre_affaire_global_usd = sum(x['chiffre_affaire'] for x in benefices_usd)
+    marge_moyenne_usd = (benefice_total_global_usd / chiffre_affaire_global_usd * 100) if chiffre_affaire_global_usd > 0 else 0
+    
+    # Totaux CDF
+    benefice_total_global_cdf = sum(x['benefice_total'] for x in benefices_cdf)
+    chiffre_affaire_global_cdf = sum(x['chiffre_affaire'] for x in benefices_cdf)
+    marge_moyenne_cdf = (benefice_total_global_cdf / chiffre_affaire_global_cdf * 100) if chiffre_affaire_global_cdf > 0 else 0
+    
+    # Liste des hôpitaux pour le filtre
+    hopitaux = Hopital.objects.all()
+    
+    # Si l'utilisateur n'est pas admin global, on limite la liste
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    context = {
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'mois': mois,
+        'annee': annee,
+        'benefices_par_produit': benefices_par_produit,
+        # USD
+        'benefice_total_global_usd': round(benefice_total_global_usd, 2),
+        'chiffre_affaire_global_usd': round(chiffre_affaire_global_usd, 2),
+        'marge_moyenne_usd': round(marge_moyenne_usd, 2),
+        # CDF
+        'benefice_total_global_cdf': round(benefice_total_global_cdf, 2),
+        'chiffre_affaire_global_cdf': round(chiffre_affaire_global_cdf, 2),
+        'marge_moyenne_cdf': round(marge_moyenne_cdf, 2),
+    }
+    
+    return render(request, 'back-end/pharmacie/pharmacie_benefices.html', context)
+#
+# ======================================================================================================
+# ALERT STOCK PHARMACIE
+# ======================================================================================================
+@login_required
+@staff_member_required
+def admin_alertes_stock(request):
+    """Gestion des alertes de stock (rupture et seuil critique)"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    
+    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
+    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
+        # Pharmacien ne voit que son hôpital
+        hopital_selectionne = hopital_user
+    elif hopital_id:
+        # Admin peut filtrer par hôpital
+        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+    else:
+        # Par défaut, on prend l'hôpital de l'utilisateur
+        hopital_selectionne = hopital_user
+    
+    # Tous les produits - Filtrage par hôpital
+    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    
+    alertes = []
+    for produit in produits:
+        # Calcul du stock - Version améliorée avec LotPharmacie.quantite_actuelle
+        lots = LotPharmacie.objects.filter(
+            produit=produit,
+            hopital=hopital_selectionne
+        )
+        stock = sum(lot.quantite_actuelle or 0 for lot in lots)
+        
+        # Lots proches de péremption
+        lots_peremption = LotPharmacie.objects.filter(
+            produit=produit,
+            hopital=hopital_selectionne,
+            quantite_actuelle__gt=0
+        ).filter(
+            date_peremption__lte=timezone.now().date() + timedelta(days=30)
+        ).count()
+        
+        # Vérifier si le modèle a un seuil_alerte, sinon définir une valeur par défaut
+        seuil_alerte = getattr(produit, 'seuil_alerte', 10)
+        
+        # Déterminer le statut
+        if stock <= 0:
+            statut = 'rupture'
+        elif stock <= seuil_alerte:
+            statut = 'faible'
+        elif lots_peremption > 0:
+            statut = 'peremption'
+        else:
+            continue  # Pas d'alerte
+        
+        alertes.append({
+            'produit': produit,
+            'stock': stock,
+            'seuil_alerte': seuil_alerte,
+            'statut': statut,
+            'lots_peremption': lots_peremption,
+            'devise': produit.devise  # USD ou CDF
+        })
+    
+    # Trier par statut (rupture d'abord, puis faible, puis péremption)
+    statut_order = {'rupture': 0, 'faible': 1, 'peremption': 2}
+    alertes = sorted(alertes, key=lambda x: statut_order.get(x['statut'], 3))
+    
+    # Liste des hôpitaux pour le filtre
+    hopitaux = Hopital.objects.all()
+    
+    # Si l'utilisateur n'est pas admin global, on limite la liste
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    # Compter les alertes par type
+    alertes_rupture = len([a for a in alertes if a['statut'] == 'rupture'])
+    alertes_fortible = len([a for a in alertes if a['statut'] == 'faible'])
+    alertes_peremption = len([a for a in alertes if a['statut'] == 'peremption'])
+    
+    context = {
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'alertes': alertes,
+        'alertes_rupture': alertes_rupture,
+        'alertes_faible': alertes_fortible,
+        'alertes_peremption': alertes_peremption,
+        'total_alertes': len(alertes),
+    }
+    
+    return render(request, 'back-end/pharmacie/pharmacie_alertes.html', context)
+
+#
+# ================================================================================================================
+# HISTORIQUE DE PRODUIT ADMIN 
+# =================================================================================================================
+
+@login_required
+@staff_member_required
+def admin_historique_produit(request, produit_id):
+    """Historique détaillé d'un produit spécifique"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    type_mouvement = request.GET.get('type_mouvement')
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    
+    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
+    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
+        # Pharmacien ne voit que son hôpital
+        hopital_selectionne = hopital_user
+    elif hopital_id:
+        # Admin peut filtrer par hôpital
+        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+    else:
+        # Par défaut, on prend l'hôpital de l'utilisateur
+        hopital_selectionne = hopital_user
+    
+    # Récupérer le produit - AVEC GESTION D'ERREUR
+    try:
+        produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
+    except ProduitPharmacie.DoesNotExist:
+        messages.error(request, f"Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
+        return redirect('admin_historique_stock')
+    
+    # Récupérer les mouvements pour ce produit
+    mouvements = MouvementStock.objects.filter(lot__produit=produit, hopital=hopital_selectionne)
+    
+    # Filtres
+    if date_debut:
+        mouvements = mouvements.filter(date_mouvement__gte=date_debut)
+    
+    if date_fin:
+        mouvements = mouvements.filter(date_mouvement__lte=date_fin)
+    
+    if type_mouvement:
+        mouvements = mouvements.filter(type_mouvement=type_mouvement)
+    
+    # Tri par date décroissante
+    mouvements = mouvements.select_related(
+        'lot', 
+        'lot__produit', 
+        'effectue_par'
+    ).order_by('-date_mouvement')
+    
+    # Calcul des totaux
+    entrees = mouvements.filter(type_mouvement='ENTREE').aggregate(
+        total=Coalesce(Sum('quantite_unites'), 0)
+    )['total'] or 0
+    
+    sorties = mouvements.filter(type_mouvement='SORTIE').aggregate(
+        total=Coalesce(Sum('quantite_unites'), 0)
+    )['total'] or 0
+    
+    ajustements = mouvements.filter(type_mouvement='AJUSTEMENT').aggregate(
+        total=Coalesce(Sum('quantite_unites'), 0)
+    )['total'] or 0
+    
+    stock_net = entrees - sorties + ajustements
+    
+    # Liste des hôpitaux pour le filtre
+    hopitaux = Hopital.objects.all()
+    
+    # Si l'utilisateur n'est pas admin global, on limite la liste
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    context = {
+        'produit': produit,
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'type_mouvement': type_mouvement,
+        'mouvements': mouvements,
+        'entrees': entrees,
+        'sorties': sorties,
+        'ajustements': ajustements,
+        'stock_net': stock_net,
+    }
+    
+    return render(request, 'back-end/pharmacie/pharmacie_historique_produit.html', context)

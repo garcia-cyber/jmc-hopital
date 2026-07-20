@@ -1,0 +1,623 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Historique des Stocks | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i {
+            color: var(--primary);
+        }
+
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-600);
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-select, .filter-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: white;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-reset:hover {
+            background: var(--gray-200);
+            border-color: var(--gray-300);
+        }
+
+        .info-bar {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .info-bar i {
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .info-text {
+            color: var(--gray-700);
+            font-size: 0.9375rem;
+        }
+
+        .info-text strong {
+            color: var(--dark);
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+
+        .badge-entree {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .badge-sortie {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .badge-ajustement {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .badge-light {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .text-entree {
+            color: var(--success);
+        }
+
+        .text-sortie {
+            color: var(--danger);
+        }
+
+        .text-ajustement {
+            color: var(--warning);
+        }
+
+        .btn-action {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .resume-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resume-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .resume-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .resume-item {
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .resume-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .resume-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .resume-entree { color: var(--success); }
+        .resume-sortie { color: var(--danger); }
+        .resume-total { color: var(--primary); }
+
+        @media (max-width: 768px) {
+            .admin-header, .filter-bar, .card-header-custom {
+                padding: 1.25rem 1.5rem;
+            }
+            .table-responsive {
+                border-radius: 0 0 12px 12px;
+            }
+            .table thead th, .table tbody td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8125rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-history"></i>
+                                Historique des Mouvements
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'admin_pharmacie_dashboard' %}">Dashboard Pharmacie</a></li>
+                                <li class="breadcrumb-item active">Historique des Stocks</li>
+                            </ul>
+                        </div>
+                        {% if role_utilisateur %}
+                        <div class="text-muted">
+                            <i class="fa fa-user-shield"></i>
+                            <strong>{{ role_utilisateur.roleName|title }}</strong>
+                            {% if hopital_selectionne %} • {{ hopital_selectionne.nomH }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Info Bar -->
+                {% if produit %}
+                <div class="info-bar">
+                    <i class="fa fa-info-circle"></i>
+                    <div class="info-text">
+                        Affichage des mouvements pour : <strong>{{ produit.nom }}</strong>
+                        {% if produit.forme %} • {{ produit.forme }}{% endif %}
+                        {% if produit.dosage %} • {{ produit.dosage }}{% endif %}
+                        <a href="{% url 'admin_historique_stock' %}" class="btn btn-sm btn-light ms-2">
+                            <i class="fa fa-times"></i> Voir tous
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Filtres -->
+                <form method="GET" class="filter-bar">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-hospital"></i> Hôpital
+                        </label>
+                        <select name="hopital" class="filter-select">
+                            <option value="">Tous</option>
+                            {% for hopital in hopitaux %}
+                            <option value="{{ hopital.id }}" {% if hopital_selectionne and hopital_selectionne.id == hopital.id %}selected{% endif %}>
+                                {{ hopital.nomH }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Du
+                        </label>
+                        <input type="date" name="date_debut" class="filter-input" value="{{ date_debut }}">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Au
+                        </label>
+                        <input type="date" name="date_fin" class="filter-input" value="{{ date_fin }}">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-exchange-alt"></i> Type
+                        </label>
+                        <select name="type_mouvement" class="filter-select">
+                            <option value="">Tous</option>
+                            <option value="ENTREE" {% if type_mouvement == 'ENTREE' %}selected{% endif %}>Entrée</option>
+                            <option value="SORTIE" {% if type_mouvement == 'SORTIE' %}selected{% endif %}>Sortie</option>
+                            <option value="AJUSTEMENT" {% if type_mouvement == 'AJUSTEMENT' %}selected{% endif %}>Ajustement</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter">
+                        <i class="fa fa-filter"></i> Filtrer
+                    </button>
+                    <a href="{% url 'admin_historique_stock' %}" class="btn-reset">
+                        <i class="fa fa-undo"></i> Reset
+                    </a>
+                </form>
+
+                <!-- Résumé par produit -->
+                {% if resume_par_produit %}
+                <div class="resume-card">
+                    <h5 class="resume-title">
+                        <i class="fa fa-chart-pie text-primary"></i>
+                        Résumé des Mouvements
+                    </h5>
+                    <div class="resume-grid">
+                        {% for resume in resume_par_produit %}
+                        <div class="resume-item">
+                            <div class="resume-label">{{ resume.produit.nom|truncatechars:20 }}</div>
+                            <div class="d-flex justify-content-between gap-2 mt-2">
+                                <div class="text-center">
+                                    <div class="resume-value resume-entree" style="font-size: 1.1rem;">+{{ resume.entrees }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Entrées</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="resume-value resume-sortie" style="font-size: 1.1rem;">-{{ resume.sorties }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Sorties</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="resume-value resume-total" style="font-size: 1.1rem;">{{ resume.total }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Net</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tableau des mouvements -->
+                <div class="content-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-list text-primary"></i>
+                            Liste des Mouvements
+                            <span class="badge-count">{{ mouvements.count }}</span>
+                        </h5>
+                        <a href="{% url 'admin_pharmacie_dashboard' %}" class="btn-action btn-view">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Date & Heure</th>
+                                    <th>Produit</th>
+                                    <th>Lot</th>
+                                    <th class="text-center">Type</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th>Effectué par</th>
+                                    <th>Hôpital</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mouvement in mouvements %}
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-primary">{{ forloop.counter }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="font-weight-bold">{{ mouvement.date_mouvement|date:"d/m/Y" }}</div>
+                                        <div class="text-muted small">{{ mouvement.date_mouvement|time:"H:i" }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ mouvement.lot.produit.nom }}</strong>
+                                        <div class="text-muted small">
+                                            {{ mouvement.lot.produit.forme }} • {{ mouvement.lot.produit.dosage }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light text-dark">
+                                            {{ mouvement.lot.numero_lot|truncatechars:15 }}
+                                        </span>
+                                        <div class="text-muted small mt-1">
+                                            {% if mouvement.lot.quantite_actuelle > 0 %}
+                                            <i class="fa fa-check-circle text-success"></i> {{ mouvement.lot.quantite_actuelle }} restants
+                                            {% else %}
+                                            <i class="fa fa-exclamation-triangle text-danger"></i> Épuisé
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if mouvement.type_mouvement == 'ENTREE' %}
+                                        <span class="badge badge-entree">
+                                            <i class="fa fa-arrow-down"></i> Entrée
+                                        </span>
+                                        {% elif mouvement.type_mouvement == 'SORTIE' %}
+                                        <span class="badge badge-sortie">
+                                            <i class="fa fa-arrow-up"></i> Sortie
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-ajustement">
+                                            <i class="fa fa-exchange-alt"></i> Ajustement
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if mouvement.type_mouvement == 'ENTREE' or mouvement.type_mouvement == 'AJUSTEMENT' and mouvement.quantite_unites > 0 %}
+                                        <strong class="text-entree">+{{ mouvement.quantite_unites }}</strong>
+                                        {% else %}
+                                        <strong class="text-sortie">{{ mouvement.quantite_unites }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <i class="fa fa-user-circle text-muted"></i>
+                                        {{ mouvement.effectue_par.username|default:"Système" }}
+                                    </td>
+                                    <td>
+                                        {% if mouvement.hopital %}
+                                        <span class="badge badge-light text-dark">
+                                            {{ mouvement.hopital.nomH|truncatechars:20 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted">
+                                        <i class="fa fa-inbox fa-3x mb-3"></i>
+                                        <p class="mb-1">Aucun mouvement trouvé</p>
+                                        <small class="text-muted">
+                                            {% if date_debut or date_fin or type_mouvement or hopital_selectionne %}
+                                            Essayez de modifier les filtres
+                                            {% else %}
+                                            Aucun mouvement enregistré pour le moment
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Links -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="content-card p-4 text-center">
+                            <i class="fa fa-chart-line fa-3x text-success mb-3"></i>
+                            <h5 class="mb-2">Analyse des Bénéfices</h5>
+                            <p class="text-muted mb-3">
+                                Consultez les bénéfices réalisés par produit
+                            </p>
+                            <a href="{% url 'admin_benefices_pharmacie' %}" class="btn btn-success">
+                                <i class="fa fa-arrow-right"></i> Accéder
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="content-card p-4 text-center">
+                            <i class="fa fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                            <h5 class="mb-2">Alertes de Stock</h5>
+                            <p class="text-muted mb-3">
+                                Surveillez les ruptures et seuils critiques
+                            </p>
+                            <a href="{% url 'admin_alertes_stock' %}" class="btn btn-danger">
+                                <i class="fa fa-arrow-right"></i> Accéder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

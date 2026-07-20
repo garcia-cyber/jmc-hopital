@@ -207,6 +207,11 @@ urlpatterns =[
     path('payer-dette/<int:paiement_id>/', views.ajouter_paiement_dette, name='ajouter_paiement_dette'),
     path('pharmacie/modifier/<int:produit_id>/', views.modifier_produit_pharmacie, name='modifier_produit'),
     path('pharmacie/supprimer/<int:produit_id>/', views.supprimer_produit_pharmacie, name='supprimer_produit'),
+    path('pharmacie/', views.admin_pharmacie_dashboard, name='admin_pharmacie_dashboard'),
+    path('pharmacie/historique/', views.admin_historique_stock, name='admin_historique_stock'),
+    path('pharmacie/historique/<int:produit_id>/', views.admin_historique_stock, name='admin_historique_produit'),
+    path('pharmacie/benefices/', views.admin_benefices_pharmacie, name='admin_benefices_pharmacie'),
+    path('pharmacie/alertes/', views.admin_alertes_stock, name='admin_alertes_stock'),
 
 
     # =====================================

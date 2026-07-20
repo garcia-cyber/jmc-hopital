@@ -1,0 +1,559 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Pharmacie | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i {
+            color: var(--primary);
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-select, .filter-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: white;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+        }
+
+        .stat-card.primary { border-left-color: var(--primary); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-card.primary .stat-icon {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .stat-card.success .stat-icon {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .stat-card.warning .stat-icon {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .stat-card.danger .stat-icon {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .stat-subtitle {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .btn-action {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .currency-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .currency-usd {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .currency-cdf {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        @media (max-width: 768px) {
+            .admin-header, .filter-bar {
+                padding: 1.25rem 1.5rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <h1 class="admin-title">
+                        <i class="fa fa-chart-line"></i>
+                        Dashboard Pharmacie
+                    </h1>
+                </div>
+
+                <!-- Filtres -->
+                <form method="GET" class="filter-bar">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-hospital"></i> Hôpital
+                        </label>
+                        <select name="hopital" class="filter-select">
+                            <option value="">Tous les hôpitaux</option>
+                            {% for hopital in hopitaux %}
+                            <option value="{{ hopital.id }}" {% if hopital_selectionne and hopital_selectionne.id == hopital.id %}selected{% endif %}>
+                                {{ hopital.nomH }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Du
+                        </label>
+                        <input type="date" name="date_debut" class="filter-input" value="{{ date_debut }}">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Au
+                        </label>
+                        <input type="date" name="date_fin" class="filter-input" value="{{ date_fin }}">
+                    </div>
+                    <button type="submit" class="btn-filter">
+                        <i class="fa fa-filter"></i> Filtrer
+                    </button>
+                </form>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card primary">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-pills"></i>
+                            </div>
+                            <div class="stat-title">Total Produits</div>
+                        </div>
+                        <div class="stat-value">{{ total_produits }}</div>
+                        <div class="stat-subtitle">références actives</div>
+                    </div>
+
+                    <div class="stat-card success">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-boxes"></i>
+                            </div>
+                            <div class="stat-title">Stock Total</div>
+                        </div>
+                        <div class="stat-value">{{ stock_total }}</div>
+                        <div class="stat-subtitle">unités disponibles</div>
+                    </div>
+
+                    <div class="stat-card warning">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-chart-line"></i>
+                            </div>
+                            <div class="stat-title">Bénéfice Potentiel</div>
+                        </div>
+                        <div class="stat-value">
+                            ${{ benefice_potentiel_usd|floatformat:2 }}
+                            <span class="currency-badge currency-usd">USD</span>
+                        </div>
+                        <div class="stat-subtitle">
+                            {{ benefice_potentiel_cdf|floatformat:0 }} FC
+                            <span class="currency-badge currency-cdf">CDF</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card danger">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <i class="fa fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-title">En Rupture</div>
+                        </div>
+                        <div class="stat-value">{{ produits_rupture }}</div>
+                        <div class="stat-subtitle">produits à réapprovisionner</div>
+                    </div>
+                </div>
+
+                <!-- Bénéfices réalisés -->
+                <div class="content-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-dollar-sign text-success"></i>
+                            Performance Commerciale
+                        </h5>
+                        <a href="{% url 'admin_benefices_pharmacie' %}" class="btn-action btn-view">
+                            <i class="fa fa-eye"></i> Voir détails
+                        </a>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="text-muted mb-2">Chiffre d'Affaires</div>
+                                    <div class="h4 text-primary mb-1">
+                                        ${{ chiffre_affaire_total_usd|floatformat:2 }}
+                                        <span class="currency-badge currency-usd">USD</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        {{ chiffre_affaire_total_cdf|floatformat:0 }} FC
+                                        <span class="currency-badge currency-cdf">CDF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="text-muted mb-2">Bénéfice Réalisé</div>
+                                    <div class="h4 text-success mb-1">
+                                        ${{ benefice_realise_usd|floatformat:2 }}
+                                        <span class="currency-badge currency-usd">USD</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        {{ benefice_realise_cdf|floatformat:0 }} FC
+                                        <span class="currency-badge currency-cdf">CDF</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="text-muted mb-2">Valeur du Stock</div>
+                                    <div class="h4 text-warning mb-1">
+                                        ${{ valeur_stock_vente_usd|floatformat:2 }}
+                                        <span class="currency-badge currency-usd">USD</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        {{ valeur_stock_vente_cdf|floatformat:0 }} FC
+                                        <span class="currency-badge currency-cdf">CDF</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Ventes -->
+                <div class="content-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-trophy text-warning"></i>
+                            Top 10 Produits les Plus Vendus
+                        </h5>
+                        <a href="{% url 'admin_historique_stock' %}" class="btn-action btn-view">
+                            <i class="fa fa-history"></i> Historique complet
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Produit</th>
+                                    <th>Catégorie</th>
+                                    <th>Quantité Vendue</th>
+                                    <th>Chiffre d'Affaires</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in top_ventes %}
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-primary">{{ forloop.counter }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.produit.nom }}</strong>
+                                        <div class="text-muted small">
+                                            {{ item.produit.forme }} • {{ item.produit.dosage }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light text-dark">{{ item.produit.categorie }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong>{{ item.quantite_vendue }}</strong> unités
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.devise == 'CDF' %}
+                                            <strong class="text-warning">{{ item.chiffre_affaire|floatformat:2 }} FC</strong>
+                                            <span class="currency-badge currency-cdf">CDF</span>
+                                        {% else %}
+                                            <strong class="text-primary">${{ item.chiffre_affaire|floatformat:2 }}</strong>
+                                            <span class="currency-badge currency-usd">USD</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'admin_historique_produit' item.produit.id %}" class="btn-action btn-view">
+                                            <i class="fa fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="fa fa-inbox fa-2x mb-2"></i>
+                                        <p class="mb-0">Aucune vente enregistrée</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Liens rapides -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="content-card p-4 text-center">
+                            <i class="fa fa-history fa-3x text-primary mb-3"></i>
+                            <h5 class="mb-3">Historique des Mouvements</h5>
+                            <p class="text-muted mb-3">
+                                Consultez l'historique complet des entrées, sorties et ajustements de stock
+                            </p>
+                            <a href="{% url 'admin_historique_stock' %}" class="btn btn-primary">
+                                <i class="fa fa-arrow-right"></i> Accéder
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="content-card p-4 text-center">
+                            <i class="fa fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                            <h5 class="mb-3">Alertes de Stock</h5>
+                            <p class="text-muted mb-3">
+                                Surveillez les ruptures, seuils critiques et péremptions
+                            </p>
+                            <a href="{% url 'admin_alertes_stock' %}" class="btn btn-danger">
+                                <i class="fa fa-arrow-right"></i> Accéder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

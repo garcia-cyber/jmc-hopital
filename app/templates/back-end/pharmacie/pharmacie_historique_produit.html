@@ -1,0 +1,587 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Historique Produit | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i {
+            color: var(--primary);
+        }
+
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-600);
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .product-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .product-title i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .product-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .product-meta {
+            color: var(--gray-600);
+            font-size: 0.9375rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid var(--gray-200);
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .stat-entree { color: var(--success); }
+        .stat-sortie { color: var(--danger); }
+        .stat-total { color: var(--primary); }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-select, .filter-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: white;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+            padding: 0.625rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-reset:hover {
+            background: var(--gray-200);
+            border-color: var(--gray-300);
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-count {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .table {
+            margin: 0;
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+
+        .badge-entree {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .badge-sortie {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .badge-ajustement {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .badge-light {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .text-entree {
+            color: var(--success);
+        }
+
+        .text-sortie {
+            color: var(--danger);
+        }
+
+        .btn-action {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .currency-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .currency-usd {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .currency-cdf {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        @media (max-width: 768px) {
+            .admin-header, .filter-bar, .card-header-custom {
+                padding: 1.25rem 1.5rem;
+            }
+            .table-responsive {
+                border-radius: 0 0 12px 12px;
+            }
+            .table thead th, .table tbody td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8125rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-file-medical"></i>
+                                Historique du Produit
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'admin_pharmacie_dashboard' %}">Dashboard Pharmacie</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'admin_historique_stock' %}">Historique des Stocks</a></li>
+                                <li class="breadcrumb-item active">Détails</li>
+                            </ul>
+                        </div>
+                        {% if role_utilisateur %}
+                        <div class="text-muted">
+                            <i class="fa fa-user-shield"></i>
+                            <strong>{{ role_utilisateur.roleName|title }}</strong>
+                            {% if hopital_selectionne %} • {{ hopital_selectionne.nomH }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Info Produit -->
+                <div class="product-card">
+                    <div class="product-header">
+                        <div class="product-title">
+                            <i class="fa fa-pills"></i>
+                            <div>
+                                <h2 class="product-name">{{ produit.nom }}</h2>
+                                <div class="product-meta">
+                                    {{ produit.forme }} • {{ produit.dosage }} • {{ produit.categorie }}
+                                    {% if produit.devise %}
+                                        {% if produit.devise == 'CDF' %}
+                                            <span class="currency-badge currency-cdf">CDF</span>
+                                        {% else %}
+                                            <span class="currency-badge currency-usd">USD</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{% url 'admin_historique_stock' %}" class="btn-action btn-view">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <div class="stat-label">Entrées</div>
+                            <div class="stat-value stat-entree">+{{ entrees }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Sorties</div>
+                            <div class="stat-value stat-sortie">-{{ sorties }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Ajustements</div>
+                            <div class="stat-value">{{ ajustements }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Stock Net</div>
+                            <div class="stat-value stat-total">{{ stock_net }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtres -->
+                <form method="GET" class="filter-bar">
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Du
+                        </label>
+                        <input type="date" name="date_debut" class="filter-input" value="{{ date_debut }}">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-calendar"></i> Au
+                        </label>
+                        <input type="date" name="date_fin" class="filter-input" value="{{ date_fin }}">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fa fa-exchange-alt"></i> Type
+                        </label>
+                        <select name="type_mouvement" class="filter-select">
+                            <option value="">Tous</option>
+                            <option value="ENTREE" {% if type_mouvement == 'ENTREE' %}selected{% endif %}>Entrée</option>
+                            <option value="SORTIE" {% if type_mouvement == 'SORTIE' %}selected{% endif %}>Sortie</option>
+                            <option value="AJUSTEMENT" {% if type_mouvement == 'AJUSTEMENT' %}selected{% endif %}>Ajustement</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter">
+                        <i class="fa fa-filter"></i> Filtrer
+                    </button>
+                    <a href="{% url 'admin_historique_produit' produit.id %}" class="btn-reset">
+                        <i class="fa fa-undo"></i> Reset
+                    </a>
+                </form>
+
+                <!-- Tableau des mouvements -->
+                <div class="content-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-list text-primary"></i>
+                            Mouvements du Produit
+                            <span class="badge-count">{{ mouvements.count }}</span>
+                        </h5>
+                        <a href="{% url 'admin_historique_stock' %}" class="btn-action btn-view">
+                            <i class="fa fa-list"></i> Tous les produits
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Date & Heure</th>
+                                    <th>Lot</th>
+                                    <th class="text-center">Type</th>
+                                    <th class="text-center">Quantité</th>
+                                    <th>Effectué par</th>
+                                    <th>Hôpital</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mouvement in mouvements %}
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-primary">{{ forloop.counter }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="font-weight-bold">{{ mouvement.date_mouvement|date:"d/m/Y" }}</div>
+                                        <div class="text-muted small">{{ mouvement.date_mouvement|time:"H:i" }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light text-dark">
+                                            {{ mouvement.lot.numero_lot|truncatechars:15 }}
+                                        </span>
+                                        <div class="text-muted small mt-1">
+                                            {% if mouvement.lot.quantite_actuelle > 0 %}
+                                            <i class="fa fa-check-circle text-success"></i> {{ mouvement.lot.quantite_actuelle }} restants
+                                            {% else %}
+                                            <i class="fa fa-exclamation-triangle text-danger"></i> Épuisé
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if mouvement.type_mouvement == 'ENTREE' %}
+                                        <span class="badge badge-entree">
+                                            <i class="fa fa-arrow-down"></i> Entrée
+                                        </span>
+                                        {% elif mouvement.type_mouvement == 'SORTIE' %}
+                                        <span class="badge badge-sortie">
+                                            <i class="fa fa-arrow-up"></i> Sortie
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-ajustement">
+                                            <i class="fa fa-exchange-alt"></i> Ajustement
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if mouvement.type_mouvement == 'ENTREE' or mouvement.type_mouvement == 'AJUSTEMENT' and mouvement.quantite_unites > 0 %}
+                                        <strong class="text-entree">+{{ mouvement.quantite_unites }}</strong>
+                                        {% else %}
+                                        <strong class="text-sortie">{{ mouvement.quantite_unites }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <i class="fa fa-user-circle text-muted"></i>
+                                        {{ mouvement.effectue_par.username|default:"Système" }}
+                                    </td>
+                                    <td>
+                                        {% if mouvement.hopital %}
+                                        <span class="badge badge-light text-dark">
+                                            {{ mouvement.hopital.nomH|truncatechars:20 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="fa fa-inbox fa-3x mb-3"></i>
+                                        <p class="mb-1">Aucun mouvement trouvé</p>
+                                        <small class="text-muted">
+                                            {% if date_debut or date_fin or type_mouvement %}
+                                            Essayez de modifier les filtres
+                                            {% else %}
+                                            Aucun mouvement enregistré pour ce produit
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

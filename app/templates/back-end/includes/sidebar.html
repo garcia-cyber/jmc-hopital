@@ -65,6 +65,13 @@
                         </ul>
                     </li>
 
+                    <li class="nav-item">
+    <a class="nav-link" href="{% url 'liste_patients_orientations' %}">
+        <i class="fa fa-user-injured"></i>
+        <span>Patients & Orientations</span>
+    </a>
+</li>
+
 
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
 
@@ -183,6 +190,16 @@
                         </ul>
                     </li>
 
+                    <li class="submenu">
+                        <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
+                        <ul>
+                            <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
+                            <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
+                            <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
+                            <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
+                        </ul>
+                    </li>
+
 
                     <li class="menu-title">
                         <span>Gestion des Externes</span>
@@ -210,6 +227,13 @@
                             <i class="fa fa-list"></i> <span>Liste des demandes</span>
                         </a>
                     </li>
+
+                    <li class="nav-item">
+    <a class="nav-link" href="{% url 'liste_patients_orientations' %}">
+        <i class="fa fa-user-injured"></i>
+        <span>Patients & Orientations</span>
+    </a>
+</li>
 
 
                     <li class="menu-title"> 
@@ -354,6 +378,12 @@
                             <span>Fiches Accouchement</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+    <a class="nav-link" href="{% url 'liste_patients_orientations' %}">
+        <i class="fa fa-user-injured"></i>
+        <span>Patients & Orientations</span>
+    </a>
+</li>
                     <li><a href="{% url 'historique_examen_externe_technicien' %}"><i class="la la-history"></i> <span>Examens externe</span></a></li>
                 {% endif %}
 

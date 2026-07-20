@@ -1,0 +1,369 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patients & Orientations | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f8fafc;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .page-card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #eff6ff, #ffffff);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .page-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
+            color: var(--primary);
+        }
+
+        .page-subtitle {
+            margin: 0.5rem 0 0;
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid;
+        }
+
+        .stat-card.primary { border-left-color: var(--primary); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+
+        .stat-title {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-top: 0.35rem;
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .table tbody td {
+            padding: 1rem 1rem;
+            vertical-align: middle;
+            color: var(--gray-700);
+        }
+
+        .badge-custom {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-primary { background: #dbeafe; color: var(--primary); }
+        .badge-success { background: #d1fae5; color: var(--success); }
+        .badge-warning { background: #fef3c7; color: var(--warning); }
+        .badge-danger { background: #fee2e2; color: var(--danger); }
+        .badge-light { background: var(--gray-100); color: var(--gray-700); }
+
+        .panel-box {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-form .form-control,
+        .filter-form .form-select {
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 0.7rem 0.9rem;
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .btn-filter:hover {
+            background: #2563eb;
+        }
+
+        .btn-reset {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .btn-reset:hover {
+            background: var(--gray-200);
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-card mb-4">
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fa fa-user-injured"></i>
+                        Liste des Patients & Orientations
+                    </h1>
+                    <p class="page-subtitle">
+                        Vue générale de tous les patients et de leurs dernières orientations.
+                    </p>
+                </div>
+
+                <div class="p-4">
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-title">Total Patients</div>
+                            <div class="stat-value">{{ patients.count }}</div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-title">Total Orientations</div>
+                            <div class="stat-value">{{ orientations.count }}</div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-title">Patients Orientés</div>
+                            <div class="stat-value">{{ orientations|length }}</div>
+                        </div>
+                    </div>
+
+                    <div class="panel-box">
+                        <form method="get" class="filter-form">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">Recherche patient</label>
+                                    <input type="text" name="q" class="form-control" placeholder="Nom, code patient...">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Filtrer par hôpital</label>
+                                    <select name="hopital" class="form-select">
+                                        <option value="">Tous les hôpitaux</option>
+                                        {% for p in patients %}
+                                            {% if p.hopital %}
+                                                <option value="{{ p.hopital.id }}">{{ p.hopital.nomH }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-filter">
+                                        <i class="fa fa-search"></i> Filtrer
+                                    </button>
+                                    <a href="{% url 'liste_patients_orientations' %}" class="btn-reset">
+                                        <i class="fa fa-undo"></i> Reset
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Patient</th>
+                                    <th>Code</th>
+                                    <th>Service</th>
+                                    <th>Hôpital</th>
+                                    <th>Dernière orientation</th>
+                                    <th>Destination</th>
+                                    <th>Médecin</th>
+                                    <th>Observation</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in patients %}
+                                    {% with o=derniere_orientation_par_patient|default_if_none:'' %}
+                                    {% endwith %}
+                                    <tr>
+                                        <td><span class="badge-custom badge-light">{{ forloop.counter }}</span></td>
+                                        <td>
+                                            <strong>{{ patient.noms }}</strong>
+                                            <div class="text-muted small">
+                                                {% if patient.sexe == 'M' %}Masculin{% else %}Féminin{% endif %}
+                                                {% if patient.age %} • {{ patient.age }}{% endif %}
+                                            </div>
+                                        </td>
+                                        <td><span class="badge-custom badge-primary">{{ patient.codepatient }}</span></td>
+                                        <td>
+                                            {% if patient.service %}
+                                                <span class="badge-custom badge-success">{{ patient.service.nom }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if patient.hopital %}
+                                                <span class="badge-custom badge-light">{{ patient.hopital.nomH }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if derniere_orientation_par_patient.patient.id == patient.id %}
+                                                {{ derniere_orientation_par_patient.date_orientation|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                {% for o in orientations %}
+                                                    {% if o.consultation.triage.patient.id == patient.id %}
+                                                        {{ o.date_orientation|date:"d/m/Y H:i" }}
+                                                        {% break %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                            <span class="text-muted">-</span>
+                                        </td>
+                                        <td>
+                                            {% for o in orientations %}
+                                                {% if o.consultation.triage.patient.id == patient.id %}
+                                                    {{ o.getdestinationdisplay }}
+                                                    {% break %}
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for o in orientations %}
+                                                {% if o.consultation.triage.patient.id == patient.id %}
+                                                    {% if o.medecin_orientateur %}
+                                                        {{ o.medecin_orientateur.username }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                    {% break %}
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for o in orientations %}
+                                                {% if o.consultation.triage.patient.id == patient.id %}
+                                                    {{ o.observation|default:"-"|truncatechars:35 }}
+                                                    {% break %}
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-muted">-</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for o in orientations %}
+                                                {% if o.consultation.triage.patient.id == patient.id %}
+                                                    {% if o.est_admis %}
+                                                        <span class="badge-custom badge-success">Admis</span>
+                                                    {% else %}
+                                                        <span class="badge-custom badge-warning">En attente</span>
+                                                    {% endif %}
+                                                    {% break %}
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="badge-custom badge-light">Aucune</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="10" class="text-center py-5 text-muted">
+                                            <i class="fa fa-inbox fa-3x mb-3"></i>
+                                            <p class="mb-0">Aucun patient trouvé.</p>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 alert alert-info border-0 shadow-sm">
+                        <strong>Note :</strong>
+                        cette page affiche la liste générale des patients avec leur dernière orientation connue.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

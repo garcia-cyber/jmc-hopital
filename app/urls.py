@@ -64,17 +64,9 @@ urlpatterns =[
      path('sessions/', views.liste_sessions, name='liste_sessions'),
      path('paiement/session/<int:session_id>/', views.payer_session, name='paiement_session'),
      path('patients/fideles/dette', views.liste_patients_fideles, name='liste_patients_fideles'),
-
-      path(
-        'patients/conventionnes/',
-        views.liste_conventionnes_par_entreprise,
-        name='liste_conventionnes'
-    ),
-     path(
-    'entreprise/<int:entreprise_id>/payer/',
-    views.payer_dette_entreprise,
-    name='payer_dette_entreprise'
-),
+     path('patients/conventionnes/',views.liste_conventionnes_par_entreprise,name='liste_conventionnes'),
+     path('entreprise/<int:entreprise_id>/payer/',views.payer_dette_entreprise,name='payer_dette_entreprise'),
+     path("patients/orientations/", liste_patients_orientations_view, name="liste_patients_orientations"),
 
 
 

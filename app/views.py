@@ -7814,3 +7814,56 @@ def assistant_questions_view(request):
         "intent": "unknown",
         "message": "Question non prise en charge."
     }, status=200)
+
+#
+# ======================================================================================================================
+# ORIENTATION DES PATIENT LISTE 
+# ======================================================================================================================
+@login_required
+def liste_patients_orientations_view(request):
+    patients = Patient.objects.select_related("hopital", "service").order_by("noms")
+    orientations = Orientation.objects.select_related(
+        "consultation",
+        "medecin_orientateur",
+        "consultation__triage__patient"
+    ).order_by("-date_orientation")
+
+    derniere_orientation_par_patient = {}
+    for o in orientations:
+        patient = o.consultation.triage.patient
+        if patient.id not in derniere_orientation_par_patient:
+            derniere_orientation_par_patient[patient.id] = o
+
+    return render(request, "back-end/patient/liste_patients_orientations.html", {
+        "patients": patients,
+        "orientations": orientations,
+        "derniere_orientation_par_patient": derniere_orientation_par_patient,
+    })
+
+#
+# ===========================================================================================================================
+# LISTE DE TYPE DE CHAMBRE COTE ADMIN
+# ===========================================================================================================================
+def liste_types_chambre(request):
+  types_chambre = TypeChambre.objects.all()
+  return render(
+      request,
+      'back-end/patient/type_chambre_list.html',
+      {'types_chambre': types_chambre},
+  )
+
+#
+# ===========================================================================================================================
+# LISTE DE CHAMBRE COTE ADMIN
+# ===========================================================================================================================
+def liste_chambres(request):
+  chambres = Chambre.objects.all()
+  return render(request, 'back-end/patient/chambre_list.html', {'chambres': chambres})
+
+#
+# ===========================================================================================================================
+# LISTE DES LITS
+# ===========================================================================================================================
+def liste_lits(request):
+  lits = Lit.objects.all()
+  return render(request, 'back-end/patient/lit_list.html', {'lits': lits})

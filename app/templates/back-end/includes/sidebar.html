@@ -55,6 +55,16 @@
                         </ul>
                     </li>
 
+                      <li class="submenu">
+                        <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
+                        <ul>
+                            <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
+                            <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
+                            <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
+                            <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
+                        </ul>
+                    </li>
+
 
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
 
@@ -222,15 +232,7 @@
                     </li>
 
 
-                    <li class="submenu">
-                        <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
-                        <ul>
-                            <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
-                            <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
-                            <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
-                            <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
-                        </ul>
-                    </li>
+                  
 
 
                     <li class="menu-title"> 
@@ -492,6 +494,13 @@
                         <i class="fa fa-list"></i> <span>Liste des rapports</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{% url 'assistant_questions_view' %}">
+                        <i class="fa fa-robot"></i>
+                        <span>Assistant IA</span>
+                    </a>
+                </li>
+
                 <li class="menu-title"> <span>SESSION</span> </li>
                 <li><a href="{% url 'deco' %}" class="text-danger"><i class="la la-power-off"></i> <span>Déconnexion</span></a></li>
             </ul>

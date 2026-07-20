@@ -298,4 +298,9 @@ urlpatterns =[
     path('global/paiement/<int:paiement_id>/delete/', views.admin_paiement_delete, name='admin_global_paiement_delete'),
     path('global/paiement/<int:paiement_id>/detail/', views.admin_paiement_detail, name='admin_global_paiement_detail'),
 
+    # =================================================
+    #
+    #
+    path("assistant/questions/", assistant_questions_view, name="assistant_questions_view"),
+
  ]

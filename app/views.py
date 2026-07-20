@@ -7588,3 +7588,229 @@ def admin_paiement_detail(request, paiement_id):
     }
     
     return render(request, 'back-end/paiements/paiement_detail.html', context)
+
+#
+# ===========================================================================================================================
+# ===========================================================================================================================
+from django.views.decorators.http import require_http_methods
+def detect_intent(question):
+    q = question.lower()
+
+    if any(x in q for x in [
+        "combien de consultations",
+        "nombre de consultations",
+        "a été consulté",
+        "consulté combien",
+        "nombre fois consulté"
+    ]):
+        return "consultations_patient"
+
+    if any(x in q for x in [
+        "total payé",
+        "paiement",
+        "combien a payé",
+        "montant payé"
+    ]):
+        return "paiements_patient"
+
+    if any(x in q for x in [
+        "reste à payer",
+        "reste payer",
+        "solde",
+        "dette"
+    ]):
+        return "reste_a_payer"
+
+    if any(x in q for x in [
+        "examens",
+        "examens en attente",
+        "examens réalisés"
+    ]):
+        return "examens_patient"
+
+    if any(x in q for x in [
+        "historique complet",
+        "tout l'historique",
+        "résumé complet",
+        "vue complète"
+    ]):
+        return "historique_complet"
+
+    return "unknown"
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def assistant_questions_view(request):
+    if request.method == "GET":
+        patients = Patient.objects.all().order_by("noms")
+        return render(request, "back-end/assistant/questions.html", {"patients": patients})
+
+    question = request.POST.get("question", "").strip()
+    patient_id = request.POST.get("patient_id", "").strip()
+
+    if not question:
+        return JsonResponse({
+            "success": False,
+            "intent": "empty",
+            "message": "La question est vide."
+        }, status=400)
+
+    patient = None
+    if patient_id:
+        patient = get_object_or_404(Patient, pk=patient_id)
+
+    intent = detect_intent(question)
+
+    if intent == "unknown":
+        return JsonResponse({
+            "success": False,
+            "intent": "unknown",
+            "message": "Je n'ai pas compris la question. Essaie de demander les consultations, paiements, reste à payer ou historique complet."
+        }, status=200)
+
+    if not patient:
+        return JsonResponse({
+            "success": False,
+            "intent": intent,
+            "message": "Veuillez sélectionner un patient pour cette question."
+        }, status=400)
+
+    consultations_qs = Consultation.objects.filter(triage__patient=patient)
+    paiements_qs = Paiement.objects.filter(patient=patient)
+    examens_qs = DemandeExamen.objects.filter(consultation__triage__patient=patient)
+    sessions_qs = SessionSoins.objects.filter(patient=patient)
+
+    if intent == "consultations_patient":
+        total = consultations_qs.count()
+        last = consultations_qs.order_by("-datecreation").first()
+
+        data = {
+            "patient": patient.noms,
+            "code_patient": patient.codepatient,
+            "total_consultations": total,
+            "derniere_consultation": last.datecreation.strftime("%d/%m/%Y %H:%M") if last else None,
+            "dernier_medecin": last.medecin.username if last and last.medecin else None,
+        }
+
+        answer = f"Le patient {patient.noms} a été consulté {total} fois."
+        if last:
+            answer += f" La dernière consultation date du {last.datecreation.strftime('%d/%m/%Y à %H:%M')}."
+
+        return JsonResponse({
+            "success": True,
+            "intent": intent,
+            "message": answer,
+            "answer": answer,
+            "data": data
+        })
+
+    if intent == "paiements_patient":
+        total_usd = paiements_qs.filter(devise="USD").aggregate(total=Sum("montantverse"))["total"] or Decimal("0")
+        total_cdf = paiements_qs.filter(devise="CDF").aggregate(total=Sum("montantverse"))["total"] or Decimal("0")
+        total_reste = paiements_qs.aggregate(total=Sum("resteapayer"))["total"] or Decimal("0")
+
+        data = {
+            "patient": patient.noms,
+            "nombre_paiements": paiements_qs.count(),
+            "total_usd": float(total_usd),
+            "total_cdf": float(total_cdf),
+            "reste_total": float(total_reste),
+        }
+
+        answer = (
+            f"Le patient {patient.noms} a {paiements_qs.count()} paiements enregistrés. "
+            f"Total payé: {total_usd} USD et {total_cdf} CDF."
+        )
+
+        return JsonResponse({
+            "success": True,
+            "intent": intent,
+            "message": answer,
+            "answer": answer,
+            "data": data
+        })
+
+    if intent == "reste_a_payer":
+        total_reste = paiements_qs.aggregate(total=Sum("resteapayer"))["total"] or Decimal("0")
+
+        data = {
+            "patient": patient.noms,
+            "reste_total": float(total_reste),
+        }
+
+        answer = f"Le reste à payer pour {patient.noms} est de {total_reste}."
+
+        return JsonResponse({
+            "success": True,
+            "intent": intent,
+            "message": answer,
+            "answer": answer,
+            "data": data
+        })
+
+    if intent == "examens_patient":
+        total_examens = examens_qs.count()
+        en_attente = examens_qs.filter(statut="ENATTENTE").count()
+        termines = examens_qs.filter(statut="TERMINE").count()
+
+        data = {
+            "patient": patient.noms,
+            "total_examens": total_examens,
+            "examens_en_attente": en_attente,
+            "examens_termines": termines,
+        }
+
+        answer = (
+            f"Le patient {patient.noms} a {total_examens} examens, "
+            f"dont {en_attente} en attente et {termines} terminés."
+        )
+
+        return JsonResponse({
+            "success": True,
+            "intent": intent,
+            "message": answer,
+            "answer": answer,
+            "data": data
+        })
+
+    if intent == "historique_complet":
+        total_consultations = consultations_qs.count()
+        total_paiements = paiements_qs.count()
+        total_examens = examens_qs.count()
+        total_sessions = sessions_qs.count()
+
+        total_usd = paiements_qs.filter(devise="USD").aggregate(total=Sum("montantverse"))["total"] or Decimal("0")
+        total_cdf = paiements_qs.filter(devise="CDF").aggregate(total=Sum("montantverse"))["total"] or Decimal("0")
+        total_reste = paiements_qs.aggregate(total=Sum("resteapayer"))["total"] or Decimal("0")
+
+        data = {
+            "patient": patient.noms,
+            "code_patient": patient.codepatient,
+            "consultations": total_consultations,
+            "paiements": total_paiements,
+            "examens": total_examens,
+            "sessions": total_sessions,
+            "total_usd": float(total_usd),
+            "total_cdf": float(total_cdf),
+            "reste_total": float(total_reste),
+        }
+
+        answer = (
+            f"Résumé de {patient.noms} : {total_consultations} consultations, "
+            f"{total_paiements} paiements, {total_examens} examens et {total_sessions} sessions de soins."
+        )
+
+        return JsonResponse({
+            "success": True,
+            "intent": intent,
+            "message": answer,
+            "answer": answer,
+            "data": data
+        })
+
+    return JsonResponse({
+        "success": False,
+        "intent": "unknown",
+        "message": "Question non prise en charge."
+    }, status=200)

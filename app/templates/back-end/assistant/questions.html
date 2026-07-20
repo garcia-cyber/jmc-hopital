@@ -1,0 +1,357 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Assistant IA | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f8fafc;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .page-card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #eff6ff, #ffffff);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .page-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
+            color: var(--primary);
+        }
+
+        .page-subtitle {
+            margin: 0.5rem 0 0;
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        .content-wrap {
+            padding: 1.5rem 2rem 2rem;
+        }
+
+        .chat-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .form-label {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 0.8rem 0.95rem;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+        }
+
+        .btn-send {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .btn-send:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+            padding: 0.8rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: var(--gray-200);
+        }
+
+        .response-box {
+            margin-top: 1.5rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .response-header {
+            background: #f8fafc;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.9rem 1rem;
+            font-weight: 700;
+            color: var(--gray-700);
+        }
+
+        .response-body {
+            padding: 1rem;
+            min-height: 110px;
+            color: var(--gray-700);
+            white-space: pre-wrap;
+        }
+
+        .response-meta {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--gray-200);
+            background: #fcfcfd;
+            color: var(--gray-600);
+            font-size: 0.88rem;
+        }
+
+        .suggestions {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .suggestion-btn {
+            border: 1px solid var(--gray-200);
+            background: white;
+            color: var(--gray-700);
+            border-radius: 999px;
+            padding: 0.5rem 0.9rem;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+
+        .suggestion-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(59,130,246,0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .page-header, .content-wrap {
+                padding: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-card">
+                    <div class="page-header">
+                        <h1 class="page-title">
+                            <i class="fa fa-robot"></i>
+                            Assistant IA
+                        </h1>
+                        <p class="page-subtitle">
+                            Pose une question sur un patient, les paiements, les consultations ou l’historique administratif.
+                        </p>
+                    </div>
+
+                    <div class="content-wrap">
+                        <form id="assistant-form" class="chat-form">
+                            {% csrf_token %}
+
+                            <div>
+                                <label class="form-label">Patient (optionnel)</label>
+                                <select id="patient_id" class="form-select">
+                                    <option value="">Choisir un patient si la question le concerne</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">
+                                        {{ patient.noms }} - {{ patient.codepatient }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Votre question</label>
+                                <textarea id="question" class="form-control" rows="4"
+                                          placeholder="Ex: Combien de fois ce patient a été consulté ?"></textarea>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn-send">
+                                    <i class="fa fa-paper-plane"></i> Envoyer
+                                </button>
+                                <button type="button" id="reset-btn" class="btn-reset">
+                                    <i class="fa fa-undo"></i> Réinitialiser
+                                </button>
+                            </div>
+
+                            <div class="loading" id="loading-box">
+                                <div class="spinner"></div>
+                                <span>Analyse de la question...</span>
+                            </div>
+                        </form>
+
+                        <div class="suggestions">
+                            <button type="button" class="suggestion-btn" data-question="Combien de fois ce patient a été consulté ?">Consultations</button>
+                            <button type="button" class="suggestion-btn" data-question="Quel est le total payé par ce patient ?">Total payé</button>
+                            <button type="button" class="suggestion-btn" data-question="Quel est le reste à payer ?">Reste à payer</button>
+                            <button type="button" class="suggestion-btn" data-question="Montre l'historique complet du patient.">Historique complet</button>
+                        </div>
+
+                        <div class="response-box mt-4">
+                            <div class="response-header">
+                                Réponse
+                            </div>
+                            <div class="response-body" id="response-box">
+                                La réponse de l’assistant apparaîtra ici.
+                            </div>
+                            <div class="response-meta" id="response-meta" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        const form = document.getElementById("assistant-form");
+        const questionInput = document.getElementById("question");
+        const patientSelect = document.getElementById("patient_id");
+        const responseBox = document.getElementById("response-box");
+        const responseMeta = document.getElementById("response-meta");
+        const loadingBox = document.getElementById("loading-box");
+        const resetBtn = document.getElementById("reset-btn");
+
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        form.addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const question = questionInput.value.trim();
+            const patient_id = patientSelect.value;
+
+            if (!question) {
+                responseBox.innerHTML = "Veuillez écrire une question.";
+                responseMeta.style.display = "none";
+                return;
+            }
+
+            loadingBox.style.display = "flex";
+            responseBox.innerHTML = "";
+            responseMeta.style.display = "none";
+
+            try {
+                const res = await fetch("{% url 'assistant_questions_view' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": getCSRFToken()
+                    },
+                    body: new URLSearchParams({
+                        question: question,
+                        patient_id: patient_id
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    responseBox.innerHTML = data.answer || "Réponse reçue.";
+                    responseMeta.style.display = "block";
+                    responseMeta.innerHTML = `
+                        <strong>Intention :</strong> ${data.intent || "unknown"}<br>
+                        <strong>Statut :</strong> Réponse générée avec succès
+                    `;
+                } else {
+                    responseBox.innerHTML = data.message || "Une erreur est survenue.";
+                    responseMeta.style.display = "block";
+                    responseMeta.innerHTML = `<strong>Statut :</strong> Échec`;
+                }
+            } catch (error) {
+                responseBox.innerHTML = "Erreur de connexion au serveur.";
+                responseMeta.style.display = "block";
+                responseMeta.innerHTML = `<strong>Statut :</strong> Erreur réseau`;
+            } finally {
+                loadingBox.style.display = "none";
+            }
+        });
+
+        resetBtn.addEventListener("click", function() {
+            questionInput.value = "";
+            patientSelect.value = "";
+            responseBox.innerHTML = "La réponse de l’assistant apparaîtra ici.";
+            responseMeta.style.display = "none";
+        });
+
+        document.querySelectorAll(".suggestion-btn").forEach(btn => {
+            btn.addEventListener("click", function() {
+                questionInput.value = this.dataset.question;
+                questionInput.focus();
+            });
+        });
+    </script>
+</body>
+</html>

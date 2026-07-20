@@ -291,4 +291,11 @@ urlpatterns =[
     path("rapports/creer/", views.creer_rapport_journalier, name="creer_rapport_journalier"),
     path("rapports/", views.liste_rapports_journaliers, name="liste_rapports_journaliers"),
 
+    # =================================================
+    # PAIEMENT ADMIN
+    #
+    path('global/paiements/list/', views.admin_paiements_list, name='admin_global_paiements_list'),
+    path('global/paiement/<int:paiement_id>/delete/', views.admin_paiement_delete, name='admin_global_paiement_delete'),
+    path('global/paiement/<int:paiement_id>/detail/', views.admin_paiement_detail, name='admin_global_paiement_detail'),
+
  ]

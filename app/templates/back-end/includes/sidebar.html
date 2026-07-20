@@ -94,6 +94,14 @@
                         </ul>
                     </li>
 
+                    <li class="sidebar-item">
+    <a href="{% url 'admin_global_paiements_list' %}" 
+       class="sidebar-link {% if 'paiement' in request.resolver_match.url_name or 'payments' in request.resolver_match.url_name %}active{% endif %}"
+       title="Voir tous les paiements">
+        <i class="fa fa-receipt"></i>
+        <span>Gestion des Paiements</span>
+    </a>
+</li>
 
                     <li><a href="{% url 'liste_consultations' %}"><i class="la la-history"></i> <span>Historique Consultations</span></a></li>
 

@@ -1,0 +1,349 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Détail Paiement | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body { background: #f8fafc; }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i { color: var(--primary); }
+
+        .breadcrumb { margin: 0; font-size: 0.875rem; }
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--gray-600); }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body { padding: 1.5rem; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-item {
+            padding: 1rem;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover { background: var(--primary-dark); color: white; }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover { background: #dc2626; color: white; }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            display: inline-block;
+        }
+
+        .badge-primary { background: #dbeafe; color: var(--primary); }
+        .badge-success { background: #d1fae5; color: var(--success); }
+        .badge-warning { background: #fef3c7; color: var(--warning); }
+        .badge-danger { background: #fee2e2; color: var(--danger); }
+
+        .currency-usd { color: var(--primary); font-weight: 700; }
+        .currency-cdf { color: var(--warning); font-weight: 700; }
+
+        .table { margin: 0; }
+        .table thead th {
+            background: #f8fafc;
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+        .table tbody td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+        }
+        .table tbody tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-receipt"></i>
+                                Détail du Paiement
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'admin_global_paiements_list' %}">Paiements</a></li>
+                                <li class="breadcrumb-item active">Détail #{{ paiement.id }}</li>
+                            </ul>
+                        </div>
+                        <a href="{% url 'admin_global_paiements_list' %}" class="btn-action btn-view">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Info Paiement -->
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-file-invoice-dollar text-primary"></i>
+                            Informations du Paiement
+                        </h5>
+                        <span class="badge {% if paiement.devise == 'CDF' %}badge-warning{% else %}badge-primary{% endif %}">
+                            {{ paiement.devise }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Service</div>
+                                <div class="info-value">{{ paiement.service }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Date</div>
+                                <div class="info-value">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Montant Versé</div>
+                                <div class="info-value {% if paiement.devise == 'CDF' %}currency-cdf{% else %}currency-usd{% endif %}">
+                                    {{ paiement.montant_verse }} {% if paiement.devise == 'CDF' %}FC{% else %}USD{% endif %}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Réduction</div>
+                                <div class="info-value">{{ paiement.montant_reduction }} {% if paiement.devise == 'CDF' %}FC{% else %}USD{% endif %}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Reste à Payer</div>
+                                <div class="info-value {% if paiement.reste_a_payer > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ paiement.reste_a_payer }} {% if paiement.devise == 'CDF' %}FC{% else %}USD{% endif %}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Hôpital</div>
+                                <div class="info-value">{{ paiement.hopital.nomH|default:"-" }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Caissier</div>
+                                <div class="info-value"><i class="fa fa-user-circle"></i> {{ paiement.caissier.username }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Patient / Client -->
+                {% if paiement.patient %}
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-user text-primary"></i>
+                            Informations Patient
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Nom Complet</div>
+                                <div class="info-value">{{ paiement.patient.nom }} {{ paiement.patient.prenom }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Matricule</div>
+                                <div class="info-value">{{ paiement.patient.matricule|default:"-" }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Téléphone</div>
+                                <div class="info-value">{{ paiement.patient.telephone|default:"-" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Facture -->
+                {% if facture %}
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-file-invoice text-success"></i>
+                            Facture Associée
+                        </h5>
+                        <span class="badge badge-success">{{ facture.numero_facture }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Autres Paiements -->
+                {% if autres_paiements.exists %}
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-list text-primary"></i>
+                            Autres Paiements Associés
+                        </h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Service</th>
+                                    <th>Montant</th>
+                                    <th>Devise</th>
+                                    <th>Caissier</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in autres_paiements %}
+                                <tr>
+                                    <td>{{ p.date_paiement|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ p.service }}</td>
+                                    <td>{{ p.montant_verse }}</td>
+                                    <td>
+                                        <span class="badge {% if p.devise == 'CDF' %}badge-warning{% else %}badge-primary{% endif %}">
+                                            {{ p.devise }}
+                                        </span>
+                                    </td>
+                                    <td>{{ p.caissier.username }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-end gap-2">
+                    {% if can_delete %}
+                    <a href="{% url 'admin_global_paiement_delete' paiement.id %}" 
+                       class="btn-action btn-danger"
+                       onclick="return confirm('⚠️ Confirmer la suppression de ce paiement ?\n\nCette action est irréversible.')">
+                        <i class="fa fa-trash"></i> Supprimer
+                    </a>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -7218,3 +7218,373 @@ def admin_historique_produit(request, produit_id):
     }
     
     return render(request, 'back-end/pharmacie/pharmacie_historique_produit.html', context)
+
+
+#
+# =======================================================================================================
+# PAIEMENT VUE PAR ADMIN
+# =======================================================================================================
+@login_required
+@staff_member_required
+def admin_paiements_list(request):
+    """Liste des paiements avec filtres par patient et prestation"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
+        return redirect('dashboard')
+    
+    # Filtres
+    hopital_id = request.GET.get('hopital')
+    patient_id = request.GET.get('patient')
+    prestation_id = request.GET.get('prestation')
+    service = request.GET.get('service')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    devise = request.GET.get('devise')
+    
+    # Gestion du filtre par hôpital selon le rôle
+    hopital_selectionne = None
+    est_admin_global = False
+    
+    # Vérifier si admin global
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        est_admin_global = True
+        # Admin peut voir tous les hôpitaux ou filtrer
+        if hopital_id:
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        # Si pas de filtre, on ne filtre pas par hôpital (tous)
+    else:
+        # Caissier, comptable ne voient que leur hôpital
+        hopital_selectionne = hopital_user
+    
+    # Requête de base
+    if hopital_selectionne:
+        paiements = Paiement.objects.filter(hopital=hopital_selectionne)
+    else:
+        # Admin global voit TOUS les paiements
+        paiements = Paiement.objects.all()
+    
+    # Filtres
+    if patient_id:
+        paiements = paiements.filter(patient_id=patient_id)
+    
+    if prestation_id:
+        # Filtrer par prestation spécifique (consultation, session soins, etc.)
+        from .models import Consultation, SessionSoins, DemandExamenExterne
+        if prestation_id == 'consultation':
+            consultations = Consultation.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else Consultation.objects.all()
+            paiements = paiements.filter(consultation__in=consultations)
+        elif prestation_id == 'session':
+            sessions = SessionSoins.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else SessionSoins.objects.all()
+            paiements = paiements.filter(session__in=sessions)
+        elif prestation_id == 'examen_externe':
+            examens = DemandExamenExterne.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else DemandExamenExterne.objects.all()
+            paiements = paiements.filter(demande_examen_externe__in=examens)
+    
+    if service:
+        paiements = paiements.filter(service=service)
+    
+    if date_debut:
+        paiements = paiements.filter(date_paiement__date__gte=date_debut)
+    
+    if date_fin:
+        paiements = paiements.filter(date_paiement__date__lte=date_fin)
+    
+    if devise:
+        paiements = paiements.filter(devise=devise)
+    
+    # Tri par date décroissante
+    paiements = paiements.select_related(
+        'patient', 
+        'caissier', 
+        'hopital',
+        'consultation',
+        'session',
+        'hospitalisation',
+        'dossier_maternite',
+        'demande_examen_externe'
+    ).order_by('-date_paiement')
+    
+    # Stats
+    if hopital_selectionne:
+        total_usd = paiements.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+        total_cdf = paiements.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+    else:
+        total_usd = Paiement.objects.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+        total_cdf = Paiement.objects.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+    
+    # Liste des hôpitaux pour le filtre (admin global voit TOUS)
+    if est_admin_global:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    
+    context = {
+        'hopitaux': hopitaux,
+        'hopital_selectionne': hopital_selectionne,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+        'paiements': paiements,
+        'total_usd': round(total_usd, 2),
+        'total_cdf': round(total_cdf, 2),
+        'patient_id': patient_id,
+        'prestation_id': prestation_id,
+        'service': service,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'devise': devise,
+        'SERVICES': Paiement.SERVICES,
+        'est_admin_global': est_admin_global,
+    }
+    
+    return render(request, 'back-end/paiements/paiements_list.html', context)
+
+#
+# ===============================================================================================================
+# SUPPRESSION DU PAIEMENT PAR L'ADMIN
+# ===============================================================================================================
+@login_required
+@staff_member_required
+def admin_paiement_delete(request, paiement_id):
+    """Supprimer un paiement - Admin global uniquement"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('dashboard')
+    
+    # Vérifier si admin ou caissier principal
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur', 'admin_caisse']:
+        messages.error(request, "Vous n'avez pas la permission de supprimer des paiements.")
+        return redirect('admin_global_paiements_list')
+    
+    # Récupérer le paiement
+    try:
+        paiement = Paiement.objects.get(pk=paiement_id)
+    except Paiement.DoesNotExist:
+        messages.error(request, "Paiement non trouvé.")
+        return redirect('admin_global_paiements_list')
+    
+    # Sauvegarder les infos avant suppression
+    service = paiement.service
+    montant = paiement.montant_verse
+    devise = paiement.devise
+    hopital_paiement = paiement.hopital
+    
+    # --- ANNULER LES EFFETS DU PAIEMENT ---
+    
+    # Si Fiche patient
+    if service == 'FICHE' and paiement.patient:
+        paiement.patient.fiche_payee = False
+        paiement.patient.save()
+    
+    # Si Consultation
+    elif service == 'CONSULTATION' and paiement.consultation:
+        paiement.consultation.consultation_payee = False
+        paiement.consultation.save()
+    
+    # Si Carte de fidélité
+    elif service == 'CARTE_FIDELITE' and paiement.patient:
+        paiement.patient.a_carte_fidelite = False
+        paiement.patient.save()
+    
+    # Si Hospitalisation
+    elif paiement.hospitalisation:
+        total_due = Decimal(str(paiement.hospitalisation.cout_total))
+        autres_paiements = paiement.hospitalisation.paiements.exclude(pk=paiement_id)
+        total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+        total_deja_reduit = autres_paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
+        nouveau_reste = max(0, total_due - total_deja_reduit - total_deja_verse)
+        paiement.hospitalisation.reste_a_payer = nouveau_reste
+        paiement.hospitalisation.est_payee = (nouveau_reste <= 0)
+        paiement.hospitalisation.save()
+    
+    # Si Session Soins
+    elif paiement.session:
+        autres_paiements = paiement.session.paiements.exclude(pk=paiement_id)
+        total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+        total_deja_reduit = autres_paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
+        nouveau_reste = max(0, paiement.session.total_a_payer - total_deja_reduit - total_deja_verse)
+        paiement.session.reste_a_payer = nouveau_reste
+        paiement.session.est_payee = (nouveau_reste <= 0)
+        paiement.session.save()
+    
+    # Si Examen Externe
+    elif paiement.demande_examen_externe:
+        total_due = paiement.demande_examen_externe.total_a_payer
+        autres_paiements = paiement.demande_examen_externe.paiements.exclude(pk=paiement_id)
+        total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+        nouveau_reste = max(0, total_due - total_deja_verse)
+        if nouveau_reste > 0:
+            paiement.demande_examen_externe.statut = 'EN_ATTENTE'
+        paiement.demande_examen_externe.save()
+    
+    # Si Maternité
+    elif service == 'MATERNITE' and paiement.dossier_maternite:
+        autres_paiements = paiement.dossier_maternite.paiements.exclude(pk=paiement_id)
+        if autres_paiements.exists():
+            total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+            if total_deja_verse < paiement.dossier_maternite.cout_total:
+                paiement.dossier_maternite.est_paye = False
+        else:
+            paiement.dossier_maternite.est_paye = False
+        paiement.dossier_maternite.save()
+    
+    # Si Entreprise
+    elif service == 'ENTREPRISE' and paiement.entreprise:
+        montant_usd = montant
+        if devise == 'CDF':
+            from .models import ConfigurationHopital
+            taux = ConfigurationHopital.get_taux()
+            montant_usd = montant / taux
+        total_a_rembourser = montant_usd + paiement.montant_reduction
+        paiement.entreprise.dette_mensuelle = paiement.entreprise.dette_mensuelle + total_a_rembourser
+        paiement.entreprise.save()
+    
+    # Si Bloc Opératoire
+    elif paiement.bloc_op:
+        autres_paiements = paiement.bloc_op.paiements.exclude(pk=paiement_id)
+        if autres_paiements.exists():
+            total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+            if total_deja_verse < paiement.bloc_op.cout_total:
+                paiement.bloc_op.est_payee = False
+        else:
+            paiement.bloc_op.est_payee = False
+        paiement.bloc_op.save()
+    
+    # Si Compte Rendu (Maternité)
+    elif paiement.compte_rendu:
+        autres_paiements = Paiement.objects.filter(compte_rendu=paiement.compte_rendu).exclude(pk=paiement_id)
+        if autres_paiements.exists():
+            total_deja_verse = autres_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
+            if total_deja_verse < paiement.compte_rendu.cout_total:
+                paiement.compte_rendu.est_paye = False
+        else:
+            paiement.compte_rendu.est_paye = False
+        paiement.compte_rendu.save()
+    
+    # Supprimer la facture associée
+    try:
+        facture = Facture.objects.get(paiement=paiement)
+        facture.delete()
+    except Facture.DoesNotExist:
+        pass
+    
+    # Enregistrer le journal de suppression
+    try:
+        from .models import JournalAudit
+        JournalAudit.objects.create(
+            user=request.user,
+            action='SUPPRESSION_PAIEMENT',
+            details=f"Paiement supprimé: {service} - {montant} {devise} - Hôpital: {hopital_paiement.nomH if hopital_paiement else 'N/A'}",
+            hopital=hopital_paiement
+        )
+    except:
+        pass
+    
+    # --- SUPPRIMER LE PAIEMENT ---
+    paiement.delete()
+    
+    messages.success(
+        request, 
+        f"Paiement supprimé avec succès ! {service} - {montant} {devise}"
+    )
+    
+    return redirect('admin_global_paiements_list')
+#
+# =======================================================================================================
+# DETAIL PAIEMENT ADMIN
+# =======================================================================================================
+@login_required
+@staff_member_required
+def admin_paiement_detail(request, paiement_id):
+    """Détail d'un paiement spécifique"""
+    
+    # Récupération du rôle de l'utilisateur connecté
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    
+    hopital_user = role_obj.hopital if role_obj else None
+    fonction_key = role_obj.fonctionKey if role_obj else None
+    fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    
+    # Vérification des permissions
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('dashboard')
+    
+    # Vérifier si admin
+    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur', 'admin_caisse', 'comptable']:
+        messages.error(request, "Vous n'avez pas la permission de voir ce paiement.")
+        return redirect('admin_payments_list')
+    
+    # Récupérer le paiement
+    try:
+        paiement = Paiement.objects.select_related(
+            'patient',
+            'caissier',
+            'hopital',
+            'consultation',
+            'session',
+            'hospitalisation',
+            'dossier_maternite',
+            'demande_examen_externe',
+            'bloc_op',
+            'compte_rendu',
+            'entreprise',
+            'clientEx'
+        ).get(pk=paiement_id)
+    except Paiement.DoesNotExist:
+        messages.error(request, "Paiement non trouvé.")
+        return redirect('admin_payments_list')
+    
+    # Récupérer la facture associée
+    facture = None
+    try:
+        facture = Facture.objects.get(paiement=paiement)
+    except Facture.DoesNotExist:
+        pass
+    
+    # Récupérer les autres paiements liés au même service
+    autres_paiements = Paiement.objects.none()
+    
+    if paiement.patient:
+        autres_paiements = Paiement.objects.filter(patient=paiement.patient).exclude(pk=paiement_id)
+    elif paiement.hospitalisation:
+        autres_paiements = Paiement.objects.filter(hospitalisation=paiement.hospitalisation).exclude(pk=paiement_id)
+    elif paiement.session:
+        autres_paiements = Paiement.objects.filter(session=paiement.session).exclude(pk=paiement_id)
+    elif paiement.demande_examen_externe:
+        autres_paiements = Paiement.objects.filter(demande_examen_externe=paiement.demande_examen_externe).exclude(pk=paiement_id)
+    elif paiement.dossier_maternite:
+        autres_paiements = Paiement.objects.filter(dossier_maternite=paiement.dossier_maternite).exclude(pk=paiement_id)
+    
+    context = {
+        'paiement': paiement,
+        'facture': facture,
+        'autres_paiements': autres_paiements,
+        'fonctionKey': fonction_key_name,
+        'role_utilisateur': fonction_key,
+    }
+    
+    return render(request, 'back-end/paiements/paiement_detail.html', context)

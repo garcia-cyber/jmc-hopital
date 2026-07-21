@@ -682,3 +682,25 @@ class RapportJournalierPersonnelForm(forms.ModelForm):
             "nombre_personnel_absent": forms.NumberInput(attrs={"class": "form-control"}),
             "incidents_signales": forms.NumberInput(attrs={"class": "form-control"}),
         }
+
+
+
+class TypeChambreForm(forms.ModelForm):
+
+  class Meta:
+    model = TypeChambre
+    fields = ['libelle', 'prix_nuitée', 'hopital']
+
+
+class ChambreForm(forms.ModelForm):
+
+  class Meta:
+    model = Chambre
+    fields = ['nom', 'type_chambre', 'est_active', 'hopital']
+
+
+class LitForm(forms.ModelForm):
+
+  class Meta:
+    model = Lit
+    fields = ['chambre', 'nom_lit', 'est_occupe', 'est_actif', 'hopital']

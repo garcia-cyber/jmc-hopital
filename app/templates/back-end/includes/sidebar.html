@@ -37,14 +37,18 @@
                         <a href="#"><i class="la la-user-injured"></i> <span> Patients </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'enregistrement_patient' %}">Tous les patients</a></li>
+                            <li><a  href="{% url 'liste_patients_orientations' %}">Patients & Orientations</a></li>
                         </ul>
                     </li>
-                    <li><a href="{% url 'dashboard_finance' %}"><i class="fa fa-wallet"></i> <span>Journal de Caisse</span></a></li>
+                    
                     <li class="submenu">
                         <a href="#"><i class="la la-wallet"></i> <span> Gestion Financière </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'dashboard_finance_depense' %}">Journal de Caisse</a></li>
                             <li><a href="{% url 'creer_depense' %}">Saisir une Dépense</a></li>
+                            {% if fonctionKey == 'admin' %}
+                            <li><a href="{% url 'dashboard_finance' %}">Filtration Caisse</a></li>
+                            {%endif%}
                         </ul>
                     </li>
                     <li class="submenu">
@@ -59,18 +63,19 @@
                         <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
                         <ul>
                             <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
-                            <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
-                            <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
-                            <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
+                           
+                            <li><a href="{% url 'type_chambre_list' %}">Liste Type Chambre</a></li>
+                            
+                            <li><a href="{% url 'chambre_list' %}">Liste des Chambres</a></li>
+                            
+                            
+                            <li><a href="{% url 'lit_list' %}">lite des lists</a></li>
                         </ul>
                     </li>
 
-                    <li class="nav-item">
-    <a class="nav-link" href="{% url 'liste_patients_orientations' %}">
-        <i class="fa fa-user-injured"></i>
-        <span>Patients & Orientations</span>
-    </a>
-</li>
+                  
+
+                    
 
 
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
@@ -194,9 +199,14 @@
                         <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
                         <ul>
                             <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
+                            
                             <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
+                           
                             <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
+                            
+                            
                             <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
+                            
                         </ul>
                     </li>
 

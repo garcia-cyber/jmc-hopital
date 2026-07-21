@@ -8,167 +8,325 @@
     {% include 'back-end/includes/css.html' %}
     <style>
         :root {
-            --primary: #3b82f6;
+            --primary: #2563eb;
+            --primary-2: #0f172a;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #1e293b;
-            --gray-100: #f8fafc;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-600: #475569;
-            --gray-700: #334155;
-            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --soft-blue: #eff6ff;
+            --soft-green: #ecfdf5;
+            --soft-yellow: #fffbeb;
         }
 
         body {
-            background: #f8fafc;
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 28%),
+                radial-gradient(circle at top right, rgba(16,185,129,0.08), transparent 24%),
+                var(--bg);
+            color: var(--text);
         }
 
-        .page-card {
-            background: white;
-            border-radius: 14px;
-            box-shadow: var(--shadow);
+        .page-shell { padding: 1.25rem; }
+
+        .hero-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid rgba(37, 99, 235, 0.08);
+            border-radius: 22px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
             overflow: hidden;
         }
 
-        .page-header {
-            background: linear-gradient(135deg, #eff6ff, #ffffff);
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--gray-200);
+        .hero-top {
+            padding: 1.5rem 1.6rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(16,185,129,0.04));
         }
 
-        .page-title {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--dark);
-            margin: 0;
+        .hero-title {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.9rem;
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary-2);
         }
 
-        .page-title i {
+        .hero-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: var(--soft-blue);
             color: var(--primary);
+            box-shadow: inset 0 0 0 1px rgba(37,99,235,0.10);
         }
 
-        .page-subtitle {
-            margin: 0.5rem 0 0;
-            color: var(--gray-600);
+        .hero-subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--muted);
             font-size: 0.95rem;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+        .hero-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
         }
 
-        .stat-card {
-            background: white;
+        .action-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
             border-radius: 12px;
-            padding: 1.25rem;
-            box-shadow: var(--shadow);
-            border-left: 4px solid;
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
         }
 
-        .stat-card.primary { border-left-color: var(--primary); }
-        .stat-card.success { border-left-color: var(--success); }
-        .stat-card.warning { border-left-color: var(--warning); }
+        .action-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
 
-        .stat-title {
-            font-size: 0.85rem;
-            color: var(--gray-600);
-            font-weight: 700;
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .metrics { padding: 1.25rem 1.6rem 0.2rem; }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+        }
+
+        .metric-badge {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.1rem;
+        }
+
+        .metric-badge.blue { background: var(--soft-blue); color: var(--primary); }
+        .metric-badge.green { background: var(--soft-green); color: var(--success); }
+        .metric-badge.yellow { background: var(--soft-yellow); color: var(--warning); }
+
+        .metric-label {
+            font-size: 0.82rem;
+            color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.04em;
+            font-weight: 700;
         }
 
-        .stat-value {
-            font-size: 1.8rem;
+        .metric-value {
+            font-size: 1.55rem;
+            line-height: 1.1;
             font-weight: 800;
-            color: var(--dark);
-            margin-top: 0.35rem;
+            margin-top: 0.2rem;
         }
+
+        .content-card {
+            margin: 1.25rem 1.6rem 1.6rem;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .content-head {
+            padding: 1rem 1rem 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--line);
+            background: #fcfdff;
+        }
+
+        .content-head h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--primary-2);
+        }
+
+        .content-head small { color: var(--muted); }
+
+        .panel-box {
+            padding: 1rem;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(180deg, #ffffff, #fbfdff);
+        }
+
+        .filter-form .form-control,
+        .filter-form .form-select {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0.75rem 0.95rem;
+            box-shadow: none;
+        }
+
+        .filter-form .form-control:focus,
+        .filter-form .form-select:focus {
+            border-color: rgba(37,99,235,0.45);
+            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.08);
+        }
+
+        .btn-filter,
+        .btn-reset {
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+        }
+
+        .btn-filter {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: #fff;
+        }
+
+        .btn-reset {
+            background: #fff;
+            border: 1px solid var(--line);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .table-wrap { padding: 0.25rem; }
 
         .table thead th {
             background: #f8fafc;
-            color: var(--gray-600);
-            font-weight: 700;
+            color: #334155;
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            padding: 1rem 1rem;
-            border-bottom: 2px solid var(--gray-200);
+            font-weight: 800;
+            padding: 0.95rem 0.95rem;
+            border-bottom: 1px solid var(--line);
+            white-space: nowrap;
         }
 
         .table tbody td {
-            padding: 1rem 1rem;
+            padding: 0.95rem 0.95rem;
             vertical-align: middle;
-            color: var(--gray-700);
+            color: var(--text);
+            border-top: 1px solid #f1f5f9;
         }
+
+        .table tbody tr:hover { background: #fbfdff; }
 
         .badge-custom {
             padding: 0.35rem 0.75rem;
             border-radius: 999px;
             font-size: 0.8rem;
-            font-weight: 700;
-            display: inline-block;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
         }
 
         .badge-primary { background: #dbeafe; color: var(--primary); }
         .badge-success { background: #d1fae5; color: var(--success); }
         .badge-warning { background: #fef3c7; color: var(--warning); }
-        .badge-danger { background: #fee2e2; color: var(--danger); }
-        .badge-light { background: var(--gray-100); color: var(--gray-700); }
+        .badge-light { background: #f8fafc; color: #334155; }
 
-        .panel-box {
-            background: #fff;
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+        .patient-name {
+            font-weight: 800;
+            color: var(--primary-2);
         }
 
-        .filter-form .form-control,
-        .filter-form .form-select {
-            border: 2px solid var(--gray-200);
+        .patient-meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 0.2rem;
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+        .empty-box i {
+            font-size: 2.8rem;
+            margin-bottom: 0.8rem;
+            opacity: 0.45;
+        }
+
+        .note-box {
+            margin: 0 1.6rem 1.6rem;
+            border: 1px solid rgba(37,99,235,0.12);
+            background: linear-gradient(135deg, #eff6ff, #f8fffb);
+            border-radius: 16px;
+            padding: 1rem 1.1rem;
+            color: #334155;
+        }
+
+        .pagination-wrap {
+            display: flex;
+            justify-content: flex-end;
+            padding: 1rem 1rem 1.2rem;
+        }
+
+        .pagination {
+            margin: 0;
+        }
+
+        .page-link {
             border-radius: 10px;
-            padding: 0.7rem 0.9rem;
+            margin: 0 0.15rem;
+            border: 1px solid var(--line);
+            color: var(--primary);
         }
 
-        .btn-filter {
+        .page-item.active .page-link {
             background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.7rem 1.2rem;
-            border-radius: 10px;
-            font-weight: 700;
-        }
-
-        .btn-filter:hover {
-            background: #2563eb;
-        }
-
-        .btn-reset {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            border: 2px solid var(--gray-200);
-            padding: 0.7rem 1.2rem;
-            border-radius: 10px;
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .btn-reset:hover {
-            background: var(--gray-200);
+            border-color: var(--primary);
         }
 
         @media (max-width: 768px) {
-            .page-header {
-                padding: 1.25rem;
+            .hero-top,
+            .content-head {
+                padding: 1rem;
             }
+
+            .metrics,
+            .content-card,
+            .note-box {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+
+            .page-shell { padding: 0.75rem; }
         }
     </style>
 </head>
@@ -178,31 +336,64 @@
     {% include 'back-end/includes/sidebar.html' %}
 
     <div class="page-wrapper">
-        <div class="content container-fluid">
-            <div class="page-card mb-4">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fa fa-user-injured"></i>
-                        Liste des Patients & Orientations
-                    </h1>
-                    <p class="page-subtitle">
-                        Vue générale de tous les patients et de leurs dernières orientations.
-                    </p>
+        <div class="content container-fluid page-shell">
+            <div class="hero-card">
+                <div class="hero-top">
+                    <div>
+                        <h1 class="hero-title">
+                            <span class="hero-icon"><i class="fa fa-user-injured"></i></span>
+                            Liste des Patients & Orientations
+                        </h1>
+                        <p class="hero-subtitle">
+                            {% if request.user.is_superuser %}
+                                Vue générale de tous les patients orientés.
+                            {% else %}
+                                Vue des patients orientés de votre hôpital.
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="hero-actions">
+                        <a href="{% url 'liste_patients_orientations' %}" class="action-btn">
+                            <i class="fa fa-sync"></i> Actualiser
+                        </a>
+                        <a href="#" class="action-btn primary">
+                            <i class="fa fa-download"></i> Exporter
+                        </a>
+                    </div>
                 </div>
 
-                <div class="p-4">
-                    <div class="stats-grid">
-                        <div class="stat-card primary">
-                            <div class="stat-title">Total Patients</div>
-                            <div class="stat-value">{{ patients.count }}</div>
+                <div class="metrics">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-badge blue"><i class="fa fa-users"></i></div>
+                            <div>
+                                <div class="metric-label">Total Patients</div>
+                                <div class="metric-value">{{ patients.count }}</div>
+                            </div>
                         </div>
-                        <div class="stat-card success">
-                            <div class="stat-title">Total Orientations</div>
-                            <div class="stat-value">{{ orientations.count }}</div>
+                        <div class="metric-card">
+                            <div class="metric-badge green"><i class="fa fa-route"></i></div>
+                            <div>
+                                <div class="metric-label">Total Orientations</div>
+                                <div class="metric-value">{{ orientations.count }}</div>
+                            </div>
                         </div>
-                        <div class="stat-card warning">
-                            <div class="stat-title">Patients Orientés</div>
-                            <div class="stat-value">{{ orientations|length }}</div>
+                        <div class="metric-card">
+                            <div class="metric-badge yellow"><i class="fa fa-check-circle"></i></div>
+                            <div>
+                                <div class="metric-label">Patients Orientés</div>
+                                <div class="metric-value">{{ page_obj.paginator.count }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="content-head">
+                        <div>
+                            <h5>Liste détaillée</h5>
+                            <small>Rechercher et filtrer rapidement les patients.</small>
                         </div>
                     </div>
 
@@ -211,20 +402,22 @@
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-4">
                                     <label class="form-label">Recherche patient</label>
-                                    <input type="text" name="q" class="form-control" placeholder="Nom, code patient...">
+                                    <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Nom, code patient...">
                                 </div>
+
+                                {% if request.user.is_superuser %}
                                 <div class="col-md-4">
                                     <label class="form-label">Filtrer par hôpital</label>
                                     <select name="hopital" class="form-select">
                                         <option value="">Tous les hôpitaux</option>
-                                        {% for p in patients %}
-                                            {% if p.hopital %}
-                                                <option value="{{ p.hopital.id }}">{{ p.hopital.nomH }}</option>
-                                            {% endif %}
+                                        {% for id, nom in hopitals %}
+                                            <option value="{{ id }}" {% if selected_hopital_id == id|stringformat:"s" %}selected{% endif %}>{{ nom }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <div class="col-md-4 d-flex gap-2">
+                                {% endif %}
+
+                                <div class="col-md-{% if request.user.is_superuser %}4{% else %}8{% endif %} d-flex gap-2">
                                     <button type="submit" class="btn btn-filter">
                                         <i class="fa fa-search"></i> Filtrer
                                     </button>
@@ -236,7 +429,7 @@
                         </form>
                     </div>
 
-                    <div class="table-responsive">
+                    <div class="table-wrap table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>
                                 <tr>
@@ -253,100 +446,80 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for patient in patients %}
-                                    {% with o=derniere_orientation_par_patient|default_if_none:'' %}
-                                    {% endwith %}
-                                    <tr>
-                                        <td><span class="badge-custom badge-light">{{ forloop.counter }}</span></td>
-                                        <td>
-                                            <strong>{{ patient.noms }}</strong>
-                                            <div class="text-muted small">
-                                                {% if patient.sexe == 'M' %}Masculin{% else %}Féminin{% endif %}
-                                                {% if patient.age %} • {{ patient.age }}{% endif %}
-                                            </div>
-                                        </td>
-                                        <td><span class="badge-custom badge-primary">{{ patient.codepatient }}</span></td>
-                                        <td>
-                                            {% if patient.service %}
-                                                <span class="badge-custom badge-success">{{ patient.service.nom }}</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if patient.hopital %}
-                                                <span class="badge-custom badge-light">{{ patient.hopital.nomH }}</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if derniere_orientation_par_patient.patient.id == patient.id %}
-                                                {{ derniere_orientation_par_patient.date_orientation|date:"d/m/Y H:i" }}
-                                            {% else %}
-                                                {% for o in orientations %}
-                                                    {% if o.consultation.triage.patient.id == patient.id %}
-                                                        {{ o.date_orientation|date:"d/m/Y H:i" }}
-                                                        {% break %}
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% endif %}
-                                            <span class="text-muted">-</span>
-                                        </td>
-                                        <td>
-                                            {% for o in orientations %}
-                                                {% if o.consultation.triage.patient.id == patient.id %}
-                                                    {{ o.getdestinationdisplay }}
-                                                    {% break %}
+                                {% for item in patients_data %}
+                                    {% with patient=item.patient orientation=item.orientation %}
+                                        <tr>
+                                            <td><span class="badge-custom badge-light">{{ forloop.counter }}</span></td>
+                                            <td>
+                                                <div class="patient-name">{{ patient.noms }}</div>
+                                                <div class="patient-meta">
+                                                    {% if patient.sexe == 'M' %}Masculin{% else %}Féminin{% endif %}
+                                                    {% if patient.age %} • {{ patient.age }}{% endif %}
+                                                </div>
+                                            </td>
+                                            <td><span class="badge-custom badge-primary">{{ patient.code_patient }}</span></td>
+                                            <td>
+                                                {% if patient.service %}
+                                                    <span class="badge-custom badge-success">{{ patient.service.nom }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
                                                 {% endif %}
-                                            {% empty %}
-                                                <span class="text-muted">-</span>
-                                            {% endfor %}
-                                        </td>
-                                        <td>
-                                            {% for o in orientations %}
-                                                {% if o.consultation.triage.patient.id == patient.id %}
-                                                    {% if o.medecin_orientateur %}
-                                                        {{ o.medecin_orientateur.username }}
-                                                    {% else %}
-                                                        -
-                                                    {% endif %}
-                                                    {% break %}
+                                            </td>
+                                            <td>
+                                                {% if patient.hopital %}
+                                                    <span class="badge-custom badge-light">{{ patient.hopital.nomH }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
                                                 {% endif %}
-                                            {% empty %}
-                                                <span class="text-muted">-</span>
-                                            {% endfor %}
-                                        </td>
-                                        <td>
-                                            {% for o in orientations %}
-                                                {% if o.consultation.triage.patient.id == patient.id %}
-                                                    {{ o.observation|default:"-"|truncatechars:35 }}
-                                                    {% break %}
+                                            </td>
+                                            <td>
+                                                {% if orientation %}
+                                                    {{ orientation.date_orientation|date:"d/m/Y H:i" }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
                                                 {% endif %}
-                                            {% empty %}
-                                                <span class="text-muted">-</span>
-                                            {% endfor %}
-                                        </td>
-                                        <td>
-                                            {% for o in orientations %}
-                                                {% if o.consultation.triage.patient.id == patient.id %}
-                                                    {% if o.est_admis %}
+                                            </td>
+                                            <td>
+                                                {% if orientation %}
+                                                    {{ orientation.get_destination_display }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if orientation and orientation.medecin_orientateur %}
+                                                    {{ orientation.medecin_orientateur.username }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if orientation %}
+                                                    {{ orientation.observation|default:"-"|truncatechars:35 }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if orientation %}
+                                                    {% if orientation.est_admis %}
                                                         <span class="badge-custom badge-success">Admis</span>
                                                     {% else %}
                                                         <span class="badge-custom badge-warning">En attente</span>
                                                     {% endif %}
-                                                    {% break %}
+                                                {% else %}
+                                                    <span class="badge-custom badge-light">Aucune</span>
                                                 {% endif %}
-                                            {% empty %}
-                                                <span class="badge-custom badge-light">Aucune</span>
-                                            {% endfor %}
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
+                                    {% endwith %}
                                 {% empty %}
                                     <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="fa fa-inbox fa-3x mb-3"></i>
-                                            <p class="mb-0">Aucun patient trouvé.</p>
+                                        <td colspan="10">
+                                            <div class="empty-box">
+                                                <i class="fa fa-inbox"></i>
+                                                <div>Aucun patient trouvé.</div>
+                                            </div>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -354,10 +527,46 @@
                         </table>
                     </div>
 
-                    <div class="mt-4 alert alert-info border-0 shadow-sm">
-                        <strong>Note :</strong>
-                        cette page affiche la liste générale des patients avec leur dernière orientation connue.
+                    <div class="pagination-wrap">
+                        <nav aria-label="Pagination patients">
+                            <ul class="pagination">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if selected_hopital_id %}&hopital={{ selected_hopital_id }}{% endif %}">«</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_hopital_id %}&hopital={{ selected_hopital_id }}{% endif %}">‹</a>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if selected_hopital_id %}&hopital={{ selected_hopital_id }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_hopital_id %}&hopital={{ selected_hopital_id }}{% endif %}">›</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if selected_hopital_id %}&hopital={{ selected_hopital_id }}{% endif %}">»</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
                     </div>
+                </div>
+
+                <div class="note-box">
+                    <strong>Note :</strong> cette page affiche la liste générale des patients avec leur dernière orientation connue.
+                    {% if not request.user.is_superuser and user_hopital %}
+                        Vous êtes limité à l’hôpital : <strong>{{ user_hopital.nomH }}</strong>.
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -7821,49 +7821,195 @@ def assistant_questions_view(request):
 # ======================================================================================================================
 @login_required
 def liste_patients_orientations_view(request):
-    patients = Patient.objects.select_related("hopital", "service").order_by("noms")
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital", "fonctionKey").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    user_hopital = role_obj.hopital if role_obj else None
+
+    q = request.GET.get("q", "").strip()
+    selected_hopital_id = request.GET.get("hopital", "").strip()
+
+    patients = Patient.objects.select_related("hopital", "service")
+    if q:
+        patients = patients.filter(
+            Q(noms__icontains=q) |
+            Q(code_patient__icontains=q)
+        )
+
+    if request.user.is_superuser:
+        if selected_hopital_id:
+            patients = patients.filter(hopital_id=selected_hopital_id)
+    else:
+        if user_hopital:
+            patients = patients.filter(hopital=user_hopital)
+        else:
+            patients = patients.none()
+
+    patients = patients.order_by("noms")
+
     orientations = Orientation.objects.select_related(
         "consultation",
         "medecin_orientateur",
-        "consultation__triage__patient"
+        "consultation__triage__patient",
+        "hopital",
     ).order_by("-date_orientation")
 
+    if request.user.is_superuser:
+        if selected_hopital_id:
+            orientations = orientations.filter(hopital_id=selected_hopital_id)
+    else:
+        if user_hopital:
+            orientations = orientations.filter(hopital=user_hopital)
+        else:
+            orientations = orientations.none()
+
+    if q:
+        orientations = orientations.filter(
+            Q(consultation__triage__patient__noms__icontains=q) |
+            Q(consultation__triage__patient__code_patient__icontains=q)
+        )
+
     derniere_orientation_par_patient = {}
-    for o in orientations:
-        patient = o.consultation.triage.patient
+    for orientation in orientations:
+        patient = orientation.consultation.triage.patient
         if patient.id not in derniere_orientation_par_patient:
-            derniere_orientation_par_patient[patient.id] = o
+            derniere_orientation_par_patient[patient.id] = orientation
+
+    patients_data = []
+    for patient in patients:
+        orientation = derniere_orientation_par_patient.get(patient.id)
+        patients_data.append({
+            "patient": patient,
+            "orientation": orientation,
+        })
+
+    paginator = Paginator(patients_data, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    if request.user.is_superuser:
+        hopitals = Patient.objects.exclude(hopital__isnull=True).values_list(
+            "hopital__id", "hopital__nomH"
+        ).distinct().order_by("hopital__nomH")
+    else:
+        hopitals = []
 
     return render(request, "back-end/patient/liste_patients_orientations.html", {
+        "page_obj": page_obj,
+        "patients_data": page_obj.object_list,
         "patients": patients,
         "orientations": orientations,
-        "derniere_orientation_par_patient": derniere_orientation_par_patient,
+        "fonctionKey": fonction_key,
+        "user_hopital": user_hopital,
+        "hopitals": hopitals,
+        "selected_hopital_id": selected_hopital_id,
+        "q": q,
     })
-
 #
 # ===========================================================================================================================
 # LISTE DE TYPE DE CHAMBRE COTE ADMIN
 # ===========================================================================================================================
+@login_required
 def liste_types_chambre(request):
   types_chambre = TypeChambre.objects.all()
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
   return render(
       request,
       'back-end/patient/type_chambre_list.html',
-      {'types_chambre': types_chambre},
+      {'types_chambre': types_chambre,'fonctionKey':fonction_key},
   )
 
 #
 # ===========================================================================================================================
 # LISTE DE CHAMBRE COTE ADMIN
 # ===========================================================================================================================
+@login_required
 def liste_chambres(request):
   chambres = Chambre.objects.all()
-  return render(request, 'back-end/patient/chambre_list.html', {'chambres': chambres})
+
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(request, 'back-end/patient/chambre_list.html', {'chambres': chambres,'fonctionKey':fonction_key})
 
 #
 # ===========================================================================================================================
 # LISTE DES LITS
 # ===========================================================================================================================
+@login_required
 def liste_lits(request):
   lits = Lit.objects.all()
-  return render(request, 'back-end/patient/lit_list.html', {'lits': lits})
+
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(request, 'back-end/patient/lit_list.html', {'lits': lits ,'fonctionKey':fonction_key})
+
+
+
+
+
+#
+# ===============================================================================================================
+# MODIFICATION TYPE DE CHAMBRE 
+# ===============================================================================================================
+@login_required
+def modifier_type_chambre(request, pk):
+  type_chambre = get_object_or_404(TypeChambre, pk=pk)
+  if request.method == 'POST':
+    form = TypeChambreForm(request.POST, instance=type_chambre)
+    if form.is_valid():
+      form.save()
+      return redirect('type_chambre_list')
+  else:
+    form = TypeChambreForm(instance=type_chambre)
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(
+      request,
+      'back-end/patient/type_chambre_form.html',
+      {'form': form, 'objet': type_chambre,'fonctionKey':fonction_key},
+  )
+
+#
+# =============================================================================================================
+# MODIFICATION DE CHAMBRE
+# =============================================================================================================
+@login_required
+def modifier_chambre(request, pk):
+  chambre = get_object_or_404(Chambre, pk=pk)
+  if request.method == 'POST':
+    form = ChambreForm(request.POST, instance=chambre)
+    if form.is_valid():
+      form.save()
+      return redirect('chambre_list')
+  else:
+    form = ChambreForm(instance=chambre)
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(
+      request, 'back-end/patient/chambre_form.html', {'form': form, 'objet': chambre,'fonctionKey':fonction_key} 
+  )
+
+#
+# =========================================================================================================================
+# MODIFICATION DES LITS
+# =========================================================================================================================
+@login_required
+def modifier_lit(request, pk):
+  lit = get_object_or_404(Lit, pk=pk)
+  if request.method == 'POST':
+    form = LitForm(request.POST, instance=lit)
+    if form.is_valid():
+      form.save()
+      return redirect('lit_list')
+  else:
+    form = LitForm(instance=lit)
+    
+  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(request, 'back-end/patient/lit_form.html', {'form': form, 'objet': lit,'fonctionKey':fonction_key})

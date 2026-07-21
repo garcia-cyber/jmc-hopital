@@ -149,6 +149,26 @@ urlpatterns =[
     path('payer-hospitalisation/<int:hosp_id>/', views.enregistrer_paiement_hospitalisation, name='payer_hospitalisation'),
     path('hospitalisation/modifier/<int:hospitalisation_id>/', views.modifier_hospitalisation_view, name='modifier_hospitalisation'),
 
+    path(
+        'types-chambre/',
+        views.liste_types_chambre,
+        name='type_chambre_list',
+    ),
+    path('chambres-liste/', views.liste_chambres, name='chambre_list'),
+    path('lits-liste/', views.liste_lits, name='lit_list'),
+    # Modifications
+    path(
+        'types-chambre/<int:pk>/modifier/',
+        views.modifier_type_chambre,
+        name='type_chambre_update',
+    ),
+    path(
+        'chambres/<int:pk>/modifier/',
+        views.modifier_chambre,
+        name='chambre_update',
+    ),
+    path('lits/<int:pk>/modifier/', views.modifier_lit, name='lit_update'),
+
 
     # ====================================
     # ORDONNANCE IMPRIMER

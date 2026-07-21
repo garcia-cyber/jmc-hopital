@@ -548,7 +548,12 @@ def enregistrement_patient(request):
 
                 patient.save()
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
-                return redirect('enregistrement_patient')
+
+                if patient.entreprise:
+                    return redirect('troisieme_vue', patient_id=patient.id)
+
+                return redirect('payer_fiche', patient_id=patient.id)
+
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
         else:
@@ -559,7 +564,6 @@ def enregistrement_patient(request):
         form = PatientForm()
 
     patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
-
     entreprises = Entreprise.objects.filter(hopital=hopital_user).order_by('nom') if hopital_user else Entreprise.objects.none()
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
@@ -569,7 +573,6 @@ def enregistrement_patient(request):
         'hopital_user': hopital_user,
         'entreprises': entreprises,
     })
-
 # 18
 # ==================================================================================================
 #  LISTE DES PATIENT(E)S 
@@ -630,37 +633,47 @@ def modifier_patient(request, pk):
 # ==================================================================================================
 @login_required
 def payer_fiche(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-
-    config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
-
-    role = Fonction.objects.filter(userKey=request.user).select_related('hopital', 'fonctionKey').first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
 
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    if patient.hopital != hopital_user:
-        messages.error(request, "Ce patient appartient à un autre hôpital. Vous ne pouvez pas encaisser sa fiche.")
-        return redirect('enregistrement_patient')
+    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
+
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
+
+    now = timezone.now()
+    if timezone.is_naive(now):
+        now = timezone.make_aware(now, timezone.get_current_timezone())
+    heure_actuelle = timezone.localtime(now).hour
+    est_nuit = heure_actuelle >= 16
+    libelle_cible = "Fiche nuit" if est_nuit else "Fiche jour"
 
     prestation_fiche = Prestation.objects.filter(
         categorie='ADM',
-        libelle__icontains="Fiche",
+        libelle__icontains=libelle_cible,
         hopital=hopital_user
     ).first()
 
     if not prestation_fiche:
-        messages.error(request, f"La prestation 'Fiche' n'est pas configurée pour votre hôpital ({hopital_user.nom}).")
+        messages.error(
+            request,
+            f"La prestation '{libelle_cible}' n'est pas configurée pour votre hôpital ({hopital_user.nomH})."
+        )
         return redirect('enregistrement_patient')
 
     prix_fiche_usd = Decimal(str(prestation_fiche.prix))
 
-    paiements_existants = Paiement.objects.filter(patient=patient, service='FICHE')
-    total_deja_paye_usd = Decimal('0.00')
+    paiements_existants = Paiement.objects.filter(
+        patient=patient,
+        service='FICHE',
+        hopital=hopital_user
+    )
 
+    total_deja_paye_usd = Decimal('0.00')
     for p in paiements_existants:
         if p.devise == 'CDF':
             total_deja_paye_usd += p.montant_verse / taux
@@ -672,10 +685,7 @@ def payer_fiche(request, patient_id):
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant', 0))
         devise = request.POST.get('devise')
-
-        montant_test_usd = montant_saisi
-        if devise == 'CDF':
-            montant_test_usd = montant_saisi / taux
+        montant_test_usd = montant_saisi / taux if devise == 'CDF' else montant_saisi
 
         if montant_test_usd > (reste_a_payer_usd + Decimal('0.01')):
             messages.error(request, f"Le montant dépasse le reste à payer ({reste_a_payer_usd:.2f} USD).")
@@ -694,15 +704,18 @@ def payer_fiche(request, patient_id):
             if nouveau_total_usd >= (prix_fiche_usd - Decimal('0.01')):
                 patient.fiche_payee = True
                 patient.save()
-                messages.success(request, f"Paiement terminé. La fiche de {patient.noms} est validée.")
+                messages.success(request, f"Paiement terminé. La {libelle_cible.lower()} de {patient.noms} est validée.")
+                return redirect('liste_attente_triage')
             else:
-                messages.success(request, f"Paiement enregistré. Reste à payer : {(prix_fiche_usd - nouveau_total_usd):.2f} USD")
-
-            return redirect('enregistrement_patient')
+                messages.success(
+                    request,
+                    f"Paiement enregistré. Reste à payer : {(prix_fiche_usd - nouveau_total_usd):.2f} USD"
+                )
+                return redirect('payer_fiche', patient_id=patient.id)
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    context = {
+    return render(request, 'back-end/finance/payer_fiche.html', {
         'patient': patient,
         'reste_a_payer': reste_a_payer_usd,
         'reste_a_payer_cdf': reste_a_payer_usd * taux,
@@ -711,8 +724,10 @@ def payer_fiche(request, patient_id):
         'libelle_prestation': prestation_fiche.libelle,
         'fonctionKey': fonctionKey,
         'deja_paye': patient.fiche_payee,
-    }
-    return render(request, 'back-end/finance/payer_fiche.html', context)
+        'est_nuit': est_nuit,
+        'heure_actuelle': heure_actuelle,
+        'libelle_cible': libelle_cible,
+    })
 # 21
 # ==================================================================================================
 # HISTORIQUE DE PAIEMENT

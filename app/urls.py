@@ -27,7 +27,10 @@ urlpatterns =[
 
      # ================================
      # PRESTATION ET CONFIGURATION
+     #
      path('prestations/', views.gestion_prestations, name='gestion_prestations'),
+     path('prestations_receptionniste/', views.liste_prestations_receptionniste, name='liste_prestations_receptionniste'),
+     path("prestations/<int:pk>/supprimer/", views.supprimer_prestation, name="supprimer_prestation"),
      path('config/taux/', views.modifier_taux, name='modifier_taux'),
      path('prestations/modifier/<int:pk>/', views.modifier_prestation, name='modifier_prestation'),
      path('enregistrer_hopital/',views.enregistrer_hopital, name = 'hopitalAdd') ,
@@ -37,6 +40,7 @@ urlpatterns =[
 
      # =================================
      # SERVICE
+     #
      path('services/', views.gestion_services, name='gestion_services'),
      path('services/modifier/<int:pk>/', views.modifier_service, name='modifier_service'),
 

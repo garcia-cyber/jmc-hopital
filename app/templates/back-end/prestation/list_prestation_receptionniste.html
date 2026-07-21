@@ -1,0 +1,471 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prestations | Réceptionniste</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-2: #0f172a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --line: #e5e7eb;
+            --soft-blue: #eff6ff;
+            --soft-green: #ecfdf5;
+            --soft-yellow: #fffbeb;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,0.10), transparent 25%),
+                radial-gradient(circle at top right, rgba(16,185,129,0.10), transparent 22%),
+                linear-gradient(180deg, #ffffff 0%, #f6f9fc 35%, var(--bg) 100%);
+            color: var(--text);
+        }
+
+        .page-shell { padding: 1.2rem; }
+
+        .hero-card {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(37,99,235,0.08);
+            border-radius: 26px;
+            box-shadow: 0 14px 35px rgba(15, 23, 42, 0.07);
+            overflow: hidden;
+        }
+
+        .hero-top {
+            padding: 1.35rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(135deg, rgba(37,99,235,0.07), rgba(16,185,129,0.04));
+        }
+
+        .hero-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .hero-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            background: var(--soft-blue);
+            color: var(--primary);
+            box-shadow: inset 0 0 0 1px rgba(37,99,235,0.10);
+            flex: 0 0 auto;
+        }
+
+        .hero-title {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary-2);
+        }
+
+        .hero-subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            transition: 0.2s ease;
+        }
+
+        .action-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+        }
+
+        .metrics { padding: 1.2rem 1.5rem 0.2rem; }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
+        }
+
+        .metric-badge {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.1rem;
+        }
+
+        .metric-badge.blue { background: var(--soft-blue); color: var(--primary); }
+        .metric-badge.green { background: var(--soft-green); color: var(--success); }
+        .metric-badge.yellow { background: var(--soft-yellow); color: var(--warning); }
+
+        .metric-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 700;
+        }
+
+        .metric-value {
+            font-size: 1.55rem;
+            line-height: 1.1;
+            font-weight: 800;
+            margin-top: 0.2rem;
+        }
+
+        .content-card {
+            margin: 1.25rem 1.5rem 1.5rem;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+        }
+
+        .content-head {
+            padding: 1rem 1rem 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--line);
+            background: #fcfdff;
+        }
+
+        .content-head h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--primary-2);
+        }
+
+        .content-head small { color: var(--muted); }
+
+        .panel-box {
+            padding: 1rem;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(180deg, #ffffff, #fbfdff);
+        }
+
+        .search-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 1rem;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
+        }
+
+        .search-card .form-control {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0.78rem 1rem;
+            box-shadow: none;
+        }
+
+        .search-card .form-control:focus {
+            border-color: rgba(37,99,235,0.45);
+            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.08);
+        }
+
+        .btn-search,
+        .btn-reset {
+            border-radius: 12px;
+            padding: 0.78rem 1rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .btn-search {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: #fff;
+        }
+
+        .btn-reset {
+            background: #fff;
+            border: 1px solid var(--line);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .table-wrap { padding: 0.25rem; }
+
+        .table thead th {
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 800;
+            padding: 0.95rem 0.95rem;
+            border-bottom: 1px solid var(--line);
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 0.95rem 0.95rem;
+            vertical-align: middle;
+            color: var(--text);
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .table tbody tr:hover { background: #fbfdff; }
+
+        .badge-custom {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .badge-success { background: #d1fae5; color: var(--success); }
+        .badge-light { background: #f8fafc; color: #334155; }
+
+        .prestation-name {
+            font-weight: 800;
+            color: var(--primary-2);
+        }
+
+        .prestation-meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 0.2rem;
+        }
+
+        .money {
+            font-weight: 800;
+            color: var(--primary-2);
+            white-space: nowrap;
+        }
+
+        .empty-box {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+        }
+
+        .empty-box i {
+            font-size: 2.8rem;
+            margin-bottom: 0.8rem;
+            opacity: 0.45;
+        }
+
+        .note-box {
+            margin: 0 1.5rem 1.5rem;
+            border: 1px solid rgba(37,99,235,0.12);
+            background: linear-gradient(135deg, #eff6ff, #f8fffb);
+            border-radius: 16px;
+            padding: 1rem 1.1rem;
+            color: #334155;
+        }
+
+        @media (max-width: 768px) {
+            .hero-top, .content-head { padding: 1rem; }
+            .metrics, .content-card, .note-box {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+            .page-shell { padding: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid page-shell">
+            <div class="hero-card">
+                <div class="hero-top">
+                    <div class="hero-left">
+                        <div class="hero-icon"><i class="fa fa-list-alt"></i></div>
+                        <div>
+                            <h1 class="hero-title">Prestations de l’hôpital</h1>
+                            <p class="hero-subtitle">
+                                Prix en USD et conversion automatique en CDF.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="hero-actions">
+                        <a href="{% url 'liste_prestations_receptionniste' %}" class="action-btn">
+                            <i class="fa fa-sync"></i> Actualiser
+                        </a>
+                    </div>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-badge blue"><i class="fa fa-cubes"></i></div>
+                            <div>
+                                <div class="metric-label">Prestations</div>
+                                <div class="metric-value">{{ prestations.count }}</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-badge green"><i class="fa fa-exchange-alt"></i></div>
+                            <div>
+                                <div class="metric-label">Taux USD / CDF</div>
+                                <div class="metric-value">{{ taux }}</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-badge yellow"><i class="fa fa-hospital"></i></div>
+                            <div>
+                                <div class="metric-label">Hôpital connecté</div>
+                                <div class="metric-value">
+                                    {% if user_hopital %}{{ user_hopital.nomH }}{% else %}-{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="content-head">
+                        <div>
+                            <h5>Liste détaillée</h5>
+                            <small>Recherche par libellé ou catégorie.</small>
+                        </div>
+                    </div>
+
+                    <div class="panel-box">
+                        <form method="get" class="search-card">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-lg-9 col-md-8">
+                                    <label for="q" class="form-label mb-1">Rechercher une prestation</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                        <input
+                                            type="search"
+                                            id="q"
+                                            name="q"
+                                            class="form-control"
+                                            value="{{ request.GET.q }}"
+                                            placeholder="Ex: consultation, laboratoire, urgence..."
+                                        >
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-search w-100">
+                                        Rechercher
+                                    </button>
+                                    <a href="{% url 'liste_prestations_receptionniste' %}" class="btn-reset w-100 text-center d-flex align-items-center justify-content-center">
+                                        Réinitialiser
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-wrap table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Prestation</th>
+                                    <th>Catégorie</th>
+                                    <th>Prix USD</th>
+                                    <th>Prix CDF</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in prestations_list %}
+                                    {% with prestation=item.obj %}
+                                        <tr>
+                                            <td><span class="badge-custom badge-light">{{ forloop.counter }}</span></td>
+                                            <td>
+                                                <div class="prestation-name">{{ prestation.libelle }}</div>
+                                                {% if prestation.description %}
+                                                    <div class="prestation-meta">{{ prestation.description|truncatechars:60 }}</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if prestation.categorie %}
+                                                    <span class="badge-custom badge-success">{{ prestation.categorie }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="money">{{ item.prix_usd|floatformat:2 }} USD</span></td>
+                                            <td><span class="money">{{ item.prix_cdf|floatformat:0 }} CDF</span></td>
+                                        </tr>
+                                    {% endwith %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="empty-box">
+                                                <i class="fa fa-inbox"></i>
+                                                <div>Aucune prestation trouvée.</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="note-box">
+                    <strong>Note :</strong> si la recherche ne retourne rien, vérifiez la vue Python et surtout l’usage de `q = request.GET.get("q", "").strip()` avant le `filter(...)`. Vous êtes limité à l’hôpital : <strong>jmc 1</strong>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

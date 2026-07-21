@@ -171,6 +171,11 @@
                             <span>Patients Conventionnés</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{% url 'liste_prestations_receptionniste' %}">
+                            <i class="fa fa-tag"></i> <span>Prix prestation</span>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a href="{% url 'liste_patients_fideles' %}" class="nav-link">
                             <i class="fa fa-id-card"></i>
@@ -199,7 +204,7 @@
                         <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
                         <ul>
                             <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
-                            
+
                             <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
                            
                             <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>

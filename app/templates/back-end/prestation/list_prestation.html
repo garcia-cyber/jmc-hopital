@@ -287,6 +287,19 @@
                                                            class="btn btn-sm btn-outline-primary action-btn">
                                                             <i class="fa fa-pen mr-1"></i> Modifier
                                                         </a>
+
+                                                        <a href="{% url 'modifier_prestation' item.id %}">
+                                                           <form method="post" action="{% url 'supprimer_prestation' item.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger btn-sm"
+            onclick="return confirm('Voulez-vous vraiment supprimer cette prestation ?');">
+        Supprimer
+    </button>
+</form>
+                                                        </a>
+                                                        
+
+
                                                     </td>
                                                 </tr>
                                             {% empty %}

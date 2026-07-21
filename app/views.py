@@ -388,6 +388,23 @@ def gestion_prestations(request):
     }
     
     return render(request, 'back-end/prestation/list_prestation.html', context)
+
+#
+# ==================================================================================================
+# SUPPRESSION PRESTATION
+# ==================================================================================================
+@login_required
+def supprimer_prestation(request, pk):
+    prestation = get_object_or_404(Prestation, pk=pk)
+
+    if request.method == "POST":
+        prestation.delete()
+        messages.success(request, "La prestation a été supprimée avec succès.")
+        return redirect("gestion_prestations")
+
+    return redirect("gestion_prestations")
+
+
 # 13
 # ==================================================================================================
 #  VUE CONFIGURATION TAUX (Modification unique) ---
@@ -8078,3 +8095,51 @@ def supprimer_lit(request, pk):
         'back-end/patient/lit_confirm_delete.html',
         {'objet': lit, 'fonctionKey': fonction_key}
     )
+
+#
+# =============================================================================================================================
+# LISTE DES PRESTATIONS POUR LES RECPTIONNISTE
+# =============================================================================================================================
+@login_required
+def liste_prestations_receptionniste(request):
+    role = Fonction.objects.filter(userKey=request.user).select_related("hopital", "fonctionKey").first()
+    user_hopital = role.hopital if role else None
+    fonction_key = role.fonctionKey.roleName if role and role.fonctionKey else "Utilisateur"
+
+    q = request.GET.get("q", "").strip()
+
+    prestations = Prestation.objects.all().order_by("libelle")
+
+    if not request.user.is_superuser:
+        if user_hopital:
+            prestations = prestations.filter(hopital=user_hopital)
+        else:
+            prestations = prestations.none()
+
+    if q:
+        prestations = prestations.filter(
+            Q(libelle__icontains=q) |
+            Q(categorie__icontains=q)
+        )
+
+    taux = ConfigurationHopital.get_taux()
+    taux = Decimal(str(taux))
+
+    prestations_list = []
+    for prestation in prestations:
+        prix_usd = prestation.prix or Decimal("0")
+        prix_cdf = prix_usd * taux
+        prestations_list.append({
+            "obj": prestation,
+            "prix_usd": prix_usd,
+            "prix_cdf": prix_cdf,
+        })
+
+    return render(request, "back-end/prestation/list_prestation_receptionniste.html", {
+        "prestations": prestations,
+        "prestations_list": prestations_list,
+        "taux": taux,
+        "fonctionKey": fonction_key,
+        "user_hopital": user_hopital,
+        "q": q,
+    })

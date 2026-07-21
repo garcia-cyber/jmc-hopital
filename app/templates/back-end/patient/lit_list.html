@@ -203,6 +203,11 @@
                                         <a href="{% url 'lit_update' lit.pk %}" class="btn-action btn-view">
                                             <i class="fa fa-edit"></i> Modifier
                                         </a>
+
+                                        <a href="{% url 'lit_delete' lit.pk %}" class="btn-action btn-danger">
+                                            <i class="fa fa-edit"></i> Supprimer
+                                        </a>
+
                                     </td>
                                 </tr>
                                 {% empty %}

@@ -21,6 +21,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.core.exceptions import PermissionDenied
 from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import ProtectedError
 
 
 # Create your views here.
@@ -8013,3 +8014,67 @@ def modifier_lit(request, pk):
   fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
 
   return render(request, 'back-end/patient/lit_form.html', {'form': form, 'objet': lit,'fonctionKey':fonction_key})
+#
+# ===========================================================================================================================
+# SUPPRESSION DU TYPE DE CHAMBRE 
+# ============================================================================================================================
+@login_required
+def supprimer_type_chambre(request, pk):
+    type_chambre = get_object_or_404(TypeChambre, pk=pk)
+    if request.method == 'POST':
+        type_chambre.delete()
+        return redirect('type_chambre_list')
+    
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(
+        request,
+        'back-end/patient/type_chambre_confirm_delete.html',
+        {'objet': type_chambre, 'fonctionKey': fonction_key}
+    )
+
+#
+# ===========================================================================================================================
+# SUPPRESSION DES CHAMBRES 
+# ============================================================================================================================
+@login_required
+def supprimer_chambre(request, pk):
+    chambre = get_object_or_404(Chambre, pk=pk)
+    if request.method == 'POST':
+        chambre.delete()
+        return redirect('chambre_list')
+    
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(
+        request,
+        'back-end/patient/chambre_confirm_delete.html',
+        {'objet': chambre, 'fonctionKey': fonction_key}
+    )
+
+#
+# ===========================================================================================================================
+# SUPPRESSION DES LITS 
+# ============================================================================================================================
+@login_required
+def supprimer_lit(request, pk):
+    lit = get_object_or_404(Lit, pk=pk)
+    if request.method == 'POST':
+        try:
+            lit.delete()
+            messages.success(request, "Le lit a été supprimé avec succès.")
+            return redirect('lit_list')
+        except ProtectedError:
+            messages.error(request, "Impossible de supprimer ce lit car il est rattaché à une ou plusieurs hospitalisations existantes.")
+            return redirect('lit_list')
+    
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(
+        request,
+        'back-end/patient/lit_confirm_delete.html',
+        {'objet': lit, 'fonctionKey': fonction_key}
+    )

@@ -157,17 +157,12 @@ urlpatterns =[
     path('chambres-liste/', views.liste_chambres, name='chambre_list'),
     path('lits-liste/', views.liste_lits, name='lit_list'),
     # Modifications
-    path(
-        'types-chambre/<int:pk>/modifier/',
-        views.modifier_type_chambre,
-        name='type_chambre_update',
-    ),
-    path(
-        'chambres/<int:pk>/modifier/',
-        views.modifier_chambre,
-        name='chambre_update',
-    ),
+    path('types-chambre/<int:pk>/modifier/',views.modifier_type_chambre,name='type_chambre_update'),
+    path('chambres/<int:pk>/modifier/',views.modifier_chambre,name='chambre_update'),
     path('lits/<int:pk>/modifier/', views.modifier_lit, name='lit_update'),
+    path('types-chambres/<int:pk>/supprimer/', views.supprimer_type_chambre, name='type_chambre_delete'),
+    path('chambres/<int:pk>/supprimer/', views.supprimer_chambre, name='chambre_delete'),
+    path('lits/<int:pk>/supprimer/', views.supprimer_lit, name='lit_delete'),
 
 
     # ====================================

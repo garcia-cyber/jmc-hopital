@@ -182,6 +182,11 @@
                                         <a href="{% url 'type_chambre_update' type_chambre.pk %}" class="btn-action btn-view">
                                             <i class="fa fa-edit"></i> Modifier
                                         </a>
+
+                                        <a href="{% url 'type_chambre_delete' type_chambre.pk %}" class="btn-action btn-danger">
+                                            <i class="fa fa-edit"></i> Supprimer
+                                        </a>
+
                                     </td>
                                 </tr>
                                 {% empty %}

@@ -550,7 +550,7 @@ def enregistrement_patient(request):
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
 
                 if patient.entreprise:
-                    return redirect('troisieme_vue', patient_id=patient.id)
+                    return redirect('liste_attente_triage')
 
                 return redirect('payer_fiche', patient_id=patient.id)
 

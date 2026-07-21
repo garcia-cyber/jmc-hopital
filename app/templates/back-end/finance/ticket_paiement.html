@@ -1,243 +1,175 @@
-<!DOCTYPE html>
 {% load static %}
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
     <title>Reçu de Paiement #{{ paiement.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @page {
-            size: 80mm auto;
-            margin: 0;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.35;
-            color: #111;
-            margin: 0;
-            padding: 0;
+            background: #f8fafc;
+            color: #334155;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .invoice-box {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 50px;
             background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
         }
 
-        .ticket {
-            width: 80mm;
-            max-width: 80mm;
-            margin: 0 auto;
-            padding: 8mm 6mm;
-        }
-
-        .center {
-            text-align: center;
-        }
-
-        .bold {
-            font-weight: 700;
-        }
-
-        .muted {
-            color: #555;
-            font-size: 11px;
-        }
-
-        .header {
-            text-align: center;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-        }
-
-        .header h2 {
-            margin: 0;
-            font-size: 16px;
+        .header-brand {
+            color: #0284c7;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        .header p {
-            margin: 2px 0;
-            font-size: 11px;
+        .table thead {
+            background: #f1f5f9;
         }
 
-        .section {
-            margin-bottom: 8px;
+        .total-section {
+            border-top: 2px solid #f1f5f9;
+            padding-top: 20px;
         }
 
-        .line {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin: 2px 0;
-            font-size: 12px;
-        }
-
-        .label {
-            min-width: 42%;
-        }
-
-        .value {
-            text-align: right;
-            word-break: break-word;
-        }
-
-        .divider {
-            border-top: 1px dashed #000;
-            margin: 8px 0;
-        }
-
-        .service-box {
-            border: 1px solid #000;
-            padding: 6px;
-            margin-top: 5px;
-        }
-
-        .service-title {
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .exam-list {
-            margin: 0;
-            padding-left: 14px;
-            font-size: 11px;
-        }
-
-        .exam-list li {
-            margin: 2px 0;
-        }
-
-        .total-box {
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px dashed #000;
-        }
-
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
+        .status-badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
             font-weight: 700;
         }
 
-        .footer {
-            text-align: center;
-            border-top: 1px dashed #000;
-            padding-top: 8px;
-            margin-top: 10px;
-            font-size: 11px;
+        .paid {
+            background: #dcfce7;
+            color: #166534;
         }
 
-        .btn-print {
-            display: block;
-            width: 100%;
-            border: none;
-            background: #111;
-            color: #fff;
-            padding: 8px 10px;
-            font-weight: 700;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            cursor: pointer;
+        .due {
+            background: #fee2e2;
+            color: #991b1b;
         }
 
         @media print {
-            .btn-print {
-                display: none;
+            .no-print {
+                display: none !important;
+            }
+
+            .invoice-box {
+                box-shadow: none;
+                margin: 0;
+                padding: 20px;
             }
 
             body {
-                margin: 0;
-                padding: 0;
-            }
-
-            .ticket {
-                width: 80mm;
-                max-width: 80mm;
-                padding: 0;
+                background: #fff;
             }
         }
     </style>
 </head>
 <body>
-    <div class="ticket">
-        <button class="btn-print" onclick="window.print()">Imprimer le reçu</button>
 
-        <div class="header">
-            <h2>JMC ERP</h2>
-            <p>Centre Hospitalier & Médical</p>
-            <p>Kinshasa, RDC</p>
-            <p>Tél: +243 816 878 808</p>
+<div class="invoice-box">
+    <div class="row mb-5">
+        <div class="col-6">
+            <h2 class="header-brand">JMC Hospital</h2>
+            <p class="mb-0">Centre Hospitalier & Médical</p>
+            <p class="mb-0">Kinshasa, RDC</p>
+            <p class="mb-0">Tél: +243 816 878 808</p>
         </div>
-
-        <div class="section">
-            <div class="line">
-                <span class="label bold">Reçu N° :</span>
-                <span class="value">{{ paiement.id }}</span>
-            </div>
-            <div class="line">
-                <span class="label bold">Date :</span>
-                <span class="value">{{ date_paiement_fix|date:"d/m/Y H:i" }}</span>
-            </div>
-            <div class="line">
-                <span class="label bold">Patient :</span>
-                <span class="value">{{ patient.noms }}</span>
-            </div>
-            <div class="line">
-                <span class="label bold">ID Patient :</span>
-                <span class="value">#{{ patient.id }}</span>
-            </div>
-            <div class="line">
-                <span class="label bold">Caissier :</span>
-                <span class="value">{{ paiement.caissier.username|default:"Système" }}</span>
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="service-box">
-            <div class="service-title">Prestation / Examen</div>
-
-            {% if nom_prestation %}
-                <div class="bold">{{ nom_prestation }}</div>
-            {% else %}
-                <div class="bold">{{ paiement.get_service_display }}</div>
-            {% endif %}
-
-            {% if examens_ticket %}
-                <ul class="exam-list">
-                    {% for ex in examens_ticket %}
-                        <li>{{ ex.libelle }} - {{ ex.prix|floatformat:2 }} {{ paiement.devise }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </div>
-
-        <div class="total-box">
-            <div class="total-row">
-                <span>Net payé</span>
-                <span>{{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}</span>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p class="bold">Merci pour votre confiance !</p>
-            <p>Les actes médicaux payés ne sont pas remboursables.</p>
-            <p class="muted">Généré automatiquement</p>
+        <div class="col-6 text-end">
+            <h4>REÇU DE PAIEMENT</h4>
+            <p class="mb-0">
+                <strong>N°:</strong> #TRX-{{ paiement.id|stringformat:"05d" }}<br>
+                <strong>Date:</strong> {{ date_paiement_fix|date:"d/m/Y H:i" }}
+            </p>
         </div>
     </div>
 
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-            }, 300);
-        };
-    </script>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h6 class="fw-bold">Informations patient</h6>
+            <p class="mb-1"><strong>Nom :</strong> {{ patient.noms }}</p>
+            <p class="mb-1"><strong>Code :</strong> {{ patient.code_patient }}</p>
+            <p class="mb-1"><strong>Sexe :</strong> {{ patient.get_sexe_display }}</p>
+            <p class="mb-1"><strong>Âge :</strong> {{ patient.age }}</p>
+            <p class="mb-1"><strong>Téléphone :</strong> {{ patient.telephone }}</p>
+        </div>
+
+        <div class="col-md-6 text-end">
+            <h6 class="fw-bold">Informations paiement</h6>
+            <p class="mb-1"><strong>Caissier :</strong> {{ paiement.caissier.username|default:"Système" }}</p>
+            <p class="mb-1"><strong>Service :</strong> {{ paiement.get_service_display }}</p>
+            <p class="mb-1"><strong>Devise :</strong> {{ paiement.devise }}</p>
+            <p class="mb-1">
+                <strong>Statut :</strong>
+                {% if paiement.reste_a_payer <= 0 %}
+                    <span class="status-badge paid">Payé</span>
+                {% else %}
+                    <span class="status-badge due">Partiel / Impayé</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Prestation</th>
+                <th class="text-center">Qté</th>
+                <th class="text-end">Prix Unitaire</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if details_ticket %}
+                {% for item in details_ticket %}
+                <tr>
+                    <td>
+                        <strong>{{ item.libelle }}</strong>
+                    </td>
+                    <td class="text-center">1</td>
+                    <td class="text-end">{{ item.prix|floatformat:2 }} {{ paiement.devise }}</td>
+                    <td class="text-end">{{ item.prix|floatformat:2 }} {{ paiement.devise }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td>
+                        <strong>{{ nom_prestation|default:paiement.get_service_display }}</strong>
+                    </td>
+                    <td class="text-center">1</td>
+                    <td class="text-end">{{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}</td>
+                    <td class="text-end">{{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="row mt-4 total-section">
+        <div class="col-6"></div>
+        <div class="col-6 text-end">
+            <p class="mb-1">Montant payé : <strong>{{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}</strong></p>
+            {% if paiement.devise == 'CDF' %}
+                <p class="mb-1">Montant équivalent : <strong>{{ montant_usd|floatformat:2 }} USD</strong></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-5 no-print text-center">
+        <a href="{% url 'historique_paiements' patient.id %}" class="btn btn-outline-secondary me-2">
+            Retour
+        </a>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print me-2"></i>Imprimer le reçu
+        </button>
+    </div>
+</div>
+
 </body>
 </html>

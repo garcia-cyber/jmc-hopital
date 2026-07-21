@@ -880,36 +880,70 @@ def imprimer_facture(request, patient_id):
 # ==================================================================================================
 @login_required
 def imprimer_recu_direct(request, paiement_id):
-    paiement = get_object_or_404(Paiement, id=paiement_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    if not hopital_user:
+        return redirect('enregistrement_patient')
+
+    paiement = get_object_or_404(
+        Paiement.objects.select_related(
+            'patient', 'caissier', 'consultation', 'bloc_op', 'entreprise'
+        ),
+        id=paiement_id,
+        hopital=hopital_user
+    )
+
+    patient = paiement.patient
+    taux = ConfigurationHopital.get_taux()
     date_reelle = paiement.date_paiement
 
-    examens_associes = []
-    nom_prestation = None
+    nom_prestation = paiement.get_service_display()
+    details_ticket = []
 
-    if paiement.consultation and paiement.service in ['LABO', 'RADIO', 'ECHOGRAPHIE', 'EXAMENS']:
-        examens_payes = paiement.consultation.examens.filter(
-            statut__in=['EN_COURS', 'TERMINE']
-        ).select_related('prestation')
+    # Cas consultation / examens
+    if paiement.consultation:
+        examens_qs = getattr(paiement.consultation, 'examens', None)
+        if examens_qs is not None:
+            examens_associes = examens_qs.select_related('prestation').all()
+            for exam in examens_associes:
+                if getattr(exam, 'prestation', None):
+                    details_ticket.append({
+                        'libelle': exam.prestation.libelle,
+                        'prix': exam.prestation.prix,
+                    })
 
-        for exam in examens_payes:
-            if exam.prestation:
-                examens_associes.append({
-                    'libelle': exam.prestation.libelle,
-                    'prix': exam.prestation.prix
-                })
+            if details_ticket:
+                nom_prestation = details_ticket[0]['libelle']
 
-        if paiement.service == 'EXAMENS' and examens_associes:
-            nom_prestation = examens_associes[0]['libelle']
-        elif examens_payes.exists() and examens_payes.first().prestation:
-            nom_prestation = examens_payes.first().prestation.libelle
+    # Cas bloc opératoire
+    if paiement.bloc_op and hasattr(paiement.bloc_op, 'prestation') and paiement.bloc_op.prestation:
+        nom_prestation = paiement.bloc_op.prestation.libelle
+        details_ticket.append({
+            'libelle': paiement.bloc_op.prestation.libelle,
+            'prix': paiement.bloc_op.prestation.prix,
+        })
+
+    # Cas paiement entreprise
+    if paiement.service == 'ENTREPRISE' and paiement.entreprise:
+        nom_prestation = f"Paiement Entreprise : {paiement.entreprise.nom}"
+
+    # Montant converti si besoin
+    montant_usd = paiement.montant_verse
+    if paiement.devise == 'CDF':
+        montant_usd = paiement.montant_verse / taux
 
     context = {
         'paiement': paiement,
-        'patient': paiement.patient,
+        'patient': patient,
+        'hopital_user': hopital_user,
+        'fonctionKey': fonctionKey,
         'date_paiement_fix': date_reelle,
-        'examens_ticket': examens_associes,
         'nom_prestation': nom_prestation,
+        'details_ticket': details_ticket,
+        'taux': taux,
+        'montant_usd': montant_usd,
     }
     return render(request, 'back-end/finance/ticket_paiement.html', context)
 # 23

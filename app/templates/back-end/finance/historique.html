@@ -96,9 +96,9 @@
                             ({{ reste_a_payer_cdf|floatformat:0 }} FC).
                         </p>
                     </div>
-                    <a href="{% url 'payer_fiche' patient.id %}" class="btn btn-danger btn-sm">
+                    {% comment %} <a href="{% url 'payer_fiche' patient.id %}" class="btn btn-danger btn-sm">
                         <i class="fa fa-hand-holding-usd"></i> Encaisser
-                    </a>
+                    </a> {% endcomment %}
                 </div>
             </div>
             {% else %}

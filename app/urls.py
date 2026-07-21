@@ -84,6 +84,7 @@ urlpatterns =[
      path('journal-caisse-depense/', views.dashboard_finance_depense, name='dashboard_finance_depense'),
      path('depense/nouvelle/', views.creer_depense, name='creer_depense'),
      path('patients/', views.liste_patients_urgence, name='liste_patients_urgence'),
+     path('patient/<int:patient_id>/imprimer-facture/', views.imprimer_facture, name='imprimer_facture'),
 
      # ====================================
      # INFIRMIER

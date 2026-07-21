@@ -7,111 +7,194 @@
     <title>Historique Financier | {{ patient.noms }}</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        :root { --hosp-blue: #0056b3; --hosp-light: #eef2f7; --hosp-accent: #007bff; }
-        body { background-color: #f8f9fe; }
-        .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .summary-card { background: white; border-left: 5px solid var(--hosp-accent); position: relative; }
-        .icon-box { font-size: 1.5rem; opacity: 0.2; position: absolute; right: 15px; top: 15px; }
-        .table thead { background: var(--hosp-light); color: var(--hosp-blue); }
-        .badge-devise { font-size: 0.75em; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
-        .alert-dette { border: 1px solid #ffcdd2; background: #fff5f5; color: #c62828; border-radius: 12px; }
+        :root {
+            --hosp-blue: #0056b3;
+            --hosp-light: #eef2f7;
+            --hosp-accent: #007bff;
+        }
+
+        body {
+            background-color: #f8f9fe;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .summary-card {
+            background: white;
+            border-left: 5px solid var(--hosp-accent);
+            position: relative;
+            min-height: 130px;
+        }
+
+        .icon-box {
+            font-size: 1.5rem;
+            opacity: 0.2;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+        }
+
+        .table thead {
+            background: var(--hosp-light);
+            color: var(--hosp-blue);
+        }
+
+        .badge-devise {
+            font-size: 0.75em;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .alert-dette {
+            border: 1px solid #ffcdd2;
+            background: #fff5f5;
+            color: #c62828;
+            border-radius: 12px;
+        }
+
+        .section-title {
+            font-weight: 800;
+        }
     </style>
 </head>
 <body>
-    <div class="main-wrapper">
-        {% include 'back-end/includes/header.html' %}
-        {% include 'back-end/includes/sidebar.html' %}
-        
-        <div class="page-wrapper">
-            <div class="content container-fluid">
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="text-primary font-weight-bold"><i class="fa fa-file-invoice-dollar"></i> Dossier Financier : {{ patient.noms }}</h3>
-                    <a href="javascript:history.back()" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> Retour</a>
-                </div>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
 
-                {% if est_debiteur %}
-                <div class="alert alert-dette shadow-sm mb-4 p-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-1"><i class="fa fa-exclamation-triangle"></i> Solde impayé</h5>
-                            <p class="mb-0">Reste à payer : <strong>{{ reste_a_payer_usd|floatformat:2 }} $</strong> ({{ reste_a_payer_cdf|floatformat:0 }} FC).</p>
-                        </div>
-                        <a href="#" class="btn btn-danger btn-sm"><i class="fa fa-hand-holding-usd"></i> Encaisser</a>
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h3 class="text-primary section-title">
+                    <i class="fa fa-file-invoice-dollar"></i> Dossier Financier : {{ patient.noms }}
+                </h3>
+                <div class="d-flex gap-2">
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left"></i> Retour
+                    </a>
+                    {% if peut_imprimer_facture %}
+                        <a href="{% url 'imprimer_facture' patient.id %}" target="_blank" class="btn btn-primary">
+                            <i class="fa fa-print"></i> Imprimer facture
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if est_debiteur %}
+            <div class="alert alert-dette shadow-sm mb-4 p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="mb-1"><i class="fa fa-exclamation-triangle"></i> Solde impayé</h5>
+                        <p class="mb-0">
+                            Reste à payer : <strong>{{ reste_a_payer_usd|floatformat:2 }} $</strong>
+                            ({{ reste_a_payer_cdf|floatformat:0 }} FC).
+                        </p>
+                    </div>
+                    <a href="{% url 'payer_fiche' patient.id %}" class="btn btn-danger btn-sm">
+                        <i class="fa fa-hand-holding-usd"></i> Encaisser
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-success shadow-sm mb-4 p-3">
+                <strong><i class="fa fa-check-circle"></i> Dossier soldé.</strong>
+                Le patient est en règle sur les paiements suivis dans ce dossier.
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card summary-card p-3">
+                        <i class="fa fa-receipt icon-box"></i>
+                        <small class="text-muted"><i class="fa fa-clipboard-list"></i> Total Dû</small>
+                        <h4 class="mb-0">{{ cout_total_usd|floatformat:2 }} $</h4>
+                        <small class="text-muted">≈ {{ cout_total_cdf|floatformat:0 }} FC</small>
                     </div>
                 </div>
-                {% endif %}
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <div class="card summary-card p-3">
-                            <i class="fa fa-receipt icon-box"></i>
-                            <small class="text-muted"><i class="fa fa-clipboard-list"></i> Total Dû</small>
-                            <h4 class="mb-0">{{ cout_total_usd|floatformat:2 }} $</h4>
-                            <small class="text-muted">≈ {{ cout_total_cdf|floatformat:0 }} FC</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card summary-card p-3" style="border-left-color: #28a745;">
-                            <i class="fa fa-check-circle icon-box"></i>
-                            <small class="text-muted"><i class="fa fa-wallet"></i> Total Versé</small>
-                            <h4 class="mb-0 text-success">{{ total_paye_usd|floatformat:2 }} $</h4>
-                            <small class="text-success">{{ total_paye_cdf|floatformat:0 }} FC</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card summary-card p-3" style="border-left-color: #dc3545;">
-                            <i class="fa fa-times-circle icon-box"></i>
-                            <small class="text-muted"><i class="fa fa-balance-scale"></i> Reste à Payer</small>
-                            <h4 class="mb-0 text-danger">{{ reste_a_payer_usd|floatformat:2 }} $</h4>
-                            <small class="text-danger">{{ reste_a_payer_cdf|floatformat:0 }} FC</small>
-                        </div>
+                <div class="col-md-4">
+                    <div class="card summary-card p-3" style="border-left-color: #28a745;">
+                        <i class="fa fa-check-circle icon-box"></i>
+                        <small class="text-muted"><i class="fa fa-wallet"></i> Total Versé</small>
+                        <h4 class="mb-0 text-success">{{ total_paye_usd|floatformat:2 }} $</h4>
+                        <small class="text-success">{{ total_paye_cdf|floatformat:0 }} FC</small>
                     </div>
                 </div>
-
-                <div class="card mt-4">
-                    <div class="card-header bg-white pt-3 pb-0 border-0">
-                        <h5 class="card-title"><i class="fa fa-history"></i> Historique des versements</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead>
-                                    <tr>
-                                        <th><i class="fa fa-calendar-alt"></i> Date</th>
-                                        <th><i class="fa fa-concierge-bell"></i> Service</th>
-                                        <th><i class="fa fa-dollar-sign"></i> Montant</th>
-                                        <th class="text-right"><i class="fa fa-cogs"></i> Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in paiements_liste %}
-                                    <tr>
-                                        <td>{{ item.date_paiement|date:"d/m/Y H:i" }}</td>
-                                        <td><span class="badge badge-light"><i class="fa fa-hospital-user"></i> {{ item.get_service_display }}</span></td>
-                                        <td>
-                                            <strong>{{ item.montant_verse|floatformat:2 }}</strong> 
-                                            <span class="badge badge-devise {% if item.devise == 'USD' %}badge-primary{% else %}badge-warning{% endif %}">
-                                                {{ item.devise }}
-                                            </span>
-                                        </td>
-                                        <td class="text-right">
-                                            <a href="{% url 'imprimer_recu_direct' item.id %}" target="_blank" class="btn btn-sm btn-light">
-                                                <i class="fa fa-print"></i> Reçu
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa fa-info-circle"></i> Aucune transaction enregistrée.</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="col-md-4">
+                    <div class="card summary-card p-3" style="border-left-color: #dc3545;">
+                        <i class="fa fa-times-circle icon-box"></i>
+                        <small class="text-muted"><i class="fa fa-balance-scale"></i> Reste à Payer</small>
+                        <h4 class="mb-0 text-danger">{{ reste_a_payer_usd|floatformat:2 }} $</h4>
+                        <small class="text-danger">{{ reste_a_payer_cdf|floatformat:0 }} FC</small>
                     </div>
                 </div>
             </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-white pt-3 pb-0 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="card-title mb-0"><i class="fa fa-history"></i> Historique des versements</h5>
+                    <small class="text-muted">
+                        {% if facture_reglee %}
+                            Facture réglée
+                        {% else %}
+                            Facture non soldée
+                        {% endif %}
+                    </small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th><i class="fa fa-calendar-alt"></i> Date</th>
+                                    <th><i class="fa fa-concierge-bell"></i> Service</th>
+                                    <th><i class="fa fa-dollar-sign"></i> Montant</th>
+                                    <th class="text-end"><i class="fa fa-cogs"></i> Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in paiements_liste %}
+                                <tr>
+                                    <td>{{ item.date_paiement|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fa fa-hospital-user"></i> {{ item.get_service_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.montant_verse|floatformat:2 }}</strong>
+                                        <span class="badge badge-devise {% if item.devise == 'USD' %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+                                            {{ item.devise }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'imprimer_recu_direct' item.id %}" target="_blank" class="btn btn-sm btn-light">
+                                            <i class="fa fa-print"></i> Reçu
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        <i class="fa fa-info-circle"></i> Aucune transaction enregistrée.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-    {% include 'back-end/includes/js.html' %}
+</div>
+
+{% include 'back-end/includes/js.html' %}
 </body>
 </html>

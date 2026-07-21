@@ -735,61 +735,144 @@ def payer_fiche(request, patient_id):
 @login_required
 def historique_paiements(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
-    
-    # Récupération du taux de change (assurez-vous d'avoir une méthode pour cela)
-    taux = Decimal(str(getattr(ConfigurationHopital.objects.first(), 'taux_change', 1660)))
 
-    # 1. CALCULS DES COÛTS (Sécurisation des objets)
-    # Prix de la fiche
-    cout_fiche = Decimal(str(getattr(patient.service, 'prix', 0))) if patient.service else Decimal('0.00')
-    
-    # Prix des examens
-    cout_examens = Prestation.objects.filter(
-        demandeexamen__consultation__triage__patient=patient
-    ).aggregate(total=Sum('prix'))['total'] or Decimal('0.00')
-    
-    # Prix du Bloc (Sécurisation pour éviter l'erreur NoneType)
-    bloc = BlocOperatoire.objects.filter(consultation__triage__patient=patient).first()
-    cout_bloc = bloc.prestation.prix if (bloc and hasattr(bloc, 'prestation') and bloc.prestation) else Decimal('0.00')
-    
-    total_cout_usd = cout_fiche + cout_examens + cout_bloc
-    
-    # 2. CALCULS PAIEMENTS RÉELS
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    taux = ConfigurationHopital.get_taux()
+
+    # Paiements du patient
     paiements = Paiement.objects.filter(patient=patient)
+    if hopital_user:
+        paiements = paiements.filter(hopital=hopital_user)
+
     recettes = paiements.aggregate(
         usd=Sum('montant_verse', filter=Q(devise='USD')),
         cdf=Sum('montant_verse', filter=Q(devise='CDF'))
     )
-    
+
     total_paye_usd = recettes['usd'] or Decimal('0.00')
     total_paye_cdf = recettes['cdf'] or Decimal('0.00')
-    
-    # Conversion du payé en CDF vers USD pour calculer la dette totale
     total_paye_en_usd = total_paye_usd + (total_paye_cdf / taux)
-    
-    # 3. RÉSULTATS ET DETTES
+
+    # Fiche
+    prestation_fiche = Prestation.objects.filter(
+        categorie='ADM',
+        libelle__icontains='Fiche',
+        hopital=hopital_user
+    ).first() if hopital_user else None
+
+    cout_fiche = Decimal(str(prestation_fiche.prix)) if prestation_fiche else Decimal('0.00')
+
+    # Examens
+    examens_qs = Prestation.objects.filter(
+        demandeexamen__consultation__triage__patient=patient
+    )
+    if hopital_user:
+        examens_qs = examens_qs.filter(hopital=hopital_user)
+
+    cout_examens = examens_qs.aggregate(total=Sum('prix'))['total'] or Decimal('0.00')
+
+    # Bloc
+    bloc = BlocOperatoire.objects.filter(consultation__triage__patient=patient)
+    if hopital_user:
+        bloc = bloc.filter(consultation__triage__patient__hopital=hopital_user)
+    bloc = bloc.first()
+
+    cout_bloc = Decimal('0.00')
+    if bloc:
+        if hasattr(bloc, 'prestation') and bloc.prestation:
+            cout_bloc = Decimal(str(bloc.prestation.prix))
+        elif hasattr(bloc, 'cout_total') and bloc.cout_total:
+            cout_bloc = Decimal(str(bloc.cout_total))
+
+    total_cout_usd = cout_fiche + cout_examens + cout_bloc
     reste_a_payer_usd = max(Decimal('0.00'), total_cout_usd - total_paye_en_usd)
     reste_a_payer_cdf = reste_a_payer_usd * taux
-    
-    # Objets pour les boutons d'encaissement
-    consultation = Consultation.objects.filter(triage__patient=patient).order_by('-date_creation').first()
-    
+
+    consultation = Consultation.objects.filter(triage__patient=patient)
+    if hopital_user:
+        consultation = consultation.filter(triage__patient__hopital=hopital_user)
+    consultation = consultation.order_by('-date_creation').first()
+
+    peut_imprimer_facture = total_cout_usd > 0
+    facture_reglee = reste_a_payer_usd <= Decimal('0.01')
+
     context = {
         'patient': patient,
         'paiements_liste': paiements.order_by('-date_paiement'),
         'cout_total_usd': total_cout_usd,
         'total_paye_usd': total_paye_usd,
         'total_paye_cdf': total_paye_cdf,
+        'total_paye_en_usd': total_paye_en_usd,
         'reste_a_payer_usd': reste_a_payer_usd,
         'reste_a_payer_cdf': reste_a_payer_cdf,
-        'est_debiteur': reste_a_payer_usd > 0.01, # Si > 0.01$ de dette
+        'est_debiteur': reste_a_payer_usd > Decimal('0.01'),
+        'facture_reglee': facture_reglee,
+        'peut_imprimer_facture': peut_imprimer_facture,
         'derniere_consultation': consultation,
         'bloc_id': bloc.id if bloc else None,
-        'fonctionKey': Fonction.objects.filter(userKey=request.user).first().fonctionKey.roleName 
-                       if Fonction.objects.filter(userKey=request.user).first() else None
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
     }
     return render(request, 'back-end/finance/historique.html', context)
 
+#
+# ================================================================================================
+# IMPRIMER HISTORIQUE PAIEMENT 
+# ===============================================================================================
+@login_required
+def imprimer_facture(request, patient_id):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
+    taux = ConfigurationHopital.get_taux()
+
+    paiements = Paiement.objects.filter(patient=patient, hopital=hopital_user)
+
+    recettes = paiements.aggregate(
+        usd=Sum('montant_verse', filter=Q(devise='USD')),
+        cdf=Sum('montant_verse', filter=Q(devise='CDF'))
+    )
+
+    total_paye_usd = recettes['usd'] or Decimal('0.00')
+    total_paye_cdf = recettes['cdf'] or Decimal('0.00')
+    total_paye_en_usd = total_paye_usd + (total_paye_cdf / taux)
+
+    prestation_fiche = Prestation.objects.filter(
+        categorie='ADM',
+        libelle__icontains='Fiche',
+        hopital=hopital_user
+    ).first()
+
+    cout_fiche = Decimal(str(prestation_fiche.prix)) if prestation_fiche else Decimal('0.00')
+
+    total_cout_usd = cout_fiche
+    reste_a_payer_usd = max(Decimal('0.00'), total_cout_usd - total_paye_en_usd)
+    reste_a_payer_cdf = reste_a_payer_usd * taux
+
+    context = {
+        'patient': patient,
+        'paiements_liste': paiements.order_by('-date_paiement'),
+        'taux': taux,
+        'cout_total_usd': total_cout_usd,
+        'cout_total_cdf': total_cout_usd * taux,
+        'total_paye_usd': total_paye_usd,
+        'total_paye_cdf': total_paye_cdf,
+        'reste_a_payer_usd': reste_a_payer_usd,
+        'reste_a_payer_cdf': reste_a_payer_cdf,
+        'facture_reglee': reste_a_payer_usd <= Decimal('0.01'),
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+    }
+    return render(request, 'back-end/finance/imprimer_facture.html', context)
 
 # 22
 # ==================================================================================================

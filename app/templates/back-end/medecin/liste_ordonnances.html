@@ -5,127 +5,312 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dossiers Médicaux & Prescriptions | JMC</title>
-    
+
     {% include 'back-end/includes/css.html' %}
-    
+
     <style>
-        .page-wrapper { background-color: #f8fafc; padding: 20px; }
-        .search-container { margin-bottom: 20px; }
-        .search-box { width: 100%; max-width: 400px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .table thead { background-color: #006064; color: #ffffff; }
-        .badge-exam { 
-            background: #e0f2f1; color: #006064; font-size: 0.75rem; 
-            display: block; padding: 6px; border-radius: 6px; 
-            margin-bottom: 5px; border-left: 4px solid #006064; 
+        :root{
+            --primary:#0d6efd;
+            --primary-dark:#0f172a;
+            --bg:#f8fafc;
+            --card:#ffffff;
+            --text:#1f2937;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+            --accent:#006064;
         }
-        .med-list { font-size: 0.85rem; color: #37474f; list-style: square; padding-left: 20px; margin: 0; }
-        .btn-action { border-radius: 50%; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; }
+
+        body{
+            background: linear-gradient(180deg, #fff 0%, #f8fafc 45%, #eef4fb 100%);
+            color: var(--text);
+        }
+
+        .content.container-fluid{
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .page-title{
+            font-weight: 800;
+            color: var(--primary-dark);
+            font-size: clamp(1.2rem, 2vw, 1.9rem);
+        }
+
+        .card{
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            box-shadow: 0 10px 28px rgba(15,23,42,.06);
+            overflow: hidden;
+        }
+
+        .search-container{
+            margin-bottom: 1rem;
+        }
+
+        .search-box{
+            width: 100%;
+            max-width: 520px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            outline: none;
+            transition: .2s ease;
+            background: #fff;
+        }
+
+        .search-box:focus{
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+        }
+
+        .table-responsive{
+            border-radius: 0;
+        }
+
+        .table{
+            margin-bottom: 0;
+            min-width: 1100px;
+        }
+
+        .table thead{
+            background-color: var(--accent);
+            color: #fff;
+        }
+
+        .table thead th{
+            white-space: nowrap;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+
+        .table td{
+            vertical-align: top;
+        }
+
+        .badge-exam{
+            background: #e0f2f1;
+            color: #006064;
+            font-size: 0.78rem;
+            display: block;
+            padding: 7px 9px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border-left: 4px solid #006064;
+            line-height: 1.25;
+        }
+
+        .med-list{
+            font-size: 0.88rem;
+            color: #37474f;
+            list-style: square;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .med-list li{
+            margin-bottom: 4px;
+        }
+
+        .btn-action{
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px;
+            flex: 0 0 auto;
+        }
+
+        .action-wrap{
+            display: flex;
+            justify-content: center;
+            gap: .35rem;
+            flex-wrap: wrap;
+        }
+
+        .empty-state{
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .meta-chip{
+            display: inline-block;
+            padding: .35rem .6rem;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #1d4ed8;
+            font-size: .78rem;
+            font-weight: 700;
+            margin-bottom: .35rem;
+        }
+
+        @media (max-width: 768px){
+            .content.container-fluid{
+                padding-left: .75rem;
+                padding-right: .75rem;
+            }
+
+            .page-title{
+                font-size: 1.25rem;
+            }
+
+            .search-box{
+                max-width: 100%;
+            }
+
+            .card-body{
+                padding: .9rem;
+            }
+        }
+
+        @media (max-width: 576px){
+            .btn-action{
+                width: 100%;
+                border-radius: 12px;
+                height: 42px;
+            }
+
+            .action-wrap{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: .5rem;
+            }
+
+            .table{
+                min-width: 980px;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <div class="main-wrapper">
-        {% include 'back-end/includes/header.html' %}
-        {% include 'back-end/includes/sidebar.html' %}
-        
-        <div class="page-wrapper">
-            <div class="content container-fluid">
-                
-                <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
-                    <h3 class="page-title text-primary font-weight-bold">Dossiers Médicaux & Prescriptions</h3>
-                </div>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
 
-                <div class="search-container">
-                    <input type="text" id="searchInput" class="search-box" onkeyup="filterTable()" placeholder="🔍 Rechercher par nom de patient...">
-                </div>
+    <div class="page-wrapper">
+        <div class="content container-fluid">
 
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped" id="ordonnanceTable">
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Diagnostic / Notes</th>
-                                        <th>Médicaments</th>
-                                        <th>Examens & Résultats</th>
-                                        <th>Médecin</th>
-                                        <th class="text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for ord in ordonnances %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ ord.consultation.triage.patient.noms }}</strong><br>
-                                            <small class="text-muted"><i class="fa fa-calendar"></i> {{ ord.consultation.date_creation|date:"d/m/Y" }}</small>
-                                        </td>
-                                        <td>
-                                            <small><strong>Diag:</strong> {{ ord.consultation.diagnostic_final|default:"Non spécifié" }}</small><br>
-                                            <small class="text-muted"><strong>Note:</strong> {{ ord.observation|truncatechars:50|default:"-" }}</small>
-                                        </td>
-                                        <td>
-                                            <ul class="med-list">
-                                                {% for med in ord.medicaments.all %}
-                                                    <li>{{ med.nom }} <small>({{ med.posologie }})</small></li>
-                                                {% empty %}
-                                                    <small class="text-muted">Aucun</small>
-                                                {% endfor %}
-                                            </ul>
-                                        </td>
-                                        <td>
-                                            {% for ex in ord.consultation.examens.all %}
-                                                <div class="badge-exam">
-                                                    <strong>{{ ex.prestation.libelle }}:</strong> {{ ex.resultat|default:"En cours..." }}<br>
-                                                    <span style="font-size: 0.65rem; color: #004d40;">Tech: {{ ex.technicien.noms|default:"-" }}</span>
-                                                </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4 mt-3">
+                <div>
+                    <h3 class="page-title mb-1">Dossiers Médicaux & Prescriptions</h3>
+                    <div class="text-muted">Ordonnances définitives de votre hôpital</div>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-box" onkeyup="filterTable()" placeholder="🔍 Rechercher par nom de patient...">
+            </div>
+
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped align-middle" id="ordonnanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Diagnostic / Notes</th>
+                                    <th>Médicaments</th>
+                                    <th>Examens & Résultats</th>
+                                    <th>Médecin</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ord in ordonnances %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ ord.consultation.triage.patient.noms }}</strong><br>
+                                        <span class="meta-chip">{{ ord.consultation.triage.patient.code_patient }}</span><br>
+                                        <small class="text-muted"><i class="fa fa-calendar"></i> {{ ord.consultation.date_creation|date:"d/m/Y" }}</small>
+                                    </td>
+
+                                    <td class="text-break">
+                                        <small><strong>Diag:</strong> {{ ord.consultation.diagnostic_final|default:"Non spécifié" }}</small><br>
+                                        <small class="text-muted"><strong>Note:</strong> {{ ord.observation|truncatechars:70|default:"-" }}</small>
+                                    </td>
+
+                                    <td>
+                                        <ul class="med-list">
+                                            {% for med in ord.medicaments.all %}
+                                                <li>{{ med.nom }} <small>({{ med.posologie }})</small></li>
                                             {% empty %}
-                                                <small class="text-muted">Aucun examen</small>
+                                                <li class="text-muted" style="list-style:none;">Aucun</li>
                                             {% endfor %}
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-info text-white">
-                                                <i class="fa fa-user-md"></i> {{ ord.consultation.medecin.noms|default:"-" }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
+                                        </ul>
+                                    </td>
+
+                                    <td>
+                                        {% for ex in ord.consultation.examens.all %}
+                                            <div class="badge-exam">
+                                                <strong>{{ ex.prestation.libelle }}:</strong>
+                                                {{ ex.resultat|default:"En cours..." }}<br>
+                                                <span style="font-size: 0.72rem; color: #004d40;">
+                                                    Tech: {{ ex.technicien.noms|default:"-" }}
+                                                </span>
+                                            </div>
+                                        {% empty %}
+                                            <small class="text-muted">Aucun examen</small>
+                                        {% endfor %}
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            {{ ord.consultation.medecin.get_full_name|default:ord.consultation.medecin.username }}
+                                        </strong><br>
+                                        <small class="text-muted">
+                                            <i class="fa fa-user-md"></i> Médecin traitant
+                                        </small>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div class="action-wrap">
                                             <a href="{% url 'imprimer_ordonnance' ord.id %}" target="_blank" class="btn btn-primary btn-action" title="Imprimer">
                                                 <i class="fa fa-print"></i>
                                             </a>
                                             <a href="{% url 'modifier_ordonnance' ord.id %}" class="btn btn-warning btn-action text-white" title="Modifier">
                                                 <i class="fa fa-pencil-alt"></i>
                                             </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4">Aucune ordonnance disponible.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="empty-state">
+                                            <i class="fa fa-folder-open fa-2x mb-2"></i><br>
+                                            Aucune ordonnance disponible.
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script>
-        function filterTable() {
-            let input = document.getElementById("searchInput");
-            let filter = input.value.toLowerCase();
-            let table = document.getElementById("ordonnanceTable");
-            let tr = table.getElementsByTagName("tr");
-            for (let i = 1; i < tr.length; i++) {
-                let td = tr[i].getElementsByTagName("td")[0];
-                if (td) {
-                    tr[i].style.display = td.innerText.toLowerCase().indexOf(filter) > -1 ? "" : "none";
-                }
+</div>
+
+<script>
+    function filterTable() {
+        let input = document.getElementById("searchInput");
+        let filter = input.value.toLowerCase();
+        let table = document.getElementById("ordonnanceTable");
+        let tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td")[0];
+            if (td) {
+                tr[i].style.display = td.innerText.toLowerCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
-    </script>
-    {% include 'back-end/includes/js.html' %}
+    }
+</script>
+
+{% include 'back-end/includes/js.html' %}
 </body>
 </html>

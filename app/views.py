@@ -2622,25 +2622,36 @@ def liste_ordonnances_delivrees_view(request):
 # ============================================================================================
 @login_required
 def liste_ordonnances_prescrites_view(request):
-    # Récupération optimisée avec le bon related_name 'medicaments'
-    ordonnances = Ordonnance.objects.filter(type_ordonnance='DEFINITIVE').select_related(
-        'consultation__triage__patient', 
-        'consultation__medecin' 
-    ).prefetch_related(
-        'medicaments', # <--- CORRIGÉ ICI
-        'consultation__examens__prestation',
-        'consultation__examens__technicien'
-    ).order_by('-id')
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    ordonnances = Ordonnance.objects.none()
+
+    if hopital_user:
+        ordonnances = (
+            Ordonnance.objects.filter(
+                type_ordonnance='DEFINITIVE',
+                consultation__triage__patient__hopital=hopital_user
+            )
+            .select_related(
+                'consultation__triage__patient',
+                'consultation__medecin'
+            )
+            .prefetch_related(
+                'medicaments',
+                'consultation__examens__prestation',
+                'consultation__examens__technicien'
+            )
+            .order_by('-id')
+        )
+
     context = {
-        'ordonnances': ordonnances, 
-        'fonctionKey': fonctionKey
+        'ordonnances': ordonnances,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
     }
     return render(request, 'back-end/medecin/liste_ordonnances.html', context)
-
 #
 # ===========================================================================================
 # HOSPITALISE PATIENT 
@@ -3221,18 +3232,15 @@ def imprimer_ordonnance(request, ordonnance_id):
     hopital_user = role.hopital if role else None
 
     ordonnance = get_object_or_404(
-        Ordonnance.objects.select_related(
-            'consultation__triage__patient',
-            'consultation__medecin'
-        ).prefetch_related(
-            'medicaments'
-        ),
+        Ordonnance,
         id=ordonnance_id,
-        hopital=hopital_user
+        type_ordonnance='DEFINITIVE',
+        consultation__triage__patient__hopital=hopital_user
     )
 
-    context = {'ord': ordonnance}
-    return render(request, 'back-end/imprimer/print_ordonnance.html', context)
+    return render(request, 'back-end/medecin/imprimer_ordonnance.html', {
+        'ordonnance': ordonnance
+    })
 
 
 #

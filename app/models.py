@@ -87,7 +87,7 @@ class Prestation(models.Model):
     
     libelle = models.CharField(max_length=200, verbose_name="Libellé")
     categorie = models.CharField(max_length=10, choices=CATEGORIES, verbose_name="Catégorie")
-    prix = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Prix (USD)")
+    prix = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Prix (CDF)")
     hopital =  models.ForeignKey(Hopital, on_delete= models.SET_NULL , null = True , related_name = 'hopital_prestation') 
     valeur_normale = models.CharField(
         max_length=150, blank=True, null=True, 
@@ -101,7 +101,7 @@ class Prestation(models.Model):
             self.valeur_normale = None
             
     def __str__(self):
-        return f"{self.libelle} ({self.get_categorie_display()}) - {self.prix} USD"
+        return f"{self.libelle} ({self.get_categorie_display()}) - {self.prix} CDF"
 
     class Meta:
         verbose_name = "Prestation"
@@ -204,7 +204,7 @@ class ClientExterne(models.Model):
 
 # 6. PATIENT =======================================================
 class Paiement(models.Model):
-    CURRENCY = [('USD', 'USD'), ('CDF', 'CDF')]
+    CURRENCY = [('CDF', 'CDF'), ('USD', 'USD')]
     SERVICES = [
         ('FICHE', 'Fiche'), ('CONSULTATION', 'Consultation'), ('LABO', 'Labo'),
         ('ECHOGRAPHIE', 'Échographie'), ('RADIO', 'Radiographie'), ('SOIN', 'Soins'),
@@ -231,7 +231,7 @@ class Paiement(models.Model):
     service = models.CharField(max_length=20, choices=SERVICES)
     montant_verse = models.DecimalField(max_digits=15, decimal_places=2)
     montant_reduction = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    devise = models.CharField(max_length=3, choices=CURRENCY, default='USD')
+    devise = models.CharField(max_length=3, choices=CURRENCY, default='CDF')
     date_paiement = models.DateTimeField(default=timezone.now)
     caissier = models.ForeignKey(User, on_delete=models.PROTECT)
     reste_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name="Dette / Reste à payer")

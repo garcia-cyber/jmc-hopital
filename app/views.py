@@ -338,47 +338,47 @@ def modifier_utilisateur(request, user_id):
 # ==================================================================================================
 @login_required
 def gestion_prestations(request):
-    # 1. Gestion de la recherche (Query)
-    query = request.GET.get('q')
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
+    query = request.GET.get('q', '')
+
+    prestations_list = Prestation.objects.all()
+    if hopital_user:
+        prestations_list = prestations_list.filter(hopital=hopital_user)
+
     if query:
-        prestations_list = Prestation.objects.filter(
+        prestations_list = prestations_list.filter(
             Q(libelle__icontains=query) | Q(categorie__icontains=query)
-        ).order_by('libelle')
-    else:
-        prestations_list = Prestation.objects.all().order_by('libelle')
+        )
 
-    # 2. Récupération du taux de change (Correction du type ici)
-    config = ConfigurationHopital.objects.first()
-    taux_valeur = config.taux_usd_en_cdf if config else 2500.00
-    taux = Decimal(str(taux_valeur)) # Conversion sécurisée pour le calcul financier
+    prestations_list = prestations_list.order_by('libelle')
 
-    # 3. Pagination (10 éléments par page)
+    taux = ConfigurationHopital.get_taux()
+    taux = Decimal(str(taux)) if taux else Decimal('2500.00')
+
     paginator = Paginator(prestations_list, 10)
     page_number = request.GET.get('page')
     prestations_obj = paginator.get_page(page_number)
 
-    # 4. Calcul du prix en CDF pour les éléments de la page actuelle
     for item in prestations_obj:
-        item.prix_cdf = item.prix * taux
+        item.prix_cdf = item.prix
+        item.prix_usd = (Decimal(str(item.prix)) / taux) if taux else Decimal('0')
 
-    # 5. Gestion de l'ajout (POST)
     if request.method == 'POST':
         form = PrestationForm(request.POST)
         if form.is_valid():
-            form.save()
+            prestation = form.save(commit=False)
+            prestation.hopital = hopital_user
+            prestation.save()
             messages.success(request, "La prestation a été ajoutée avec succès.")
             return redirect('gestion_prestations')
     else:
         form = PrestationForm()
 
-    # 6. Gestion du rôle utilisateur (Vérification rétablie)
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    # 7. Préparation des catégories pour le modal de modification
     categories_list = Prestation._meta.get_field('categorie').choices
 
-    # 8. Contexte complet
     context = {
         'prestations': prestations_obj,
         'form': form,
@@ -386,9 +386,7 @@ def gestion_prestations(request):
         'fonctionKey': fonctionKey,
         'categories_list': categories_list,
     }
-    
     return render(request, 'back-end/prestation/list_prestation.html', context)
-
 #
 # ==================================================================================================
 # SUPPRESSION PRESTATION
@@ -411,9 +409,8 @@ def supprimer_prestation(request, pk):
 # ==================================================================================================
 @login_required
 def modifier_taux(request):
-    # On récupère le premier (et unique) objet, ou on en crée un s'il n'existe pas
     config, created = ConfigurationHopital.objects.get_or_create(id=1)
-    
+
     if request.method == 'POST':
         form = ConfigurationHopitalForm(request.POST, instance=config)
         if form.is_valid():
@@ -423,11 +420,14 @@ def modifier_taux(request):
     else:
         form = ConfigurationHopitalForm(instance=config)
 
-    # verification de la fonction
-    role = Fonction.objects.filter(userKey = request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    role = Fonction.objects.filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    return render(request, 'back-end/prestation/config_taux.html', {'form': form, 'config': config ,'fonctionKey':fonctionKey})
+    return render(request, 'back-end/prestation/config_taux.html', {
+        'form': form,
+        'config': config,
+        'fonctionKey': fonctionKey
+    })
 
 # 14
 # ==================================================================================================

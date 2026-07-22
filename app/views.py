@@ -3584,38 +3584,48 @@ def imprimer_consultation(request, consultation_id):
 # ============================================================================================
 @login_required
 def modifier_ordonnance_view(request, ordonnance_id):
-    # Récupération de l'ordonnance avec ses relations
-    ordonnance = get_object_or_404(Ordonnance.objects.select_related('consultation'), id=ordonnance_id)
+    ordonnance = get_object_or_404(
+        Ordonnance.objects.select_related('consultation'),
+        id=ordonnance_id
+    )
 
     if request.method == 'POST':
-        # 1. Mise à jour des informations de base
-        ordonnance.type_ordonnance = request.POST.get('type_ordonnance')
-        ordonnance.observation = request.POST.get('observation')
-        ordonnance.save()
+        try:
+            with transaction.atomic():
+                ordonnance.type_ordonnance = request.POST.get('type_ordonnance')
+                ordonnance.observation = request.POST.get('observation')
+                ordonnance.save()
 
-        # 2. Mise à jour des médicaments : on supprime les anciens et on recrée
-        ordonnance.medicaments.all().delete()
-        
-        noms = request.POST.getlist('nom_medicament[]')
-        posologies = request.POST.getlist('posologie[]')
-        durees = request.POST.getlist('duree[]')
+                ordonnance.medicaments.all().delete()
 
-        for i in range(len(noms)):
-            if noms[i]: # On vérifie que le nom n'est pas vide
-                Medicament.objects.create(
-                    ordonnance=ordonnance,
-                    nom=noms[i],
-                    posologie=posologies[i],
-                    duree=durees[i]
-                )
-        
-        messages.success(request, "Ordonnance mise à jour avec succès.")
-        return redirect('liste_ordonnances') 
+                noms = request.POST.getlist('nom_medicament[]')
+                posologies = request.POST.getlist('posologie[]')
+                durees = request.POST.getlist('duree[]')
+                quantites = request.POST.getlist('quantite[]')
+
+                for nom, posologie, duree, quantite in zip(noms, posologies, durees, quantites):
+                    if nom and nom.strip():
+                        Medicament.objects.create(
+                            ordonnance=ordonnance,
+                            nom=nom.strip(),
+                            posologie=posologie.strip() if posologie else '',
+                            duree=duree.strip() if duree else '',
+                            quantite=int(quantite) if quantite and str(quantite).isdigit() else 1
+                        )
+
+            messages.success(request, "Ordonnance mise à jour avec succès.")
+            return redirect('liste_ordonnances')
+
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la mise à jour : {str(e)}")
+
     role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    return render(request, 'back-end/medecin/modifier_ordonnance.html', {'ord': ordonnance, 'fonctionKey':fonctionKey})
-
+    return render(request, 'back-end/medecin/modifier_ordonnance.html', {
+        'ord': ordonnance,
+        'fonctionKey': fonctionKey
+    })
 
 #
 # ====================================================================================================
@@ -6124,24 +6134,45 @@ def imprimer_ordonnance_urgence(request, pk):
 @login_required
 def modifier_ordonnance_urgence(request, pk):
     ordonnance = get_object_or_404(
-        Ordonnance.objects.select_related('consultation__triage__patient', 'consultation__medecin'),
-        pk=pk
+        Ordonnance.objects.select_related('consultation'),
+        id=pk
     )
 
     if request.method == 'POST':
-        form = OrdonnanceFormUrgence(request.POST, instance=ordonnance)
-        if form.is_valid():
-            form.save()
+        try:
+            with transaction.atomic():
+                ordonnance.type_ordonnance = request.POST.get('type_ordonnance')
+                ordonnance.observation = request.POST.get('observation')
+                ordonnance.save()
+
+                ordonnance.medicaments.all().delete()
+
+                noms = request.POST.getlist('nom_medicament[]')
+                posologies = request.POST.getlist('posologie[]')
+                durees = request.POST.getlist('duree[]')
+                quantites = request.POST.getlist('quantite[]')
+
+                for nom, posologie, duree, quantite in zip(noms, posologies, durees, quantites):
+                    if nom and nom.strip():
+                        Medicament.objects.create(
+                            ordonnance=ordonnance,
+                            nom=nom.strip(),
+                            posologie=posologie.strip() if posologie else '',
+                            duree=duree.strip() if duree else '',
+                            quantite=int(quantite) if quantite and str(quantite).isdigit() else 1
+                        )
+
+            messages.success(request, "Ordonnance mise à jour avec succès.")
             return redirect('liste_ordonnances_urgence')
-    else:
-        form = OrdonnanceFormUrgence(instance=ordonnance)
+
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la mise à jour : {str(e)}")
 
     role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     return render(request, 'back-end/medecin/modifier_ordonnance_urgence.html', {
-        'form': form,
-        'ordonnance': ordonnance,
+        'ord': ordonnance,
         'fonctionKey': fonctionKey
     })
 

@@ -112,7 +112,7 @@ urlpatterns =[
     path('consultations/<int:consultation_id>/prescrire-urgence/', views.prescrire_ordonnance_urgence_rapide, name='prescrire_ordonnance_urgence_rapide'),
     path('medecin/liste-patients/', views.liste_patients_urgence, name='liste_patients_urgence'),
     path('ordonnance/<int:pk>/imprimer/', views.imprimer_ordonnance_urgence, name='imprimer_ordonnance'),
-    path('ordonnance/<int:pk>/modifierUrgence/', views.modifier_ordonnance_urgence, name='modifier_ordonnance'),
+    path('ordonnance/<int:pk>/modifierUrgence/', views.modifier_ordonnance_urgence, name='modifier_ordonnance_urgence'),
 
 
     # ================================

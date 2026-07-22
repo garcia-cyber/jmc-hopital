@@ -504,6 +504,24 @@
                             <i class="fas fa-history me-2"></i> Historique Ventes
                         </a>
                     </li>
+
+                     <li>
+                        <a href="{% url 'liste_ordonnances_urgence' %}">
+                            <i class="la la-notes-medical"></i> 
+                            <span>Ordonnances Urgentes</span>
+                        </a>
+                    </li>
+                    <li><a href="{% url 'liste_ordonnances' %}"><i class="la la-file-text"></i> <span>Liste des Ordonnances</span></a></li>
+                    <li>
+                        <a href="{% url 'liste_ordonnances_externes_client' %}">
+                            <i class="fa fa-list"></i> <span>Ordonnances client</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'liste_ordonnances_sortie' %}">
+                            <i class="fa fa-file-medical-alt"></i> <span>Ordonnances Sortie</span>
+                        </a>
+                    </li>
                 {% endif %}
 
 

@@ -1493,8 +1493,11 @@ def detail_consultation_view(request, pk):
 @login_required
 def liste_ordonnances_urgence(request):
     query = request.GET.get('q')
-    
-    # 1. Filtre strict sur le type 'URGENCE' et correction du tri avec 'date_prescrite'
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role else None
+
     ordonnances_list = Ordonnance.objects.filter(
         type_ordonnance='URGENCE'
     ).select_related(
@@ -1504,17 +1507,23 @@ def liste_ordonnances_urgence(request):
         'medicaments'
     ).order_by('-date_prescrite')
 
-    # 2. Recherche par nom de patient ou code patient
+    if fonctionKey != 'ADMIN':
+        if hopital_user:
+            ordonnances_list = ordonnances_list.filter(
+                consultation__triage__patient__hopital=hopital_user
+            )
+        else:
+            ordonnances_list = ordonnances_list.none()
+
     if query:
         ordonnances_list = ordonnances_list.filter(
             Q(consultation__triage__patient__noms__icontains=query) |
             Q(consultation__triage__patient__code_patient__icontains=query)
         )
 
-    # 3. Pagination à 10 éléments par page
     paginator = Paginator(ordonnances_list, 10)
     page = request.GET.get('page')
-    
+
     try:
         ordonnances = paginator.page(page)
     except PageNotAnInteger:
@@ -1522,16 +1531,12 @@ def liste_ordonnances_urgence(request):
     except EmptyPage:
         ordonnances = paginator.page(paginator.num_pages)
 
-    # 4. Rôle de l'utilisateur pour la sidebar
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
-    
     context = {
         'ordonnances': ordonnances,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'query': query,
     }
     return render(request, 'back-end/medecin/liste_ordonnances_urgence.html', context)
-
 
 # 33
 # ==================================================================================================
@@ -2292,11 +2297,14 @@ def liste_attente_ordonnance_view(request):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
     if request.method == 'POST' and request.POST.get('action') == 'enregistrer_ordonnance':
         consultation_id = request.POST.get('consultation_id')
         diagnostic = request.POST.get('diagnostic_final')
         type_ord = request.POST.get('type_ordonnance')
-
         destination = request.POST.get('destination')
         observation_orient = request.POST.get('observation_orientation')
 
@@ -2310,73 +2318,88 @@ def liste_attente_ordonnance_view(request):
             triage__patient__hopital=hopital_user
         ).first()
 
-        if consultation:
-            try:
-                with transaction.atomic():
-                    consultation.diagnostic_final = diagnostic
-                    consultation.save()
+        if not consultation:
+            messages.error(request, "Consultation introuvable.")
+            return redirect('liste_attente_medecin')
 
-                    ordonnance = Ordonnance.objects.create(
-                        consultation=consultation,
-                        type_ordonnance=type_ord
-                    )
+        try:
+            with transaction.atomic():
+                consultation.diagnostic_final = diagnostic
+                consultation.save(update_fields=['diagnostic_final'])
 
-                    for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
-                        if nom.strip():
-                            Medicament.objects.create(
-                                ordonnance=ordonnance,
-                                nom=nom,
-                                posologie=pos,
-                                duree=dur,
-                                quantite=qty if qty else 1
-                            )
+                ordonnance = Ordonnance.objects.create(
+                    consultation=consultation,
+                    type_ordonnance=type_ord
+                )
 
-                    if destination:
-                        if destination == 'Hospitalisation':
-                            lit_id = request.POST.get('lit_id')
-                            date_entree = request.POST.get('date_entree')
-                            motif_admission = request.POST.get('motif_admission')
-
-                            if lit_id:
-                                Hospitalisation.objects.create(
-                                    patient=consultation.triage.patient,
-                                    lit_id=lit_id,
-                                    hopital=hopital_user,
-                                    date_entree=date_entree if date_entree else timezone.now(),
-                                    motif_admission=motif_admission if motif_admission else diagnostic,
-                                    statut='EN_COURS'
-                                )
-
-                        Orientation.objects.create(
-                            consultation=consultation,
-                            medecin_orientateur=request.user,
-                            destination=destination,
-                            observation=observation_orient,
-                            est_admis=False
+                for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
+                    if nom and nom.strip():
+                        Medicament.objects.create(
+                            ordonnance=ordonnance,
+                            nom=nom.strip(),
+                            posologie=pos.strip() if pos else '',
+                            duree=dur.strip() if dur else '',
+                            quantite=int(qty) if qty and qty.isdigit() else 1
                         )
 
-                    messages.success(request, "Traitement complet effectué avec succès.")
-            except Exception as e:
-                messages.error(request, f"Erreur critique : {str(e)}")
+                if destination:
+                    Orientation.objects.create(
+                        consultation=consultation,
+                        medecin_orientateur=request.user,
+                        destination=destination,
+                        observation=observation_orient,
+                        est_admis=False
+                    )
+
+                    if destination == 'Hospitalisation':
+                        lit_id = request.POST.get('lit_id')
+                        date_entree = request.POST.get('date_entree')
+                        motif_admission = request.POST.get('motif_admission')
+
+                        if lit_id:
+                            hospitalisation = Hospitalisation.objects.create(
+                                patient=consultation.triage.patient,
+                                lit_id=lit_id,
+                                hopital=hopital_user,
+                                date_entree=date_entree if date_entree else timezone.now(),
+                                motif_admission=motif_admission if motif_admission else diagnostic,
+                                statut='EN_COURS'
+                            )
+
+                            lit = Lit.objects.filter(id=lit_id, hopital=hopital_user).first()
+                            if lit:
+                                lit.est_occupe = True
+                                lit.save(update_fields=['est_occupe'])
+
+            messages.success(request, "Traitement complet effectué avec succès.")
+        except Exception as e:
+            messages.error(request, f"Erreur critique : {str(e)}")
 
         return redirect('liste_attente_medecin')
 
     consultations_en_attente = Consultation.objects.filter(
         examens__statut='TERMINE',
         triage__patient__hopital=hopital_user
-    ).prefetch_related('examens', 'ordonnance_set').distinct()
+    ).prefetch_related(
+        'examens__prestation',
+        'ordonnance_set'
+    ).distinct().order_by('-date_creation')
+
+    for c in consultations_en_attente:
+        c.ordonnance_existante = c.ordonnance_set.exists()
+        c.examens_termines = c.examens.filter(statut='TERMINE')
 
     lits_disponibles = Lit.objects.filter(
         est_occupe=False,
         hopital=hopital_user
-    )
+    ).select_related('chambre').order_by('nom_lit')
 
     return render(request, 'back-end/medecin/liste_attente.html', {
         'consultations_en_attente': consultations_en_attente,
         'lits_disponibles': lits_disponibles,
         'fonctionKey': fonctionKey,
-        'now': timezone.now()
-    }) 
+        'now': timezone.now(),
+    })
 # ==================================================================================================
 # 44 : RESULTAT HISTORIQUE SOIT LABO , RADIO OU ECHO
 # ==================================================================================================
@@ -3424,9 +3447,20 @@ def liste_entreprises_view(request):
 # ======================================================================================
 @login_required
 def enregistrer_ordonnance_urgence(request, consultation_id):
-    # On récupère la consultation par son ID
-    consultation = get_object_or_404(Consultation, pk=consultation_id)
-    patient = consultation.patient  # grâce à la propriété définie dans ton modèle
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    consultation = get_object_or_404(
+        Consultation,
+        pk=consultation_id,
+        triage__patient__hopital=hopital_user
+    )
+    patient = consultation.patient
 
     if request.method == 'POST':
         diagnostic = request.POST.get('diagnostic')
@@ -3435,39 +3469,40 @@ def enregistrer_ordonnance_urgence(request, consultation_id):
         noms = request.POST.getlist('nom')
         posologies = request.POST.getlist('posologie')
         durees = request.POST.getlist('duree')
+        quantites = request.POST.getlist('quantite')
 
-        with transaction.atomic():
-            # Création de l’ordonnance liée à la consultation existante
-            ordonnance = Ordonnance.objects.create(
-                consultation=consultation,
-                type_ordonnance='URGENCE',
-                diagnostic=diagnostic,
-                observation=observation
-            )
+        try:
+            with transaction.atomic():
+                ordonnance = Ordonnance.objects.create(
+                    consultation=consultation,
+                    type_ordonnance='URGENCE',
+                    diagnostic=diagnostic,
+                    observation=observation,
+                    hopital=hopital_user
+                )
 
-            # Ajout des médicaments
-            for i in range(len(noms)):
-                if noms[i]:
-                    Medicament.objects.create(
-                        ordonnance=ordonnance,
-                        nom=noms[i],
-                        posologie=posologies[i],
-                        duree=durees[i]
-                    )
+                for nom, posologie, duree, quantite in zip(noms, posologies, durees, quantites):
+                    if nom and nom.strip():
+                        Medicament.objects.create(
+                            ordonnance=ordonnance,
+                            nom=nom.strip(),
+                            posologie=posologie.strip() if posologie else '',
+                            duree=duree.strip() if duree else '',
+                            quantite=int(quantite) if quantite and str(quantite).isdigit() else 1,
+                            hopital=hopital_user
+                        )
 
-        # Redirection vers la fiche patient après enregistrement
-        #return redirect('detail_patient', pk=patient.pk)
+            messages.success(request, "Ordonnance d'urgence enregistrée avec succès.")
+            return redirect('detail_patient', pk=patient.pk)
 
-    # Récupération du rôle utilisateur pour l’affichage
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
 
     return render(request, 'back-end/medecin/creer_ordonnance_urgence.html', {
         'patient': patient,
         'consultation': consultation,
         'fonctionKey': fonctionKey
     })
-
 
 
 #

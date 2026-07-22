@@ -10,6 +10,7 @@
         .badge-labo { background-color: #e6f7ed; color: #1f7a42; border: 1px solid #c2eed4; }
         .badge-echo { background-color: #fff9db; color: #926c00; border: 1px solid #ffe8cc; }
         .badge-radio { background-color: #fff0f1; color: #b82c39; border: 1px solid #ffccd1; }
+
         .exam-card {
             border-left: 4px solid #3498db;
             background: #f8f9fa;
@@ -22,19 +23,33 @@
             align-items: flex-start;
             gap: 10px;
         }
+
         .exam-info { flex: 1; }
-        .btn-exam { padding: 2px 8px; font-size: 0.75rem; margin-top: 4px; }
-        .status-locked { color: #7f8c8d; font-size: 0.9rem; font-weight: bold; }
+
+        .btn-exam {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        .status-locked {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
         .result-text {
             display: block;
             margin-top: 4px;
             color: #212529;
             font-size: 0.82rem;
         }
+
         .image-link {
             display: inline-block;
             margin-top: 4px;
         }
+
         .empty-result {
             color: #6c757d;
             font-size: 0.8rem;
@@ -51,7 +66,10 @@
         <div class="page-wrapper">
             <div class="content container-fluid">
                 <div class="page-header d-flex justify-content-between align-items-center mb-4">
-                    <h3>Ordonnances en Attente</h3>
+                    <div>
+                        <h3 class="mb-1">Ordonnances en Attente</h3>
+                        <small class="text-muted">Liste des consultations dont les examens sont terminés</small>
+                    </div>
                     <input type="text" id="searchInput" class="form-control w-25" placeholder="🔍 Rechercher un patient...">
                 </div>
 
@@ -70,16 +88,25 @@
                                 <tbody>
                                     {% for c in consultations_en_attente %}
                                     <tr>
-                                        <td class="align-middle">{{ c.triage.date_prelevement|date:"d/m/Y H:i" }}</td>
                                         <td class="align-middle">
-                                            <strong>{{ c.triage.patient.noms }}</strong>
+                                            <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
+                                            <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
                                         </td>
+
                                         <td class="align-middle">
-                                            {% for exam in c.examens.all %}
-                                                {% if exam.statut == 'TERMINE' %}
+                                            <strong>{{ c.triage.patient.noms }}</strong><br>
+                                            <small class="text-muted">{{ c.triage.patient.code_patient }}</small>
+                                        </td>
+
+                                        <td class="align-middle">
+                                            {% if c.examens_termines %}
+                                                {% for exam in c.examens_termines %}
                                                 <div class="exam-card">
                                                     <div class="exam-info">
-                                                        <span class="badge {% if exam.prestation.categorie == 'LABO' %}badge-labo{% elif exam.prestation.categorie == 'RADIO' %}badge-radio{% else %}badge-echo{% endif %}">
+                                                        <span class="badge
+                                                            {% if exam.prestation.categorie == 'LABO' %}badge-labo
+                                                            {% elif exam.prestation.categorie == 'RADIO' %}badge-radio
+                                                            {% else %}badge-echo{% endif %}">
                                                             {{ exam.prestation.categorie }}
                                                         </span>
                                                         <strong>{{ exam.prestation.libelle }}</strong>
@@ -103,14 +130,17 @@
                                                         <i class="fa fa-print"></i>
                                                     </a>
                                                 </div>
-                                                {% endif %}
-                                            {% empty %}
+                                                {% endfor %}
+                                            {% else %}
                                                 <small class="text-muted">Aucun résultat disponible</small>
-                                            {% endfor %}
+                                            {% endif %}
                                         </td>
+
                                         <td class="text-center align-middle">
-                                            {% if c.ordonnance_set.exists %}
-                                                <div class="status-locked"><i class="fa fa-lock"></i> Verrouillé</div>
+                                            {% if c.ordonnance_existante %}
+                                                <div class="status-locked">
+                                                    <i class="fa fa-lock"></i> Verrouillé
+                                                </div>
                                                 <a href="{% url 'imprimer_consultation' c.id %}" target="_blank" class="btn btn-success btn-sm mt-2">
                                                     <i class="fa fa-print"></i> Tout imprimer
                                                 </a>
@@ -138,7 +168,7 @@
     </div>
 
     {% for c in consultations_en_attente %}
-    {% if not c.ordonnance_set.exists %}
+    {% if not c.ordonnance_existante %}
     <div class="modal fade" id="modal{{ c.id }}" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -188,7 +218,7 @@
                             <div class="row mt-3" id="zone-lit-{{ c.id }}" style="display:none;">
                                 <div class="col-md-6">
                                     <label class="font-weight-bold">Date d'entrée</label>
-                                    <input type="datetime-local" name="date_entree" class="form-control" value="{{ now|date:'Y-m-d\TH:i' }}">
+                                    <input type="datetime-local" name="date_entree" class="form-control" value="{{ now|date:'Y-m-d\\TH:i' }}">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="font-weight-bold">Lit disponible</label>
@@ -208,11 +238,21 @@
                         <label class="font-weight-bold">Prescription</label>
                         <div id="zone-medicaments-{{ c.id }}">
                             <div class="row mb-2">
-                                <div class="col"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required></div>
-                                <div class="col"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
-                                <div class="col"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
+                                <div class="col">
+                                    <input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required>
+                                </div>
+                                <div class="col">
+                                    <input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required>
+                                </div>
+                                <div class="col">
+                                    <input type="text" name="duree[]" class="form-control" placeholder="Durée" required>
+                                </div>
+                                <div class="col">
+                                    <input type="number" name="quantite[]" class="form-control" placeholder="Qté" value="1" min="1">
+                                </div>
                             </div>
                         </div>
+
                         <button type="button" class="btn btn-info btn-sm mt-2" onclick="ajouterLigne('{{ c.id }}')">+ Ajouter médicament</button>
                     </div>
 
@@ -248,11 +288,15 @@
                 <div class="col"><input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required></div>
                 <div class="col"><input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required></div>
                 <div class="col"><input type="text" name="duree[]" class="form-control" placeholder="Durée" required></div>
-                <div class="col-auto"><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button></div>
+                <div class="col"><input type="number" name="quantite[]" class="form-control" placeholder="Qté" value="1" min="1"></div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">✕</button>
+                </div>
             `;
             zone.appendChild(div);
         }
     </script>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

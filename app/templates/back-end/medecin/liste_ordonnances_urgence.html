@@ -6,6 +6,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
     <title>JMC - Ordonnances d'Urgence</title>
     {% include 'back-end/includes/css.html' %}
+    <style>
+        .badge-light-info {
+            background-color: #e7f3ff;
+            color: #0d6efd;
+        }
+        .med-list {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+        .med-item {
+            padding: 6px 0;
+            border-bottom: 1px dashed #e9ecef;
+        }
+        .med-item:last-child {
+            border-bottom: none;
+        }
+        .med-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+            font-size: 12px;
+        }
+        .med-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #f1f3f5;
+            color: #495057;
+        }
+        .med-pill-primary {
+            background: #eef2ff;
+            color: #4338ca;
+        }
+        .obs-box {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #dc3545;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #555;
+        }
+        .action-group .btn {
+            margin-bottom: 4px;
+        }
+        .page-header {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
@@ -16,7 +67,6 @@
         <div class="page-wrapper">
             <div class="content container-fluid">
 
-                <!-- Page Header -->
                 <div class="page-header">
                     <div class="row align-items-center">
                         <div class="col">
@@ -29,7 +79,6 @@
                     </div>
                 </div>
 
-                <!-- Barre de Recherche -->
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <form method="GET" action="" class="search-form">
@@ -48,7 +97,6 @@
                     </div>
                 </div>
 
-                <!-- Tableau des ordonnances -->
                 <div class="row">
                     <div class="col-md-12">
                         <div class="table-responsive">
@@ -79,45 +127,47 @@
                                             <small>{{ ord.consultation.triage.patient.age }} ans</small>
                                         </td>
                                         <td>
-                                            <i class="fa fa-user-md text-danger"></i> 
+                                            <i class="fa fa-user-md text-danger"></i>
                                             Dr. {{ ord.consultation.medecin.get_full_name|default:ord.consultation.medecin.username }}
                                         </td>
                                         <td>
-                                            <!-- Médicaments -->
-                                            <ul class="pl-3 mb-2" style="font-size: 13px;">
+                                            <ul class="med-list">
                                                 {% for med in ord.medicaments.all %}
-                                                    <li class="mb-1">
+                                                <li class="med-item">
+                                                    <div>
                                                         <strong class="text-dark">{{ med.nom }}</strong>
+                                                    </div>
+                                                    <div class="med-meta">
                                                         {% if med.posologie %}
-                                                            <span class="badge badge-light-secondary">{{ med.posologie }}</span>
+                                                            <span class="med-pill med-pill-primary">{{ med.posologie }}</span>
                                                         {% endif %}
                                                         {% if med.duree %}
-                                                            <small class="text-muted">pendant {{ med.duree }}</small>
+                                                            <span class="med-pill">Durée: {{ med.duree }}</span>
                                                         {% endif %}
-                                                    </li>
+                                                        <span class="med-pill">Qté: {{ med.quantite }}</span>
+                                                    </div>
+                                                </li>
                                                 {% empty %}
-                                                    <li class="text-muted">Aucun médicament listé</li>
+                                                <li class="text-muted">Aucun médicament listé</li>
                                                 {% endfor %}
                                             </ul>
 
-                                            <!-- Observation -->
                                             {% if ord.observation %}
-                                                <div class="text-muted mt-1 p-2" style="font-size: 12px; background-color: #f9f9f9; border-left: 3px solid #dc3545; border-radius: 4px;">
-                                                    <i class="fa fa-commenting-o"></i> <strong>Obs :</strong> {{ ord.observation }}
-                                                </div>
+                                            <div class="obs-box">
+                                                <i class="fa fa-commenting-o"></i> <strong>Obs :</strong> {{ ord.observation }}
+                                            </div>
                                             {% endif %}
                                         </td>
-                                        <td class="text-right">
+                                        <td class="text-right action-group">
                                             <a href="{% url 'detail_consultation_view' ord.consultation.id %}" class="btn btn-sm btn-outline-primary">
                                                 <i class="fa fa-eye"></i> Voir consultation
                                             </a>
-                                            <a href="{% url 'imprimer_ordonnance' ord.id%}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                            <a href="{% url 'imprimer_ordonnance' ord.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">
                                                 <i class="fa fa-print"></i> Imprimer
                                             </a>
-
                                             <a href="{% url 'modifier_ordonnance' ord.id %}" class="btn btn-sm btn-outline-warning">
-    <i class="fa fa-edit"></i> Modifier
-</a>
+                                                <i class="fa fa-edit"></i> Modifier
+                                            </a>
                                         </td>
                                     </tr>
                                     {% empty %}
@@ -132,12 +182,13 @@
                             </table>
                         </div>
 
-                        <!-- Pagination -->
                         {% if ordonnances.has_other_pages %}
                         <div class="mt-4">
                             <ul class="pagination justify-content-center">
                                 {% if ordonnances.has_previous %}
-                                    <li class="page-item"><a class="page-link" href="?page={{ ordonnances.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo;</a></li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ ordonnances.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&laquo;</a>
+                                    </li>
                                 {% else %}
                                     <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
                                 {% endif %}
@@ -146,22 +197,25 @@
                                     {% if ordonnances.number == i %}
                                         <li class="page-item active"><span class="page-link">{{ i }}</span></li>
                                     {% else %}
-                                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a></li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                        </li>
                                     {% endif %}
                                 {% endfor %}
 
                                 {% if ordonnances.has_next %}
-                                    <li class="page-item"><a class="page-link" href="?page={{ ordonnances.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&raquo;</a></li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ ordonnances.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">&raquo;</a>
+                                    </li>
                                 {% else %}
                                     <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
                                 {% endif %}
                             </ul>
                         </div>
                         {% endif %}
-
                     </div>
                 </div>
-                
+
             </div>
         </div>
     </div>

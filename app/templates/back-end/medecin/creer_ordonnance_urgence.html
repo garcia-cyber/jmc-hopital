@@ -7,16 +7,115 @@
     <title>Nouvelle Ordonnance d'Urgence</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: none; }
-        .card-header { border-radius: 12px 12px 0 0 !important; padding: 20px; }
-        .form-control { border-radius: 8px; border: 1px solid #ced4da; }
-        .table-responsive { overflow-x: auto; }
-        /* Style pour mobile */
+        body {
+            background: linear-gradient(135deg, #f6f8fc 0%, #eef2f7 100%);
+        }
+        .page-header-box {
+            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+            color: #fff;
+            border-radius: 18px;
+            padding: 24px 28px;
+            box-shadow: 0 10px 30px rgba(220,53,69,.18);
+            margin-bottom: 24px;
+        }
+        .page-header-box small {
+            color: rgba(255,255,255,.8);
+        }
+        .card {
+            border: none;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+        .card-body {
+            padding: 28px;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #d7dde6;
+            min-height: 44px;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 .2rem rgba(220,53,69,.12);
+            border-color: #dc3545;
+        }
+        .table-wrap {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .table thead th {
+            background: #f8fafc;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: .9rem;
+            text-transform: uppercase;
+            letter-spacing: .02em;
+        }
+        .table td, .table th {
+            vertical-align: middle;
+        }
+        .btn-add {
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .btn-submit {
+            border-radius: 12px;
+            padding: 12px 22px;
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(220,53,69,.16);
+        }
+        .btn-cancel {
+            border-radius: 12px;
+            padding: 12px 22px;
+            font-weight: 600;
+        }
+        .pill-info {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #fff1f2;
+            color: #be123c;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+        .action-cell {
+            width: 56px;
+            text-align: center;
+        }
         @media (max-width: 767px) {
+            .card-body { padding: 18px; }
+            .page-header-box { padding: 18px; border-radius: 14px; }
             .table thead { display: none; }
             .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
-            .table td { display: flex; flex-direction: column; margin-bottom: 10px; }
-            .table td::before { content: attr(data-label); font-weight: bold; margin-bottom: 5px; color: #555; }
+            .table tr {
+                border-bottom: 1px solid #e5e7eb;
+                padding: 12px 0;
+            }
+            .table td {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                padding: 10px 0;
+                border: none;
+            }
+            .table td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: #6b7280;
+                font-size: .82rem;
+            }
+            .action-cell {
+                width: 100%;
+                text-align: left;
+            }
         }
     </style>
 </head>
@@ -24,56 +123,98 @@
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="card">
-                    <div class="card-header bg-danger text-white">
-                        <h4 class="mb-0"><i class="fa fa-stethoscope"></i> Ordonnance d'Urgence</h4>
-                        <small class="text-white-50">Patient : {{ consultation.triage.patient.noms }}</small>
+                <div class="page-header-box">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap">
+                        <div>
+                            <div class="pill-info mb-2">
+                                <i class="fa fa-stethoscope"></i> Ordonnance d'Urgence
+                            </div>
+                            <h3 class="mb-1 text-white">Créer une ordonnance</h3>
+                            <small>Patient : {{ consultation.triage.patient.noms }}</small>
+                        </div>
+                        <div class="mt-2 mt-md-0">
+                            <a href="{% url 'detail_consultation' consultation.pk %}" class="btn btn-light btn-cancel">
+                                <i class="fa fa-arrow-left"></i> Retour
+                            </a>
+                        </div>
                     </div>
+                </div>
+
+                <div class="card">
                     <div class="card-body">
                         <form method="POST">
                             {% csrf_token %}
-                            
-                            <div class="form-group mb-4">
-                                <label class="font-weight-bold">Diagnostic Principal</label>
-                                <input type="text" name="diagnostic" class="form-control form-control-lg" placeholder="Saisir le diagnostic..." required>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="section-title">Diagnostic principal</div>
+                                    <div class="form-group">
+                                        <input type="text" name="diagnostic" class="form-control form-control-lg" placeholder="Saisir le diagnostic..." required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="section-title">Type</div>
+                                    <div class="form-group">
+                                        <input type="text" class="form-control form-control-lg" value="URGENCE" readonly>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="table-responsive">
-                                <table class="table table-striped" id="table-medicaments">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Médicament</th>
-                                            <th>Posologie</th>
-                                            <th>Durée</th>
-                                            <th style="width: 50px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td data-label="Médicament"><input type="text" name="nom" class="form-control" placeholder="Nom..." required></td>
-                                            <td data-label="Posologie"><input type="text" name="posologie" class="form-control" placeholder="ex: 1cp 3x/j..." required></td>
-                                            <td data-label="Durée"><input type="text" name="duree" class="form-control" placeholder="ex: 5 jours..." required></td>
-                                            <td></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="section-title mt-3">Médicaments prescrits</div>
+                            <div class="table-wrap">
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0" id="table-medicaments">
+                                        <thead>
+                                            <tr>
+                                                <th>Médicament</th>
+                                                <th>Posologie</th>
+                                                <th>Durée</th>
+                                                <th>Quantité</th>
+                                                <th class="action-cell"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td data-label="Médicament">
+                                                    <input type="text" name="nom" class="form-control" placeholder="Nom..." required>
+                                                </td>
+                                                <td data-label="Posologie">
+                                                    <input type="text" name="posologie" class="form-control" placeholder="ex: 1 cp 3x/j..." required>
+                                                </td>
+                                                <td data-label="Durée">
+                                                    <input type="text" name="duree" class="form-control" placeholder="ex: 5 jours..." required>
+                                                </td>
+                                                <td data-label="Quantité">
+                                                    <input type="number" name="quantite" class="form-control" value="1" min="1" required>
+                                                </td>
+                                                <td class="action-cell" data-label="Action"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
-                            <button type="button" class="btn btn-outline-info btn-block mb-4" onclick="ajouterLigne()">
-                                <i class="fa fa-plus"></i> Ajouter un médicament
-                            </button>
-                            
-                            <div class="form-group mb-4">
-                                <label class="font-weight-bold">Observations complémentaires</label>
-                                <textarea name="observation" class="form-control" rows="3" placeholder="Informations supplémentaires..."></textarea>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-outline-info btn-add" onclick="ajouterLigne()">
+                                    <i class="fa fa-plus"></i> Ajouter un médicament
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between border-top pt-3">
-                                <a href="{% url 'detail_consultation' consultation.pk %}" class="btn btn-secondary px-4">Annuler</a>
-                                <button type="submit" class="btn btn-danger px-4 shadow-sm"><i class="fa fa-save"></i> Enregistrer</button>
+                            <div class="section-title mt-4">Observations complémentaires</div>
+                            <div class="form-group">
+                                <textarea name="observation" class="form-control" rows="4" placeholder="Informations supplémentaires..."></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-4 flex-wrap">
+                                <a href="{% url 'detail_consultation' consultation.pk %}" class="btn btn-secondary btn-cancel mb-2 mb-md-0">
+                                    Annuler
+                                </a>
+                                <button type="submit" class="btn btn-danger btn-submit mb-2 mb-md-0">
+                                    <i class="fa fa-save"></i> Enregistrer l'ordonnance
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -87,10 +228,15 @@
             const table = document.getElementById("table-medicaments").getElementsByTagName('tbody')[0];
             const newRow = table.insertRow();
             newRow.innerHTML = `
-                <td data-label="Médicament"><input type="text" name="nom" class="form-control" required></td>
-                <td data-label="Posologie"><input type="text" name="posologie" class="form-control" required></td>
-                <td data-label="Durée"><input type="text" name="duree" class="form-control" required></td>
-                <td data-label="Action"><button type="button" class="btn btn-danger btn-sm" onclick="supprimerLigne(this)"><i class="fa fa-trash"></i></button></td>
+                <td data-label="Médicament"><input type="text" name="nom" class="form-control" placeholder="Nom..." required></td>
+                <td data-label="Posologie"><input type="text" name="posologie" class="form-control" placeholder="ex: 1 cp 3x/j..." required></td>
+                <td data-label="Durée"><input type="text" name="duree" class="form-control" placeholder="ex: 5 jours..." required></td>
+                <td data-label="Quantité"><input type="number" name="quantite" class="form-control" value="1" min="1" required></td>
+                <td class="action-cell" data-label="Action">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="supprimerLigne(this)">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </td>
             `;
         }
 
@@ -98,6 +244,7 @@
             btn.closest('tr').remove();
         }
     </script>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

@@ -685,11 +685,6 @@ class RapportJournalierPersonnelForm(forms.ModelForm):
 
 
 
-class TypeChambreForm(forms.ModelForm):
-
-  class Meta:
-    model = TypeChambre
-    fields = ['libelle', 'prix_nuitée', 'hopital']
 
 
 class ChambreForm(forms.ModelForm):

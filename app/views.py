@@ -1303,26 +1303,37 @@ def consultation_medicale(request, triage_id):
 # ==================================================================================================
 @login_required
 def liste_consultations_terminees(request):
-    consultations = Consultation.objects.select_related(
-        'triage__patient',
-        'medecin'
-    ).prefetch_related(
-        'examens__prestation'
-    ).order_by('-date_creation')
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    consultations = Consultation.objects.none()
+
+    if hopital_user:
+        consultations = (
+            Consultation.objects.select_related(
+                'triage__patient',
+                'medecin'
+            )
+            .prefetch_related(
+                'examens__prestation'
+            )
+            .filter(
+                triage__patient__hopital=hopital_user
+            )
+            .order_by('-date_creation')
+        )
 
     context = {
         'consultations': consultations,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
     }
     return render(request, 'back-end/medecin/liste_consultations.html', context)
 #
 # ==============================================================================================
 # MODIFICATION DE LA CONSULTATION PAR LE MEDECIN 
 # ==============================================================================================
-@login_required
 @login_required
 def modifier_consultation(request, triage_id):
     triage = get_object_or_404(SigneVital, id=triage_id)
@@ -1339,7 +1350,10 @@ def modifier_consultation(request, triage_id):
         messages.error(request, "Ce patient appartient à un autre hôpital.")
         return redirect('liste_consultation_medecin')
 
-    consultation = Consultation.objects.filter(triage=triage).first()
+    consultation = Consultation.objects.filter(
+        triage=triage,
+        triage__patient__hopital=hopital_user
+    ).first()
 
     if consultation is None:
         messages.error(request, "Aucune consultation trouvée pour ce patient.")
@@ -1399,6 +1413,7 @@ def modifier_consultation(request, triage_id):
                         exam.save()
 
                     prestation_ids = request.POST.getlist('examens_ids')
+
                     for prestation_id in prestation_ids:
                         prestation = get_object_or_404(
                             Prestation,
@@ -1407,19 +1422,35 @@ def modifier_consultation(request, triage_id):
                             categorie__in=['LABO', 'RADIO', 'ECHO']
                         )
 
-                        DemandeExamen.objects.create(
+                        quantite = request.POST.get(f'qty_{prestation_id}', 1)
+                        statut = request.POST.get(f'statut_{prestation_id}', 'EN_ATTENTE')
+                        indication = request.POST.get(f'indication_{prestation_id}', '')
+                        resultat = request.POST.get(f'resultat_{prestation_id}', '')
+                        date_realisation = request.POST.get(f'date_realisation_{prestation_id}') or None
+
+                        exam, created = DemandeExamen.objects.get_or_create(
                             consultation=consultation_obj,
                             prestation=prestation,
-                            quantite=request.POST.get(f'qty_{prestation_id}', 1),
-                            statut=request.POST.get(f'statut_{prestation_id}', 'EN_ATTENTE'),
-                            indication=request.POST.get(f'indication_{prestation_id}', ''),
-                            resultat=request.POST.get(f'resultat_{prestation_id}', ''),
                             hopital=hopital_user,
-                            date_realisation=request.POST.get(f'date_realisation_{prestation_id}') or None
+                            defaults={
+                                'quantite': quantite,
+                                'statut': statut,
+                                'indication': indication,
+                                'resultat': resultat,
+                                'date_realisation': date_realisation,
+                            }
                         )
 
+                        if not created:
+                            exam.quantite = quantite
+                            exam.statut = statut
+                            exam.indication = indication
+                            exam.resultat = resultat
+                            exam.date_realisation = date_realisation
+                            exam.save()
+
                 messages.success(request, f"Consultation de {triage.patient.noms} modifiée avec succès !")
-                return redirect('liste_consultation_medecin')
+                return redirect('liste_consultations')
 
             except Exception as e:
                 messages.error(request, f"Une erreur technique est survenue : {str(e)}")
@@ -1434,7 +1465,8 @@ def modifier_consultation(request, triage_id):
         'consultation': consultation,
         'examens_disponibles': examens_disponibles,
         'examens_existant': examens_existant,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
     })
 # 31
 # ==================================================================================================
@@ -1530,45 +1562,74 @@ def prescrire_ordonnance_urgence_rapide(request, consultation_id):
 # ==================================================================================================
 @login_required
 def encaisser_examens_prescrits(request, consultation_id):
-    # Récupération de l'objet consultation
-    consultation = get_object_or_404(Consultation, id=consultation_id)
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    consultation = get_object_or_404(
+        Consultation.objects.select_related('triage__patient', 'medecin', 'hopital')
+        .prefetch_related('examens__prestation', 'paiements'),
+        id=consultation_id,
+        triage__patient__hopital=hopital_user
+    )
+
     examens = consultation.examens.all()
-    
-    # 1. Récupération de la configuration pour le taux (Logique conservée)
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500')
-    
-    # 2. Calculs financiers (Logique conservée)
-    total_prescrit = examens.aggregate(total=Sum('prestation__prix'))['total'] or Decimal('0.00')
-    total_verse = Paiement.objects.filter(consultation=consultation).aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
-    total_reductions = Paiement.objects.filter(consultation=consultation).aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
-    
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
+
+    total_prescrit = examens.aggregate(
+        total=Coalesce(
+            Sum(F('prestation__prix') * F('quantite')),
+            Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+        )
+    )['total'] or Decimal('0.00')
+
+    paiements_examens = consultation.paiements.filter(service='EXAMENS')
+
+    total_verse = paiements_examens.aggregate(
+        total=Coalesce(
+            Sum('montant_verse'),
+            Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+        )
+    )['total'] or Decimal('0.00')
+
+    total_reductions = paiements_examens.aggregate(
+        total=Coalesce(
+            Sum('montant_reduction'),
+            Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+        )
+    )['total'] or Decimal('0.00')
+
     reste_a_payer_usd = total_prescrit - (total_verse + total_reductions)
+    if reste_a_payer_usd < 0:
+        reste_a_payer_usd = Decimal('0.00')
 
     if request.method == 'POST':
         try:
             devise = request.POST.get('devise', 'USD')
-            montant_recu = Decimal(request.POST.get('montant_verse', 0))
-            reduction_usd = Decimal(request.POST.get('montant_reduction', 0))
-            
-            # Validation : montants négatifs
+            montant_recu = Decimal(request.POST.get('montant_verse', '0') or '0')
+            reduction_usd = Decimal(request.POST.get('montant_reduction', '0') or '0')
+
             if montant_recu < 0 or reduction_usd < 0:
                 messages.error(request, "Les montants ne peuvent pas être négatifs.")
-                return redirect('encaisser_examens', consultation_id=consultation.id)
+                return redirect('encaisser_examens_prescrits', consultation_id=consultation.id)
 
-            # Conversion du montant reçu en USD
-            montant_verse_usd = montant_recu / taux if devise == 'CDF' else montant_recu
+            montant_verse_usd = (montant_recu / taux) if devise == 'CDF' else montant_recu
             total_encaisse = montant_verse_usd + reduction_usd
 
-            # Validation : Vérification du solde avant encaissement
             if total_encaisse > reste_a_payer_usd:
-                messages.error(request, f"Erreur : Le montant total ({total_encaisse:.2f} USD) dépasse le reste à payer ({reste_a_payer_usd:.2f} USD).")
-                return redirect('encaisser_examens', consultation_id=consultation.id)
+                messages.error(
+                    request,
+                    f"Erreur : le montant total ({total_encaisse:.2f} USD) dépasse le reste à payer ({reste_a_payer_usd:.2f} USD)."
+                )
+                return redirect('encaisser_examens_prescrits', consultation_id=consultation.id)
 
-            # 3. Création du paiement (Logique forcée conservée)
             nouveau_reste = reste_a_payer_usd - total_encaisse
-            
-            Paiement.objects.create(
+            paiement = Paiement.objects.create(
                 patient=consultation.triage.patient,
                 consultation=consultation,
                 service='EXAMENS',
@@ -1577,31 +1638,30 @@ def encaisser_examens_prescrits(request, consultation_id):
                 reste_a_payer=max(Decimal('0.00'), nouveau_reste),
                 devise=devise,
                 caissier=request.user,
-                date_paiement=timezone.now()
+                date_paiement=timezone.now(),
+                hopital=hopital_user
             )
+
+            if paiement.reste_a_payer <= 0:
+                consultation.consultation_payee = True
+                consultation.save(update_fields=['consultation_payee'])
 
             messages.success(request, "Paiement enregistré avec succès.")
             return redirect('historique_paiements', patient_id=consultation.triage.patient.id)
 
         except Exception as e:
             messages.error(request, f"Une erreur technique est survenue : {str(e)}")
-            return redirect('encaisser_examens', consultation_id=consultation.id)
+            return redirect('encaisser_examens_prescrits', consultation_id=consultation.id)
 
-    # Récupération des informations sur l'utilisateur pour le template (Logique conservée)
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
-
-    # Context complet avec toutes vos variables d'origine
     context = {
         'consultation': consultation,
+        'examens': examens,
         'reste_a_payer_usd': reste_a_payer_usd,
         'taux': taux,
         'fonctionKey': fonctionKey,
-        'examens': examens, # Ajouté : nécessaire pour afficher la liste des examens
-        'total_prescrit': total_prescrit
+        'hopital_user': hopital_user,
     }
     return render(request, 'back-end/caisse/encaisser_examens.html', context)
-
 # 35
 # ==================================================================================================
 # RECEPTIONNISTE PAIEMENT DES EXAM
@@ -1617,27 +1677,14 @@ def liste_attente_caisse(request):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    consultations_a_payer = Consultation.objects.filter(
-        examens__isnull=False,
-        triage__patient__hopital=hopital_user
-    ).distinct().order_by('-date_creation')
-
-    consultations_a_payer = consultations_a_payer.annotate(
-        total_a_payer=Coalesce(
-            Sum(F('examens__prestation__prix') * F('examens__quantite')),
-            Value(0.00, output_field=DecimalField())
-        ),
-        total_deja_paye=Coalesce(
-            Sum('paiements__montant_verse') + Sum('paiements__montant_reduction'),
-            Value(0.00, output_field=DecimalField())
-        )
+    consultations_a_payer = (
+        Consultation.objects
+        .filter(examens__isnull=False, triage__patient__hopital=hopital_user)
+        .select_related('triage__patient', 'medecin')
+        .prefetch_related('examens__prestation', 'paiements')
+        .distinct()
+        .order_by('-date_creation')
     )
-
-    consultations_a_payer = consultations_a_payer.annotate(
-        reste_a_payer=F('total_a_payer') - F('total_deja_paye')
-    )
-
-    consultations_a_payer = consultations_a_payer.filter(reste_a_payer__gt=0)
 
     query = request.GET.get('q')
     if query:
@@ -1646,17 +1693,37 @@ def liste_attente_caisse(request):
             Q(triage__patient__code_patient__icontains=query)
         )
 
-    fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
+    consultations = []
+    for c in consultations_a_payer:
+        total_a_payer = c.examens.aggregate(
+            total=Coalesce(
+                Sum(F('prestation__prix') * F('quantite')),
+                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+            )
+        )['total'] or Decimal('0.00')
 
-    context = {
-        'consultations': consultations_a_payer,
-        'fonctionKey': fonctionKey,
-        'query': query
-    }
+        paiements_examens = c.paiements.filter(service='EXAMENS')
 
-    return render(request, 'back-end/caisse/liste_attente.html', context)
+        total_deja_paye = paiements_examens.aggregate(
+            total=Coalesce(
+                Sum(F('montant_verse') + F('montant_reduction')),
+                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+            )
+        )['total'] or Decimal('0.00')
 
-# 36
+        reste = total_a_payer - total_deja_paye
+        if reste > 0:
+            c.total_a_payer = total_a_payer
+            c.total_deja_paye = total_deja_paye
+            c.reste_a_payer = reste
+            consultations.append(c)
+
+    return render(request, 'back-end/caisse/liste_attente.html', {
+        'consultations': consultations,
+        'fonctionKey': role.fonctionKey.roleName if (role and role.fonctionKey) else None,
+        'query': query,
+        'taux': taux,
+    })# 36
 # ==================================================================================================
 # LISTE DES EXAMENS A FAIRE 
 # ==================================================================================================
@@ -2236,6 +2303,7 @@ def liste_attente_ordonnance_view(request):
         noms = request.POST.getlist('nom_medicament[]')
         posologies = request.POST.getlist('posologie[]')
         durees = request.POST.getlist('duree[]')
+        quantites = request.POST.getlist('quantite[]')
 
         consultation = Consultation.objects.filter(
             id=consultation_id,
@@ -2253,13 +2321,14 @@ def liste_attente_ordonnance_view(request):
                         type_ordonnance=type_ord
                     )
 
-                    for nom, pos, dur in zip(noms, posologies, durees):
+                    for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
                         if nom.strip():
                             Medicament.objects.create(
                                 ordonnance=ordonnance,
                                 nom=nom,
                                 posologie=pos,
-                                duree=dur
+                                duree=dur,
+                                quantite=qty if qty else 1
                             )
 
                     if destination:
@@ -2307,8 +2376,7 @@ def liste_attente_ordonnance_view(request):
         'lits_disponibles': lits_disponibles,
         'fonctionKey': fonctionKey,
         'now': timezone.now()
-    })
- 
+    }) 
 # ==================================================================================================
 # 44 : RESULTAT HISTORIQUE SOIT LABO , RADIO OU ECHO
 # ==================================================================================================

@@ -4,12 +4,199 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>JMC - Modifier Consultation</title>
+    <title>JMC - Modification de Consultation</title>
 
     {% include 'back-end/includes/css.html' %}
     <style>
-        .constant-val { font-size: 16px; font-weight: bold; color: #1f2937; }
-        .section-title { border-left: 4px solid #dc3545; padding-left: 10px; font-weight: bold; color: #b21f2d; margin-bottom: 20px; }
+        :root {
+            --jmc-primary: #0284c7;
+            --jmc-primary-dark: #0369a1;
+            --jmc-border: #cbd5e1;
+            --jmc-text: #1e293b;
+            --jmc-muted: #64748b;
+            --jmc-bg: #f8fafc;
+        }
+
+        body {
+            background-color: var(--jmc-bg);
+            color: var(--jmc-text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 1rem;
+        }
+
+        .page-title {
+            font-weight: 700;
+            color: var(--jmc-text);
+            font-size: 1.25rem;
+        }
+
+        .card {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+            background: #ffffff;
+        }
+
+        .card-header {
+            background-color: #f1f5f9;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 0.85rem 1.25rem;
+            font-weight: 700;
+            color: var(--jmc-text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .patient-banner {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-left: 4px solid var(--jmc-primary);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .patient-banner dt {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--jmc-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .patient-banner dd {
+            font-weight: 600;
+            color: var(--jmc-text);
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control {
+            border: 1px solid var(--jmc-border);
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.9rem;
+            color: var(--jmc-text);
+            background-color: #fff;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-control:focus {
+            border-color: var(--jmc-primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--jmc-primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-medical {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--jmc-border);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .table-medical th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px;
+            border-bottom: 1px solid var(--jmc-border);
+            text-align: left;
+        }
+
+        .table-medical td {
+            padding: 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--jmc-border);
+            background-color: #fff;
+        }
+
+        .table-medical tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn {
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.55rem 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background-color: var(--jmc-primary);
+            border-color: var(--jmc-primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--jmc-primary-dark);
+            border-color: var(--jmc-primary-dark);
+        }
+
+        .btn-secondary-custom {
+            background-color: #f1f5f9;
+            border: 1px solid var(--jmc-border);
+            color: #334155;
+        }
+
+        .btn-secondary-custom:hover {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .badge-code {
+            background-color: #e2e8f0;
+            color: #334155;
+            font-family: monospace;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -21,261 +208,226 @@
     <div class="page-wrapper">
         <div class="content container-fluid">
 
-            <div class="page-header">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h3 class="page-title">Modifier la Consultation</h3>
-                        <ul class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="#">Accueil</a></li>
-                            <li class="breadcrumb-item"><a href="{% url 'liste_consultations' %}">Consultations terminées</a></li>
-                            <li class="breadcrumb-item active">Modification</li>
-                        </ul>
-                    </div>
+            <div class="page-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="page-title">JMC - Dossier Médical : Modification de Consultation</h3>
+                    <ul class="breadcrumb mb-0" style="background: none; padding: 0; font-size: 0.8rem;">
+                        <li class="breadcrumb-item"><a href="#">Accueil</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'liste_consultations' %}">Consultations</a></li>
+                        <li class="breadcrumb-item active">Édition</li>
+                    </ul>
                 </div>
             </div>
 
             {% if messages %}
-                <div class="row">
-                    <div class="col-md-12">
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        {% endfor %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
-                </div>
+                {% endfor %}
             {% endif %}
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h4 class="card-title mb-0">
-                                <i class="fa fa-edit"></i> Modifier les données cliniques et les examens
-                            </h4>
-                        </div>
-                        <div class="card-body">
-
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <div class="border rounded p-3 bg-light">
-                                        <h5 class="mb-2"><i class="fa fa-user text-primary"></i> Patient</h5>
-                                        <p class="mb-1"><strong>Nom :</strong> {{ triage.patient.noms }}</p>
-                                        <p class="mb-1"><strong>Code :</strong> {{ triage.patient.code_patient }}</p>
-                                        <p class="mb-0"><strong>Âge :</strong> {{ triage.patient.age }} ans</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="border rounded p-3 bg-light">
-                                        <h5 class="mb-2"><i class="fa fa-user-md text-primary"></i> Médecin</h5>
-                                        <p class="mb-1"><strong>Consultation :</strong> {{ consultation.date_creation|date:"d/m/Y à H:i" }}</p>
-                                        <p class="mb-0"><strong>État :</strong>
-                                            {% if triage.est_consulte %}
-                                                <span class="badge badge-success">Clôturée</span>
-                                            {% else %}
-                                                <span class="badge badge-warning">En cours</span>
-                                            {% endif %}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <form method="post" id="consultationForm">
-                                {% csrf_token %}
-
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <h5 class="mb-3 text-secondary">Données Cliniques</h5>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Motif de consultation</label>
-                                            <textarea name="motif_consultation" class="form-control" rows="3">{{ consultation.motif_consultation|default_if_none:'' }}</textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Antécédent</label>
-                                            <input type="text" name="antecedent" class="form-control" value="{{ consultation.antecedent|default_if_none:'' }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Complément d'anamnèse</label>
-                                            <input type="text" name="complement_d_anamnese" class="form-control" value="{{ consultation.complement_d_anamnese|default_if_none:'' }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Histoire de la maladie</label>
-                                            <textarea name="histoire_maladie" class="form-control" rows="4">{{ consultation.histoire_maladie|default_if_none:'' }}</textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Examen physique</label>
-                                            <textarea name="examen_physique" class="form-control" rows="4">{{ consultation.examen_physique|default_if_none:'' }}</textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Hypothèse diagnostique</label>
-                                            <textarea name="hypothese_diagnostique" class="form-control" rows="4">{{ consultation.hypothese_diagnostique|default_if_none:'' }}</textarea>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <hr>
-
-                                <div class="row mb-2">
-                                    <div class="col">
-                                        <h5 class="mb-3 text-secondary">Examens Prescrits</h5>
-                                    </div>
-                                </div>
-
-                                {% if examens_existant %}
-                                    <div class="table-responsive">
-                                        <table class="table table-hover custom-table mb-0">
-                                            <thead class="thead-dark">
-                                                <tr>
-                                                    <th>Prestation</th>
-                                                    <th>Quantité</th>
-                                                    <th>Statut</th>
-                                                    <th>Indication</th>
-                                                    <th>Résultat</th>
-                                                    <th>Date réalisation</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for exam in examens_existant %}
-                                                    <tr>
-                                                        <td>
-                                                            <select name="exam_{{ exam.id }}_prestation" class="form-control">
-                                                                {% for p in examens_disponibles %}
-                                                                    <option value="{{ p.id }}" {% if exam.prestation_id == p.id %}selected{% endif %}>
-                                                                        {{ p.libelle }} - {{ p.get_categorie_display }}
-                                                                    </option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </td>
-                                                        <td style="width: 90px;">
-                                                            <input type="number" min="1" name="exam_{{ exam.id }}_quantite" class="form-control" value="{{ exam.quantite }}">
-                                                        </td>
-                                                        <td style="width: 140px;">
-                                                            <select name="exam_{{ exam.id }}_statut" class="form-control">
-                                                                <option value="EN_ATTENTE" {% if exam.statut == 'EN_ATTENTE' %}selected{% endif %}>En attente</option>
-                                                                <option value="TERMINE" {% if exam.statut == 'TERMINE' %}selected{% endif %}>Terminé</option>
-                                                                <option value="ANNULE" {% if exam.statut == 'ANNULE' %}selected{% endif %}>Annulé</option>
-                                                            </select>
-                                                        </td>
-                                                        <td>
-                                                            <textarea name="exam_{{ exam.id }}_indication" class="form-control" rows="2">{{ exam.indication|default_if_none:'' }}</textarea>
-                                                        </td>
-                                                        <td>
-                                                            <textarea name="exam_{{ exam.id }}_resultat" class="form-control" rows="2">{{ exam.resultat|default_if_none:'' }}</textarea>
-                                                        </td>
-                                                        <td style="width: 190px;">
-                                                            <input type="datetime-local" name="exam_{{ exam.id }}_date_realisation" class="form-control" value="{% if exam.date_realisation %}{{ exam.date_realisation|date:'Y-m-d\\TH:i' }}{% endif %}">
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        Aucun examen lié à cette consultation.
-                                    </div>
-                                {% endif %}
-
-                                <hr>
-
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <h5 class="mb-3 text-secondary">Ajouter des examens</h5>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Filtrer par catégorie</label>
-                                            <select id="filter_categorie" class="form-control">
-                                                <option value="all">-- Toutes les catégories --</option>
-                                                <option value="LABO">LABO</option>
-                                                <option value="RADIO">RADIO</option>
-                                                <option value="ECHO">ECHO</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="font-weight-bold">Prestation</label>
-                                            <select id="select_prestation" class="form-control">
-                                                <option value="">-- Choisir une prestation --</option>
-                                                {% for p in examens_disponibles %}
-                                                    <option value="{{ p.id }}" data-cat="{{ p.categorie }}">
-                                                        {{ p.libelle }} - {{ p.get_categorie_display }}
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-2 d-flex align-items-end">
-                                        <button type="button" id="btn_add_examen" class="btn btn-info btn-block mb-3">
-                                            <i class="fa fa-plus"></i> Ajouter
-                                        </button>
-                                    </div>
-
-                                    <div class="col-md-12">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered table-sm custom-table">
-                                                <thead class="bg-light">
-                                                    <tr>
-                                                        <th>Prestation</th>
-                                                        <th>Quantité</th>
-                                                        <th>Statut</th>
-                                                        <th>Indication</th>
-                                                        <th>Résultat</th>
-                                                        <th>Date réalisation</th>
-                                                        <th style="width: 50px;"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="wrapper_examens">
-                                                    <tr class="placeholder-row">
-                                                        <td colspan="7" class="text-center text-muted small py-3">
-                                                            Aucun examen ajouté pour le moment.
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="text-right mt-4">
-                                    <a href="{% url 'liste_consultations' %}" class="btn btn-secondary">
-                                        <i class="fa fa-times"></i> Annuler
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fa fa-save"></i> Enregistrer les modifications
-                                    </button>
-                                </div>
-                            </form>
-
-                        </div>
+            <div class="patient-banner">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <dt>Patient</dt>
+                        <dd><i class="fa fa-user text-muted me-1"></i> {{ triage.patient.noms }}</dd>
+                    </div>
+                    <div class="col-md-2">
+                        <dt>Code Patient</dt>
+                        <dd><span class="badge-code">{{ triage.patient.code_patient }}</span></dd>
+                    </div>
+                    <div class="col-md-2">
+                        <dt>Âge</dt>
+                        <dd>{{ triage.patient.age }} ans</dd>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <dt>Date de Triage / Création</dt>
+                        <dd><i class="fa fa-calendar-alt text-muted me-1"></i> {{ triage.date_creation|date:"d/m/Y à H:i" }}</dd>
                     </div>
                 </div>
             </div>
+
+            <form method="post" id="consultationForm">
+                {% csrf_token %}
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fa fa-file-medical text-primary"></i> Saisie Clinique & Anamnèse
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Motif de consultation</label>
+                                    <textarea name="motif_consultation" class="form-control" rows="2" placeholder="Raison principale de la visite...">{{ consultation.motif_consultation|default_if_none:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Antécédents médicaux / chirurgicaux</label>
+                                    <input type="text" name="antecedent" class="form-control" value="{{ consultation.antecedent|default_if_none:'' }}" placeholder="Ex: HTA, Diabète, Allergies...">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Complément d'anamnèse</label>
+                                    <input type="text" name="complement_d_anamnese" class="form-control" value="{{ consultation.complement_d_anamnese|default_if_none:'' }}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Histoire de la maladie</label>
+                                    <textarea name="histoire_maladie" class="form-control" rows="3" placeholder="Évolution chronologique des symptômes...">{{ consultation.histoire_maladie|default_if_none:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Examen physique</label>
+                                    <textarea name="examen_physique" class="form-control" rows="3" placeholder="Constats cliniques de l'examen physique...">{{ consultation.examen_physique|default_if_none:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Hypothèse diagnostique</label>
+                                    <textarea name="hypothese_diagnostique" class="form-control" rows="2" placeholder="Diagnostics différentiels ou présumés...">{{ consultation.hypothese_diagnostique|default_if_none:'' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title">
+                            <i class="fa fa-flask"></i> Examens et Prestations Associés
+                        </div>
+
+                        {% if examens_existant %}
+                            <div class="table-responsive">
+                                <table class="table-medical">
+                                    <thead>
+                                        <tr>
+                                            <th>Prestation</th>
+                                            <th style="width: 80px;">Qté</th>
+                                            <th style="width: 160px;">Statut</th>
+                                            <th>Indication clinique</th>
+                                            <th>Résultat</th>
+                                            <th style="width: 190px;">Date réalisation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for exam in examens_existant %}
+                                        <tr>
+                                            <td>
+                                                <input type="hidden" name="exam_{{ exam.id }}_prestation" value="{{ exam.prestation_id }}">
+                                                <strong class="text-dark">{{ exam.prestation.libelle }}</strong>
+                                                <br><small class="text-muted">[{{ exam.prestation.get_categorie_display }}]</small>
+                                            </td>
+                                            <td>
+                                                <input type="number" min="1" name="exam_{{ exam.id }}_quantite" class="form-control" value="{{ exam.quantite }}">
+                                            </td>
+                                            <td>
+                                                <select name="exam_{{ exam.id }}_statut" class="form-control">
+                                                    <option value="EN_ATTENTE" {% if exam.statut == 'EN_ATTENTE' %}selected{% endif %}>En attente</option>
+                                                    <option value="TERMINE" {% if exam.statut == 'TERMINE' %}selected{% endif %}>Terminé</option>
+                                                    <option value="ANNULE" {% if exam.statut == 'ANNULE' %}selected{% endif %}>Annulé</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <textarea name="exam_{{ exam.id }}_indication" class="form-control" rows="2">{{ exam.indication|default_if_none:'' }}</textarea>
+                                            </td>
+                                            <td>
+                                                <textarea name="exam_{{ exam.id }}_resultat" class="form-control" rows="2">{{ exam.resultat|default_if_none:'' }}</textarea>
+                                            </td>
+                                            <td>
+                                                <input type="datetime-local" name="exam_{{ exam.id }}_date_realisation" class="form-control" value="{% if exam.date_realisation %}{{ exam.date_realisation|date:'Y-m-d\\TH:i' }}{% endif %}">
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted small font-italic mb-4">Aucun examen enregistré pour cette consultation.</p>
+                        {% endif %}
+
+                        <div class="section-title">
+                            <i class="fa fa-plus-circle"></i> Prescrire de nouveaux examens
+                        </div>
+
+                        <div class="row g-2 align-items-end bg-light p-3 rounded border mb-3">
+                            <div class="col-md-3">
+                                <div class="form-group mb-0">
+                                    <label>Filtrer catégorie</label>
+                                    <select id="filter_categorie" class="form-control">
+                                        <option value="all">-- Toutes --</option>
+                                        <option value="LABO">Laboratoire</option>
+                                        <option value="RADIO">Radiologie</option>
+                                        <option value="ECHO">Échographie</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="form-group mb-0">
+                                    <label>Sélectionner la prestation</label>
+                                    <select id="select_prestation" class="form-control">
+                                        <option value="">-- Choisir un examen médical --</option>
+                                        {% for p in examens_disponibles %}
+                                            <option value="{{ p.id }}" data-cat="{{ p.categorie }}">
+                                                {{ p.libelle }} [{{ p.get_categorie_display }}]
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" id="btn_add_examen" class="btn btn-secondary-custom w-100">
+                                    <i class="fa fa-plus"></i> Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table-medical mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Prestation prescrite</th>
+                                        <th style="width: 80px;">Qté</th>
+                                        <th style="width: 160px;">Statut</th>
+                                        <th>Indication</th>
+                                        <th>Résultat</th>
+                                        <th style="width: 190px;">Date réalisation</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wrapper_examens">
+                                    <tr class="placeholder-row">
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            Aucun nouvel examen ajouté à cette session.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a href="{% url 'liste_consultations' %}" class="btn btn-secondary-custom">
+                                <i class="fa fa-arrow-left"></i> Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-save"></i> Enregistrer les modifications
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </form>
 
         </div>
     </div>
@@ -305,7 +457,12 @@ $(document).ready(function() {
         var prestationText = $('#select_prestation option:selected').text();
 
         if (!prestationId) {
-            alert("Veuillez sélectionner une prestation.");
+            alert("Veuillez sélectionner une prestation médicale.");
+            return;
+        }
+
+        if ($('#new_exam_' + prestationId).length) {
+            alert("Cet examen a déjà été ajouté dans la liste temporaire.");
             return;
         }
 
@@ -317,27 +474,27 @@ $(document).ready(function() {
                     <input type="hidden" name="examens_ids" value="${prestationId}">
                     <strong>${prestationText}</strong>
                 </td>
-                <td style="width: 90px;">
-                    <input type="number" name="qty_${prestationId}" min="1" value="1" class="form-control form-control-sm">
+                <td>
+                    <input type="number" name="qty_${prestationId}" min="1" value="1" class="form-control">
                 </td>
-                <td style="width: 140px;">
-                    <select name="statut_${prestationId}" class="form-control form-control-sm">
+                <td>
+                    <select name="statut_${prestationId}" class="form-control">
                         <option value="EN_ATTENTE">En attente</option>
                         <option value="TERMINE">Terminé</option>
                         <option value="ANNULE">Annulé</option>
                     </select>
                 </td>
                 <td>
-                    <textarea name="indication_${prestationId}" class="form-control form-control-sm" rows="2"></textarea>
+                    <textarea name="indication_${prestationId}" class="form-control" rows="2"></textarea>
                 </td>
                 <td>
-                    <textarea name="resultat_${prestationId}" class="form-control form-control-sm" rows="2"></textarea>
+                    <textarea name="resultat_${prestationId}" class="form-control" rows="2"></textarea>
                 </td>
-                <td style="width: 190px;">
-                    <input type="datetime-local" name="date_realisation_${prestationId}" class="form-control form-control-sm">
+                <td>
+                    <input type="datetime-local" name="date_realisation_${prestationId}" class="form-control">
                 </td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-exam">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-exam" style="padding: 6px 10px;">
                         <i class="fa fa-trash"></i>
                     </button>
                 </td>
@@ -353,8 +510,8 @@ $(document).ready(function() {
         if ($('#wrapper_examens tr').length === 0) {
             $('#wrapper_examens').html(`
                 <tr class="placeholder-row">
-                    <td colspan="7" class="text-center text-muted small py-3">
-                        Aucun examen ajouté pour le moment.
+                    <td colspan="7" class="text-center text-muted py-3">
+                        Aucun nouvel examen ajouté à cette session.
                     </td>
                 </tr>
             `);

@@ -468,6 +468,7 @@ class Medicament(models.Model):
     nom = models.CharField(max_length=255)
     posologie = models.CharField(max_length=255)
     duree = models.CharField(max_length=100)
+    quantite = models.PositiveIntegerField(default=1, null = True, blank= True)
     hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
     
     STATUT_CHOICES = [('EN_COURS', 'En cours'), ('STOPPE', 'Stoppé')]

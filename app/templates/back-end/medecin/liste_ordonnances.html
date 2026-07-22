@@ -235,7 +235,13 @@
                                     <td>
                                         <ul class="med-list">
                                             {% for med in ord.medicaments.all %}
-                                                <li>{{ med.nom }} <small>({{ med.posologie }})</small></li>
+                                                <li>
+                                                    {{ med.nom }}
+                                                    <small>
+                                                        ({{ med.posologie }})
+                                                        - Qté: {{ med.quantite|default:1 }}
+                                                    </small>
+                                                </li>
                                             {% empty %}
                                                 <li class="text-muted" style="list-style:none;">Aucun</li>
                                             {% endfor %}

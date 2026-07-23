@@ -22,6 +22,7 @@
             --soft-yellow: #fffbeb;
         }
 
+
         body {
             background:
                 radial-gradient(circle at top left, rgba(37,99,235,0.10), transparent 25%),
@@ -30,7 +31,9 @@
             color: var(--text);
         }
 
+
         .page-shell { padding: 1.2rem; }
+
 
         .hero-card {
             background: rgba(255,255,255,0.92);
@@ -40,6 +43,7 @@
             box-shadow: 0 14px 35px rgba(15, 23, 42, 0.07);
             overflow: hidden;
         }
+
 
         .hero-top {
             padding: 1.35rem 1.5rem;
@@ -52,11 +56,13 @@
             background: linear-gradient(135deg, rgba(37,99,235,0.07), rgba(16,185,129,0.04));
         }
 
+
         .hero-left {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
+
 
         .hero-icon {
             width: 54px;
@@ -70,6 +76,7 @@
             flex: 0 0 auto;
         }
 
+
         .hero-title {
             margin: 0;
             font-size: 1.35rem;
@@ -77,17 +84,20 @@
             color: var(--primary-2);
         }
 
+
         .hero-subtitle {
             margin: 0.35rem 0 0;
             color: var(--muted);
             font-size: 0.95rem;
         }
 
+
         .hero-actions {
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
         }
+
 
         .action-btn {
             border: 1px solid var(--line);
@@ -103,24 +113,29 @@
             transition: 0.2s ease;
         }
 
+
         .action-btn.primary {
             background: var(--primary);
             border-color: var(--primary);
             color: #fff;
         }
 
+
         .action-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
         }
 
+
         .metrics { padding: 1.2rem 1.5rem 0.2rem; }
+
 
         .metric-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 1rem;
         }
+
 
         .metric-card {
             background: #fff;
@@ -133,6 +148,7 @@
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
         }
 
+
         .metric-badge {
             width: 48px;
             height: 48px;
@@ -142,9 +158,11 @@
             font-size: 1.1rem;
         }
 
+
         .metric-badge.blue { background: var(--soft-blue); color: var(--primary); }
         .metric-badge.green { background: var(--soft-green); color: var(--success); }
         .metric-badge.yellow { background: var(--soft-yellow); color: var(--warning); }
+
 
         .metric-label {
             font-size: 0.82rem;
@@ -154,12 +172,14 @@
             font-weight: 700;
         }
 
+
         .metric-value {
             font-size: 1.55rem;
             line-height: 1.1;
             font-weight: 800;
             margin-top: 0.2rem;
         }
+
 
         .content-card {
             margin: 1.25rem 1.5rem 1.5rem;
@@ -169,6 +189,7 @@
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
         }
+
 
         .content-head {
             padding: 1rem 1rem 0.9rem;
@@ -180,6 +201,7 @@
             background: #fcfdff;
         }
 
+
         .content-head h5 {
             margin: 0;
             font-size: 1rem;
@@ -187,13 +209,16 @@
             color: var(--primary-2);
         }
 
+
         .content-head small { color: var(--muted); }
+
 
         .panel-box {
             padding: 1rem;
             border-bottom: 1px solid var(--line);
             background: linear-gradient(180deg, #ffffff, #fbfdff);
         }
+
 
         .search-card {
             background: #fff;
@@ -203,6 +228,7 @@
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
         }
 
+
         .search-card .form-control {
             border: 1px solid var(--line);
             border-radius: 12px;
@@ -210,10 +236,12 @@
             box-shadow: none;
         }
 
+
         .search-card .form-control:focus {
             border-color: rgba(37,99,235,0.45);
             box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.08);
         }
+
 
         .btn-search,
         .btn-reset {
@@ -223,11 +251,13 @@
             white-space: nowrap;
         }
 
+
         .btn-search {
             background: var(--primary);
             border: 1px solid var(--primary);
             color: #fff;
         }
+
 
         .btn-reset {
             background: #fff;
@@ -236,7 +266,9 @@
             text-decoration: none;
         }
 
+
         .table-wrap { padding: 0.25rem; }
+
 
         .table thead th {
             background: #f8fafc;
@@ -250,6 +282,7 @@
             white-space: nowrap;
         }
 
+
         .table tbody td {
             padding: 0.95rem 0.95rem;
             vertical-align: middle;
@@ -257,7 +290,9 @@
             border-top: 1px solid #f1f5f9;
         }
 
+
         .table tbody tr:hover { background: #fbfdff; }
+
 
         .badge-custom {
             padding: 0.35rem 0.75rem;
@@ -268,13 +303,16 @@
             align-items: center;
         }
 
+
         .badge-success { background: #d1fae5; color: var(--success); }
         .badge-light { background: #f8fafc; color: #334155; }
+
 
         .prestation-name {
             font-weight: 800;
             color: var(--primary-2);
         }
+
 
         .prestation-meta {
             font-size: 0.85rem;
@@ -282,11 +320,13 @@
             margin-top: 0.2rem;
         }
 
+
         .money {
             font-weight: 800;
             color: var(--primary-2);
             white-space: nowrap;
         }
+
 
         .empty-box {
             text-align: center;
@@ -294,11 +334,13 @@
             color: var(--muted);
         }
 
+
         .empty-box i {
             font-size: 2.8rem;
             margin-bottom: 0.8rem;
             opacity: 0.45;
         }
+
 
         .note-box {
             margin: 0 1.5rem 1.5rem;
@@ -308,6 +350,7 @@
             padding: 1rem 1.1rem;
             color: #334155;
         }
+
 
         @media (max-width: 768px) {
             .hero-top, .content-head { padding: 1rem; }
@@ -333,7 +376,7 @@
                         <div>
                             <h1 class="hero-title">Prestations de l’hôpital</h1>
                             <p class="hero-subtitle">
-                                Prix en USD et conversion automatique en CDF.
+                                Prix en CDF et conversion automatique en USD.
                             </p>
                         </div>
                     </div>
@@ -358,7 +401,7 @@
                             <div class="metric-badge green"><i class="fa fa-exchange-alt"></i></div>
                             <div>
                                 <div class="metric-label">Taux USD / CDF</div>
-                                <div class="metric-value">{{ taux }}</div>
+                                <div class="metric-value">1 USD = {{ taux|floatformat:0 }} CDF</div>
                             </div>
                         </div>
                         <div class="metric-card">
@@ -459,7 +502,7 @@
                 </div>
 
                 <div class="note-box">
-                    <strong>Note :</strong> si la recherche ne retourne rien, vérifiez la vue Python et surtout l’usage de `q = request.GET.get("q", "").strip()` avant le `filter(...)`. Vous êtes limité à l’hôpital : <strong>jmc 1</strong>.
+                    <strong>Note :</strong> le prix est stocké en CDF. La colonne USD est une conversion automatique avec le taux en vigueur.
                 </div>
             </div>
         </div>

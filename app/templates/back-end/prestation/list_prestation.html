@@ -175,13 +175,9 @@
             margin-bottom: 14px;
         }
 
-        .form-control, .custom-select {
-            border-radius: 10px;
-        }
-
-        .modal-content {
-            border-radius: 18px;
-            overflow: hidden;
+        .hospital-name {
+            font-weight: 700;
+            color: #334155;
         }
     </style>
 </head>
@@ -262,7 +258,7 @@
                                                 <th>Hôpital</th>
                                                 <th>Prix (USD)</th>
                                                 <th>Prix (CDF)</th>
-                                                <th class="text-right" style="width: 160px;">Action</th>
+                                                <th class="text-right" style="width: 120px;">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -273,9 +269,9 @@
                                                     <td>
                                                         {% if item.categorie == 'LABO' %}
                                                             <span class="cat-badge cat-labo">{{ item.get_categorie_display }}</span>
-                                                        {% elif item.categorie == 'CONS' %}
+                                                        {% elif item.categorie == 'CONS' or item.categorie == 'CONSULTATION' %}
                                                             <span class="cat-badge cat-consult">{{ item.get_categorie_display }}</span>
-                                                        {% elif item.categorie == 'ECHO' or item.categorie == 'RADIO' or item.categorie == 'SCAN' or item.categorie == 'IRM' %}
+                                                        {% elif item.categorie == 'IMAG' or item.categorie == 'IMAGERIE' %}
                                                             <span class="cat-badge cat-imagerie">{{ item.get_categorie_display }}</span>
                                                         {% else %}
                                                             <span class="cat-badge cat-default">{{ item.get_categorie_display }}</span>
@@ -290,7 +286,7 @@
                                                     </td>
                                                     <td>
                                                         {% if item.hopital %}
-                                                            <span class="badge-usd">{{ item.hopital }}</span>
+                                                            <span class="hospital-name">{{ item.hopital.nomH|default:item.hopital }}</span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
@@ -299,20 +295,13 @@
                                                         <span class="badge-usd">{{ item.prix_usd|floatformat:2 }} $</span>
                                                     </td>
                                                     <td>
-                                                        <span class="text-cdf">{{ item.prix_cdf|floatformat:0 }} FC</span>
+                                                        <span class="text-cdf">{{ item.prix|floatformat:0 }} FC</span>
                                                     </td>
                                                     <td class="text-right">
-                                                        <a href="{% url 'modifier_prestation' item.id %}" class="btn btn-sm btn-outline-primary action-btn">
+                                                        <a href="{% url 'modifier_prestation' item.id %}"
+                                                           class="btn btn-sm btn-outline-primary action-btn">
                                                             <i class="fa fa-pen mr-1"></i> Modifier
                                                         </a>
-
-                                                        <form method="post" action="{% url 'supprimer_prestation' item.id %}" style="display:inline;">
-                                                            {% csrf_token %}
-                                                            <button type="submit" class="btn btn-outline-danger btn-sm action-btn"
-                                                                    onclick="return confirm('Voulez-vous vraiment supprimer cette prestation ?');">
-                                                                Supprimer
-                                                            </button>
-                                                        </form>
                                                     </td>
                                                 </tr>
                                             {% empty %}
@@ -356,6 +345,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 

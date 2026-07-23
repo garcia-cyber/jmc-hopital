@@ -60,9 +60,19 @@
                                                         <span class="exam-sub">{{ exam.prestation.get_categorie_display }}</span>
                                                     </td>
                                                     <td class="text-end">{{ exam.quantite }}</td>
-                                                    <td class="text-end">{{ exam.prestation.prix|floatformat:2 }} USD</td>
                                                     <td class="text-end">
-                                                        {{ exam.prestation.prix|floatformat:2|floatformat:2 }} x {{ exam.quantite }}
+                                                        {{ exam.prestation.prix|floatformat:0 }} FC
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            ~ {{ exam.prestation.prix_usd|floatformat:2 }} USD
+                                                        </small>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        {{ exam.sous_total_cdf|floatformat:0 }} FC
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            ~ {{ exam.sous_total_usd|floatformat:2 }} USD
+                                                        </small>
                                                     </td>
                                                 </tr>
                                                 {% empty %}
@@ -78,7 +88,12 @@
 
                                     <div class="summary-box mt-4">
                                         <h5 class="m-0 text-primary">
-                                            Solde à payer : <span id="total_du">{{ reste_a_payer_usd|floatformat:2 }}</span> USD
+                                            Reste à payer :
+                                            <span id="total_du_cdf">{{ reste_a_payer_cdf|floatformat:0 }}</span> FC
+                                            <br>
+                                            <small class="text-muted">
+                                                (~ <span id="total_du_usd">{{ reste_a_payer_usd|floatformat:2 }}</span> USD)
+                                            </small>
                                         </h5>
                                     </div>
                                 </div>
@@ -92,31 +107,37 @@
                                         <i class="fa fa-cash-register me-2 text-success"></i> Saisie Caisse
                                     </h5>
 
-                                    <input type="hidden" id="dette_globale" value="{{ reste_a_payer_usd }}">
+                                    <!-- Dette globale en CDF -->
+                                    <input type="hidden" id="dette_globale_cdf" value="{{ reste_a_payer_cdf|floatformat:2 }}">
                                     <input type="hidden" id="taux_du_jour" value="{{ taux }}">
 
                                     <div class="mb-3">
                                         <label class="form-label fw-bold small text-uppercase">Devise</label>
                                         <select name="devise" id="select_devise" class="form-select form-select-lg" onchange="calculerReste()">
+                                            <option value="CDF" selected>CDF (FC)</option>
                                             <option value="USD">USD ($)</option>
-                                            <option value="CDF">CDF (FC) - Taux: {{ taux }}</option>
                                         </select>
                                     </div>
 
                                     <div class="mb-3">
                                         <label class="form-label fw-bold small text-uppercase">Montant versé</label>
                                         <input type="number" id="mt_input" name="montant_verse" class="form-control form-control-lg" step="0.01" value="0" required oninput="calculerReste()">
+                                        <small class="form-text text-muted" id="max_helper"></small>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label class="form-label fw-bold small text-uppercase">Réduction (USD)</label>
+                                        <label class="form-label fw-bold small text-uppercase">Réduction (FC)</label>
                                         <input type="number" name="montant_reduction" id="mt_reduction" class="form-control form-control-lg" step="0.01" value="0" oninput="calculerReste()">
                                     </div>
 
                                     <div class="result-highlight text-center my-4">
                                         <small class="text-muted d-block mb-1">Nouveau solde à payer</small>
                                         <h2 class="m-0 text-primary fw-bold">
-                                            <span id="nouveau_reste">{{ reste_a_payer_usd|floatformat:2 }}</span> <small>USD</small>
+                                            <span id="nouveau_reste_cdf">{{ reste_a_payer_cdf|floatformat:0 }}</span> FC
+                                            <br>
+                                            <small class="text-muted" style="font-size: 0.6em;">
+                                                (~ <span id="nouveau_reste_usd">{{ reste_a_payer_usd|floatformat:2 }}</span> USD)
+                                            </small>
                                         </h2>
                                     </div>
 
@@ -136,28 +157,51 @@
 
     <script>
         function calculerReste() {
-            const detteInitiale = parseFloat(document.getElementById('dette_globale').value) || 0;
+            const detteInitialeCdf = parseFloat(document.getElementById('dette_globale_cdf').value) || 0;
             const taux = parseFloat(document.getElementById('taux_du_jour').value) || 1;
+
             const devise = document.getElementById('select_devise').value;
             const inputVal = parseFloat(document.getElementById('mt_input').value) || 0;
             const reduction = parseFloat(document.getElementById('mt_reduction').value) || 0;
 
-            let montantVerseUsd = (devise === 'CDF') ? (inputVal / taux) : inputVal;
-            const reste = detteInitiale - (montantVerseUsd + reduction);
+            // Montant versé et réduction en CDF
+            let montantVerseCdf = (devise === 'CDF') ? inputVal : (inputVal * taux);
+            let reductionCdf = reduction; // réduction saisie en FC
 
-            const affichage = document.getElementById('nouveau_reste');
+            const totalEncaisseCdf = montantVerseCdf + reductionCdf;
+            const resteCdf = Math.max(0, detteInitialeCdf - totalEncaisseCdf);
+            const resteUsd = resteCdf / taux;
+
+            const affichageCdf = document.getElementById('nouveau_reste_cdf');
+            const affichageUsd = document.getElementById('nouveau_reste_usd');
             const btn = document.getElementById('btn_submit');
+            const maxHelper = document.getElementById('max_helper');
 
-            affichage.innerText = Math.max(0, reste).toFixed(2);
+            affichageCdf.innerText = resteCdf.toFixed(0);
+            affichageUsd.innerText = resteUsd.toFixed(2);
 
-            if (reste < 0) {
-                affichage.style.color = "red";
-                btn.disabled = true;
+            // Aide pour le montant max
+            if (devise === 'CDF') {
+                maxHelper.innerText = `Maximum conseillé : ${detteInitialeCdf.toFixed(0)} FC`;
             } else {
-                affichage.style.color = "inherit";
+                const maxUsd = detteInitialeCdf / taux;
+                maxHelper.innerText = `Maximum conseillé : ${maxUsd.toFixed(2)} USD`;
+            }
+
+            // Désactiver si on dépasse un peu (tolérance 1 FC)
+            if (totalEncaisseCdf > detteInitialeCdf + 1) {
+                btn.disabled = true;
+                affichageCdf.style.color = "red";
+            } else {
                 btn.disabled = false;
+                affichageCdf.style.color = "inherit";
             }
         }
+
+        // Initialiser au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            calculerReste();
+        });
     </script>
 </body>
 </html>

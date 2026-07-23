@@ -135,7 +135,7 @@
                                                     {% endif %}
                                                 </td>
                                                 <td>
-                                                    {% if c.reste_a_payer > 0 %}
+                                                    {% if c.reste_a_payer_cdf > 0 %}
                                                     <span class="badge badge-warning">À Facturer</span>
                                                     {% else %}
                                                     <span class="badge badge-success">Payé</span>
@@ -143,8 +143,12 @@
                                                 </td>
                                                 <td>
                                                     <strong class="text-danger" style="font-size: 16px;">
-                                                        {{ c.reste_a_payer|floatformat:2 }} USD
+                                                        {{ c.reste_a_payer_cdf|floatformat:0 }} FC
                                                     </strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        ~ {{ c.reste_a_payer_usd|floatformat:2 }} USD
+                                                    </small>
                                                 </td>
                                                 <td class="text-right">
                                                     <a href="{% url 'encaisser_examens_prescrits' c.id %}" class="btn btn-sm btn-success px-3 shadow-sm">

@@ -645,15 +645,21 @@ def payer_fiche(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
 
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')  # 1 USD = taux CDF
 
+    # --- Calcul de l'heure et détermination jour/nuit ---
     now = timezone.now()
     if timezone.is_naive(now):
         now = timezone.make_aware(now, timezone.get_current_timezone())
-    heure_actuelle = timezone.localtime(now).hour
-    est_nuit = heure_actuelle >= 16
+    now_local = timezone.localtime(now)
+    heure_actuelle = now_local.hour
+
+    # Nuit : de 16h (inclus) à 7h (exclu)
+    # Jour : de 7h (inclus) à 16h (exclu)
+    est_nuit = heure_actuelle >= 16 or heure_actuelle < 7
     libelle_cible = "Fiche nuit" if est_nuit else "Fiche jour"
 
+    # --- Récupération de la prestation (prix stocké en CDF) ---
     prestation_fiche = Prestation.objects.filter(
         categorie='ADM',
         libelle__icontains=libelle_cible,
@@ -667,31 +673,54 @@ def payer_fiche(request, patient_id):
         )
         return redirect('enregistrement_patient')
 
-    prix_fiche_usd = Decimal(str(prestation_fiche.prix))
+    # prix_fiche_cdf = prix tel que stocké en base (CDF)
+    prix_fiche_cdf = prestation_fiche.prix or Decimal('0')
+    # Conversion en USD : USD = CDF / taux
+    prix_fiche_usd = prix_fiche_cdf / taux if taux else Decimal('0')
 
+    # --- Calcul des paiements existants (toujours en CDF en base) ---
     paiements_existants = Paiement.objects.filter(
         patient=patient,
         service='FICHE',
         hopital=hopital_user
     )
 
-    total_deja_paye_usd = Decimal('0.00')
+    total_deja_paye_cdf = Decimal('0')
     for p in paiements_existants:
+        # p.montant_verse est stocké dans la devise indiquée
         if p.devise == 'CDF':
-            total_deja_paye_usd += p.montant_verse / taux
-        else:
-            total_deja_paye_usd += p.montant_verse
+            total_deja_paye_cdf += p.montant_verse
+        else:  # USD
+            total_deja_paye_cdf += p.montant_verse * taux
 
-    reste_a_payer_usd = prix_fiche_usd - total_deja_paye_usd
+    # Reste à payer en CDF puis conversion en USD
+    reste_a_payer_cdf = prix_fiche_cdf - total_deja_paye_cdf
+    if reste_a_payer_cdf < 0:
+        reste_a_payer_cdf = Decimal('0')
 
+    reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
+
+    # --- Traitement du formulaire de paiement ---
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant', 0))
         devise = request.POST.get('devise')
-        montant_test_usd = montant_saisi / taux if devise == 'CDF' else montant_saisi
 
-        if montant_test_usd > (reste_a_payer_usd + Decimal('0.01')):
-            messages.error(request, f"Le montant dépasse le reste à payer ({reste_a_payer_usd:.2f} USD).")
-        elif montant_saisi > 0:
+        # Convertir le montant saisi en CDF pour comparer avec reste_a_payer_cdf
+        if devise == 'CDF':
+            montant_saisi_cdf = montant_saisi
+        else:  # USD
+            montant_saisi_cdf = montant_saisi * taux
+
+        # Vérifier si le montant dépasse le reste à payer (avec petite tolérance)
+        tolerance_cdf = Decimal('1')  # 1 CDF de tolérance
+        if montant_saisi_cdf > (reste_a_payer_cdf + tolerance_cdf):
+            messages.error(
+                request,
+                f"Le montant dépasse le reste à payer ({reste_a_payer_cdf:.0f} CDF / "
+                f"{reste_a_payer_usd:.2f} USD)."
+            )
+        elif montant_saisi_cdf > 0:
+            # Créer le paiement (montant_verse dans la devise choisie)
             Paiement.objects.create(
                 patient=patient,
                 service='FICHE',
@@ -701,17 +730,23 @@ def payer_fiche(request, patient_id):
                 hopital=hopital_user
             )
 
-            nouveau_total_usd = total_deja_paye_usd + montant_test_usd
+            nouveau_total_cdf = total_deja_paye_cdf + montant_saisi_cdf
 
-            if nouveau_total_usd >= (prix_fiche_usd - Decimal('0.01')):
+            if nouveau_total_cdf >= (prix_fiche_cdf - Decimal('1')):  # tolérance 1 CDF
                 patient.fiche_payee = True
                 patient.save()
-                messages.success(request, f"Paiement terminé. La {libelle_cible.lower()} de {patient.noms} est validée.")
-                return redirect('liste_attente_triage')
-            else:
                 messages.success(
                     request,
-                    f"Paiement enregistré. Reste à payer : {(prix_fiche_usd - nouveau_total_usd):.2f} USD"
+                    f"Paiement terminé. La {libelle_cible.lower()} de {patient.noms} est validée."
+                )
+                return redirect('liste_attente_triage')
+            else:
+                nouveau_reste_cdf = prix_fiche_cdf - nouveau_total_cdf
+                nouveau_reste_usd = nouveau_reste_cdf / taux if taux else Decimal('0')
+                messages.success(
+                    request,
+                    f"Paiement enregistré. Reste à payer : {nouveau_reste_cdf:.0f} CDF "
+                    f"(~ {nouveau_reste_usd:.2f} USD)."
                 )
                 return redirect('payer_fiche', patient_id=patient.id)
 
@@ -719,10 +754,11 @@ def payer_fiche(request, patient_id):
 
     return render(request, 'back-end/finance/payer_fiche.html', {
         'patient': patient,
-        'reste_a_payer': reste_a_payer_usd,
-        'reste_a_payer_cdf': reste_a_payer_usd * taux,
+        'reste_a_payer': reste_a_payer_usd,          # en USD (pour affichage)
+        'reste_a_payer_cdf': reste_a_payer_cdf,      # en CDF (pour affichage)
         'taux': taux,
-        'prix_fiche': prix_fiche_usd,
+        'prix_fiche': prix_fiche_usd,                # en USD (pour affichage)
+        'prix_fiche_cdf': prix_fiche_cdf,            # en CDF (pour affichage)
         'libelle_prestation': prestation_fiche.libelle,
         'fonctionKey': fonctionKey,
         'deja_paye': patient.fiche_payee,
@@ -742,84 +778,104 @@ def historique_paiements(request, patient_id):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    taux = ConfigurationHopital.get_taux()
+    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
-    # Paiements du patient
+    # ---- Paiements du patient ----
     paiements = Paiement.objects.filter(patient=patient)
     if hopital_user:
         paiements = paiements.filter(hopital=hopital_user)
 
+    # Sommes brutes par devise
     recettes = paiements.aggregate(
         usd=Sum('montant_verse', filter=Q(devise='USD')),
         cdf=Sum('montant_verse', filter=Q(devise='CDF'))
     )
 
-    total_paye_usd = recettes['usd'] or Decimal('0.00')
-    total_paye_cdf = recettes['cdf'] or Decimal('0.00')
-    total_paye_en_usd = total_paye_usd + (total_paye_cdf / taux)
+    total_paye_usd_brut = recettes['usd'] or Decimal('0.00')
+    total_paye_cdf_brut = recettes['cdf'] or Decimal('0.00')
 
-    # Fiche
-    prestation_fiche = Prestation.objects.filter(
-        categorie='ADM',
-        libelle__icontains='Fiche',
-        hopital=hopital_user
-    ).first() if hopital_user else None
+    # Total payé en CDF (tout converti en CDF)
+    total_paye_cdf = total_paye_cdf_brut + (total_paye_usd_brut * taux)
+    # Total payé en USD (pour affichage)
+    total_paye_en_usd = total_paye_cdf / taux if taux else Decimal('0')
 
-    cout_fiche = Decimal(str(prestation_fiche.prix)) if prestation_fiche else Decimal('0.00')
+    # ---- Fiche ----
+    # On pourrait aussi déterminer jour/nuit ici si nécessaire
+    prestation_fiche = None
+    if hopital_user:
+        prestation_fiche = Prestation.objects.filter(
+            categorie='ADM',
+            libelle__icontains='Fiche',
+            hopital=hopital_user
+        ).first()
 
-    # Examens
+    # Prix de la fiche en CDF (stocké en base)
+    cout_fiche_cdf = Decimal(str(prestation_fiche.prix)) if prestation_fiche else Decimal('0.00')
+    cout_fiche_usd = cout_fiche_cdf / taux if taux else Decimal('0')
+
+    # ---- Examens ----
     examens_qs = Prestation.objects.filter(
         demandeexamen__consultation__triage__patient=patient
     )
     if hopital_user:
         examens_qs = examens_qs.filter(hopital=hopital_user)
 
-    cout_examens = examens_qs.aggregate(total=Sum('prix'))['total'] or Decimal('0.00')
+    # Prix des examens en CDF
+    cout_examens_cdf = examens_qs.aggregate(total=Sum('prix'))['total'] or Decimal('0.00')
+    cout_examens_usd = cout_examens_cdf / taux if taux else Decimal('0')
 
-    # Bloc
-    bloc = BlocOperatoire.objects.filter(consultation__triage__patient=patient)
+    # ---- Bloc ----
+    bloc_qs = BlocOperatoire.objects.filter(consultation__triage__patient=patient)
     if hopital_user:
-        bloc = bloc.filter(consultation__triage__patient__hopital=hopital_user)
-    bloc = bloc.first()
+        bloc_qs = bloc_qs.filter(consultation__triage__patient__hopital=hopital_user)
+    bloc = bloc_qs.first()
 
-    cout_bloc = Decimal('0.00')
+    cout_bloc_cdf = Decimal('0.00')
     if bloc:
         if hasattr(bloc, 'prestation') and bloc.prestation:
-            cout_bloc = Decimal(str(bloc.prestation.prix))
+            cout_bloc_cdf = Decimal(str(bloc.prestation.prix))
         elif hasattr(bloc, 'cout_total') and bloc.cout_total:
-            cout_bloc = Decimal(str(bloc.cout_total))
+            cout_bloc_cdf = Decimal(str(bloc.cout_total))
 
-    total_cout_usd = cout_fiche + cout_examens + cout_bloc
-    reste_a_payer_usd = max(Decimal('0.00'), total_cout_usd - total_paye_en_usd)
-    reste_a_payer_cdf = reste_a_payer_usd * taux
+    cout_bloc_usd = cout_bloc_cdf / taux if taux else Decimal('0')
 
-    consultation = Consultation.objects.filter(triage__patient=patient)
+    # ---- Total des coûts ----
+    total_cout_cdf = cout_fiche_cdf + cout_examens_cdf + cout_bloc_cdf
+    total_cout_usd = total_cout_cdf / taux if taux else Decimal('0')
+
+    # ---- Reste à payer ----
+    reste_a_payer_cdf = max(Decimal('0'), total_cout_cdf - total_paye_cdf)
+    reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
+
+    # ---- Dernière consultation ----
+    consultation_qs = Consultation.objects.filter(triage__patient=patient)
     if hopital_user:
-        consultation = consultation.filter(triage__patient__hopital=hopital_user)
-    consultation = consultation.order_by('-date_creation').first()
+        consultation_qs = consultation_qs.filter(triage__patient__hopital=hopital_user)
+    consultation = consultation_qs.order_by('-date_creation').first()
 
-    peut_imprimer_facture = total_cout_usd > 0
-    facture_reglee = reste_a_payer_usd <= Decimal('0.01')
+    peut_imprimer_facture = total_cout_cdf > 0
+    facture_reglee = reste_a_payer_cdf <= Decimal('1')  # 1 CDF de tolérance
 
     context = {
         'patient': patient,
         'paiements_liste': paiements.order_by('-date_paiement'),
+        'cout_total_cdf': total_cout_cdf,
         'cout_total_usd': total_cout_usd,
-        'total_paye_usd': total_paye_usd,
         'total_paye_cdf': total_paye_cdf,
+        'total_paye_usd': total_paye_en_usd,  # même valeur, nom plus clair pour le template
         'total_paye_en_usd': total_paye_en_usd,
-        'reste_a_payer_usd': reste_a_payer_usd,
         'reste_a_payer_cdf': reste_a_payer_cdf,
-        'est_debiteur': reste_a_payer_usd > Decimal('0.01'),
+        'reste_a_payer_usd': reste_a_payer_usd,
+        'est_debiteur': reste_a_payer_cdf > Decimal('1'),
         'facture_reglee': facture_reglee,
         'peut_imprimer_facture': peut_imprimer_facture,
         'derniere_consultation': consultation,
         'bloc_id': bloc.id if bloc else None,
         'fonctionKey': fonctionKey,
         'hopital_user': hopital_user,
+        'taux': taux,
     }
     return render(request, 'back-end/finance/historique.html', context)
-
 #
 # ================================================================================================
 # IMPRIMER HISTORIQUE PAIEMENT 
@@ -954,7 +1010,7 @@ def imprimer_recu_direct(request, paiement_id):
 # ==================================================================================================
 @login_required
 def liste_attente_triage(request):
-    taux = ConfigurationHopital.get_taux()
+    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
@@ -963,32 +1019,71 @@ def liste_attente_triage(request):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
+    # --- Détermination jour / nuit (16h–7h = nuit) ---
+    now = timezone.now()
+    if timezone.is_naive(now):
+        now = timezone.make_aware(now, timezone.get_current_timezone())
+    now_local = timezone.localtime(now)
+    heure_actuelle = now_local.hour
+
+    est_nuit = heure_actuelle >= 16 or heure_actuelle < 7
+    libelle_cible = "Fiche nuit" if est_nuit else "Fiche jour"
+
+    # --- Récupération de la prestation (prix en CDF) ---
     prestation_fiche = Prestation.objects.filter(
         categorie='ADM',
-        libelle__icontains='Fiche',
+        libelle__icontains=libelle_cible,
         hopital=hopital_user
     ).first()
 
-    prix_fiche_usd = prestation_fiche.prix if prestation_fiche else Decimal('6.00')
+    if not prestation_fiche:
+        # Fallback si aucune prestation trouvée
+        messages.error(
+            request,
+            f"La prestation '{libelle_cible}' n'est pas configurée pour votre hôpital."
+        )
+        # Tu peux choisir de rediriger ou continuer avec un prix par défaut
+        # return redirect('enregistrement_patient')
+        prix_fiche_cdf = Decimal('0')
+    else:
+        prix_fiche_cdf = prestation_fiche.prix or Decimal('0')
+
+    # Prix en USD juste pour affichage (si besoin dans le template)
+    prix_fiche_usd = prix_fiche_cdf / taux if taux else Decimal('0')
 
     patients_liste = Patient.objects.filter(hopital=hopital_user).order_by('-date_creation')
 
     for patient in patients_liste:
+        # Patients non SIMPLE : on considère qu'ils n'ont pas à payer la fiche
         if patient.type_patient != 'SIMPLE':
             patient.a_solde_fiche = True
-            patient.total_fiche_usd = Decimal('0.00')
+            patient.total_fiche_cdf = Decimal('0')  # ou total_fiche_usd si tu veux garder ce champ
             patient.doit_payer_fiche = False
         else:
             patient.doit_payer_fiche = True
-            paiements = Paiement.objects.filter(patient=patient, service='FICHE', hopital=hopital_user)
-            total_paye_usd = sum([
-                p.montant_verse if p.devise == 'USD' else (p.montant_verse / taux)
-                for p in paiements
-            ], Decimal('0.00'))
 
-            patient.total_fiche_usd = total_paye_usd
-            patient.a_solde_fiche = total_paye_usd >= prix_fiche_usd
+            # Tous les paiements FICHE pour ce patient
+            paiements = Paiement.objects.filter(
+                patient=patient,
+                service='FICHE',
+                hopital=hopital_user
+            )
 
+            # Calcul du total payé en CDF (en convertissant les USD en CDF)
+            total_paye_cdf = Decimal('0')
+            for p in paiements:
+                if p.devise == 'CDF':
+                    total_paye_cdf += p.montant_verse
+                else:  # USD
+                    total_paye_cdf += p.montant_verse * taux
+
+            # On stocke le total payé (en CDF) dans le patient (adapte le nom du champ selon ton modèle)
+            patient.total_fiche_cdf = total_paye_cdf
+
+            # Le patient a soldé si le total payé >= prix de la fiche (en CDF)
+            patient.a_solde_fiche = total_paye_cdf >= prix_fiche_cdf
+
+        # Signes vitaux
         patient.a_signes_vitaux_deja_pris = SigneVital.objects.filter(patient=patient).exists()
 
     fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
@@ -996,10 +1091,13 @@ def liste_attente_triage(request):
     return render(request, 'back-end/infirmerie/liste_attente.html', {
         'patients': patients_liste,
         'taux': taux,
-        'prix_fiche': prix_fiche_usd,
-        'fonctionKey': fonctionKey
+        'prix_fiche': prix_fiche_usd,      # pour affichage en USD si tu veux
+        'prix_fiche_cdf': prix_fiche_cdf,  # pour affichage en CDF
+        'fonctionKey': fonctionKey,
+        'libelle_cible': libelle_cible,
+        'est_nuit': est_nuit,
+        'heure_actuelle': heure_actuelle,
     })
-
 
 
 # 24
@@ -1586,70 +1684,96 @@ def encaisser_examens_prescrits(request, consultation_id):
 
     examens = consultation.examens.all()
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')  # 1 USD = taux CDF
 
-    total_prescrit = examens.aggregate(
+    # ---- Total des examens prescrits (en CDF) ----
+    total_prescrit_cdf = examens.aggregate(
         total=Coalesce(
             Sum(F('prestation__prix') * F('quantite')),
             Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
         )
     )['total'] or Decimal('0.00')
 
+    # ---- Paiements déjà faits pour les examens (en CDF) ----
     paiements_examens = consultation.paiements.filter(service='EXAMENS')
 
-    total_verse = paiements_examens.aggregate(
-        total=Coalesce(
-            Sum('montant_verse'),
-            Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
-        )
-    )['total'] or Decimal('0.00')
+    total_verse_cdf = Decimal('0.00')
+    total_reductions_cdf = Decimal('0.00')
 
-    total_reductions = paiements_examens.aggregate(
-        total=Coalesce(
-            Sum('montant_reduction'),
-            Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
-        )
-    )['total'] or Decimal('0.00')
+    for p in paiements_examens:
+        # montant_verse est dans la devise du paiement
+        if p.devise == 'CDF':
+            total_verse_cdf += p.montant_verse
+        else:  # USD
+            total_verse_cdf += p.montant_verse * taux
 
-    reste_a_payer_usd = total_prescrit - (total_verse + total_reductions)
-    if reste_a_payer_usd < 0:
-        reste_a_payer_usd = Decimal('0.00')
+        # idem pour les réductions (si stockées en USD ou CDF selon ta logique)
+        if p.devise == 'CDF':
+            total_reductions_cdf += p.montant_reduction
+        else:
+            total_reductions_cdf += p.montant_reduction * taux
 
+    # Reste à payer en CDF
+    reste_a_payer_cdf = total_prescrit_cdf - (total_verse_cdf + total_reductions_cdf)
+    if reste_a_payer_cdf < 0:
+        reste_a_payer_cdf = Decimal('0.00')
+
+    # Conversion en USD (pour affichage)
+    reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
+
+    # ---- Traitement du formulaire de paiement ----
     if request.method == 'POST':
         try:
-            devise = request.POST.get('devise', 'USD')
+            devise = request.POST.get('devise', 'CDF')  # par défaut CDF
             montant_recu = Decimal(request.POST.get('montant_verse', '0') or '0')
-            reduction_usd = Decimal(request.POST.get('montant_reduction', '0') or '0')
+            reduction = Decimal(request.POST.get('montant_reduction', '0') or '0')
 
-            if montant_recu < 0 or reduction_usd < 0:
+            if montant_recu < 0 or reduction < 0:
                 messages.error(request, "Les montants ne peuvent pas être négatifs.")
                 return redirect('encaisser_examens_prescrits', consultation_id=consultation.id)
 
-            montant_verse_usd = (montant_recu / taux) if devise == 'CDF' else montant_recu
-            total_encaisse = montant_verse_usd + reduction_usd
+            # Conversion du montant et de la réduction en CDF
+            if devise == 'CDF':
+                montant_verse_cdf = montant_recu
+                reduction_cdf = reduction
+            else:  # USD
+                montant_verse_cdf = montant_recu * taux
+                reduction_cdf = reduction * taux
 
-            if total_encaisse > reste_a_payer_usd:
+            total_encaisse_cdf = montant_verse_cdf + reduction_cdf
+
+            # Vérifier si on ne dépasse pas le reste à payer (en CDF)
+            tolerance_cdf = Decimal('1')  # 1 CDF de tolérance
+            if total_encaisse_cdf > (reste_a_payer_cdf + tolerance_cdf):
                 messages.error(
                     request,
-                    f"Erreur : le montant total ({total_encaisse:.2f} USD) dépasse le reste à payer ({reste_a_payer_usd:.2f} USD)."
+                    f"Erreur : le montant total ({total_encaisse_cdf:.0f} CDF / "
+                    f"{total_encaisse_cdf / taux:.2f} USD) dépasse le reste à payer "
+                    f"({reste_a_payer_cdf:.0f} CDF / {reste_a_payer_usd:.2f} USD)."
                 )
                 return redirect('encaisser_examens_prescrits', consultation_id=consultation.id)
 
-            nouveau_reste = reste_a_payer_usd - total_encaisse
+            # Nouveau reste en CDF
+            nouveau_reste_cdf = reste_a_payer_cdf - total_encaisse_cdf
+            if nouveau_reste_cdf < 0:
+                nouveau_reste_cdf = Decimal('0')
+
+            # Création du paiement
+            # Ici, on stocke montant_verse et montant_reduction dans la devise choisie
             paiement = Paiement.objects.create(
                 patient=consultation.triage.patient,
                 consultation=consultation,
                 service='EXAMENS',
-                montant_verse=montant_verse_usd,
-                montant_reduction=reduction_usd,
-                reste_a_payer=max(Decimal('0.00'), nouveau_reste),
+                montant_verse=montant_recu,          # dans la devise choisie
+                montant_reduction=reduction,         # dans la devise choisie
+                reste_a_payer=nouveau_reste_cdf,     # on garde le reste en CDF en base (ou adapte selon ton modèle)
                 devise=devise,
                 caissier=request.user,
                 date_paiement=timezone.now(),
                 hopital=hopital_user
             )
 
-            if paiement.reste_a_payer <= 0:
+            if nouveau_reste_cdf <= Decimal('1'):  # 1 CDF de tolérance
                 consultation.consultation_payee = True
                 consultation.save(update_fields=['consultation_payee'])
 
@@ -1663,19 +1787,23 @@ def encaisser_examens_prescrits(request, consultation_id):
     context = {
         'consultation': consultation,
         'examens': examens,
+        'reste_a_payer_cdf': reste_a_payer_cdf,
         'reste_a_payer_usd': reste_a_payer_usd,
+        'total_prescrit_cdf': total_prescrit_cdf,
+        'total_prescrit_usd': total_prescrit_cdf / taux if taux else Decimal('0'),
+        'total_verse_cdf': total_verse_cdf,
+        'total_reductions_cdf': total_reductions_cdf,
         'taux': taux,
         'fonctionKey': fonctionKey,
         'hopital_user': hopital_user,
     }
-    return render(request, 'back-end/caisse/encaisser_examens.html', context)
-# 35
+    return render(request, 'back-end/caisse/encaisser_examens.html', context)# 35
 # ==================================================================================================
 # RECEPTIONNISTE PAIEMENT DES EXAM
 # ==================================================================================================
 @login_required
 def liste_attente_caisse(request):
-    taux = ConfigurationHopital.get_taux()
+    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
@@ -1684,15 +1812,20 @@ def liste_attente_caisse(request):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
+    # Toutes les consultations avec examens, pour l'hôpital de l'utilisateur
     consultations_a_payer = (
         Consultation.objects
-        .filter(examens__isnull=False, triage__patient__hopital=hopital_user)
+        .filter(
+            examens__isnull=False,
+            triage__patient__hopital=hopital_user
+        )
         .select_related('triage__patient', 'medecin')
         .prefetch_related('examens__prestation', 'paiements')
         .distinct()
         .order_by('-date_creation')
     )
 
+    # Filtre recherche
     query = request.GET.get('q')
     if query:
         consultations_a_payer = consultations_a_payer.filter(
@@ -1702,35 +1835,53 @@ def liste_attente_caisse(request):
 
     consultations = []
     for c in consultations_a_payer:
-        total_a_payer = c.examens.aggregate(
+        # ---- Total des examens en CDF ----
+        # prestation.prix est en CDF
+        total_a_payer_cdf = c.examens.aggregate(
             total=Coalesce(
                 Sum(F('prestation__prix') * F('quantite')),
                 Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
             )
         )['total'] or Decimal('0.00')
 
+        # ---- Paiements déjà faits pour les examens (en CDF) ----
         paiements_examens = c.paiements.filter(service='EXAMENS')
 
-        total_deja_paye = paiements_examens.aggregate(
-            total=Coalesce(
-                Sum(F('montant_verse') + F('montant_reduction')),
-                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
-            )
-        )['total'] or Decimal('0.00')
+        total_deja_paye_cdf = Decimal('0.00')
+        for p in paiements_examens:
+            if p.devise == 'CDF':
+                total_deja_paye_cdf += p.montant_verse
+            else:  # USD
+                total_deja_paye_cdf += p.montant_verse * taux
 
-        reste = total_a_payer - total_deja_paye
-        if reste > 0:
-            c.total_a_payer = total_a_payer
-            c.total_deja_paye = total_deja_paye
-            c.reste_a_payer = reste
-            consultations.append(c)
+        # ---- Reste à payer ----
+        reste_a_payer_cdf = total_a_payer_cdf - total_deja_paye_cdf
+        if reste_a_payer_cdf <= 0:
+            continue  # cette consultation est déjà entièrement payée
+
+        # Conversion en USD pour affichage (optionnel)
+        total_a_payer_usd = total_a_payer_cdf / taux if taux else Decimal('0')
+        total_deja_paye_usd = total_deja_paye_cdf / taux if taux else Decimal('0')
+        reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
+
+        # On attache les infos à la consultation
+        c.total_a_payer_cdf = total_a_payer_cdf
+        c.total_deja_paye_cdf = total_deja_paye_cdf
+        c.reste_a_payer_cdf = reste_a_payer_cdf
+
+        c.total_a_payer_usd = total_a_payer_usd
+        c.total_deja_paye_usd = total_deja_paye_usd
+        c.reste_a_payer_usd = reste_a_payer_usd
+
+        consultations.append(c)
 
     return render(request, 'back-end/caisse/liste_attente.html', {
         'consultations': consultations,
         'fonctionKey': role.fonctionKey.roleName if (role and role.fonctionKey) else None,
         'query': query,
         'taux': taux,
-    })# 36
+    })
+# 36
 # ==================================================================================================
 # LISTE DES EXAMENS A FAIRE 
 # ==================================================================================================

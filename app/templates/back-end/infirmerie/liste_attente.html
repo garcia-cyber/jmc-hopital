@@ -35,13 +35,20 @@
                             </div>
                         </div>
                         <div class="col-sm-3 col-md-3">  
-                            <button class="btn btn-success btn-block" onclick="window.location.reload();"> <i class="fa fa-sync"></i> Actualiser </button>  
+                            <button class="btn btn-success btn-block" onclick="window.location.reload();"> <i class="fa fa-sync"></i> Actualiser </button>   
                         </div>   
                     </div>
 
                     <div class="card card-table mt-3">
                         <div class="card-header">
-                            <h4 class="card-title mb-0">Patients en attente (Taux : {{ taux }} FC | Prix Fiche : {{ prix_fiche }} USD)</h4>
+                            <h4 class="card-title mb-0">
+                                Patients en attente
+                                <small class="text-muted d-block mt-1" style="font-size: 0.85rem;">
+                                    Taux : 1 USD = {{ taux|floatformat:0 }} FC |
+                                    Fiche : {{ libelle_cible }} ({{ heure_actuelle }}h) |
+                                    Prix : {{ prix_fiche_cdf|floatformat:0 }} FC (~ {{ prix_fiche|floatformat:2 }} USD)
+                                </small>
+                            </h4>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -51,8 +58,8 @@
                                             <th>Patient</th>
                                             <th>Type</th>
                                             <th>Heure arrivée</th>
-                                            <th class="text-center">Total Fiche</th>
-                                            <th class="text-center">Statut</th>
+                                            <th class="text-center">Total payé (Fiche)</th>
+                                            <th class="text-center">Statut fiche</th>
                                             <th class="text-right">Action</th>
                                         </tr>
                                     </thead>
@@ -70,26 +77,46 @@
                                             <td><span class="badge badge-primary">{{ patient.get_type_patient_display }}</span></td>
                                             <td>{{ patient.date_creation|date:"H:i" }}</td>
                                             <td class="text-center">
-                                                <span class="badge {% if patient.a_solde_fiche %}badge-info{% else %}badge-warning{% endif %}">
-                                                    {{ patient.total_fiche_usd|floatformat:2 }} USD
-                                                </span>
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    <span class="badge badge-secondary">Exonéré</span>
+                                                {% else %}
+                                                    <span class="badge {% if patient.a_solde_fiche %}badge-success{% else %}badge-warning{% endif %}">
+                                                        {{ patient.total_fiche_cdf|floatformat:0 }} FC
+                                                    </span>
+                                                {% endif %}
                                             </td>
                                             <td class="text-center">
-                                                {% if patient.a_solde_fiche %}
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Exonéré</span>
+                                                {% elif patient.a_solde_fiche %}
                                                     <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Prêt</span>
                                                 {% else %}
                                                     <span class="badge badge-danger-border"><i class="fa fa-clock"></i> Paiement requis</span>
                                                 {% endif %}
                                             </td>
                                             <td class="text-right">
-                                                {% if not patient.a_solde_fiche and patient.doit_payer_fiche %}
-                                                    <button class="btn btn-secondary btn-sm" disabled title="Le patient doit solder {{ prix_fiche }} USD">
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    {# Patients exonérés : toujours accessibles #}
+                                                    {% if patient.a_signes_vitaux_deja_pris %}
+                                                        <button class="btn btn-warning btn-sm" disabled>
+                                                            <i class="fa fa-check-square"></i> Déjà prélevé
+                                                        </button>
+                                                    {% else %}
+                                                        <a href="{% url 'saisir_signes' patient.id %}" class="btn btn-primary btn-sm">
+                                                            <i class="fa fa-stethoscope"></i> Signes Vitaux
+                                                        </a>
+                                                    {% endif %}
+
+                                                {% elif not patient.a_solde_fiche and patient.doit_payer_fiche %}
+                                                    <button class="btn btn-secondary btn-sm" disabled title="Le patient doit solder la fiche">
                                                         <i class="fa fa-lock"></i> Bloqué
                                                     </button>
+
                                                 {% elif patient.a_signes_vitaux_deja_pris %}
                                                     <button class="btn btn-warning btn-sm" disabled>
                                                         <i class="fa fa-check-square"></i> Déjà prélevé
                                                     </button>
+
                                                 {% else %}
                                                     <a href="{% url 'saisir_signes' patient.id %}" class="btn btn-primary btn-sm">
                                                         <i class="fa fa-stethoscope"></i> Signes Vitaux

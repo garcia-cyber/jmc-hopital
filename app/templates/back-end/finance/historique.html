@@ -88,17 +88,15 @@
 
             {% if est_debiteur %}
             <div class="alert alert-dette shadow-sm mb-4 p-3">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h5 class="mb-1"><i class="fa fa-exclamation-triangle"></i> Solde impayé</h5>
-                        <p class="mb-0">
-                            Reste à payer : <strong>{{ reste_a_payer_usd|floatformat:2 }} $</strong>
-                            ({{ reste_a_payer_cdf|floatformat:0 }} FC).
-                        </p>
-                    </div>
-                    {% comment %} <a href="{% url 'payer_fiche' patient.id %}" class="btn btn-danger btn-sm">
-                        <i class="fa fa-hand-holding-usd"></i> Encaisser
-                    </a> {% endcomment %}
+                <div>
+                    <h5 class="mb-1"><i class="fa fa-exclamation-triangle"></i> Solde impayé</h5>
+                    <p class="mb-0">
+                        Reste à payer : <strong>{{ reste_a_payer_cdf|floatformat:0 }} FC</strong>
+                        (~ {{ reste_a_payer_usd|floatformat:2 }} USD).
+                    </p>
+                    <small class="text-muted">
+                        Ce montant correspond à la différence entre le total dû (fiche, examens, bloc, etc.) et le total déjà versé.
+                    </small>
                 </div>
             </div>
             {% else %}
@@ -113,24 +111,24 @@
                     <div class="card summary-card p-3">
                         <i class="fa fa-receipt icon-box"></i>
                         <small class="text-muted"><i class="fa fa-clipboard-list"></i> Total Dû</small>
-                        <h4 class="mb-0">{{ cout_total_usd|floatformat:2 }} $</h4>
-                        <small class="text-muted">≈ {{ cout_total_cdf|floatformat:0 }} FC</small>
+                        <h4 class="mb-0">{{ cout_total_cdf|floatformat:0 }} FC</h4>
+                        <small class="text-muted">≈ {{ cout_total_usd|floatformat:2 }} USD</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card summary-card p-3" style="border-left-color: #28a745;">
                         <i class="fa fa-check-circle icon-box"></i>
                         <small class="text-muted"><i class="fa fa-wallet"></i> Total Versé</small>
-                        <h4 class="mb-0 text-success">{{ total_paye_usd|floatformat:2 }} $</h4>
-                        <small class="text-success">{{ total_paye_cdf|floatformat:0 }} FC</small>
+                        <h4 class="mb-0 text-success">{{ total_paye_cdf|floatformat:0 }} FC</h4>
+                        <small class="text-success">≈ {{ total_paye_usd|floatformat:2 }} USD</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card summary-card p-3" style="border-left-color: #dc3545;">
                         <i class="fa fa-times-circle icon-box"></i>
                         <small class="text-muted"><i class="fa fa-balance-scale"></i> Reste à Payer</small>
-                        <h4 class="mb-0 text-danger">{{ reste_a_payer_usd|floatformat:2 }} $</h4>
-                        <small class="text-danger">{{ reste_a_payer_cdf|floatformat:0 }} FC</small>
+                        <h4 class="mb-0 text-danger">{{ reste_a_payer_cdf|floatformat:0 }} FC</h4>
+                        <small class="text-danger">≈ {{ reste_a_payer_usd|floatformat:2 }} USD</small>
                     </div>
                 </div>
             </div>

@@ -149,6 +149,12 @@
             color: #334155;
         }
 
+        .devise-helper {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
         @media (max-width: 768px) {
             .card-body {
                 padding: 1rem;
@@ -200,13 +206,16 @@
                                     </div>
                                     <div class="summary-box">
                                         <div class="summary-label">Prix total</div>
-                                        <div class="summary-value">{{ prix_fiche|floatformat:2 }} USD</div>
+                                        <div class="summary-value">
+                                            {{ prix_fiche_cdf|floatformat:0 }} FC
+                                            <span class="text-muted">(~ {{ prix_fiche|floatformat:2 }} USD)</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="amount-box text-md-end">
-                                        <h3>Reste : {{ reste_a_payer|floatformat:2 }} USD</h3>
-                                        <p>Soit {{ reste_a_payer_cdf|floatformat:0 }} FC (taux : {{ taux }})</p>
+                                        <h3>Reste : {{ reste_a_payer_cdf|floatformat:0 }} FC</h3>
+                                        <p>(~ {{ reste_a_payer|floatformat:2 }} USD, taux : 1 USD = {{ taux|floatformat:0 }} FC)</p>
                                     </div>
                                 </div>
                             </div>
@@ -231,22 +240,36 @@
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label class="form-label">Montant à verser <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="number" name="montant" step="0.01" max="{{ reste_a_payer|add:'0.01' }}" required>
+                                                <input
+                                                    class="form-control"
+                                                    type="number"
+                                                    name="montant"
+                                                    id="montant_input"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    required
+                                                >
+                                                <div class="devise-helper" id="max_helper">
+                                                    Maximum : {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label class="form-label">Devise</label>
                                                 <select class="form-select" name="devise" id="devise_select">
-                                                    <option value="USD">USD ($)</option>
                                                     <option value="CDF">CDF (FC)</option>
+                                                    <option value="USD">USD ($)</option>
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div class="info-card mt-3">
-                                        <small id="info_paiement">Le montant sera déduit du reste à payer.</small>
+                                        <small id="info_paiement">
+                                            Le reste à payer est de {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                            (~ {{ reste_a_payer|floatformat:2 }} USD).
+                                        </small>
                                     </div>
 
                                     <div class="submit-section">
@@ -272,20 +295,35 @@
 
 <script>
     $(document).ready(function () {
-        function updateInfo() {
-            let dev = $('#devise_select').val();
-            let resteUSD = "{{ reste_a_payer|floatformat:2 }}";
-            let resteCDF = "{{ reste_a_payer_cdf|floatformat:0 }}";
+        const resteCDF = parseFloat("{{ reste_a_payer_cdf|floatformat:2 }}");
+        const resteUSD = parseFloat("{{ reste_a_payer|floatformat:2 }}");
+        const taux = parseFloat("{{ taux|floatformat:2 }}");
 
-            if (dev === 'CDF') {
-                $('#info_paiement').text("Le reste à payer est de " + resteCDF + " FC");
-            } else {
-                $('#info_paiement').text("Le reste à payer est de " + resteUSD + " USD");
+        const $deviseSelect = $('#devise_select');
+        const $montantInput = $('#montant_input');
+        const $maxHelper = $('#max_helper');
+        const $infoPaiement = $('#info_paiement');
+
+        function updateUI() {
+            const devise = $deviseSelect.val();
+
+            if (devise === 'CDF') {
+                $montantInput.attr('max', resteCDF.toFixed(2));
+                $maxHelper.text(`Maximum : ${resteCDF.toFixed(0)} FC`);
+                $infoPaiement.text(
+                    `Le reste à payer est de ${resteCDF.toFixed(0)} FC (~ ${resteUSD.toFixed(2)} USD).`
+                );
+            } else { // USD
+                $montantInput.attr('max', resteUSD.toFixed(2));
+                $maxHelper.text(`Maximum : ${resteUSD.toFixed(2)} USD`);
+                $infoPaiement.text(
+                    `Le reste à payer est de ${resteUSD.toFixed(2)} USD (~ ${resteCDF.toFixed(0)} FC).`
+                );
             }
         }
 
-        $('#devise_select').on('change', updateInfo);
-        updateInfo();
+        $deviseSelect.on('change', updateUI);
+        updateUI();
     });
 </script>
 </body>

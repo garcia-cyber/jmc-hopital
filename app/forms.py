@@ -244,11 +244,25 @@ class DepenseForm(forms.ModelForm):
 class TypeChambreForm(forms.ModelForm):
     class Meta:
         model = TypeChambre
-        fields = ['libelle', 'prix_nuitée'] # Vérifiez que le nom correspond exactement au modèle
+        fields = ['libelle', 'prix_nuitée']
         widgets = {
-            'libelle': forms.TextInput(attrs={'class': 'form-control'}),
-            'prix_nuitée': forms.NumberInput(attrs={'class': 'form-control'}),
+            'libelle': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: VIP, Commune, Spéciale, etc.'
+            }),
+            'prix_nuitée': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '100',
+                'min': '0',
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['libelle'].label = "Libellé du type de chambre"
+        self.fields['prix_nuitée'].label = "Prix de la nuitée (FC)"
+        self.fields['prix_nuitée'].help_text = "Indiquez le prix en Francs Congolais (FC)."
+        self.fields['prix_nuitée'].required = True
 
 class ChambreForm(forms.ModelForm):
     class Meta:

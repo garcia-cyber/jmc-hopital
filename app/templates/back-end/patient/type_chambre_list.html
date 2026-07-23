@@ -120,6 +120,20 @@
             vertical-align: middle;
         }
         .table tbody tr:hover { background: #f8fafc; }
+
+        .price-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .price-main {
+            font-weight: 700;
+            color: var(--success);
+        }
+        .price-sub {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+        }
     </style>
 </head>
 <body>
@@ -156,6 +170,9 @@
                             <i class="fa fa-list text-primary"></i>
                             Liste enregistrée (Rôle : {{ fonctionKey }})
                         </h5>
+                        <small class="text-muted">
+                            Taux : 1 USD = {{ taux|floatformat:0 }} FC
+                        </small>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
@@ -174,19 +191,24 @@
                                     <td><strong>#{{ type_chambre.id }}</strong></td>
                                     <td>{{ type_chambre.libelle }}</td>
                                     <td>
-                                        <span class="fw-bold text-success">{{ type_chambre.prix_nuitée }}</span>
+                                        <div class="price-cell">
+                                            <span class="price-main">
+                                                {{ type_chambre.prix_cdf|floatformat:0 }} FC
+                                            </span>
+                                            <span class="price-sub">
+                                                ~ {{ type_chambre.prix_usd|floatformat:2 }} USD
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>{{ type_chambre.hopital.nomH|default:"-" }}</td>
                                     <td class="text-end">
-                                        <!-- Adaptez le nom de l'URL de modification selon votre urls.py -->
                                         <a href="{% url 'type_chambre_update' type_chambre.pk %}" class="btn-action btn-view">
                                             <i class="fa fa-edit"></i> Modifier
                                         </a>
 
                                         <a href="{% url 'type_chambre_delete' type_chambre.pk %}" class="btn-action btn-danger">
-                                            <i class="fa fa-edit"></i> Supprimer
+                                            <i class="fa fa-trash"></i> Supprimer
                                         </a>
-
                                     </td>
                                 </tr>
                                 {% empty %}

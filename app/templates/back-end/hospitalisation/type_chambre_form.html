@@ -103,7 +103,10 @@
                                             {% for field in form %}
                                             <div class="col-sm-12 col-md-6 mb-3">
                                                 <div class="form-group">
-                                                    <label class="font-weight-bold text-secondary">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                                    <label class="font-weight-bold text-secondary">
+                                                        {{ field.label }}
+                                                        {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                                    </label>
                                                     
                                                     <!-- Injection propre des classes Bootstrap dans les champs du Form Django -->
                                                     {% if field.field.widget.input_type == "checkbox" or field.field.widget.input_type == "radio" %}
@@ -111,12 +114,13 @@
                                                             {{ field }}
                                                         </div>
                                                     {% else %}
-                                                        <input type="{{ field.field.widget.input_type|default:'text' }}" 
-                                                               name="{{ field.html_name }}" 
+                                                        <input type="{{ field.field.widget.input_type|default:'text' }}" 
+                                                               name="{{ field.html_name }}" 
                                                                id="{{ field.id_for_label }}"
                                                                class="form-control {% if field.errors %}is-invalid{% endif %}"
                                                                value="{{ field.value|default:'' }}"
-                                                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>
+                                                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}
+                                                               {% if field.name == 'prix_nuitée' %}oninput="calculerEquivalenceUsd()"{% endif %}>
                                                     {% endif %}
                                                     
                                                     <!-- Gestion fine des erreurs par champ -->
@@ -130,6 +134,13 @@
                                                     
                                                     {% if field.help_text %}
                                                     <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+
+                                                    {% if field.name == 'prix_nuitée' %}
+                                                    <small class="form-text text-primary">
+                                                        Équivalent : <strong id="equivalence_usd">0.00</strong> USD
+                                                        (taux : 1 USD = {{ taux|floatformat:0 }} FC)
+                                                    </small>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -158,7 +169,7 @@
         <!-- /Main Wrapper -->
         
         <!-- jQuery & Scripts de base -->
-        {% include 'back-end/includes/js.html' %}     
+        {% include 'back-end/includes/js.html' %}    
 
         <!-- Styles locaux pour le composant d'étape (Stepper) -->
         <style>
@@ -179,5 +190,27 @@
                 box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
             }
         </style>
+
+        <script>
+            const taux = parseFloat("{{ taux|floatformat:2 }}");
+
+            function calculerEquivalenceUsd() {
+                const prixFcInput = document.getElementById('{{ form.prix_nuitée.id_for_label }}');
+                const equivalenceUsdSpan = document.getElementById('equivalence_usd');
+
+                const prixFc = parseFloat(prixFcInput.value);
+                if (!isNaN(prixFc) && taux > 0) {
+                    const prixUsd = prixFc / taux;
+                    equivalenceUsdSpan.textContent = prixUsd.toFixed(2);
+                } else {
+                    equivalenceUsdSpan.textContent = "0.00";
+                }
+            }
+
+            // Initialiser au chargement (si une valeur est déjà présente)
+            document.addEventListener('DOMContentLoaded', function() {
+                calculerEquivalenceUsd();
+            });
+        </script>
     </body>
 </html>

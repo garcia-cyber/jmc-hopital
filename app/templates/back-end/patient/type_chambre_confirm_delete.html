@@ -115,6 +115,22 @@
             margin-bottom: 1.5rem;
             font-weight: 500;
         }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label {
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        .info-value {
+            color: var(--gray-700);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -156,8 +172,29 @@
                         <div class="alert-warning-custom">
                             <i class="fa fa-exclamation-triangle"></i> 
                             Êtes-vous sûr de vouloir supprimer cet élément ? 
-                            <strong>{% if objet.libelle %}{{ objet.libelle }}{% elif objet.nom %}{{ objet.nom }}{% elif objet.nom_lit %}{{ objet.nom_lit }}{% else %}#{{ objet.id }}{% endif %}</strong>
+                            <strong>{{ objet.libelle }}</strong>
                             <br>Cette action est irréversible.
+                        </div>
+
+                        <!-- Détails de l'objet (optionnel, pour plus de clarté) -->
+                        <div class="mb-4">
+                            <div class="info-row">
+                                <span class="info-label">Libellé</span>
+                                <span class="info-value">{{ objet.libelle }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Prix nuitée</span>
+                                <span class="info-value">
+                                    {{ objet.prix_nuitée|floatformat:0 }} FC
+                                    {% if taux %}
+                                        (~ {{ objet.prix_nuitée|floatformat:2|div:taux|floatformat:2 }} USD)
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Hôpital</span>
+                                <span class="info-value">{{ objet.hopital.nomH|default:"-" }}</span>
+                            </div>
                         </div>
 
                         <form method="post">

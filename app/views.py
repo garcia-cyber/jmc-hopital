@@ -2651,22 +2651,38 @@ def ajouter_type_chambre(request):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     hopital_user = role.hopital if role else None
 
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('ajouter_type_chambre')  # ou vers un dashboard
+
     if request.method == 'POST':
         form = TypeChambreForm(request.POST)
         if form.is_valid():
             type_chambre = form.save(commit=False)
             type_chambre.hopital = hopital_user
+
+            # Le prix est saisi en CDF par défaut dans le formulaire
+            # Si ton formulaire a un champ 'prix_cdf', tu peux faire :
+            # type_chambre.prix = form.cleaned_data['prix_cdf']
+
             type_chambre.save()
+
             messages.success(request, f"Le type de chambre '{type_chambre.libelle}' a été enregistré.")
-            return redirect('ajouter_chambre')
+            return redirect('ajouter_chambre')  # ou une autre vue de liste
     else:
         form = TypeChambreForm()
 
+    # Optionnel : récupérer le taux pour affichage (ex. dans le template)
+    
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
+
     return render(request, 'back-end/hospitalisation/type_chambre_form.html', {
         'form': form,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'taux': taux,
+        'hopital_user': hopital_user,
     })
-
 # --------------------------------------------------------------------------------------------------
 # VUE : Deuxième étape de la configuration de l'infrastructure de soins.
 # FONCTION : Gère l'enregistrement des chambres physiques et de leurs prix par nuitée. Elle bloque
@@ -8355,15 +8371,31 @@ def liste_patients_orientations_view(request):
 # ===========================================================================================================================
 @login_required
 def liste_types_chambre(request):
-  types_chambre = TypeChambre.objects.all()
-  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
-  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    # Récupérer le taux de conversion
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')  # 1 USD = taux CDF
 
-  return render(
-      request,
-      'back-end/patient/type_chambre_list.html',
-      {'types_chambre': types_chambre,'fonctionKey':fonction_key},
-  )
+    # Tous les types de chambre
+    types_chambre = TypeChambre.objects.all()
+
+    # Ajouter les prix convertis pour chaque type
+    for tc in types_chambre:
+        # tc.prix_nuitée est stocké en CDF
+        tc.prix_cdf = tc.prix_nuitée or Decimal('0')
+        tc.prix_usd = tc.prix_cdf / taux if taux else Decimal('0')
+
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    return render(
+        request,
+        'back-end/patient/type_chambre_list.html',
+        {
+            'types_chambre': types_chambre,
+            'fonctionKey': fonction_key,
+            'taux': taux,
+        },
+    )
 
 #
 # ===========================================================================================================================
@@ -8401,23 +8433,34 @@ def liste_lits(request):
 # ===============================================================================================================
 @login_required
 def modifier_type_chambre(request, pk):
-  type_chambre = get_object_or_404(TypeChambre, pk=pk)
-  if request.method == 'POST':
-    form = TypeChambreForm(request.POST, instance=type_chambre)
-    if form.is_valid():
-      form.save()
-      return redirect('type_chambre_list')
-  else:
-    form = TypeChambreForm(instance=type_chambre)
-  role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
-  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+    type_chambre = get_object_or_404(TypeChambre, pk=pk)
 
-  return render(
-      request,
-      'back-end/patient/type_chambre_form.html',
-      {'form': form, 'objet': type_chambre,'fonctionKey':fonction_key},
-  )
+    if request.method == 'POST':
+        form = TypeChambreForm(request.POST, instance=type_chambre)
+        if form.is_valid():
+            # Le champ prix_nuitée est en CDF dans le formulaire
+            form.save()
+            return redirect('type_chambre_list')
+    else:
+        form = TypeChambreForm(instance=type_chambre)
 
+    role_obj = Fonction.objects.filter(userKey=request.user).select_related("hopital").first()
+    fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+    # Récupérer le taux pour affichage (équivalent USD)
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
+
+    return render(
+        request,
+        'back-end/patient/type_chambre_form.html',  # ou 'back-end/hospitalisation/type_chambre_form.html'
+        {
+            'form': form,
+            'objet': type_chambre,
+            'fonctionKey': fonction_key,
+            'taux': taux,
+        },
+    )
 #
 # =============================================================================================================
 # MODIFICATION DE CHAMBRE

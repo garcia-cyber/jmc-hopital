@@ -1435,29 +1435,29 @@ def liste_consultations_terminees(request):
 # MODIFICATION DE LA CONSULTATION PAR LE MEDECIN 
 # ==============================================================================================
 @login_required
-def modifier_consultation(request, triage_id):
-    triage = get_object_or_404(SigneVital, id=triage_id)
+def modifier_consultation(request, consultation_id):
+    # Récupérer la consultation avec ses relations
+    consultation = get_object_or_404(
+        Consultation.objects.select_related('triage__patient', 'medecin'),
+        id=consultation_id
+    )
 
-    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
 
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
-        return redirect('enregistrement_patient')
+        return redirect('liste_consultations')
 
-    if triage.patient.hopital != hopital_user:
+    # Sécurité : le patient doit appartenir au même hôpital
+    if consultation.triage.patient.hopital != hopital_user:
         messages.error(request, "Ce patient appartient à un autre hôpital.")
-        return redirect('liste_consultation_medecin')
+        return redirect('liste_consultations')
 
-    consultation = Consultation.objects.filter(
-        triage=triage,
-        triage__patient__hopital=hopital_user
-    ).first()
-
-    if consultation is None:
-        messages.error(request, "Aucune consultation trouvée pour ce patient.")
-        return redirect('liste_consultation_medecin')
+    triage = consultation.triage
 
     examens_disponibles = Prestation.objects.filter(
         hopital=hopital_user,
@@ -1481,6 +1481,7 @@ def modifier_consultation(request, triage_id):
                     consultation_obj.triage = triage
                     consultation_obj.save()
 
+                    # Mise à jour des examens existants
                     for exam in examens_existant:
                         prestation_id = request.POST.get(f'exam_{exam.id}_prestation')
                         quantite = request.POST.get(f'exam_{exam.id}_quantite')
@@ -1512,6 +1513,7 @@ def modifier_consultation(request, triage_id):
                         exam.hopital = hopital_user
                         exam.save()
 
+                    # Ajout de nouveaux examens
                     prestation_ids = request.POST.getlist('examens_ids')
 
                     for prestation_id in prestation_ids:

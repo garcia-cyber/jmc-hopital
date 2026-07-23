@@ -1436,7 +1436,7 @@ def liste_consultations_terminees(request):
 # ==============================================================================================
 @login_required
 def modifier_consultation(request, consultation_id):
-    # Récupérer la consultation avec ses relations
+    # Récupérer la consultation
     consultation = get_object_or_404(
         Consultation.objects.select_related('triage__patient', 'medecin'),
         id=consultation_id
@@ -1459,118 +1459,74 @@ def modifier_consultation(request, consultation_id):
 
     triage = consultation.triage
 
-    examens_disponibles = Prestation.objects.filter(
-        hopital=hopital_user,
-        categorie__in=['LABO', 'RADIO', 'ECHO']
-    ).order_by('categorie', 'libelle')
-
+    # EXAMENS EXISTANTS : uniquement ceux de l'hôpital du user
     examens_existant = DemandeExamen.objects.filter(
         consultation=consultation,
         hopital=hopital_user
     ).select_related('prestation').order_by('date_demande')
 
+    # PRESTATIONS DISPONIBLES : uniquement celles de l'hôpital du user
+    examens_disponibles = Prestation.objects.filter(
+        hopital=hopital_user,
+        categorie__in=['LABO', 'RADIO', 'ECHO']
+    ).order_by('categorie', 'libelle')
+
     if request.method == 'POST':
-        form = ConsultationForm(request.POST, instance=consultation)
+        try:
+            with transaction.atomic():
+                prestation_ids = request.POST.getlist('examens_ids')
 
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    consultation_obj = form.save(commit=False)
-                    consultation_obj.medecin = request.user
-                    consultation_obj.hopital = hopital_user
-                    consultation_obj.triage = triage
-                    consultation_obj.save()
+                for prestation_id in prestation_ids:
+                    # On vérifie aussi l'hôpital ici
+                    prestation = get_object_or_404(
+                        Prestation,
+                        id=prestation_id,
+                        hopital=hopital_user,
+                        categorie__in=['LABO', 'RADIO', 'ECHO']
+                    )
 
-                    # Mise à jour des examens existants
-                    for exam in examens_existant:
-                        prestation_id = request.POST.get(f'exam_{exam.id}_prestation')
-                        quantite = request.POST.get(f'exam_{exam.id}_quantite')
-                        statut = request.POST.get(f'exam_{exam.id}_statut')
-                        indication = request.POST.get(f'exam_{exam.id}_indication')
-                        resultat = request.POST.get(f'exam_{exam.id}_resultat')
-                        date_realisation = request.POST.get(f'exam_{exam.id}_date_realisation')
+                    quantite = request.POST.get(f'qty_{prestation_id}', 1)
+                    statut = request.POST.get(f'statut_{prestation_id}', 'EN_ATTENTE')
+                    indication = request.POST.get(f'indication_{prestation_id}', '')
+                    resultat = request.POST.get(f'resultat_{prestation_id}', '')
+                    date_realisation = request.POST.get(f'date_realisation_{prestation_id}') or None
 
-                        if prestation_id:
-                            prestation = get_object_or_404(
-                                Prestation,
-                                id=prestation_id,
-                                hopital=hopital_user,
-                                categorie__in=['LABO', 'RADIO', 'ECHO']
-                            )
-                            exam.prestation = prestation
+                    # Création / mise à jour de l'examen
+                    exam, created = DemandeExamen.objects.get_or_create(
+                        consultation=consultation,
+                        prestation=prestation,
+                        hopital=hopital_user,  # <== important
+                        defaults={
+                            'quantite': quantite,
+                            'statut': statut,
+                            'indication': indication,
+                            'resultat': resultat,
+                            'date_realisation': date_realisation,
+                        }
+                    )
 
-                        if quantite:
-                            exam.quantite = quantite
-                        if statut:
-                            exam.statut = statut
-                        if indication is not None:
-                            exam.indication = indication
-                        if resultat is not None:
-                            exam.resultat = resultat
-                        if date_realisation:
-                            exam.date_realisation = date_realisation
-
-                        exam.hopital = hopital_user
+                    if not created:
+                        exam.quantite = quantite
+                        exam.statut = statut
+                        exam.indication = indication
+                        exam.resultat = resultat
+                        exam.date_realisation = date_realisation
                         exam.save()
 
-                    # Ajout de nouveaux examens
-                    prestation_ids = request.POST.getlist('examens_ids')
+            messages.success(request, f"Examens ajoutés pour {triage.patient.noms} avec succès !")
+            return redirect('liste_consultations')
 
-                    for prestation_id in prestation_ids:
-                        prestation = get_object_or_404(
-                            Prestation,
-                            id=prestation_id,
-                            hopital=hopital_user,
-                            categorie__in=['LABO', 'RADIO', 'ECHO']
-                        )
-
-                        quantite = request.POST.get(f'qty_{prestation_id}', 1)
-                        statut = request.POST.get(f'statut_{prestation_id}', 'EN_ATTENTE')
-                        indication = request.POST.get(f'indication_{prestation_id}', '')
-                        resultat = request.POST.get(f'resultat_{prestation_id}', '')
-                        date_realisation = request.POST.get(f'date_realisation_{prestation_id}') or None
-
-                        exam, created = DemandeExamen.objects.get_or_create(
-                            consultation=consultation_obj,
-                            prestation=prestation,
-                            hopital=hopital_user,
-                            defaults={
-                                'quantite': quantite,
-                                'statut': statut,
-                                'indication': indication,
-                                'resultat': resultat,
-                                'date_realisation': date_realisation,
-                            }
-                        )
-
-                        if not created:
-                            exam.quantite = quantite
-                            exam.statut = statut
-                            exam.indication = indication
-                            exam.resultat = resultat
-                            exam.date_realisation = date_realisation
-                            exam.save()
-
-                messages.success(request, f"Consultation de {triage.patient.noms} modifiée avec succès !")
-                return redirect('liste_consultations')
-
-            except Exception as e:
-                messages.error(request, f"Une erreur technique est survenue : {str(e)}")
-        else:
-            messages.error(request, "Veuillez vérifier les erreurs du formulaire clinique.")
-    else:
-        form = ConsultationForm(instance=consultation)
+        except Exception as e:
+            messages.error(request, f"Une erreur technique est survenue : {str(e)}")
 
     return render(request, 'back-end/medecin/modifier_consultation.html', {
         'triage': triage,
-        'form': form,
         'consultation': consultation,
         'examens_disponibles': examens_disponibles,
         'examens_existant': examens_existant,
         'fonctionKey': fonctionKey,
         'hopital_user': hopital_user,
-    })
-# 31
+    })# 31
 # ==================================================================================================
 # MEDECIN  DETAILS CONSULTATION 
 # ==================================================================================================

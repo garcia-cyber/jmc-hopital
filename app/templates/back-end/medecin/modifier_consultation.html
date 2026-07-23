@@ -308,6 +308,7 @@
                             <i class="fa fa-flask"></i> Examens et Prestations Associés
                         </div>
 
+                        {# Examens existants (uniquement ceux de l'hôpital du user, filtrés dans la vue) #}
                         {% if examens_existant %}
                             <div class="table-responsive">
                                 <table class="table-medical">
@@ -361,6 +362,7 @@
                             <i class="fa fa-plus-circle"></i> Prescrire de nouveaux examens
                         </div>
 
+                        {# Ajout de nouveaux examens (prestations de l'hôpital du user, filtrées dans la vue) #}
                         <div class="row g-2 align-items-end bg-light p-3 rounded border mb-3">
                             <div class="col-md-3">
                                 <div class="form-group mb-0">
@@ -437,6 +439,7 @@
 
 <script>
 $(document).ready(function() {
+    // Filtrer les prestations par catégorie
     $('#filter_categorie').on('change', function() {
         var selectedCat = $(this).val();
         $('#select_prestation option').each(function() {
@@ -452,6 +455,7 @@ $(document).ready(function() {
         $('#select_prestation').val('');
     });
 
+    // Ajouter une ligne d'examen temporaire
     $('#btn_add_examen').on('click', function() {
         var prestationId = $('#select_prestation').val();
         var prestationText = $('#select_prestation option:selected').text();
@@ -505,6 +509,7 @@ $(document).ready(function() {
         $('#select_prestation').val('');
     });
 
+    // Supprimer une ligne temporairement ajoutée
     $(document).on('click', '.btn-remove-exam', function() {
         $(this).closest('tr').remove();
         if ($('#wrapper_examens tr').length === 0) {

@@ -49,25 +49,69 @@
             box-shadow: 0 12px 24px rgba(13,110,253,0.24);
         }
 
-        .search-box {
-            border-radius: 999px 0 0 999px;
-            border-right: none;
-            padding-left: 18px;
-            height: 46px;
+        /* Nouvelle barre de recherche */
+        .search-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 0.6rem;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 0.65rem 0.9rem;
+            font-size: 0.95rem;
+            border-radius: 10px;
+            background: #f9fafb;
+        }
+
+        .search-input:focus {
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(13,110,253,0.15);
         }
 
         .search-btn {
-            border-radius: 0 999px 999px 0;
-            width: 52px;
-            height: 46px;
+            background: #0d6efd;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .search-btn:hover {
+            background: #0b5ed7;
+            transform: translateY(-1px);
         }
 
         .btn-reset {
-            border-radius: 999px;
-            height: 46px;
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
-            padding: 0 16px;
+            gap: 0.4rem;
+            transition: 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-reset:hover {
+            background: #e5e7eb;
         }
 
         .taux-info {
@@ -179,6 +223,53 @@
             font-weight: 700;
             color: #334155;
         }
+
+        /* Responsive mobile */
+        @media (max-width: 768px) {
+            .page-header .row {
+                flex-direction: column;
+            }
+            .page-header .col-auto {
+                width: 100%;
+                text-align: left;
+                margin-top: 0.75rem;
+            }
+
+            .row.mb-4 {
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            .row.mb-4 > .col-md-7,
+            .row.mb-4 > .col-md-5 {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                width: 100%;
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .search-card {
+                flex-wrap: wrap;
+            }
+
+            .search-input {
+                min-width: 0;
+                flex: 1 1 100%;
+            }
+
+            .search-btn,
+            .btn-reset {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+
+            .taux-info {
+                width: 100%;
+                text-align: center;
+                margin-top: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -206,20 +297,19 @@
                     </div>
                 </div>
 
+                <!-- Barre de recherche redesignée -->
                 <div class="row mb-4 align-items-center">
                     <div class="col-md-7">
-                        <form method="GET" action="{% url 'gestion_prestations' %}" class="input-group">
-                            <input type="text" name="q" class="form-control search-box"
+                        <form method="GET" action="{% url 'gestion_prestations' %}" class="search-card">
+                            <input type="text" name="q" class="search-input"
                                    placeholder="Rechercher une prestation, un code ou une catégorie..."
                                    value="{{ request.GET.q|default:'' }}">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary search-btn" type="submit">
-                                    <i class="fa fa-search"></i>
-                                </button>
-                            </div>
+                            <button class="search-btn" type="submit">
+                                <i class="fa fa-search"></i> Rechercher
+                            </button>
                             {% if request.GET.q %}
-                                <a href="{% url 'gestion_prestations' %}" class="btn btn-light ml-2 btn-reset">
-                                    <i class="fa fa-times mr-1"></i> Réinitialiser
+                                <a href="{% url 'gestion_prestations' %}" class="btn-reset">
+                                    <i class="fa fa-times"></i> Réinitialiser
                                 </a>
                             {% endif %}
                         </form>
@@ -258,7 +348,7 @@
                                                 <th>Hôpital</th>
                                                 <th>Prix (USD)</th>
                                                 <th>Prix (CDF)</th>
-                                                <th class="text-right" style="width: 120px;">Action</th>
+                                                <th class="text-right" style="width: 160px;">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -302,6 +392,16 @@
                                                            class="btn btn-sm btn-outline-primary action-btn">
                                                             <i class="fa fa-pen mr-1"></i> Modifier
                                                         </a>
+                                                        {% if fonctionKey == 'admin' %}
+                                                        <form method="post" action="{% url 'supprimer_prestation' item.id %}" style="display:inline;">
+                                                            {% csrf_token %}
+                                                            <button type="submit"
+                                                                    class="btn btn-sm btn-outline-danger action-btn"
+                                                                    onclick="return confirm('Voulez-vous vraiment supprimer cette prestation ?');">
+                                                                <i class="fa fa-trash mr-1"></i> Supprimer
+                                                            </button>
+                                                        </form>
+                                                        {%endif%}
                                                     </td>
                                                 </tr>
                                             {% empty %}

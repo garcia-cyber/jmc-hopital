@@ -56,6 +56,21 @@
             margin-top: 4px;
             display: block;
         }
+
+        .orientation-cell {
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+
+        .orientation-destination {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .orientation-observation {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -82,6 +97,7 @@
                                         <th>Date</th>
                                         <th>Patient</th>
                                         <th>Résultats</th>
+                                        <th>Orientation</th>
                                         <th class="text-center">Action</th>
                                     </tr>
                                 </thead>
@@ -136,6 +152,34 @@
                                             {% endif %}
                                         </td>
 
+                                        <td class="align-middle orientation-cell">
+                                            {% if c.orientations.all %}
+                                                {% for o in c.orientations.all %}
+                                                    <div class="orientation-destination">
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.destination }}
+                                                    </div>
+                                                    {% if o.observation %}
+                                                        <div class="orientation-observation">
+                                                            {{ o.observation }}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% elif c.orientation_set.all %}
+                                                {% for o in c.orientation_set.all %}
+                                                    <div class="orientation-destination">
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.destination }}
+                                                    </div>
+                                                    {% if o.observation %}
+                                                        <div class="orientation-observation">
+                                                            {{ o.observation }}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+
                                         <td class="text-center align-middle">
                                             {% if c.ordonnance_existante %}
                                                 <div class="status-locked">
@@ -153,7 +197,7 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="4" class="text-center p-4 text-muted">
+                                        <td colspan="5" class="text-center p-4 text-muted">
                                             Aucune consultation en attente.
                                         </td>
                                     </tr>

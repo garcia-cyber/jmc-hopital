@@ -2403,6 +2403,7 @@ def dashboard_finance_depense(request):
 # 43 : RESULTAT DU LABO RADIO ET ECHO PAR LE MEDECIN
 # ==================================================================================================
 @login_required
+@login_required
 def liste_attente_ordonnance_view(request):
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None

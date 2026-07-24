@@ -4241,6 +4241,7 @@ def modifier_type_patient(request, patient_id):
 #   SOIN RAPIDE HORS FICHE
 # ==================================================================================================
 @login_required
+@login_required
 def enregistrer_soin_rapide(request):
     role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
@@ -4250,7 +4251,7 @@ def enregistrer_soin_rapide(request):
         nom_patient = request.POST.get('nom_patient')
         ids_prestations = request.POST.getlist('prestation_ids')
         reduction = Decimal(request.POST.get('reduction', '0.00'))
-        devise_paiement = request.POST.get('devise')
+        devise_paiement = request.POST.get('devise')  # 'CDF' ou 'USD'
 
         prestations = Prestation.objects.filter(
             id__in=ids_prestations,
@@ -4258,14 +4259,17 @@ def enregistrer_soin_rapide(request):
             categorie='SOIN'
         )
 
-        total_brut = sum(p.prix for p in prestations)
-        net_usd = total_brut - reduction
+        total_brut = sum((p.prix for p in prestations), Decimal('0.00'))
+        net_cdf = total_brut - reduction
 
-        if devise_paiement == 'CDF':
-            taux = ConfigurationHopital.get_taux()
-            montant_verse = net_usd * taux
+        taux = ConfigurationHopital.get_taux()
+
+        if devise_paiement == 'USD':
+            montant_verse = (net_cdf / taux) if taux else Decimal('0.00')
+            devise_enregistree = 'USD'
         else:
-            montant_verse = net_usd
+            montant_verse = net_cdf
+            devise_enregistree = 'CDF'
 
         try:
             with transaction.atomic():
@@ -4273,7 +4277,7 @@ def enregistrer_soin_rapide(request):
                     service='SOIN',
                     montant_verse=montant_verse,
                     montant_reduction=reduction,
-                    devise=devise_paiement,
+                    devise=devise_enregistree,
                     caissier=request.user,
                     reste_a_payer=Decimal('0.00'),
                     hopital=user_hopital
@@ -4299,8 +4303,7 @@ def enregistrer_soin_rapide(request):
         'prestations': Prestation.objects.filter(categorie='SOIN', hopital=user_hopital),
         'taux': ConfigurationHopital.get_taux(),
         'fonctionKey': fonctionKey,
-    })
-#
+    })#
 # =========================================================================================
 # IMPRIMER FACTURE PATIENT OCCASIONNEL
 # =========================================================================================

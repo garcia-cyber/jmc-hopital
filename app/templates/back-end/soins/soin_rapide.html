@@ -7,11 +7,209 @@
     <title>Soin Rapide | JMC</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        /* Optimisations responsive */
-        .prestation-list { max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 15px; background: #fff; border-radius: 4px; }
-        .checkbox-group { padding: 10px; border-bottom: 1px solid #f1f1f1; cursor: pointer; }
-        .checkbox-group:hover { background: #f8f9fa; }
-        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
+        /* Optimisations responsive et modernes */
+        body { background-color: #f4f6f9; }
+        
+        .prestation-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .checkbox-group {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f1f1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .checkbox-group:last-child { border-bottom: none; }
+        
+        .checkbox-group:hover {
+            background: linear-gradient(90deg, #e8f5e9 0%, #fff 100%);
+            border-left-color: #27ae60;
+        }
+        
+        .checkbox-group.selected {
+            background: linear-gradient(90deg, #d4edda 0%, #f8fff9 100%);
+            border-left-color: #27ae60;
+        }
+        
+        /* Custom checkbox styling */
+        .custom-checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            background: #fff;
+        }
+        
+        .custom-checkbox i {
+            color: white;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            display: none;
+        }
+        
+        .checkbox-group input[type="checkbox"]:checked + .custom-checkbox {
+            background: #27ae60;
+            border-color: #27ae60;
+        }
+        
+        .checkbox-group input[type="checkbox"]:checked + .custom-checkbox i {
+            display: block;
+        }
+        
+        .checkbox-group label {
+            flex: 1;
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .prestation-price {
+            font-weight: 600;
+            color: #27ae60;
+            font-size: 1rem;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.5rem;
+        }
+        
+        .summary-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+        }
+        
+        .summary-box h5 {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .net-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #27ae60;
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e9 100%);
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 2px solid #d4edda;
+        }
+        
+        .btn-validate {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border: none;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-validate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box input {
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            padding: 12px 16px 12px 40px;
+            transition: border-color 0.2s;
+        }
+        
+        .search-box input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+        
+        .selection-count {
+            background: #27ae60;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .summary-box {
+                margin-top: 1rem;
+            }
+            
+            .checkbox-group {
+                padding: 12px 14px;
+            }
+            
+            .prestation-price {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -21,49 +219,81 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <h3 class="mb-3">Enregistrement Soin Rapide</h3>
+                <div class="page-header mb-4">
+                    <h3 class="mb-1">Soin Rapide</h3>
+                    <small class="text-muted">Enregistrement des prestations de soin occasionnel</small>
+                </div>
                 
                 <form method="POST" id="formSoin">
                     {% csrf_token %}
-                    <div class="card p-3 p-md-4">
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <input type="text" name="nom_patient" class="form-control form-control-lg" required placeholder="Nom du patient">
-                            </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0"><i class="fa fa-plus-circle"></i> Nouvelle Prestation</h4>
                         </div>
-
-                        <div class="row">
-                            <div class="col-12 col-lg-8 mb-3">
-                                <label class="font-weight-bold">Rechercher et sélectionner les prestations :</label>
-                                <input type="text" id="searchInput" class="form-control mb-2" placeholder="🔍 Taper pour filtrer..." onkeyup="filtrer()">
-                                <div class="prestation-list" id="prestationList">
-                                    {% for p in prestations %}
-                                    <div class="checkbox-group prestation-item">
-                                        <input class="form-check-input" type="checkbox" name="prestation_ids" value="{{ p.id }}" data-prix="{{ p.prix }}" onchange="calculer()">
-                                        <label class="ml-2 mb-0" style="cursor:pointer;">{{ p.libelle }} - <strong>{{ p.prix }} USD</strong></label>
-                                    </div>
-                                    {% endfor %}
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label class="font-weight-bold mb-2">Nom du patient</label>
+                                    <input type="text" name="nom_patient" class="form-control form-control-lg" required placeholder="Entrez le nom complet du patient">
                                 </div>
                             </div>
 
-                            <div class="col-12 col-lg-4">
-                                <div class="bg-light p-3 rounded border">
-                                    <div class="form-group">
-                                        <label>Réduction (USD)</label>
-                                        <input type="number" name="reduction" id="reduction" class="form-control" value="0.00" step="0.01" oninput="calculer()">
+                            <div class="row">
+                                <div class="col-12 col-lg-8 mb-3">
+                                    <label class="font-weight-bold mb-2">
+                                        <span>Sélectionner les prestations</span>
+                                        <span class="selection-count" id="selectionCount">0</span>
+                                    </label>
+                                    <div class="search-box mb-3">
+                                        <i class="fa fa-search"></i>
+                                        <input type="text" id="searchInput" class="form-control" placeholder="Rechercher une prestation..." onkeyup="filtrer()">
                                     </div>
-                                    <div class="form-group">
-                                        <label>Devise</label>
-                                        <select name="devise" id="devise" class="form-control" onchange="calculer()">
-                                            <option value="USD">USD</option>
-                                            <option value="CDF">CDF</option>
-                                        </select>
+                                    <div class="prestation-list" id="prestationList">
+                                        {% for p in prestations %}
+                                        <div class="checkbox-group prestation-item" onclick="toggleSelection(this)">
+                                            <input class="form-check-input" type="checkbox" name="prestation_ids" value="{{ p.id }}" data-prix="{{ p.prix }}" id="p{{ p.id }}" onchange="updateItemStyle(this)">
+                                            <div class="custom-checkbox">
+                                                <i class="fa fa-check"></i>
+                                            </div>
+                                            <label for="p{{ p.id }}" class="mb-0">
+                                                <div>{{ p.libelle }}</div>
+                                            </label>
+                                            <span class="prestation-price">{{ p.prix }} CDF</span>
+                                        </div>
+                                        {% empty %}
+                                        <div class="empty-state">
+                                            <i class="fa fa-inbox"></i>
+                                            <p>Aucune prestation disponible</p>
+                                        </div>
+                                        {% endfor %}
                                     </div>
-                                    <div class="form-group">
-                                        <label>Net à payer</label>
-                                        <input type="text" id="netAffichage" class="form-control form-control-lg" readonly style="font-weight:bold; color:green; background:#fff;">
+                                </div>
+
+                                <div class="col-12 col-lg-4">
+                                    <div class="summary-box">
+                                        <h5><i class="fa fa-file-invoice-dollar"></i> Récapitulatif</h5>
+                                        
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Réduction (CDF)</label>
+                                            <input type="number" name="reduction" id="reduction" class="form-control" value="0.00" step="0.01" min="0" oninput="calculer()">
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Devise de paiement</label>
+                                            <select name="devise" id="devise" class="form-control" onchange="calculer()">
+                                                <option value="CDF">CDF (Franc Congolais)</option>
+                                                <option value="USD">USD (Dollar Américain)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="net-display" id="netAffichage">
+                                            0.00 CDF
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-validate">
+                                            <i class="fa fa-check-circle"></i> Valider et Imprimer
+                                        </button>
                                     </div>
-                                    <button type="submit" class="btn btn-success btn-block">Valider et Imprimer</button>
                                 </div>
                             </div>
                         </div>
@@ -83,16 +313,41 @@
             });
         }
 
+        function toggleSelection(element) {
+            // Permet le toggle en cliquant sur toute la ligne
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'LABEL') {
+                let checkbox = element.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                updateItemStyle(checkbox);
+            }
+        }
+
+        function updateItemStyle(checkbox) {
+            let item = checkbox.closest('.checkbox-group');
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+            calculer();
+        }
+
         function calculer() {
-            let total = 0;
+            let totalCDF = 0;
+            let count = 0;
             document.querySelectorAll('input[name="prestation_ids"]:checked').forEach(c => {
-                total += parseFloat(c.getAttribute('data-prix')) || 0;
+                totalCDF += parseFloat(c.getAttribute('data-prix')) || 0;
+                count++;
             });
+            
+            // Mettre à jour le compteur
+            document.getElementById('selectionCount').textContent = count;
+            
             let reduction = parseFloat(document.getElementById('reduction').value) || 0;
-            let netUSD = Math.max(0, total - reduction);
-            let d = document.getElementById('devise').value;
-            let final = (d === 'CDF') ? (netUSD * TAUX) : netUSD;
-            document.getElementById('netAffichage').value = final.toFixed(2) + " " + d;
+            let netCDF = Math.max(0, totalCDF - reduction);
+            let devise = document.getElementById('devise').value;
+            let final = (devise === 'USD') ? (netCDF / TAUX) : netCDF;
+            document.getElementById('netAffichage').textContent = final.toFixed(2) + " " + devise;
         }
 
         window.onload = calculer;

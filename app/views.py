@@ -4391,7 +4391,7 @@ def historique_soins(request):
 # ENREGISTREMENT DES PRODUITS PHARMACEUTIQUES
 # ==============================================================================================
 @login_required
-@login_required
+
 def ajouter_produit(request):
     """Vue pour enregistrer une nouvelle référence de médicament en stock"""
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
@@ -4438,7 +4438,6 @@ def ajouter_produit(request):
 # ====================================================================================
 # LISTE DES MEDICAMENTS 
 # ====================================================================================
-
 @login_required
 def gestion_pharmacie(request):
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
@@ -4448,6 +4447,7 @@ def gestion_pharmacie(request):
     if not hopital_user:
         produits = ProduitPharmacie.objects.none()
     else:
+        # Sous-requête pour les entrées totales
         entrees_subquery = LotPharmacie.objects.filter(
             produit_id=OuterRef('pk'),
             hopital=hopital_user
@@ -4455,6 +4455,7 @@ def gestion_pharmacie(request):
             total_entrees=Coalesce(Sum('quantite_initiale'), 0)
         ).values('total_entrees')[:1]
 
+        # Sous-requête pour les sorties totales
         sorties_subquery = SortiePharmacie.objects.filter(
             lot__produit_id=OuterRef('pk'),
             lot__hopital=hopital_user
@@ -4462,6 +4463,7 @@ def gestion_pharmacie(request):
             total_sorties=Coalesce(Sum('quantite_vendue'), 0)
         ).values('total_sorties')[:1]
 
+        # Requête principale
         produits = ProduitPharmacie.objects.filter(
             hopital=hopital_user
         ).annotate(
@@ -4474,19 +4476,21 @@ def gestion_pharmacie(request):
             )
         ).order_by('nom')
 
+        # Calcul de la valeur totale du stock (en CDF)
         for p in produits:
-            p.valeur_totale = p.stock_reel * p.prix_vente_unitaire
+            # prix_vente_unitaire est déjà en CDF
+            p.valeur_totale = Decimal(p.stock_reel) * p.prix_vente_unitaire
 
+    # Taux de change (optionnel, pour affichage USD si besoin)
     taux_change = ConfigurationHopital.get_taux()
 
     context = {
         'produits': produits,
         'fonctionKey': fonctionKey,
-        'taux': taux_change
+        'taux': taux_change,
     }
 
     return render(request, 'back-end/pharmacie/gestion_stock.html', context)
-
 #
 # ====================================================================================
 # MODIFIER MEDICAMENT
@@ -4494,7 +4498,6 @@ def gestion_pharmacie(request):
 @login_required
 def modifier_produit_pharmacie(request, produit_id):
     """Vue pour modifier un produit de pharmacie"""
-    # Vérification des permissions
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
         userKey=request.user
     ).first()
@@ -4504,25 +4507,24 @@ def modifier_produit_pharmacie(request, produit_id):
         messages.error(request, "Accès non autorisé.")
         return redirect('gestion_pharmacie')
     
-    # Récupération du produit
     produit = get_object_or_404(ProduitPharmacie, pk=produit_id, hopital=hopital_user)
     
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # Récupération des champs texte
                 produit.nom = request.POST.get('nom', '').strip()
                 produit.forme = request.POST.get('forme', '').strip()
                 produit.dosage = request.POST.get('dosage', '').strip()
                 produit.categorie = request.POST.get('categorie', '').strip()
-                produit.devise = request.POST.get('devise', 'USD')
                 produit.unites_par_carton = int(request.POST.get('unites_par_carton', 1) or 1)
                 
-                # Conversion des prix en Decimal
+                # Prix en CDF (conversion si nécessaire)
                 produit.prix_achat_unitaire = Decimal(request.POST.get('prix_achat_unitaire', 0) or 0)
                 produit.prix_vente_unitaire = Decimal(request.POST.get('prix_vente_unitaire', 0) or 0)
                 
-                # Validation des champs obligatoires
+                # Force CDF comme devise
+                produit.devise = 'CDF'
+                
                 if not produit.nom or not produit.forme or not produit.dosage:
                     raise ValueError("Les champs nom, forme et dosage sont obligatoires.")
                 
@@ -4538,37 +4540,35 @@ def modifier_produit_pharmacie(request, produit_id):
             return redirect('gestion_pharmacie')
             
         except ValueError as e:
-            messages.error(request, f"❌ Erreur: {str(e)}")
+            messages.error(request, f"❌ Erreur : {str(e)}")
             return redirect('modifier_produit', produit_id=produit_id)
         except Exception as e:
-            messages.error(request, f"❌ Erreur inattendue: {str(e)}")
+            messages.error(request, f"❌ Erreur inattendue : {str(e)}")
             return redirect('modifier_produit', produit_id=produit_id)
     
-    # Calcul du stock réel pour affichage
-    with transaction.atomic():
-        entrees = LotPharmacie.objects.filter(
-            produit=produit,
-            hopital=hopital_user
-        ).aggregate(total=Coalesce(Sum('quantite_initiale'), 0))['total'] or 0
-        
-        sorties = SortiePharmacie.objects.filter(
-            lot__produit=produit,
-            lot__hopital=hopital_user
-        ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
+    # Calcul du stock réel
+    entrees = LotPharmacie.objects.filter(
+        produit=produit,
+        hopital=hopital_user
+    ).aggregate(total=Coalesce(Sum('quantite_initiale'), 0))['total'] or 0
+    
+    sorties = SortiePharmacie.objects.filter(
+        lot__produit=produit,
+        lot__hopital=hopital_user
+    ).aggregate(total=Coalesce(Sum('quantite_vendue'), 0))['total'] or 0
     
     stock_reel = entrees - sorties
-    valeur_totale = float(produit.prix_vente_unitaire) * stock_reel if produit.prix_vente_unitaire else 0
+    valeur_totale = Decimal(stock_reel) * produit.prix_vente_unitaire if produit.prix_vente_unitaire else Decimal('0.00')
     
     context = {
         'produit': produit,
         'stock_reel': stock_reel,
-        'valeur_totale': round(valeur_totale, 2),
+        'valeur_totale': valeur_totale,
         'fonctionKey': role.fonctionKey.roleName if role and role.fonctionKey else None,
         'taux': ConfigurationHopital.get_taux()
     }
     
-    return render(request, 'back-end/pharmacie/modifier_produit.html', context)
-#
+    return render(request, 'back-end/pharmacie/modifier_produit.html', context)#
 # ====================================================================================
 # SUPPRIMER MEDICAMENT
 # ====================================================================================

@@ -243,7 +243,20 @@
             color: #1f2937;
         }
 
-        .info-alert strong {
+        .info-taux {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            border-left: 4px solid #3b82f6;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-taux i {
+            color: #1e40af;
+            margin-right: 0.5rem;
+        }
+
+        .info-taux strong {
             color: #1e40af;
         }
 
@@ -350,6 +363,12 @@
                     </a>
                 </div>
 
+                <!-- Info Taux -->
+                <div class="info-taux">
+                    <i class="fa fa-info-circle"></i>
+                    <strong>Taux actuel :</strong> 1 USD = {{ taux }} CDF | Tous les prix sont affichés et enregistrés en <strong>CDF</strong>
+                </div>
+
                 <!-- Stats -->
                 <div class="stats-grid">
                     <div class="stat-box">
@@ -363,11 +382,11 @@
                     </div>
                     <div class="stat-box">
                         <div class="stat-icon value">
-                            <i class="fa fa-dollar-sign"></i>
+                            <i class="fa fa-coins"></i>
                         </div>
                         <div class="stat-content">
                             <div class="stat-label">Valeur du stock</div>
-                            <div class="stat-value">${{ valeur_totale|floatformat:2 }}</div>
+                            <div class="stat-value">{{ valeur_totale|floatformat:2 }} <small style="font-size: 1rem; color: #6b7280;">CDF</small></div>
                         </div>
                     </div>
                 </div>
@@ -446,12 +465,11 @@
                                     <div class="col col-3">
                                         <div class="form-group">
                                             <label for="devise" class="form-label">
-                                                <i class="fa fa-dollar-sign"></i> Devise
+                                                <i class="fa fa-coins"></i> Devise
                                             </label>
-                                            <select class="form-control-custom" id="devise" name="devise">
-                                                <option value="USD" {% if produit.devise == 'USD' %}selected{% endif %}>USD $</option>
-                                                <option value="CDF" {% if produit.devise == 'CDF' %}selected{% endif %}>CDF FC</option>
-                                            </select>
+                                            <input type="text" class="form-control-custom" 
+                                                   id="devise" value="CDF (Franc Congolais)" disabled>
+                                            <div class="form-help">Devise par défaut</div>
                                         </div>
                                     </div>
                                 </div>
@@ -467,31 +485,33 @@
                                     <div class="col col-6">
                                         <div class="form-group">
                                             <label for="prix_achat_unitaire" class="form-label">
-                                                Prix d'achat <span class="required">*</span>
+                                                Prix d'achat unitaire <span class="required">*</span>
                                             </label>
                                             <div class="input-group">
-                                                <span class="input-group-addon">$</span>
+                                                <span class="input-group-addon">CDF</span>
                                                 <input type="number" class="form-control-custom" 
                                                        id="prix_achat_unitaire" name="prix_achat_unitaire" 
                                                        value="{{ produit.prix_achat_unitaire }}" 
                                                        step="0.01" min="0" required
                                                        placeholder="0.00">
                                             </div>
+                                            <div class="form-help">Prix d'achat d'une unité en CDF</div>
                                         </div>
                                     </div>
                                     <div class="col col-6">
                                         <div class="form-group">
                                             <label for="prix_vente_unitaire" class="form-label">
-                                                Prix de vente <span class="required">*</span>
+                                                Prix de vente unitaire <span class="required">*</span>
                                             </label>
                                             <div class="input-group">
-                                                <span class="input-group-addon">$</span>
+                                                <span class="input-group-addon">CDF</span>
                                                 <input type="number" class="form-control-custom" 
                                                        id="prix_vente_unitaire" name="prix_vente_unitaire" 
                                                        value="{{ produit.prix_vente_unitaire }}" 
                                                        step="0.01" min="0" required
                                                        placeholder="0.00">
                                             </div>
+                                            <div class="form-help">Prix de vente d'une unité en CDF</div>
                                         </div>
                                     </div>
                                 </div>
@@ -521,7 +541,7 @@
                                                 <i class="fa fa-exchange-alt"></i> Taux de change
                                             </label>
                                             <input type="text" class="form-control-custom" 
-                                                   id="taux_change" value="{{ taux }} FC = 1 USD" disabled>
+                                                   id="taux_change" value="1 USD = {{ taux }} CDF" disabled>
                                             <div class="form-help">Configuration de l'hôpital</div>
                                         </div>
                                     </div>
@@ -530,6 +550,9 @@
                                 <div class="info-alert">
                                     <strong>Information:</strong> Le stock actuel (<strong>{{ stock_reel }} unités</strong>) 
                                     est calculé automatiquement à partir des entrées et sorties de lots.
+                                    <br><br>
+                                    <strong>Devise :</strong> Les prix sont enregistrés en <strong>CDF</strong>. 
+                                    La valeur du stock est également calculée en CDF.
                                 </div>
                             </div>
 

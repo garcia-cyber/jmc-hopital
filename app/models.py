@@ -947,7 +947,7 @@ class ProduitPharmacie(models.Model):
     dosage = models.CharField(max_length=50)
     categorie = models.CharField(max_length=100)
     unites_par_carton = models.PositiveIntegerField(default=1)
-    devise = models.CharField(max_length=3, choices=DEVISE_CHOICES, default='USD')
+    devise = models.CharField(max_length=3, choices=DEVISE_CHOICES, default='CDF')
     prix_achat_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
     prix_vente_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
     enregistre_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)

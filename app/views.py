@@ -4391,6 +4391,7 @@ def historique_soins(request):
 # ENREGISTREMENT DES PRODUITS PHARMACEUTIQUES
 # ==============================================================================================
 @login_required
+@login_required
 def ajouter_produit(request):
     """Vue pour enregistrer une nouvelle référence de médicament en stock"""
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
@@ -4400,21 +4401,38 @@ def ajouter_produit(request):
     if request.method == 'POST':
         form = ProduitPharmacieForm(request.POST)
         if form.is_valid():
-            produit = form.save(commit=False)
-            produit.hopital = hopital_user
-            produit.save()
-            messages.success(request, "Le produit a été enregistré avec succès.") 
-            return redirect('gestion_pharmacie')
+            try:
+                with transaction.atomic():
+                    produit = form.save(commit=False)
+                    produit.hopital = hopital_user
+                    produit.enregistre_par = request.user
+                    produit.devise = 'CDF'  # Force CDF par défaut
+                    
+                    #-validation des prix (doivent être > 0)
+                    if produit.prix_achat_unitaire <= 0 or produit.prix_vente_unitaire <= 0:
+                        messages.error(request, "Les prix doivent être supérieurs à 0.")
+                        return redirect('ajouter_produit')
+                    
+                    produit.save()
+                    
+                messages.success(request, "Le produit a été enregistré avec succès.")
+                return redirect('gestion_pharmacie')
+                
+            except Exception as e:
+                messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
         else:
             messages.error(request, "Erreur lors de l'enregistrement. Vérifie les données.")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = ProduitPharmacieForm()
 
     return render(request, 'back-end/pharmacie/ajouter_produit.html', {
         'form': form,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'taux': ConfigurationHopital.get_taux(),
     })
-
 
 # 
 # ====================================================================================

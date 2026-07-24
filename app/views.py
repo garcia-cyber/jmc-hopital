@@ -2403,7 +2403,6 @@ def dashboard_finance_depense(request):
 # 43 : RESULTAT DU LABO RADIO ET ECHO PAR LE MEDECIN
 # ==================================================================================================
 @login_required
-@login_required
 def liste_attente_ordonnance_view(request):
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
@@ -2417,7 +2416,7 @@ def liste_attente_ordonnance_view(request):
         consultation_id = request.POST.get('consultation_id')
         diagnostic = request.POST.get('diagnostic_final')
         type_ord = request.POST.get('type_ordonnance')
-        destination = request.POST.get('destination')
+        destination = request.POST.get('destination', '').upper()  # ← normalisé
         observation_orient = request.POST.get('observation_orientation')
 
         noms = request.POST.getlist('nom_medicament[]')
@@ -2436,12 +2435,16 @@ def liste_attente_ordonnance_view(request):
 
         try:
             with transaction.atomic():
-                consultation.diagnostic_final = diagnostic
-                consultation.save(update_fields=['diagnostic_final'])
+                # Mise à jour du diagnostic (si le champ existe)
+                if hasattr(consultation, 'diagnostic_final'):
+                    consultation.diagnostic_final = diagnostic
+                    consultation.save(update_fields=['diagnostic_final'])
 
                 ordonnance = Ordonnance.objects.create(
                     consultation=consultation,
-                    type_ordonnance=type_ord
+                    type_ordonnance=type_ord,
+                    diagnostic=diagnostic,  # ← ajouté
+                    hopital=hopital_user    # ← ajouté
                 )
 
                 for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
@@ -2451,7 +2454,8 @@ def liste_attente_ordonnance_view(request):
                             nom=nom.strip(),
                             posologie=pos.strip() if pos else '',
                             duree=dur.strip() if dur else '',
-                            quantite=int(qty) if qty and qty.isdigit() else 1
+                            quantite=int(qty) if qty and qty.isdigit() else 1,
+                            hopital=hopital_user  # ← ajouté
                         )
 
                 if destination:
@@ -2460,16 +2464,17 @@ def liste_attente_ordonnance_view(request):
                         medecin_orientateur=request.user,
                         destination=destination,
                         observation=observation_orient,
-                        est_admis=False
+                        est_admis=False,
+                        hopital=hopital_user  # ← ajouté
                     )
 
-                    if destination == 'Hospitalisation':
+                    if destination == 'HOSPITALISATION':  # ← majuscules
                         lit_id = request.POST.get('lit_id')
                         date_entree = request.POST.get('date_entree')
                         motif_admission = request.POST.get('motif_admission')
 
                         if lit_id:
-                            hospitalisation = Hospitalisation.objects.create(
+                            Hospitalisation.objects.create(
                                 patient=consultation.triage.patient,
                                 lit_id=lit_id,
                                 hopital=hopital_user,

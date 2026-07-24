@@ -389,6 +389,7 @@ class Consultation(models.Model):
 
     session = models.OneToOneField(SessionSoins, on_delete=models.CASCADE, null=True)
     hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    diagnostic_final = models.TextField(blank=True, null=True)
     
 
     @property
@@ -452,6 +453,7 @@ class Ordonnance(models.Model):
     diagnostic = models.CharField(max_length=255, blank=True)
     observation = models.TextField(blank=True)
     hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    note = models.TextField(blank=True, null=True, verbose_name="Note")
 
     def __str__(self):
         # Utilisation d'une structure sécurisée pour éviter les erreurs de type DoesNotExist

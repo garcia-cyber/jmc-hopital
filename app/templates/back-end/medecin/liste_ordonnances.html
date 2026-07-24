@@ -228,8 +228,9 @@
                                     </td>
 
                                     <td class="text-break">
-                                        <small><strong>Diag:</strong> {{ ord.consultation.diagnostic_final|default:"Non spécifié" }}</small><br>
-                                        <small class="text-muted"><strong>Note:</strong> {{ ord.observation|truncatechars:70|default:"-" }}</small>
+                                        <small><strong>Diag:</strong> {{ ord.diagnostic|default:"Non spécifié" }}</small><br>
+                                        <small class="text-muted"><strong>Obs:</strong> {{ ord.observation|truncatechars:50|default:"-" }}</small><br>
+                                        <small class="text-muted"><strong>Note:</strong> {{ ord.note|truncatechars:50|default:"-" }}</small>
                                     </td>
 
                                     <td>

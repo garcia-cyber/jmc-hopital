@@ -156,7 +156,7 @@
                                             {% if c.orientations.all %}
                                                 {% for o in c.orientations.all %}
                                                     <div class="orientation-destination">
-                                                        <i class="fa fa-map-signs text-success"></i> {{ o.destination }}
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.get_destination_display }}
                                                     </div>
                                                     {% if o.observation %}
                                                         <div class="orientation-observation">
@@ -167,7 +167,7 @@
                                             {% elif c.orientation_set.all %}
                                                 {% for o in c.orientation_set.all %}
                                                     <div class="orientation-destination">
-                                                        <i class="fa fa-map-signs text-success"></i> {{ o.destination }}
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.get_destination_display }}
                                                     </div>
                                                     {% if o.observation %}
                                                         <div class="orientation-observation">
@@ -211,6 +211,7 @@
         </div>
     </div>
 
+    <!-- Modals pour chaque consultation sans ordonnance -->
     {% for c in consultations_en_attente %}
     {% if not c.ordonnance_existante %}
     <div class="modal fade" id="modal{{ c.id }}" tabindex="-1" role="dialog" aria-hidden="true">
@@ -241,6 +242,12 @@
                             </div>
                         </div>
 
+                        <!-- Note -->
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold">Note</label>
+                            <textarea name="note" class="form-control" rows="2" placeholder="Note complémentaire (facultatif)"></textarea>
+                        </div>
+
                         <div class="form-group mb-3 p-3" style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 5px solid #28a745;">
                             <label class="font-weight-bold text-success"><i class="fa fa-map-signs"></i> Orientation</label>
                             <div class="row">
@@ -248,9 +255,10 @@
                                     <select name="destination" class="form-control" onchange="toggleLit(this, '{{ c.id }}')">
                                         <option value="">-- Choisir une destination --</option>
                                         <option value="PHARMACIE">Pharmacie</option>
-                                        <option value="Hospitalisation">Hospitalisation</option>
+                                        <option value="HOSPITALISATION">Hospitalisation</option>
                                         <option value="ACCOUCHEMENT">Accouchement</option>
                                         <option value="BLOC_OPERATOIRE">Bloc Opératoire</option>
+                                        <option value="SALLE_SOINS">Salle de Soins</option>
                                         <option value="SORTIE">Sortie</option>
                                     </select>
                                 </div>
@@ -321,7 +329,7 @@
         });
 
         function toggleLit(select, id) {
-            document.getElementById('zone-lit-' + id).style.display = (select.value === 'Hospitalisation') ? 'flex' : 'none';
+            document.getElementById('zone-lit-' + id).style.display = (select.value === 'HOSPITALISATION') ? 'flex' : 'none';
         }
 
         function ajouterLigne(id) {

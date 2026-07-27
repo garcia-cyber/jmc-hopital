@@ -9,25 +9,26 @@
     <style>
         :root {
             --primary: #2563eb;
-            --primary-2: #0f172a;
+            --primary-dark: #1e40af;
             --success: #10b981;
             --warning: #f59e0b;
-            --bg: #f4f7fb;
+            --danger: #ef4444;
+            --bg: #f5f7fb;
             --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --line: #e5e7eb;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
             --soft-blue: #eff6ff;
             --soft-green: #ecfdf5;
-            --soft-yellow: #fffbeb;
         }
 
         body {
             background:
-                radial-gradient(circle at top left, rgba(37,99,235,0.10), transparent 25%),
-                radial-gradient(circle at top right, rgba(16,185,129,0.10), transparent 22%),
-                linear-gradient(180deg, #ffffff 0%, #f6f9fc 35%, var(--bg) 100%);
+                radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 25%),
+                radial-gradient(circle at top right, rgba(16,185,129,0.08), transparent 22%),
+                linear-gradient(180deg, #ffffff 0%, #f7f9fc 40%, var(--bg) 100%);
             color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
         .page-wrapper .content {
@@ -36,25 +37,29 @@
         }
 
         .page-header {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         .page-title {
             font-weight: 800;
-            color: var(--primary-2);
+            color: var(--text);
+            font-size: 1.35rem;
+            margin-bottom: 0.25rem;
         }
 
         .breadcrumb {
             background: transparent;
             padding-left: 0;
             margin-bottom: 0;
+            font-size: 0.9rem;
         }
 
         .card {
             border: 1px solid var(--line);
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
             overflow: hidden;
+            background: var(--card);
         }
 
         .card-body {
@@ -63,65 +68,156 @@
 
         .card-title {
             font-weight: 800;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            color: var(--text);
         }
 
-        .summary-box {
-            background: linear-gradient(135deg, #f8fbff, #ffffff);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 1rem 1.1rem;
-            margin-bottom: 1rem;
+        .section-title {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.7rem;
+            font-size: 1rem;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
         }
 
         .summary-label {
             color: var(--muted);
             font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            font-weight: 700;
+            font-weight: 600;
         }
 
         .summary-value {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            color: var(--primary-2);
-            margin-top: 0.25rem;
+            color: var(--text);
         }
 
-        .amount-box {
-            background: var(--soft-blue);
-            border: 1px solid rgba(37,99,235,0.12);
-            border-radius: 18px;
-            padding: 1rem;
+        .total-box {
+            background: linear-gradient(135deg, #f8fbff, #ffffff);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            margin-top: 0.5rem;
         }
 
-        .amount-box h3 {
+        .total-box h4 {
             margin: 0;
             font-weight: 900;
-            color: #dc2626;
+            color: var(--primary-dark);
+            font-size: 1.05rem;
         }
 
-        .amount-box p {
+        .total-box p {
             margin: 0.25rem 0 0;
             color: var(--muted);
+            font-size: 0.85rem;
         }
 
         .form-label {
             font-weight: 700;
-            color: var(--primary-2);
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-bottom: 0.35rem;
         }
 
         .form-control, .form-select {
             border-radius: 12px;
             border: 1px solid var(--line);
-            padding: 0.78rem 1rem;
+            padding: 0.75rem 0.95rem;
             box-shadow: none;
+            font-size: 0.95rem;
+            background: #fff;
         }
 
         .form-control:focus, .form-select:focus {
-            border-color: rgba(37,99,235,0.45);
-            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.08);
+            border-color: rgba(37,99,235,0.5);
+            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.1);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 0.9rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            padding: 0.75rem 0.95rem 0.75rem 2.2rem;
+            font-size: 0.95rem;
+            background: #fff;
+        }
+
+        .search-box input:focus {
+            border-color: rgba(37,99,235,0.5);
+            box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.1);
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 1rem;
+        }
+
+        .prestations-list {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fafcff;
+            margin-bottom: 0.75rem;
+        }
+
+        .prestation-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 0.8rem;
+            border-bottom: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .prestation-item:last-child {
+            border-bottom: none;
+        }
+
+        .prestation-item.hidden {
+            display: none;
+        }
+
+        .prestation-item label {
+            flex: 1;
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.93rem;
+        }
+
+        .prestation-price {
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            font-size: 0.92rem;
+        }
+
+        .empty-state {
+            padding: 1.2rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
         }
 
         .submit-section {
@@ -133,8 +229,9 @@
 
         .submit-btn {
             border-radius: 12px;
-            padding: 0.8rem 1rem;
+            padding: 0.75rem 1.05rem;
             font-weight: 800;
+            font-size: 0.95rem;
         }
 
         .alert {
@@ -143,21 +240,74 @@
 
         .info-card {
             background: linear-gradient(135deg, #eff6ff, #f8fffb);
-            border: 1px solid rgba(37,99,235,0.10);
-            border-radius: 14px;
-            padding: 0.9rem 1rem;
+            border: 1px solid rgba(37,99,235,0.12);
+            border-radius: 12px;
+            padding: 0.8rem 0.95rem;
             color: #334155;
+            font-size: 0.9rem;
         }
 
         .devise-helper {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--muted);
-            margin-top: 0.25rem;
+            margin-top: 0.2rem;
+        }
+
+        .payment-card {
+            background: linear-gradient(135deg, #f8fbff, #ffffff);
+            border: 1px solid rgba(37,99,235,0.15);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Pagination */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .pagination-btn:hover {
+            background: var(--soft-blue);
+            border-color: rgba(37,99,235,0.3);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         @media (max-width: 768px) {
             .card-body {
                 padding: 1rem;
+            }
+            .page-title {
+                font-size: 1.2rem;
+            }
+            .prestations-list {
+                max-height: 220px;
             }
         }
     </style>
@@ -171,7 +321,7 @@
         <div class="content container-fluid">
 
             <div class="page-header">
-                <div class="row">
+                <div class="row align-items-center">
                     <div class="col-sm-12">
                         <h3 class="page-title">Paiement de la Fiche</h3>
                         <ul class="breadcrumb">
@@ -192,93 +342,181 @@
             {% endif %}
 
             <div class="row">
-                <div class="col-lg-8 offset-lg-2">
+                <div class="col-xl-10 offset-xl-1">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title text-primary">Détails du patient : {{ patient.noms }}</h4>
-                            <hr>
 
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <div class="summary-box">
-                                        <div class="summary-label">Prestation</div>
-                                        <div class="summary-value">{{ libelle_prestation }}</div>
-                                    </div>
-                                    <div class="summary-box">
-                                        <div class="summary-label">Prix total</div>
-                                        <div class="summary-value">
-                                            {{ prix_fiche_cdf|floatformat:0 }} FC
-                                            <span class="text-muted">(~ {{ prix_fiche|floatformat:2 }} USD)</span>
-                                        </div>
+                            <!-- En-tête patient -->
+                            <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                                <h4 class="card-title mb-0">
+                                    Patient : {{ patient.noms }}
+                                </h4>
+                                <span class="badge bg-light text-dark border">
+                                    {{ libelle_periode|default:"jour" }} – {{ heure_actuelle }}h
+                                </span>
+                            </div>
+
+                            <!-- Récapitulatif financier -->
+                            <div class="summary-row mb-3">
+                                <div>
+                                    <div class="summary-label">Déjà payé (FICHE)</div>
+                                    <div class="summary-value">
+                                        {{ ResteDejaPayeCDF|floatformat:0 }} FC
+                                        <span class="text-muted" style="font-weight:600;">
+                                            (~ {{ ResteDejaPayeUSD|floatformat:2 }} USD)
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="amount-box text-md-end">
-                                        <h3>Reste : {{ reste_a_payer_cdf|floatformat:0 }} FC</h3>
-                                        <p>(~ {{ reste_a_payer|floatformat:2 }} USD, taux : 1 USD = {{ taux|floatformat:0 }} FC)</p>
+                                <div class="text-end">
+                                    <div class="summary-label">Reste à payer (global)</div>
+                                    <div class="summary-value" id="reste_global_display">
+                                        {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                        <span class="text-muted">
+                                            (~ {{ reste_a_payer|floatformat:2 }} USD)
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="info-card mb-3">
-                                <strong>Fiche appliquée :</strong> {{ libelle_cible }}.
-                                <span class="ms-2">Heure actuelle : {{ heure_actuelle }}h</span>
+                                <strong>Fiches administratives :</strong>
+                                Recherchez et cochez les prestations à faire payer pour ce patient.
+                                Le total et le reste à payer se mettront à jour automatiquement.
                             </div>
 
                             {% if deja_paye %}
                                 <div class="alert alert-success text-center">
-                                    <i class="fa fa-check-circle fa-3x mb-3"></i><br>
-                                    <strong>Cette fiche a déjà été payée en totalité.</strong>
+                                    <i class="fa fa-check-circle fa-2x mb-2"></i><br>
+                                    <strong>Les fiches administratives de ce patient sont déjà payées en totalité.</strong>
                                     <div class="mt-3">
                                         <a href="{% url 'liste_attente_triage' %}" class="btn btn-primary">Continuer</a>
                                     </div>
                                 </div>
                             {% else %}
-                                <form method="POST">
+                                <form method="POST" id="form_paiement_fiche">
                                     {% csrf_token %}
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Montant à verser <span class="text-danger">*</span></label>
+
+                                    <!-- Section : Sélection des prestations -->
+                                    <div class="section-title">Sélection des prestations</div>
+
+                                    <!-- Barre de recherche -->
+                                    <div class="search-box">
+                                        <i class="fa fa-search search-icon"></i>
+                                        <input
+                                            type="text"
+                                            id="search_prestation"
+                                            class="form-control"
+                                            placeholder="Rechercher une prestation (ex: dossier, fiche, administratif...)"
+                                        >
+                                    </div>
+
+                                    <!-- Liste des prestations (paginée) -->
+                                    <div class="prestations-list" id="prestations_list">
+                                        {% for p in prestations_adm %}
+                                            <div class="prestation-item" data-libelle="{{ p.libelle|lower }}">
                                                 <input
-                                                    class="form-control"
-                                                    type="number"
-                                                    name="montant"
-                                                    id="montant_input"
-                                                    step="0.01"
-                                                    min="0.01"
-                                                    required
+                                                    type="checkbox"
+                                                    name="prestation_ids"
+                                                    class="form-check-input prestation-check"
+                                                    value="{{ p.id }}"
+                                                    data-prix-cdf="{{ p.prix|floatformat:2 }}"
+                                                    id="prestation_{{ p.id }}"
                                                 >
-                                                <div class="devise-helper" id="max_helper">
-                                                    Maximum : {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                                <label for="prestation_{{ p.id }}">
+                                                    {{ p.libelle }}
+                                                </label>
+                                                <div class="prestation-price">
+                                                    {{ p.prix|floatformat:0 }} FC
+                                                </div>
+                                            </div>
+                                        {% empty %}
+                                            <div class="empty-state">
+                                                Aucune prestation administrative (ADM) configurée pour cet hôpital.
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <!-- Pagination -->
+                                    <div class="pagination-container" id="pagination_container">
+                                        <!-- Généré dynamiquement par JS -->
+                                    </div>
+
+                                    <!-- Total des fiches sélectionnées -->
+                                    <div class="total-box">
+                                        <div class="summary-row">
+                                            <div class="summary-label">Total des fiches sélectionnées</div>
+                                            <div class="summary-value" id="total_selectionne_cdf">
+                                                0 FC
+                                                <span class="text-muted" style="font-weight:600;">
+                                                    (~ <span id="total_selectionne_usd">0.00</span> USD)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Info dynamique : reste à payer -->
+                                    <div class="info-card mt-3">
+                                        <div class="summary-row">
+                                            <div class="summary-label">Reste à payer (après paiements existants)</div>
+                                            <div class="summary-value" id="reste_a_payer_dyn">
+                                                {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                                <span class="text-muted">
+                                                    (~ {{ reste_a_payer|floatformat:2 }} USD)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formulaire de paiement -->
+                                    <div class="payment-card">
+                                        <div class="section-title mb-2">Paiement</div>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="montant_input">
+                                                        Montant à verser <span class="text-danger">*</span>
+                                                    </label>
+                                                    <input
+                                                        class="form-control"
+                                                        type="number"
+                                                        name="montant"
+                                                        id="montant_input"
+                                                        step="0.01"
+                                                        min="0.01"
+                                                        required
+                                                    >
+                                                    <div class="devise-helper" id="max_helper">
+                                                        Maximum : {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="devise_select">Devise</label>
+                                                    <select class="form-select" name="devise" id="devise_select">
+                                                        <option value="CDF">CDF (FC)</option>
+                                                        <option value="USD">USD ($)</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Devise</label>
-                                                <select class="form-select" name="devise" id="devise_select">
-                                                    <option value="CDF">CDF (FC)</option>
-                                                    <option value="USD">USD ($)</option>
-                                                </select>
-                                            </div>
+
+                                        <div class="info-card mt-3">
+                                            <small id="info_paiement">
+                                                Le reste à payer actuel est de {{ reste_a_payer_cdf|floatformat:0 }} FC
+                                                (~ {{ reste_a_payer|floatformat:2 }} USD).
+                                            </small>
                                         </div>
-                                    </div>
 
-                                    <div class="info-card mt-3">
-                                        <small id="info_paiement">
-                                            Le reste à payer est de {{ reste_a_payer_cdf|floatformat:0 }} FC
-                                            (~ {{ reste_a_payer|floatformat:2 }} USD).
-                                        </small>
-                                    </div>
-
-                                    <div class="submit-section">
-                                        <button class="btn btn-primary submit-btn" type="submit">
-                                            Enregistrer le paiement
-                                        </button>
-                                        <a href="{% url 'enregistrement_patient' %}" class="btn btn-light submit-btn">
-                                            Annuler
-                                        </a>
+                                        <div class="submit-section">
+                                            <button class="btn btn-primary submit-btn" type="submit">
+                                                Enregistrer le paiement
+                                            </button>
+                                            <a href="{% url 'enregistrement_patient' %}" class="btn btn-light submit-btn">
+                                                Annuler
+                                            </a>
+                                        </div>
                                     </div>
                                 </form>
                             {% endif %}
@@ -295,36 +533,197 @@
 
 <script>
     $(document).ready(function () {
-        const resteCDF = parseFloat("{{ reste_a_payer_cdf|floatformat:2 }}");
-        const resteUSD = parseFloat("{{ reste_a_payer|floatformat:2 }}");
         const taux = parseFloat("{{ taux|floatformat:2 }}");
+        const dejaPayeCDF = parseFloat("{{ ResteDejaPayeCDF|floatformat:2 }}") || 0;
 
         const $deviseSelect = $('#devise_select');
         const $montantInput = $('#montant_input');
         const $maxHelper = $('#max_helper');
         const $infoPaiement = $('#info_paiement');
 
-        function updateUI() {
+        const $prestationChecks = $('.prestation-check');
+        const $totalSelectionneCdf = $('#total_selectionne_cdf');
+        const $totalSelectionneUsd = $('#total_selectionne_usd');
+        const $resteAPayerDyn = $('#reste_a_payer_dyn');
+        const $resteGlobalDisplay = $('#reste_global_display');
+
+        const $searchInput = $('#search_prestation');
+        const $prestationsItems = $('.prestation-item');
+        const $paginationContainer = $('#pagination_container');
+
+        const ITEMS_PER_PAGE = 3;
+        let currentPage = 1;
+        let filteredItems = $prestationsItems.toArray();
+
+        function toFixed(num, digits) {
+            return Number(num).toFixed(digits);
+        }
+
+        function updateTotaux() {
+            let totalCdf = 0;
+
+            $prestationChecks.each(function () {
+                if (this.checked) {
+                    const prixCdf = parseFloat($(this).data('prix-cdf')) || 0;
+                    totalCdf += prixCdf;
+                }
+            });
+
+            const totalUsd = totalCdf / taux;
+            const resteCdf = Math.max(0, totalCdf - dejaPayeCDF);
+            const resteUsd = resteCdf / taux;
+
+            // Total des fiches sélectionnées
+            $totalSelectionneCdf.html(
+                toFixed(totalCdf, 0) + ' FC ' +
+                '<span class="text-muted" style="font-weight:600;">(~ ' +
+                '<span>' + toFixed(totalUsd, 2) + '</span> USD)</span>'
+            );
+            $totalSelectionneUsd.text(toFixed(totalUsd, 2));
+
+            // Mise à jour du "reste à payer" dynamique
+            $resteAPayerDyn.html(
+                toFixed(resteCdf, 0) + ' FC ' +
+                '<span class="text-muted">(~ ' + toFixed(resteUsd, 2) + ' USD)</span>'
+            );
+
+            // Mise à jour du "Reste à payer (global)" en haut
+            $resteGlobalDisplay.html(
+                toFixed(resteCdf, 0) + ' FC ' +
+                '<span class="text-muted" style="font-weight:600;">' +
+                '(~ ' + toFixed(resteUsd, 2) + ' USD)</span>'
+            );
+
+            updateUI(resteCdf, resteUsd);
+        }
+
+        function updateUI(resteCdf, resteUsd) {
             const devise = $deviseSelect.val();
 
             if (devise === 'CDF') {
-                $montantInput.attr('max', resteCDF.toFixed(2));
-                $maxHelper.text(`Maximum : ${resteCDF.toFixed(0)} FC`);
+                $montantInput.attr('max', toFixed(resteCdf, 2));
+                $maxHelper.text('Maximum : ' + toFixed(resteCdf, 0) + ' FC');
                 $infoPaiement.text(
-                    `Le reste à payer est de ${resteCDF.toFixed(0)} FC (~ ${resteUSD.toFixed(2)} USD).`
+                    'Le reste à payer est de ' + toFixed(resteCdf, 0) + ' FC ' +
+                    '(~ ' + toFixed(resteUsd, 2) + ' USD).'
                 );
-            } else { // USD
-                $montantInput.attr('max', resteUSD.toFixed(2));
-                $maxHelper.text(`Maximum : ${resteUSD.toFixed(2)} USD`);
+            } else {
+                $montantInput.attr('max', toFixed(resteUsd, 2));
+                $maxHelper.text('Maximum : ' + toFixed(resteUsd, 2) + ' USD');
                 $infoPaiement.text(
-                    `Le reste à payer est de ${resteUSD.toFixed(2)} USD (~ ${resteCDF.toFixed(0)} FC).`
+                    'Le reste à payer est de ' + toFixed(resteUsd, 2) + ' USD ' +
+                    '(~ ' + toFixed(resteCdf, 0) + ' FC).'
                 );
             }
         }
 
-        $deviseSelect.on('change', updateUI);
-        updateUI();
+        // Filtrage des prestations
+        function filterPrestations() {
+            const query = $searchInput.val().trim().toLowerCase();
+
+            filteredItems = $prestationsItems.toArray().filter(function (item) {
+                const libelle = $(item).data('libelle') || '';
+                return libelle.includes(query);
+            });
+
+            currentPage = 1;
+            renderPagination();
+            showPage(currentPage);
+        }
+
+        // Pagination
+        function getTotalPages() {
+            return Math.ceil(filteredItems.length / ITEMS_PER_PAGE) || 1;
+        }
+
+        function showPage(page) {
+            const totalPages = getTotalPages();
+            if (page < 1) page = 1;
+            if (page > totalPages) page = totalPages;
+
+            const start = (page - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+
+            $prestationsItems.addClass('hidden');
+
+            filteredItems.forEach(function (item, index) {
+                if (index >= start && index < end) {
+                    $(item).removeClass('hidden');
+                } else {
+                    $(item).addClass('hidden');
+                }
+            });
+
+            updatePaginationButtons(page, totalPages);
+        }
+
+        function renderPagination() {
+            const totalPages = getTotalPages();
+            $paginationContainer.empty();
+
+            if (totalPages <= 1) {
+                return;
+            }
+
+            // Bouton Précédent
+            const $prevBtn = $('<button type="button" class="pagination-btn">Préc.</button>');
+            $prevBtn.on('click', function () {
+                showPage(currentPage - 1);
+            });
+            $paginationContainer.append($prevBtn);
+
+            // Boutons de page
+            for (let i = 1; i <= totalPages; i++) {
+                const $btn = $('<button type="button" class="pagination-btn">' + i + '</button>');
+                $btn.on('click', function () {
+                    currentPage = i;
+                    showPage(currentPage);
+                });
+                $paginationContainer.append($btn);
+            }
+
+            // Bouton Suivant
+            const $nextBtn = $('<button type="button" class="pagination-btn">Suiv.</button>');
+            $nextBtn.on('click', function () {
+                showPage(currentPage + 1);
+            });
+            $paginationContainer.append($nextBtn);
+
+            updatePaginationButtons(currentPage, totalPages);
+        }
+
+        function updatePaginationButtons(current, total) {
+            $paginationContainer.find('.pagination-btn').each(function (index, btn) {
+                const $btn = $(btn);
+                const text = $btn.text().trim();
+
+                if (text === 'Préc.' || text === 'Suiv.') {
+                    if (text === 'Préc.') {
+                        $btn.prop('disabled', current <= 1);
+                    } else {
+                        $btn.prop('disabled', current >= total);
+                    }
+                } else {
+                    const pageNum = parseInt(text, 10);
+                    if (pageNum === current) {
+                        $btn.addClass('active');
+                    } else {
+                        $btn.removeClass('active');
+                    }
+                }
+            });
+        }
+
+        // Événements
+        $searchInput.on('input', filterPrestations);
+        $prestationChecks.on('change', updateTotaux);
+        $deviseSelect.on('change', updateTotaux);
+
+        // Initialisation
+        filterPrestations();
+        updateTotaux();
     });
 </script>
+
 </body>
 </html>

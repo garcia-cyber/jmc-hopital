@@ -5855,7 +5855,7 @@ def creer_session_soins(request, patient_id):
     return render(request, 'back-end/consultation/creer_session.html', {
         'patient': patient,
         'prestations': prestations,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
     })
 #
 # ===================================================================================================================

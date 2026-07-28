@@ -43,6 +43,12 @@
         .action-btn { border-radius: 999px; padding: 8px 14px; font-weight: 600; }
         .prestations-list { margin: 0; padding-left: 16px; }
         .prestations-list li { margin-bottom: 4px; }
+        .btn-print {
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 600;
+        }
+        .btn-space { margin-right: 6px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -116,6 +122,10 @@
                                             {% endif %}
                                         </td>
                                         <td class="text-right">
+                                            <a href="{% url 'facture_session' session.id %}" target ="_blank" class="btn btn-info btn-sm action-btn btn-space">
+                                                <i class="fa fa-file-text"></i> Facture
+                                            </a>
+
                                             {% if session.actuel_reste > 0 %}
                                                 <a href="{% url 'paiement_session' session.id %}" class="btn btn-primary btn-sm action-btn">
                                                     <i class="fa fa-money"></i> Payer

@@ -5874,20 +5874,69 @@ def liste_sessions(request):
 
     sessions = sessions.order_by('-date_creation')
 
+    taux = ConfigurationHopital.get_taux()
+
     for session in sessions:
-        paiements = session.paiements.all()
-        total_paye = paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or Decimal('0')
-        total_red = paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or Decimal('0')
         total_session = session.items.aggregate(Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
 
-        session.total_verse = total_paye
-        session.total_reductions = total_red
+        total_paye_cdf = Decimal('0')
+        total_red_cdf = Decimal('0')
+
+        for p in session.paiements.all():
+            if p.devise == 'USD':
+                total_paye_cdf += (p.montant_verse or Decimal('0')) * taux
+                total_red_cdf += (p.montant_reduction or Decimal('0')) * taux
+            else:
+                total_paye_cdf += (p.montant_verse or Decimal('0'))
+                total_red_cdf += (p.montant_reduction or Decimal('0'))
+
+        session.total_verse = total_paye_cdf
+        session.total_reductions = total_red_cdf
         session.total_payer_calc = total_session
-        session.actuel_reste = max(Decimal('0'), total_session - total_paye - total_red)
+        session.actuel_reste = max(Decimal('0'), total_session - total_paye_cdf - total_red_cdf)
 
     return render(request, 'back-end/consultation/liste_sessions.html', {
         'sessions': sessions,
         'fonctionKey': fonction_key
+    })
+
+#
+# ===================================================================================================================
+# FACTURE IMPRIMER DE LA SESSION NOUVELLE
+# ===================================================================================================================
+@login_required
+def facture_session(request, session_id):
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+
+    session = get_object_or_404(
+        SessionSoins.objects.select_related('patient').prefetch_related('items__prestation', 'paiements'),
+        pk=session_id,
+        hopital=hopital_user
+    )
+
+    taux = ConfigurationHopital.get_taux()
+    total_session = session.items.aggregate(Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
+    total_paye = Decimal('0')
+    total_red = Decimal('0')
+
+    for p in session.paiements.all():
+        if p.devise == 'USD':
+            total_paye += (p.montant_verse or Decimal('0')) * taux
+            total_red += (p.montant_reduction or Decimal('0')) * taux
+        else:
+            total_paye += (p.montant_verse or Decimal('0'))
+            total_red += (p.montant_reduction or Decimal('0'))
+
+    reste = max(Decimal('0'), total_session - total_paye - total_red)
+
+    return render(request, 'back-end/consultation/facture_session.html', {
+        'session': session,
+        'total_session': total_session,
+        'total_paye': total_paye,
+        'total_red': total_red,
+        'reste': reste,
+        'taux': taux,
     })
 #
 # ====================================================================================================================
@@ -5907,22 +5956,44 @@ def payer_session(request, session_id):
 
     taux = ConfigurationHopital.get_taux()
 
+    total_session = session.items.aggregate(models.Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
+    total_deja_paye = Decimal('0')
+    total_reductions = Decimal('0')
+
+    for p in session.paiements.all():
+        if p.devise == 'USD':
+            total_deja_paye += (p.montant_verse or Decimal('0')) * taux
+            total_reductions += (p.montant_reduction or Decimal('0')) * taux
+        else:
+            total_deja_paye += (p.montant_verse or Decimal('0'))
+            total_reductions += (p.montant_reduction or Decimal('0'))
+
+    reste_a_payer = max(Decimal('0'), total_session - total_deja_paye - total_reductions)
+
     if request.method == 'POST':
         try:
             montant_saisi = Decimal(request.POST.get('montant', 0))
             reduction = Decimal(request.POST.get('reduction', 0))
             devise = request.POST.get('devise', 'CDF')
 
-            montant_verse = montant_saisi / taux if devise == 'USD' else montant_saisi
-            reduction_usd = reduction / taux if devise == 'USD' else reduction
+            if devise == 'USD':
+                montant_cdf = montant_saisi * taux
+                reduction_cdf = reduction * taux
+            else:
+                montant_cdf = montant_saisi
+                reduction_cdf = reduction
+
+            if montant_cdf + reduction_cdf > reste_a_payer:
+                messages.error(request, f"Montant trop élevé. Reste à payer : {reste_a_payer:.0f} CDF.")
+                return redirect('paiement_session', session_id=session.id)
 
             Paiement.objects.create(
                 session=session,
                 patient=session.patient,
                 service='SOIN',
-                montant_verse=montant_verse,
-                montant_reduction=reduction_usd,
-                devise='USD',
+                montant_verse=montant_saisi,
+                montant_reduction=reduction,
+                devise=devise,
                 caissier=request.user,
                 hopital=hopital_user
             )
@@ -5931,11 +6002,7 @@ def payer_session(request, session_id):
             return redirect('liste_sessions')
         except Exception as e:
             messages.error(request, f"Erreur lors du paiement : {str(e)}")
-
-    total_session = session.items.aggregate(models.Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
-    total_deja_paye = session.paiements.aggregate(models.Sum('montant_verse'))['montant_verse__sum'] or Decimal('0')
-    total_reductions = session.paiements.aggregate(models.Sum('montant_reduction'))['montant_reduction__sum'] or Decimal('0')
-    reste_a_payer = max(Decimal('0'), total_session - total_deja_paye - total_reductions)
+            return redirect('paiement_session', session_id=session.id)
 
     return render(request, 'back-end/consultation/payer_session.html', {
         'session': session,

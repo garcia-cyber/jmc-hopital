@@ -5876,12 +5876,14 @@ def liste_sessions(request):
 
     for session in sessions:
         paiements = session.paiements.all()
-        total_paye = paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
-        total_red = paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
+        total_paye = paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or Decimal('0')
+        total_red = paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or Decimal('0')
+        total_session = session.items.aggregate(Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
 
         session.total_verse = total_paye
         session.total_reductions = total_red
-        session.actuel_reste = max(0, session.total_a_payer - total_paye - total_red)
+        session.total_payer_calc = total_session
+        session.actuel_reste = max(Decimal('0'), total_session - total_paye - total_red)
 
     return render(request, 'back-end/consultation/liste_sessions.html', {
         'sessions': sessions,
@@ -5905,24 +5907,21 @@ def payer_session(request, session_id):
 
     taux = ConfigurationHopital.get_taux()
 
-    if session.estpayee:
-        messages.warning(request, "Cette session est déjà soldée.")
-        return redirect('liste_sessions')
-
     if request.method == 'POST':
         try:
             montant_saisi = Decimal(request.POST.get('montant', 0))
             reduction = Decimal(request.POST.get('reduction', 0))
-            devise = request.POST.get('devise', 'USD')
+            devise = request.POST.get('devise', 'CDF')
 
-            montant_verse = montant_saisi / taux if devise == 'CDF' else montant_saisi
+            montant_verse = montant_saisi / taux if devise == 'USD' else montant_saisi
+            reduction_usd = reduction / taux if devise == 'USD' else reduction
 
             Paiement.objects.create(
                 session=session,
                 patient=session.patient,
                 service='SOIN',
                 montant_verse=montant_verse,
-                montant_reduction=reduction,
+                montant_reduction=reduction_usd,
                 devise='USD',
                 caissier=request.user,
                 hopital=hopital_user
@@ -5933,15 +5932,15 @@ def payer_session(request, session_id):
         except Exception as e:
             messages.error(request, f"Erreur lors du paiement : {str(e)}")
 
-    total_deja_paye = session.paiements.aggregate(models.Sum('montant_verse'))['montant_verse__sum'] or 0
-    total_reductions = session.paiements.aggregate(models.Sum('montant_reduction'))['montant_reduction__sum'] or 0
-    reste_a_payer = max(0, session.totalapayer - total_deja_paye - total_reductions)
-    reste_a_payer_cdf = float(reste_a_payer) * float(taux)
+    total_session = session.items.aggregate(models.Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
+    total_deja_paye = session.paiements.aggregate(models.Sum('montant_verse'))['montant_verse__sum'] or Decimal('0')
+    total_reductions = session.paiements.aggregate(models.Sum('montant_reduction'))['montant_reduction__sum'] or Decimal('0')
+    reste_a_payer = max(Decimal('0'), total_session - total_deja_paye - total_reductions)
 
     return render(request, 'back-end/consultation/payer_session.html', {
         'session': session,
+        'total_session': total_session,
         'reste_a_payer': reste_a_payer,
-        'reste_a_payer_cdf': reste_a_payer_cdf,
         'taux': taux,
         'fonctionKey': fonctionKey
     })

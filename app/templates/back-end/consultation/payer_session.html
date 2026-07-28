@@ -6,6 +6,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
     <title>Paiement - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
+    <style>
+        .page-banner {
+            background: linear-gradient(135deg, #0d6efd, #4f8cff);
+            color: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(13, 110, 253, 0.18);
+        }
+        .page-banner h3 { margin: 0 0 6px 0; font-weight: 700; }
+        .glass-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            border: 1px solid #eef1f5;
+            overflow: hidden;
+        }
+        .glass-card .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eef1f5;
+            padding: 18px 22px;
+            font-weight: 600;
+        }
+        .glass-card .card-body { padding: 22px; }
+        .summary-box {
+            background: linear-gradient(135deg, #f8fbff, #eef6ff);
+            border: 1px solid #dbe9ff;
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+        }
+        .summary-line { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+        .summary-line:last-child { margin-bottom: 0; }
+        .summary-label { color: #4b5563; font-weight: 600; }
+        .summary-value { font-weight: 700; color: #111827; }
+        .total-value { color: #0d6efd; font-size: 22px; font-weight: 800; }
+        .btn-pay { border-radius: 999px; padding: 12px 20px; font-weight: 600; box-shadow: 0 6px 16px rgba(25, 135, 84, 0.18); }
+        .detail-table thead th { font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        .empty-note { color: #6b7280; text-align: center; padding: 20px 0; }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
@@ -14,51 +54,63 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="page-header">
+                <div class="page-banner">
                     <h3>Paiement de la session de soins</h3>
-                    <p class="text-muted">Patient : <strong>{{ session.patient.noms }}</strong></p>
+                    <p class="mb-0">Patient : <strong>{{ session.patient.noms }}</strong></p>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-7">
-                        <div class="card">
-                            <div class="card-header"><h5 class="card-title">Détail des prestations</h5></div>
+                    <div class="col-lg-8 mb-4 mb-lg-0">
+                        <div class="glass-card h-100">
+                            <div class="card-header">
+                                <i class="fa fa-list-ul mr-2"></i> Détail des prestations
+                            </div>
                             <div class="card-body">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Prestation</th>
-                                            <th>Qté</th>
-                                            <th class="text-right">Prix</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for item in session.items.all %}
-                                        <tr>
-                                            <td>{{ item.prestation.libelle }}</td>
-                                            <td>{{ item.quantite }}</td>
-                                            <td class="text-right">{{ item.prix_facture }} USD</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <th colspan="2" class="text-right">Total à payer :</th>
-                                            <th class="text-right text-primary h5">{{ session.total_a_payer }} USD</th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table table-hover detail-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Prestation</th>
+                                                <th>Qté</th>
+                                                <th class="text-right">Prix</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in session.items.all %}
+                                            <tr>
+                                                <td>{{ item.prestation.libelle }}</td>
+                                                <td>{{ item.quantite }}</td>
+                                                <td class="text-right">{{ item.prix_facture }} CDF</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="3" class="empty-note">Aucune prestation trouvée pour cette session.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th colspan="2" class="text-right">Total à payer :</th>
+                                                <th class="text-right total-value">{{ total_session|floatformat:0 }} CDF</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-5">
-                        <div class="card">
-                            <div class="card-header"><h5 class="card-title">Encaisser le paiement</h5></div>
+                    <div class="col-lg-4">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <i class="fa fa-money mr-2"></i> Encaisser le paiement
+                            </div>
                             <div class="card-body">
-                                <div class="alert alert-info">
-                                    <strong>Reste à payer : {{ reste_a_payer|floatformat:2 }} USD</strong><br>
-                                    <small>Équivalent en CDF (Taux : {{ taux }}) : {{ reste_a_payer_cdf|floatformat:0 }} CDF</small>
+                                <div class="summary-box">
+                                    <div class="summary-line">
+                                        <span class="summary-label">Reste à payer</span>
+                                        <span class="summary-value total-value">{{ reste_a_payer|floatformat:0 }} CDF</span>
+                                    </div>
                                 </div>
 
                                 <form method="POST">
@@ -68,22 +120,22 @@
                                         <input type="number" step="0.01" name="montant" class="form-control" required placeholder="0.00">
                                     </div>
                                     <div class="form-group">
-                                        <label>Réduction accordée (USD)</label>
+                                        <label>Réduction accordée (CDF)</label>
                                         <input type="number" step="0.01" name="reduction" class="form-control" value="0.00">
                                     </div>
                                     <div class="form-group">
-                                        <label>Devise</label>
+                                        <label>Devise de saisie</label>
                                         <select name="devise" class="form-control">
-                                            <option value="USD">USD</option>
                                             <option value="CDF">CDF</option>
+                                            <option value="USD">USD</option>
                                         </select>
                                     </div>
-                                    
+
                                     <div class="mt-4">
-                                        <button type="submit" class="btn btn-success btn-block btn-lg">
+                                        <button type="submit" class="btn btn-success btn-block btn-lg btn-pay">
                                             <i class="fa fa-money"></i> Valider l'encaissement
                                         </button>
-                                        <a href="{% url 'liste_sessions' %}" class="btn btn-secondary btn-block">Annuler</a>
+                                        <a href="{% url 'liste_sessions' %}" class="btn btn-secondary btn-block mt-2">Annuler</a>
                                     </div>
                                 </form>
                             </div>

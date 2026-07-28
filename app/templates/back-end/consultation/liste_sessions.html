@@ -7,6 +7,43 @@
     <title>Liste des Sessions - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+    <style>
+        .page-banner {
+            background: linear-gradient(135deg, #0d6efd, #4f8cff);
+            color: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(13, 110, 253, 0.18);
+        }
+        .page-banner h3 { margin: 0 0 6px 0; font-weight: 700; }
+        .glass-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            border: 1px solid #eef1f5;
+            overflow: hidden;
+        }
+        .glass-card .card-body { padding: 20px; }
+        .table thead th {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6b7280;
+            background: #f8f9fa !important;
+            border-top: none;
+        }
+        .patient-name { font-weight: 700; color: #111827; }
+        .muted-small { color: #6b7280; font-size: 12px; }
+        .amount-total { font-weight: 800; color: #0d6efd; }
+        .amount-reduction { color: #0ea5e9; font-weight: 700; }
+        .badge-soft-danger { background: #fee2e2; color: #b91c1c; padding: 6px 10px; border-radius: 999px; }
+        .badge-soft-success { background: #dcfce7; color: #166534; padding: 6px 10px; border-radius: 999px; }
+        .status-payee { background: #dcfce7; color: #166534; padding: 6px 10px; border-radius: 999px; }
+        .status-attente { background: #fef3c7; color: #92400e; padding: 6px 10px; border-radius: 999px; }
+        .action-btn { border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+        .prestations-list { margin: 0; padding-left: 16px; }
+        .prestations-list li { margin-bottom: 4px; }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
@@ -15,86 +52,88 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="page-header">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h3 class="page-title">Sessions de Soins</h3>
-                            <ul class="breadcrumb">
-                                <li class="breadcrumb-item active">Suivi des paiements et soldes</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="page-banner">
+                    <h3>Sessions de Soins</h3>
+                    <p class="mb-0">Suivi des paiements et des soldes en CDF.</p>
                 </div>
 
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                             {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
                     {% endfor %}
                 {% endif %}
 
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table id="tableSessions" class="table table-hover table-striped border">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Patient</th>
-                                                <th>Prestations</th>
-                                                <th>Total</th>
-                                                <th>Réductions</th>
-                                                <th>Reste à payer</th>
-                                                <th>Statut</th>
-                                                <th class="text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for session in sessions %}
-                                            <tr>
-                                                <td>{{ session.date_creation|date:"d/m/Y H:i" }}</td>
-                                                <td><h6 class="mb-0">{{ session.patient.noms }}</h6></td>
-                                                <td>
-                                                    <ul class="list-unstyled mb-0 text-muted small">
-                                                        {% for item in session.items.all %}
-                                                            <li><i class="fa fa-caret-right text-primary"></i> {{ item.prestation.libelle }} ({{ item.quantite }} x {{ item.prix_facture }} USD)</li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </td>
-                                                <td><strong>{{ session.total_a_payer }} USD</strong></td>
-                                                <td><span class="text-info">{{ session.total_reductions|floatformat:2 }} USD</span></td>
-                                                <td>
-                                                    {% if session.actuel_reste > 0 %}
-                                                        <span class="badge badge-soft-danger">{{ session.actuel_reste|floatformat:2 }} USD</span>
-                                                    {% else %}
-                                                        <span class="badge badge-soft-success">Soldé</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if session.est_payee %}
-                                                        <span class="badge badge-success">Payée</span>
-                                                    {% else %}
-                                                        <span class="badge badge-warning">En attente</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td class="text-right">
-                                                    {% if not session.est_payee %}
-                                                        <a href="{% url 'paiement_session' session.id %}" class="btn btn-primary btn-sm shadow-none">
-                                                            <i class="fa fa-money"></i> Payer
-                                                        </a>
-                                                    {% else %}
-                                                        <button class="btn btn-light btn-sm" disabled><i class="fa fa-check"></i> Soldé</button>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                <div class="glass-card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="tableSessions" class="table table-hover table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Prestations</th>
+                                        <th>Total</th>
+                                        <th>Réductions</th>
+                                        <th>Reste à payer</th>
+                                        <th>Statut</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for session in sessions %}
+                                    <tr>
+                                        <td>{{ session.date_creation|date:"d/m/Y H:i" }}</td>
+                                        <td>
+                                            <div class="patient-name">{{ session.patient.noms }}</div>
+                                            <div class="muted-small">{{ session.patient.code_patient|default:"-" }}</div>
+                                        </td>
+                                        <td>
+                                            <ul class="prestations-list muted-small">
+                                                {% for item in session.items.all %}
+                                                    <li>{{ item.prestation.libelle }} ({{ item.quantite }} x {{ item.prix_facture }} CDF)</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </td>
+                                        <td><span class="amount-total">{{ session.total_a_payer|floatformat:0 }} CDF</span></td>
+                                        <td><span class="amount-reduction">{{ session.total_reductions|floatformat:0 }} CDF</span></td>
+                                        <td>
+                                            {% if session.actuel_reste > 0 %}
+                                                <span class="badge-soft-danger">{{ session.actuel_reste|floatformat:0 }} CDF</span>
+                                            {% else %}
+                                                <span class="badge-soft-success">Soldé</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if session.actuel_reste <= 0 %}
+                                                <span class="status-payee">Payée</span>
+                                            {% else %}
+                                                <span class="status-attente">En attente</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-right">
+                                            {% if session.actuel_reste > 0 %}
+                                                <a href="{% url 'paiement_session' session.id %}" class="btn btn-primary btn-sm action-btn">
+                                                    <i class="fa fa-money"></i> Payer
+                                                </a>
+                                            {% else %}
+                                                <button class="btn btn-light btn-sm action-btn" disabled>
+                                                    <i class="fa fa-check"></i> Soldé
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-5">Aucune session disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -109,15 +148,12 @@
     <script>
         $(document).ready(function() {
             $('#tableSessions').DataTable({
-                "order": [[ 0, "desc" ]], // Tri par défaut : plus récent en premier
-                "language": {
-                    "search": "Rechercher un patient ou une date :",
-                    "lengthMenu": "Afficher _MENU_ sessions par page",
-                    "info": "Affichage de _START_ à _END_ sur _TOTAL_ sessions",
-                    "paginate": {
-                        "next": "Suivant",
-                        "previous": "Précédent"
-                    }
+                order: [[0, 'desc']],
+                language: {
+                    search: 'Rechercher :',
+                    lengthMenu: 'Afficher _MENU_ sessions',
+                    info: 'Affichage de _START_ à _END_ sur _TOTAL_ sessions',
+                    paginate: { next: 'Suivant', previous: 'Précédent' }
                 }
             });
         });

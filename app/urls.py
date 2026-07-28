@@ -113,9 +113,8 @@ urlpatterns =[
     path('medecin/liste-patients/', views.liste_patients_urgence, name='liste_patients_urgence'),
     path('ordonnance/<int:pk>/imprimer/', views.imprimer_ordonnance_urgence, name='imprimer_ordonnance'),
     path('ordonnance/<int:pk>/modifierUrgence/', views.modifier_ordonnance_urgence, name='modifier_ordonnance_urgence'),
-    path('consultation/int:sv_id/reconsulter/', views.reconsulter, name='reconsulter'),
-    path('consultation/int:sv_id/detail/', views.consulter_detail, name='consulter_detail'),
-
+    path('consultation/<int:sv_id>/reconsulter/', views.reconsulter, name='reconsulter'),
+    
 
     # ================================
     # CAISSE

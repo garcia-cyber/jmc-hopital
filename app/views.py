@@ -1308,58 +1308,6 @@ def liste_consultation_medecin(request):
         'filtre': filtre,
     }
     return render(request, 'back-end/medecin/liste_consultation.html', context)
-
-#
-# ==================================================================================================
-# MEDECIN RECONSULTATION
-# ==================================================================================================
-@login_required
-def reconsulter(request, sv_id):
-    signe = get_object_or_404(SigneVital, id=sv_id)
-
-    # Exemple: on suppose un modèle Consultation lié à SigneVital via OneToOne ou FK
-    # last_consult = Consultation.objects.filter(signe_vital=signe).order_by('-created_at').first()
-
-    if request.method == 'POST':
-        form = ConsultationForm(request.POST)  # initial sera mis ci-dessous pour GET
-        if form.is_valid():
-            consult = form.save(commit=False)
-            consult.signe_vital = signe
-            consult.medecin = request.user
-            consult.save()
-            # on peut garder signe.est_consulte=True
-            return redirect('liste_consultation_medecin')
-    else:
-        initial = {
-            # Exemple: champs préremplis (à adapter)
-            # 'motif': last_consult.motif if last_consult else '',
-            # 'diagnostic': last_consult.diagnostic if last_consult else '',
-            # 'traitement': last_consult.traitement if last_consult else '',
-            # 'temperature': signe.temperature,
-            # 'tension_arterielle': signe.tension_arterielle,
-        }
-        form = ConsultationForm(initial=initial)
-
-    return render(request, 'back-end/medecin/reconsulter_form.html', {
-        'form': form,
-        'signe': signe,
-        # 'last_consult': last_consult,
-    })
-
-#
-# =================================================================================================
-# RECONSULTATION DETAIL
-# ==================================================================================================
-@login_required
-def consulter_detail(request, sv_id):
-    signe = get_object_or_404(SigneVital, id=sv_id)
-    # last_consult = Consultation.objects.filter(signe_vital=signe).order_by('-created_at').first()
-    return render(request, 'back-end/medecin/consultation_detail.html', {
-        'signe': signe,
-        # 'consultation': last_consult,
-    })
-
-
 # 28
 # ==================================================================================================
 # MEDECIN MARQUER CONSULTER POUR N'EST PLUS VOIR DANS LA LISTE
@@ -1376,6 +1324,110 @@ def marquer_consulte(request, sv_id):
         signe.save(update_fields=['est_consulte'])
     # Redirige vers l'espace de consultation (inchangé)
     return redirect('consultation_medicale', triage_id=sv_id)
+
+#
+# ==================================================================================================
+# MEDECIN RECONSULTATION
+# ==================================================================================================
+@login_required
+def reconsulter(request, sv_id):
+    signe = get_object_or_404(SigneVital, id=sv_id)
+
+    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role_obj.hopital if role_obj else None
+    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    if signe.patient.hopital != hopital_user:
+        messages.error(request, "Ce patient appartient à un autre hôpital.")
+        return redirect('liste_consultation_medecin')
+
+    consultation = Consultation.objects.filter(triage=signe).first()
+
+    if not consultation:
+        messages.error(request, "Aucune consultation existante trouvée pour ce patient.")
+        return redirect('consultation_medicale', triage_id=signe.id)
+
+    if request.method == 'POST':
+        form = ConsultationForm(request.POST, instance=consultation)
+        examens_ids = request.POST.getlist('examens_ids')
+        noms_medocs = request.POST.getlist('nom_medicament')
+        posologies = request.POST.getlist('posologie')
+        durees = request.POST.getlist('duree')
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    consultation_obj = form.save(commit=False)
+                    consultation_obj.medecin = request.user
+                    consultation_obj.hopital = hopital_user
+                    consultation_obj.triage = signe
+                    consultation_obj.save()
+
+                    DemandeExamen.objects.filter(consultation=consultation_obj).delete()
+                    LigneMedicament.objects.filter(ordonnance__consultation=consultation_obj).delete()
+                    Ordonnance.objects.filter(consultation=consultation_obj).delete()
+
+                    for e_id in examens_ids:
+                        prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
+                        qty_value = request.POST.get(f'qty_{e_id}', 1)
+
+                        DemandeExamen.objects.create(
+                            consultation=consultation_obj,
+                            prestation=prestation,
+                            quantite=qty_value,
+                            statut='EN_ATTENTE',
+                            hopital=hopital_user
+                        )
+
+                    if any(n.strip() for n in noms_medocs if n):
+                        ordonnance = Ordonnance.objects.create(
+                            consultation=consultation_obj,
+                            type_ordonnance='URGENCE',
+                            hopital=hopital_user
+                        )
+
+                        for i, nom in enumerate(noms_medocs):
+                            if nom and nom.strip():
+                                poso = posologies[i] if i < len(posologies) else ""
+                                dur = durees[i] if i < len(durees) else ""
+                                LigneMedicament.objects.create(
+                                    ordonnance=ordonnance,
+                                    nom_medicament=nom,
+                                    posologie=poso,
+                                    duree=dur,
+                                    statut='EN_COURS',
+                                    hopital=hopital_user
+                                )
+
+                    messages.success(request, "Consultation modifiée avec succès.")
+                    return redirect('liste_consultation_medecin')
+            except Exception as e:
+                messages.error(request, f"Une erreur technique est survenue : {str(e)}")
+        else:
+            messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
+    else:
+        form = ConsultationForm(instance=consultation)
+
+    examens_disponibles = Prestation.objects.filter(
+        categorie__in=['LABO', 'ECHO', 'RADIO'],
+        hopital=hopital_user
+    ).order_by('categorie', 'libelle')
+
+    return render(request, 'back-end/medecin/reconsulter_form.html', {
+        'triage': signe,
+        'form': form,
+        'examens_disponibles': examens_disponibles,
+        'consultation': consultation,
+        'fonctionKey': fonctionKey
+    })
+
+
+
+
 
 # 30
 # ==================================================================================================

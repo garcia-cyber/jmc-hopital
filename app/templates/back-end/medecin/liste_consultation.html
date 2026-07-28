@@ -115,13 +115,13 @@
                             </a>
                           {% else %}
                             <!-- Patient déjà consulté: proposer la reconsultation (préremplie) -->
-                            <a href="#" class="btn btn-sm btn-warning btn-space">
+                            <a href="{% url 'reconsulter' signe.id %}" class="btn btn-sm btn-warning btn-space">
                               <i class="fa fa-undo"></i> Reconsulter
                             </a>
                             <!-- Optionnel: accès en lecture seule à la consultation précédente -->
-                            <a href="#" class="btn btn-sm btn-outline-secondary">
+                            {% comment %} <a href="{% url 'detail_consultation' signe.id %}" class="btn btn-sm btn-outline-secondary">
                               <i class="fa fa-eye"></i> Détails
-                            </a>
+                            </a> {% endcomment %}
                           {% endif %}
                         </td>
                       </tr>

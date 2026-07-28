@@ -1,122 +1,163 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="fr">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Patients Prêts - JMC Médicale</title>
-        {% include 'back-end/includes/css.html' %}
-        <style>.dataTables_filter { display: none; }</style>
-    </head>
-    <body>
-        <div class="main-wrapper">
-            {% include 'back-end/includes/header.html' %}
-            {% include 'back-end/includes/sidebar.html' %}
-            
-            <div class="page-wrapper">
-                <div class="content container-fluid">
-                    <div class="page-header">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h3 class="page-title">Salle d'Attente (Consultation)</h3>
-                            </div>
-                        </div>
-                    </div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Patients Prêts - JMC Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+      .dataTables_filter { display: none; }
+      /* Teintes légères selon le statut */
+      tr.row-non-consulte { background-color: #fff5f5; }   /* rouge pâle */
+      tr.row-consulte     { background-color: #f4fff6; }   /* vert pâle */
+      /* Badges statut */
+      .badge-new  { background-color: #dc3545; }  /* rouge */
+      .badge-done { background-color: #28a745; }  /* vert */
+      .status-col { width: 120px; }
+      .order-col  { width: 70px; }
+      .action-col { width: 260px; } /* de la place pour 2 boutons */
+      .nowrap { white-space: nowrap; }
+      .btn-space { margin-right: 6px; margin-bottom: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="main-wrapper">
+      {% include 'back-end/includes/header.html' %}
+      {% include 'back-end/includes/sidebar.html' %}
 
-                    <div class="row filter-row">
-                        <div class="col-sm-12 col-md-12">  
-                            <div class="form-group form-focus">
-                                <input type="text" class="form-control floating" id="searchWaitingList" placeholder="Rechercher un patient...">
-                                <label class="focus-label">Recherche rapide</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="table-responsive">
-                                <table class="table table-striped custom-table mb-0" id="waitingTable">
-                                    <thead>
-                                        <tr>
-                                            <th>Ordre</th>
-                                            <th>Matricule</th>
-                                            <th>Nom Complet</th>
-                                            <th>Âge</th>
-                                            <th>Prestations (Motif)</th>
-                                            <th>Température</th>
-                                            <th>Tension</th>
-                                            <th>Trié par</th>
-                                            <th class="text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for signe in patients_prets %}
-                                        <tr>
-                                            <td><strong>#{{ forloop.counter }}</strong></td>
-                                            <td><span class="badge badge-info">{{ signe.patient.code_patient }}</span></td>
-                                            <td><strong>{{ signe.patient.noms }}</strong></td>
-                                            <td>{{ signe.patient.age }} ans</td>
-                                            
-                                            <td>
-                                                {% if signe.session %}
-                                                    <ul class="list-unstyled mb-0">
-                                                        {% for item in signe.session.items.all %}
-                                                            <li>
-                                                                <i class="fa fa-caret-right text-primary"></i> 
-                                                                {{ item.prestation.libelle }}
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                {% else %}
-                                                    <span class="text-muted"><small>Consultation Libre</small></span>
-                                                {% endif %}
-                                            </td>
-
-                                            <td>
-                                                <span class="badge {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
-                                                    {{ signe.temperature }} °C
-                                                </span>
-                                            </td>
-                                            <td>{{ signe.tension_arterielle|default:"--" }}</td>
-                                            <td><small>{{ signe.infirmier.username }}</small></td>
-                                            <td class="text-right">
-                                                <a href="{% url 'marquer_consulte' signe.id %}" class="btn btn-sm btn-primary">
-                                                    <i class="fa fa-stethoscope"></i> Consulter
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted">Aucun patient en attente.</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      <div class="page-wrapper">
+        <div class="content container-fluid">
+          <div class="page-header">
+            <div class="row align-items-center">
+              <div class="col">
+                <h3 class="page-title">Salle d'Attente (Consultation)</h3>
+                <p class="text-muted mb-0">
+                  Les nouvelles consultations apparaissent en tête. Celles déjà consultées restent visibles en dessous.
+                </p>
+              </div>
             </div>
+          </div>
+
+          <div class="row filter-row">
+            <div class="col-sm-12 col-md-12">
+              <div class="form-group form-focus">
+                <input type="text" class="form-control floating" id="searchWaitingList" placeholder="Rechercher un patient...">
+                <label class="focus-label">Recherche rapide</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12">
+              <div class="table-responsive">
+                <table class="table table-striped custom-table mb-0" id="waitingTable">
+                  <thead>
+                    <tr>
+                      <th class="order-col">Ordre</th>
+                      <th class="status-col">Statut</th>
+                      <th>Matricule</th>
+                      <th>Nom Complet</th>
+                      <th>Âge</th>
+                      <th>Prestations (Motif)</th>
+                      <th>Température</th>
+                      <th>Tension</th>
+                      <th>Trié par</th>
+                      <th class="text-right action-col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for signe in patients_prets %}
+                      <tr class="{% if signe.est_consulte %}row-consulte{% else %}row-non-consulte{% endif %}">
+                        <td class="nowrap"><strong>#{{ forloop.counter }}</strong></td>
+
+                        <td>
+                          {% if signe.est_consulte %}
+                            <span class="badge badge-done">Consulté</span>
+                          {% else %}
+                            <span class="badge badge-new">Nouveau</span>
+                          {% endif %}
+                        </td>
+
+                        <td><span class="badge badge-info">{{ signe.patient.code_patient }}</span></td>
+                        <td><strong>{{ signe.patient.noms }}</strong></td>
+                        <td class="nowrap">{{ signe.patient.age }} ans</td>
+
+                        <td>
+                          {% if signe.session %}
+                            <ul class="list-unstyled mb-0">
+                              {% for item in signe.session.items.all %}
+                                <li>
+                                  <i class="fa fa-caret-right text-primary"></i>
+                                  {{ item.prestation.libelle }}
+                                </li>
+                              {% endfor %}
+                            </ul>
+                          {% else %}
+                            <span class="text-muted"><small>Consultation Libre</small></span>
+                          {% endif %}
+                        </td>
+
+                        <td class="nowrap">
+                          <span class="badge {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
+                            {{ signe.temperature }} °C
+                          </span>
+                        </td>
+
+                        <td class="nowrap">{{ signe.tension_arterielle|default:"--" }}</td>
+                        <td class="nowrap"><small>{{ signe.infirmier.username }}</small></td>
+
+                        <td class="text-right">
+                          {% if not signe.est_consulte %}
+                            <!-- Patient non consulté: démarrer la consultation et marquer consulté -->
+                            <a href="{% url 'marquer_consulte' signe.id %}" class="btn btn-sm btn-primary btn-space">
+                              <i class="fa fa-stethoscope"></i> Consulter
+                            </a>
+                          {% else %}
+                            <!-- Patient déjà consulté: proposer la reconsultation (préremplie) -->
+                            <a href="#" class="btn btn-sm btn-warning btn-space">
+                              <i class="fa fa-undo"></i> Reconsulter
+                            </a>
+                            <!-- Optionnel: accès en lecture seule à la consultation précédente -->
+                            <a href="#" class="btn btn-sm btn-outline-secondary">
+                              <i class="fa fa-eye"></i> Détails
+                            </a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="10" class="text-center text-muted">Aucun patient.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
+      </div>
+    </div>
 
-        {% include 'back-end/includes/js.html' %}
-        <script>
-            $(document).ready(function() {
-                if ($.fn.DataTable.isDataTable('#waitingTable')) {
-                    $('#waitingTable').DataTable().destroy();
-                }
-                var table = $('#waitingTable').DataTable({
-                    "ordering": false,
-                    "paging": true,
-                    "searching": true,
-                    "info": false
-                });
+    {% include 'back-end/includes/js.html' %}
+    <script>
+      $(document).ready(function () {
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#waitingTable')) {
+          $('#waitingTable').DataTable().destroy();
+        }
 
-                // Recherche simple
-                $('#searchWaitingList').on('keyup', function() {
-                    table.search(this.value).draw();
-                });
-            });
-        </script>
-    </body>
+        var table = $('#waitingTable').DataTable({
+          ordering: false,
+          paging: true,
+          searching: true,
+          info: false
+        });
+
+        $('#searchWaitingList').on('keyup', function () {
+          table.search(this.value).draw();
+        });
+      });
+    </script>
+  </body>
 </html>

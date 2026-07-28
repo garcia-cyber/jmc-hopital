@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm ,UserChangeForm , PasswordChangeForm
 from django.contrib import messages
-from django.db.models import Q , Sum ,Prefetch , Count , ExpressionWrapper , OuterRef, Subquery , F , Value ,DecimalField, FloatField ,IntegerField ,Exists
+from django.db.models import Q , Sum ,Prefetch , Count , ExpressionWrapper , OuterRef, Subquery , F , Value ,DecimalField, FloatField ,IntegerField ,Exists , Case, When
 from decimal import Decimal , ROUND_HALF_UP , InvalidOperation
 import pytz
 from datetime import timedelta , date  , datetime
@@ -1263,59 +1263,118 @@ def historique_signes_vitaux(request, patient_id):
 @login_required
 def liste_consultation_medecin(request):
     """
-    Vue pour la liste de consultation du médecin.
-    Récupère les signes vitaux non consultés,
-    avec possibilité de filtrer selon la présence d'une session.
+    Liste de consultations côté médecin.
+    - Montre TOUTES les prises de signes vitaux de l'hôpital de l'utilisateur
+    - Les NON consultées en premier, puis les consultées
+    - Option de filtre: tous | avec_session | sans_session
     """
-
     filtre = request.GET.get('filtre', 'tous')
-
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
-
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
-
-    patients_prets = SigneVital.objects.filter(
-        est_consulte=False,
-        patient__hopital=hopital_user
-    ).select_related(
-        'patient',
-        'infirmier',
-        'session'
-    ).prefetch_related(
-        'session__items__prestation'
-    ).order_by('date_prelevement')
-
+    # Base: toutes les prises pour l'hôpital de l'utilisateur, plus les jointures utiles
+    patients_prets = (
+        SigneVital.objects
+        .filter(patient__hopital=hopital_user)
+        .select_related('patient', 'infirmier', 'session')
+        .prefetch_related('session__items__prestation')
+        # Annotation de priorité: 0 = non consulté (en haut), 1 = consulté (en bas)
+        .annotate(
+            priorite=Case(
+                When(est_consulte=False, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        )
+    )
+    # Filtres selon la présence de session
     if filtre == 'avec_session':
         patients_prets = patients_prets.filter(session__isnull=False)
     elif filtre == 'sans_session':
         patients_prets = patients_prets.filter(session__isnull=True)
-
+    # Tri: d'abord par priorité (non consultés), puis par date (les plus récents en haut)
+    patients_prets = patients_prets.order_by('priorite', '-date_prelevement')
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
     context = {
         'fonctionKey': fonctionKey,
         'patients_prets': patients_prets,
         'filtre': filtre,
     }
-
     return render(request, 'back-end/medecin/liste_consultation.html', context)
+
+#
+# ==================================================================================================
+# MEDECIN RECONSULTATION
+# ==================================================================================================
+@login_required
+def reconsulter(request, sv_id):
+    signe = get_object_or_404(SigneVital, id=sv_id)
+
+    # Exemple: on suppose un modèle Consultation lié à SigneVital via OneToOne ou FK
+    # last_consult = Consultation.objects.filter(signe_vital=signe).order_by('-created_at').first()
+
+    if request.method == 'POST':
+        form = ConsultationForm(request.POST)  # initial sera mis ci-dessous pour GET
+        if form.is_valid():
+            consult = form.save(commit=False)
+            consult.signe_vital = signe
+            consult.medecin = request.user
+            consult.save()
+            # on peut garder signe.est_consulte=True
+            return redirect('liste_consultation_medecin')
+    else:
+        initial = {
+            # Exemple: champs préremplis (à adapter)
+            # 'motif': last_consult.motif if last_consult else '',
+            # 'diagnostic': last_consult.diagnostic if last_consult else '',
+            # 'traitement': last_consult.traitement if last_consult else '',
+            # 'temperature': signe.temperature,
+            # 'tension_arterielle': signe.tension_arterielle,
+        }
+        form = ConsultationForm(initial=initial)
+
+    return render(request, 'back-end/medecin/reconsulter_form.html', {
+        'form': form,
+        'signe': signe,
+        # 'last_consult': last_consult,
+    })
+
+#
+# =================================================================================================
+# RECONSULTATION DETAIL
+# ==================================================================================================
+@login_required
+def consulter_detail(request, sv_id):
+    signe = get_object_or_404(SigneVital, id=sv_id)
+    # last_consult = Consultation.objects.filter(signe_vital=signe).order_by('-created_at').first()
+    return render(request, 'back-end/medecin/consultation_detail.html', {
+        'signe': signe,
+        # 'consultation': last_consult,
+    })
+
+
 # 28
 # ==================================================================================================
 # MEDECIN MARQUER CONSULTER POUR N'EST PLUS VOIR DANS LA LISTE
 # ==================================================================================================
 @login_required
 def marquer_consulte(request, sv_id):
-    # 1. On récupère le prélèvement spécifique
+    """
+    Marque une prise de signes vitaux comme consultée
+    (elle RESTE visible dans la liste, mais descend sous les non consultées).
+    """
     signe = get_object_or_404(SigneVital, id=sv_id)
-    
-    # 2. On marque comme consulté pour qu'il disparaisse DIRECTEMENT de la liste d'attente
-    signe.est_consulte = True
-    signe.save()
-    
-    # 3. Redirection vers l'espace de travail du médecin
+    if not signe.est_consulte:
+        signe.est_consulte = True
+        signe.save(update_fields=['est_consulte'])
+    # Redirige vers l'espace de consultation (inchangé)
     return redirect('consultation_medicale', triage_id=sv_id)
 
 # 30

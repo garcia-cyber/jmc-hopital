@@ -442,7 +442,7 @@
                 {% endif %}
 
 
-                {% if fonctionKey == 'laborantin' or fonctionKey == 'technique' or fonctionKey == 'echographe' or fonctionKey == 'radiologue' or fonctionKey == 'imagiste' %}
+                {% if fonctionKey == 'laborantin' or fonctionKey == 'technique' or fonctionKey == 'echographiste' or fonctionKey == 'radiologue' or fonctionKey == 'imagiste' %}
                     <li class="menu-title"> <span>TECHNIQUE / LABO</span> </li>
                     <li><a href="{% url 'liste_examens_techniques' %}"><i class="la la-flask"></i> <span>Examens à réaliser</span></a></li>
                     <li><a href="{% url 'historique_examens' %}"><i class="la la-history"></i> <span>Historique Examens</span></a></li>

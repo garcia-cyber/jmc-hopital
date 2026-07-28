@@ -2006,14 +2006,13 @@ def liste_examens_techniques(request):
     nom_role = (role_user.fonctionKey.roleName or "").lower()
     fonctionKey = role_user.fonctionKey.roleName
 
-    consultations = Consultation.objects.select_related(
-        'triage__patient',
-        'medecin'
-    ).prefetch_related(
-        'examens__prestation'
-    ).filter(
-        examens__isnull=False
-    ).distinct().order_by('-date_creation')
+    consultations = (
+        Consultation.objects.select_related('triage__patient', 'medecin')
+        .prefetch_related('examens__prestation')
+        .filter(examens__isnull=False)
+        .distinct()
+        .order_by('-date_creation')
+    )
 
     historique_technique = []
 
@@ -2041,9 +2040,10 @@ def liste_examens_techniques(request):
                     continue
 
             if ('labo' in nom_role and cat == 'LABO') or \
-               (('echo' in nom_role or 'echographe' in nom_role) and cat == 'ECHO') or \
+               (('echo' in nom_role or 'echographiste' in nom_role) and cat == 'ECHO') or \
                (('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO') or \
                ('technicien' in nom_role):
+
                 examens_filtrés.append({
                     'id_examen': exam.id,
                     'libelle': exam.prestation.libelle if exam.prestation else 'Examen',
@@ -2051,6 +2051,8 @@ def liste_examens_techniques(request):
                 })
 
         if examens_filtrés:
+            examens_filtrés.sort(key=lambda x: x['est_deja_fait'])
+
             historique_technique.append({
                 'consultation_id': cons.id,
                 'patient': {
@@ -2105,7 +2107,7 @@ def saisir_resultats_examens(request, consultation_id):
         # Logique de spécialisation retrouvée
         if ('labo' in nom_role or 'laborantin' in nom_role) and cat == 'LABO':
             examens_a_saisir.append(exam)
-        elif ('echo' in nom_role or 'echographe' in nom_role) and cat == 'ECHO':
+        elif ('echo' in nom_role or 'echographiste' in nom_role) and cat == 'ECHO':
             examens_a_saisir.append(exam)
         elif ('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO':
             examens_a_saisir.append(exam)
@@ -2145,6 +2147,65 @@ def saisir_resultats_examens(request, consultation_id):
         'fonctionKey': fonctionKey
     }
     return render(request, 'back-end/technique/saisir_resultats.html', context)
+
+#
+# ==================================================================================================
+# MODIFICATION D'EXAMENT PAR LES TECHNICIENS
+# ==================================================================================================
+@login_required
+def modifier_resultats_examens(request, consultation_id):
+    role_user = Fonction.objects.filter(userKey=request.user).first()
+    if not role_user or not role_user.fonctionKey:
+        messages.error(request, "Accès refusé.")
+        return redirect('dashboard')
+
+    nom_role = role_user.fonctionKey.roleName.lower()
+    fonctionKey = role_user.fonctionKey.roleName
+
+    consultation = get_object_or_404(Consultation.objects.select_related('triage__patient'), id=consultation_id)
+
+    examens_termines = consultation.examens.filter(statut='TERMINE').select_related('prestation')
+
+    examens_a_modifier = []
+    for exam in examens_termines:
+        cat = exam.prestation.categorie if exam.prestation else ''
+        if ('labo' in nom_role or 'laborantin' in nom_role) and cat == 'LABO':
+            examens_a_modifier.append(exam)
+        elif ('echo' in nom_role or 'echographiste' in nom_role) and cat == 'ECHO':
+            examens_a_modifier.append(exam)
+        elif ('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO':
+            examens_a_modifier.append(exam)
+
+    if not examens_a_modifier:
+        messages.error(request, "Aucun examen terminé à modifier pour votre spécialité.")
+        return redirect('liste_examens_techniques')
+
+    if request.method == 'POST':
+        examens_modifies = 0
+        for exam in examens_a_modifier:
+            cle_resultat = f"resultat_{exam.id}"
+            texte_resultat = request.POST.get(cle_resultat, "").strip()
+            if texte_resultat:
+                exam.resultat = texte_resultat
+                exam.technicien = request.user
+                exam.date_realisation = timezone.now()
+                exam.save(update_fields=['resultat', 'technicien', 'date_realisation'])
+                examens_modifies += 1
+
+        if examens_modifies > 0:
+            messages.success(request, f"Les résultats de ({examens_modifies}) examen(s) pour {consultation.triage.patient.noms} ont été modifiés.")
+        else:
+            messages.warning(request, "Aucune modification n'a été enregistrée.")
+
+        return redirect('liste_examens_techniques')
+
+    context = {
+        'consultation': consultation,
+        'patient': consultation.triage.patient,
+        'examens_a_modifier': examens_a_modifier,
+        'fonctionKey': fonctionKey,
+    }
+    return render(request, 'back-end/technique/modifier_resultats.html', context)
 
 # 38
 # ==================================================================================================

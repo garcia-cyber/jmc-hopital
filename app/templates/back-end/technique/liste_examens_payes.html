@@ -13,14 +13,15 @@
         .avatar-medical { background: #e3f2fd; color: #1976d2; font-weight: bold; border-radius: 8px; width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-medical { background: #28a745; color: #fff; border-radius: 6px; padding: 6px 15px; border: none; }
         .btn-medical:hover { background: #218838; color: #fff; }
+        .btn-edit { background: #17a2b8; color: #fff; border-radius: 6px; padding: 6px 15px; border: none; }
+        .btn-edit:hover { background: #138496; color: #fff; }
         .btn-finished { background: #e9ecef; color: #6c757d; cursor: not-allowed; border-radius: 6px; padding: 6px 15px; border: none; }
         .badge-type { font-size: 10px; padding: 3px 8px; border-radius: 4px; }
         .info-financiere { font-size: 11px; font-weight: 600; display: block; margin-top: 4px; }
         .info-financiere.simple { color: #dc3545; }
         .info-financiere.fidele { color: #28a745; }
         .info-financiere.conventionne { color: #17a2b8; }
-        
-        /* Responsive Table */
+
         @media (max-width: 768px) {
             .table thead { display: none; }
             .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
@@ -111,7 +112,12 @@
                                                 </td>
                                                 <td data-label="Action" class="text-center">
                                                     {% if item.tout_traite %}
-                                                        <button class="btn btn-finished btn-sm" disabled><i class="fa fa-check-circle mr-1"></i> Terminé</button>
+                                                        <button class="btn btn-finished btn-sm" disabled>
+                                                            <i class="fa fa-check-circle mr-1"></i> Terminé
+                                                        </button>
+                                                        <a href="{% url 'modifier_resultats_examens' item.consultation_id %}" class="btn btn-edit btn-sm ml-1">
+                                                            <i class="fa fa-edit mr-1"></i> Modifier
+                                                        </a>
                                                     {% else %}
                                                         <a href="{% url 'saisir_resultats_examens' item.consultation_id %}" class="btn btn-medical btn-sm">
                                                             <i class="fa fa-flask mr-1"></i> Saisir Résultats
@@ -139,7 +145,6 @@
     </div>
 
     {% include 'back-end/includes/js.html' %}
-    
     <script>
         document.getElementById('searchPatient').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();

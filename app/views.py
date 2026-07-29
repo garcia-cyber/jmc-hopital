@@ -1606,7 +1606,13 @@ def consultation_medicale(request, triage_id):
 # ==================================================================================================
 @login_required
 def liste_consultations_terminees(request):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    # Rôle / hôpital
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
@@ -1618,14 +1624,23 @@ def liste_consultations_terminees(request):
                 'triage__patient',
                 'medecin'
             )
-            .prefetch_related(
-                'examens__prestation'
-            )
-            .filter(
-                triage__patient__hopital=hopital_user
-            )
-            .order_by('-date_creation')
+            .prefetch_related('examens__prestation')
+            .filter(triage__patient__hopital=hopital_user)
         )
+
+        # Filtre de recherche
+        q = request.GET.get('q', '').strip()
+        if q:
+            consultations = consultations.filter(
+                Q(triage__patient__noms__icontains=q) |
+                Q(triage__patient__code_patient__icontains=q) |
+                Q(medecin__username__icontains=q) |
+                Q(medecin__first_name__icontains=q) |
+                Q(medecin__last_name__icontains=q)
+            )
+
+        # Tri : plus récente en premier
+        consultations = consultations.order_by('-date_creation')
 
     context = {
         'consultations': consultations,

@@ -3354,6 +3354,7 @@ def admettre_patient(request):
 # ===========================================================================================
 # LISTE DES PATIENT HOSPITALISE
 # ============================================================================================
+
 @login_required
 def liste_hospitalisations(request):
     # 1. Rôle et hôpital de l’utilisateur
@@ -3379,25 +3380,44 @@ def liste_hospitalisations(request):
     # 3. Récupérer les hospitalisations de l’hôpital
     hospitalisations_qs = Hospitalisation.objects.select_related(
         'patient',
-        'lit__chambre__type_chambre'
+        'lit__chambre__type_chambre',
+        'hopital'
     ).prefetch_related(
         'paiements'
     ).filter(
         hopital=hopital_user
     ).order_by('-date_entree')
 
-    # 4. Calcul pour chaque hospitalisation : dette, payé, reste (en CDF + USD)
+    # 4. Calcul pour chaque hospitalisation
     hospitalisations = []
     now = timezone.now()
 
     for hosp in hospitalisations_qs:
-        # Coût total en USD (depuis ton modèle)
-        cout_total_usd = hosp.cout_total or Decimal('0')
+        # --- Nombre de jours ---
+        date_entree = hosp.date_entree or now
+        if hosp.statut == 'EN_COURS':
+            nombre_jours = (now - date_entree).days + 1
+        else:
+            nombre_jours = getattr(hosp, 'nombre_jours', 1)
+            if nombre_jours <= 0:
+                nombre_jours = 1
 
-        # Conversion en CDF
-        cout_total_cdf = (cout_total_usd * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+        # --- Prix du lit par nuit (en CDF) ---
+        prix_lit_cdf = Decimal('0')
 
-        # Total déjà payé (en CDF)
+        if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
+            prix_lit_cdf = hosp.lit.chambre.type_chambre.prix_nuitée or Decimal('0')
+
+        if prix_lit_cdf <= 0:
+            prix_lit_cdf = Decimal('50000')  # valeur par défaut 50 000 CDF
+
+        # --- Coût total en CDF ---
+        cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+        # --- Coût total en USD ---
+        cout_total_usd = (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # --- Total déjà payé (en CDF) ---
         total_deja_paye_cdf = Decimal('0')
         for p in hosp.paiements.all():
             montant = p.montant_verse or Decimal('0')
@@ -3406,13 +3426,9 @@ def liste_hospitalisations(request):
             else:  # USD
                 total_deja_paye_cdf += montant * taux
 
-        # Reste à payer (en CDF)
+        # --- Reste à payer (en CDF + USD) ---
         reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
         reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        # Nombre de jours (si pas déjà dans le modèle)
-        date_entree = hosp.date_entree or now
-        nombre_jours = (now - date_entree).days + 1 if hosp.statut == 'EN_COURS' else getattr(hosp, 'nombre_jours', 0)
 
         hospitalisations.append({
             'hosp': hosp,
@@ -3421,10 +3437,11 @@ def liste_hospitalisations(request):
             'reste_a_payer_usd': reste_a_payer_usd,
             'reste_a_payer_cdf': reste_a_payer_cdf,
             'nombre_jours': nombre_jours,
+            'prix_lit_cdf': prix_lit_cdf,
         })
 
     return render(request, 'back-end/hospitalisation/liste_hospitalisations.html', {
-        'hospitalisations': hospitalisations,  # liste de dicts, pas queryset brut
+        'hospitalisations': hospitalisations,
         'fonctionKey': fonctionKey,
         'taux': taux,
     })

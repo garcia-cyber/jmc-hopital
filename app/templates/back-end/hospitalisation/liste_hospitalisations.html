@@ -188,7 +188,11 @@
                                                 {{ hosp.hopital }}
                                             </td>
                                             <td>{{ hosp.date_entree|date:"d M, Y" }}</td>
-                                            <td><span class="badge badge-soft-dark">{{ item.nombre_jours }} j</span></td>
+                                            <td>
+                                                <span class="badge badge-soft-dark">{{ item.nombre_jours }} j</span>
+                                                <br>
+                                                <small class="text-muted">{{ item.prix_lit_cdf|floatformat:0 }} CDF / nuit</small>
+                                            </td>
 
 
                                             {# Coût total en CDF #}

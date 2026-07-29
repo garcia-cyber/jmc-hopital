@@ -575,6 +575,56 @@ def enregistrement_patient(request):
         'hopital_user': hopital_user,
         'entreprises': entreprises,
     })
+
+#
+# ==================================================================================================
+# SUPPRIMER PATIENT PAR ADMIN 
+# ==================================================================================================
+@login_required
+def supprimer_patient(request, patient_id):
+    # 1. Rôle et hôpital de l’utilisateur
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = user_fonction.hopital if user_fonction else None
+    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
+
+    if not hopital_user and fonctionKey != 'admin':
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    # 2. Récupération du patient
+    # - admin : peut supprimer n'importe quel patient
+    # - autres : seulement les patients de leur hôpital
+    if fonctionKey == 'admin':
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            messages.error(request, "Le patient demandé n'existe pas.")
+            return redirect('enregistrement_patient')
+    else:
+        try:
+            patient = Patient.objects.get(id=patient_id, hopital=hopital_user)
+        except Patient.DoesNotExist:
+            messages.error(
+                request,
+                "Le patient demandé n'existe pas ou n'appartient pas à votre hôpital."
+            )
+            return redirect('enregistrement_patient')
+
+    # 3. Permissions (ici on autorise admin + éventuellement d'autres rôles)
+    # Adapte selon tes règles exactes
+    if fonctionKey not in ['admin']:
+        messages.error(request, "Vous n'avez pas la permission de supprimer un patient.")
+        return redirect('enregistrement_patient')
+
+    # 4. Suppression
+    try:
+        patient_noms = patient.noms
+        patient.delete()
+        messages.success(request, f"Le patient {patient_noms} a été supprimé avec succès.")
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la suppression : {str(e)}")
+
+    return redirect('enregistrement_patient')
 # 18
 # ==================================================================================================
 #  LISTE DES PATIENT(E)S 

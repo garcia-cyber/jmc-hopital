@@ -72,6 +72,7 @@ urlpatterns =[
      path('entreprise/<int:entreprise_id>/payer/',views.payer_dette_entreprise,name='payer_dette_entreprise'),
      path("patients/orientations/", liste_patients_orientations_view, name="liste_patients_orientations"),
      path('facture_consultation/session/<int:session_id>/', views.facture_session, name='facture_session'),
+     path('patient/<int:patient_id>/supprimer/',views.supprimer_patient,name='supprimer_patient'),
 
 
 

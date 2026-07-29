@@ -5046,7 +5046,7 @@ def enregistrer_vente(request):
         try:
             data = json.loads(request.body)
             panier = data.get('panier_data', [])
-            devise = data.get('devise', 'USD')
+            devise = data.get('devise', 'CDF')  # CDF par défaut
             montant_verse = Decimal(str(data.get('montant_verse', 0)))
 
             if not panier:
@@ -5054,12 +5054,16 @@ def enregistrer_vente(request):
             if montant_verse < 0:
                 return JsonResponse({'status': 'error', 'message': 'Montant versé invalide.'})
 
+            # Taux de change (1 USD = taux CDF)
             taux = Decimal(str(ConfigurationHopital.get_taux()))
+            if not taux or taux <= 0:
+                taux = Decimal('2300.00')
 
             with transaction.atomic():
-                montant_total = Decimal('0.00')
+                montant_total_cdf = Decimal('0.00')
                 items_a_vendre = []
 
+                # Calcul du total en CDF
                 for item in panier:
                     lot = LotPharmacie.objects.select_for_update().filter(
                         produit_id=item['id'],
@@ -5072,25 +5076,29 @@ def enregistrer_vente(request):
                         nom_produit = produit.nom if produit else "Produit"
                         return JsonResponse({'status': 'error', 'message': f'Stock insuffisant pour {nom_produit}'})
 
-                    prix_u = Decimal(str(lot.produit.prix_vente_unitaire))
-                    if devise == 'CDF':
-                        prix_u *= taux
-
-                    montant_total += (prix_u * int(item['qte']))
+                    # prix_vente_unitaire est considéré en CDF
+                    prix_u_cdf = Decimal(str(lot.produit.prix_vente_unitaire or 0))
+                    montant_total_cdf += (prix_u_cdf * int(item['qte']))
                     items_a_vendre.append({'lot': lot, 'qte': int(item['qte'])})
 
-                if montant_verse > montant_total:
-                    return JsonResponse({'status': 'error', 'message': 'Le montant versé dépasse le total.'})
+                # Convertir le montant versé en CDF pour comparer
+                if devise == 'CDF':
+                    montant_verse_cdf = montant_verse
+                else:  # USD
+                    montant_verse_cdf = montant_verse * taux
 
-                reste_a_payer = montant_total - montant_verse
+                if montant_verse_cdf > montant_total_cdf + Decimal('1'):
+                    return JsonResponse({'status': 'error', 'message': 'Le montant versé dépasse le total à payer.'})
+
+                reste_a_payer_cdf = montant_total_cdf - montant_verse_cdf
 
                 paiement = Paiement.objects.create(
-                    montant_verse=montant_verse,
+                    montant_verse=montant_verse,      # montant dans la devise saisie
                     devise=devise,
                     service='PHARMACIE',
                     caissier=request.user,
                     hopital=hopital_user,
-                    reste_a_payer=reste_a_payer
+                    reste_a_payer=reste_a_payer_cdf   # reste en CDF
                 )
 
                 for item in items_a_vendre:
@@ -5104,7 +5112,8 @@ def enregistrer_vente(request):
             return JsonResponse({
                 'status': 'success',
                 'message': 'Vente validée avec succès.',
-                'dette': str(reste_a_payer)
+                'dette_cdf': str(reste_a_payer_cdf),
+                'total_cdf': str(montant_total_cdf)
             })
 
         except Exception as e:

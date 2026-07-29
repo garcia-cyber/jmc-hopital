@@ -117,6 +117,9 @@
             <div class="content container-fluid">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
                     <h4 class="mb-0 fw-bold page-title">Nouvelle Vente Pharmacie</h4>
+                    <div class="text-muted small">
+                        Taux : 1 USD = <strong>{{ taux_actuel|floatformat:2 }} FC</strong>
+                    </div>
                 </div>
 
                 <div class="row g-4">
@@ -162,8 +165,8 @@
                                         <tr>
                                             <th>Produit</th>
                                             <th>Qté</th>
-                                            <th>Prix (USD)</th>
-                                            <th>Total</th>
+                                            <th>Prix unit. (FC)</th>
+                                            <th>Total (FC)</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -177,8 +180,8 @@
                                 <div class="col-12 col-md-4">
                                     <label class="form-label">Devise</label>
                                     <select name="devise" id="deviseSelect" class="form-select">
-                                        <option value="USD">USD ($)</option>
                                         <option value="CDF">CDF (FC)</option>
+                                        <option value="USD">USD ($)</option>
                                     </select>
                                 </div>
 
@@ -214,23 +217,26 @@
             const TAUX = parseFloat("{{ taux_actuel }}");
 
             function mettreAJourMontant() {
-                let total = 0;
+                let totalFC = 0;
                 let devise = $('#deviseSelect').val();
 
                 $('#panierBody tr').each(function() {
-                    let prixU = parseFloat($(this).data('prix'));
+                    let prixFC = parseFloat($(this).data('prix')); // prix en FC
                     let qte = parseInt($(this).data('qte'));
-                    let sousTotal = prixU * qte;
+                    let sousTotalFC = prixFC * qte;
 
-                    if (devise === 'CDF') {
-                        sousTotal *= TAUX;
-                    }
-
-                    $(this).find('.cell-total').text(sousTotal.toFixed(2));
-                    total += sousTotal;
+                    $(this).find('.cell-total').text(sousTotalFC.toFixed(2));
+                    totalFC += sousTotalFC;
                 });
 
-                $('#montantVerse').val(total.toFixed(2));
+                // Total en FC
+                if (devise === 'CDF') {
+                    $('#montantVerse').val(totalFC.toFixed(2));
+                } else {
+                    // Conversion en USD pour affichage et saisie
+                    let totalUSD = totalFC / TAUX;
+                    $('#montantVerse').val(totalUSD.toFixed(2));
+                }
             }
 
             $('#deviseSelect').on('change', mettreAJourMontant);
@@ -316,7 +322,7 @@
                     }),
                     success: function(res) {
                         if (res.status === 'success') {
-                            alert("Validé ! Reste : " + res.dette);
+                            alert("Validé ! Reste à payer (FC) : " + res.dette_cdf);
                             window.location.reload();
                         } else {
                             alert(res.message);

@@ -2630,7 +2630,7 @@ def liste_attente_ordonnance_view(request):
         consultation_id = request.POST.get('consultation_id')
         diagnostic = request.POST.get('diagnostic_final')
         type_ord = request.POST.get('type_ordonnance')
-        destination = request.POST.get('destination', '').upper()  # ← normalisé
+        destination = request.POST.get('destination', '').upper()
         observation_orient = request.POST.get('observation_orientation')
 
         noms = request.POST.getlist('nom_medicament[]')
@@ -2649,17 +2649,28 @@ def liste_attente_ordonnance_view(request):
 
         try:
             with transaction.atomic():
-                # Mise à jour du diagnostic (si le champ existe)
                 if hasattr(consultation, 'diagnostic_final'):
                     consultation.diagnostic_final = diagnostic
                     consultation.save(update_fields=['diagnostic_final'])
 
-                ordonnance = Ordonnance.objects.create(
-                    consultation=consultation,
-                    type_ordonnance=type_ord,
-                    diagnostic=diagnostic,  # ← ajouté
-                    hopital=hopital_user    # ← ajouté
-                )
+                # Au lieu de verrouiller, on peut soit créer une nouvelle ordonnance,
+                # soit récupérer et modifier l'existante. Ici, on récupère la dernière :
+                ordonnance = consultation.ordonnance_set.order_by('-id').first()
+                if ordonnance is None:
+                    ordonnance = Ordonnance.objects.create(
+                        consultation=consultation,
+                        type_ordonnance=type_ord,
+                        diagnostic=diagnostic,
+                        hopital=hopital_user
+                    )
+                else:
+                    ordonnance.type_ordonnance = type_ord
+                    ordonnance.diagnostic = diagnostic
+                    ordonnance.hopital = hopital_user
+                    ordonnance.save()
+
+                    # On efface l’ancien traitement pour le remplacer
+                    ordonnance.medicaments.all().delete()
 
                 for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
                     if nom and nom.strip():
@@ -2669,20 +2680,20 @@ def liste_attente_ordonnance_view(request):
                             posologie=pos.strip() if pos else '',
                             duree=dur.strip() if dur else '',
                             quantite=int(qty) if qty and qty.isdigit() else 1,
-                            hopital=hopital_user  # ← ajouté
+                            hopital=hopital_user
                         )
 
                 if destination:
-                    Orientation.objects.create(
+                    orientation = Orientation.objects.create(
                         consultation=consultation,
                         medecin_orientateur=request.user,
                         destination=destination,
                         observation=observation_orient,
                         est_admis=False,
-                        hopital=hopital_user  # ← ajouté
+                        hopital=hopital_user
                     )
 
-                    if destination == 'HOSPITALISATION':  # ← majuscules
+                    if destination == 'HOSPITALISATION':
                         lit_id = request.POST.get('lit_id')
                         date_entree = request.POST.get('date_entree')
                         motif_admission = request.POST.get('motif_admission')
@@ -2702,7 +2713,7 @@ def liste_attente_ordonnance_view(request):
                                 lit.est_occupe = True
                                 lit.save(update_fields=['est_occupe'])
 
-            messages.success(request, "Traitement complet effectué avec succès.")
+            messages.success(request, "Traitement (ordonnance) enregistré / mis à jour avec succès.")
         except Exception as e:
             messages.error(request, f"Erreur critique : {str(e)}")
 
@@ -2731,6 +2742,123 @@ def liste_attente_ordonnance_view(request):
         'fonctionKey': fonctionKey,
         'now': timezone.now(),
     })
+
+# ==================================================================================================
+# MODIFICATION EXAMEN PRESCRITE 
+# =================================================================================================
+@login_required
+def modifier_ordonnance_view_med(request, consultation_id):
+    # 1. Rôle et hôpital
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    # 2. Consultation + ordonnance existante
+    consultation = get_object_or_404(
+        Consultation.objects.select_related('triage__patient').prefetch_related('examens__prestation'),
+        id=consultation_id,
+        triage__patient__hopital=hopital_user
+    )
+
+    ordonnance = consultation.ordonnance_set.order_by('-id').first()
+
+    if ordonnance is None:
+        messages.error(request, "Aucune ordonnance existante pour cette consultation.")
+        return redirect('liste_attente_medecin')
+
+    medicaments = ordonnance.medicaments.all().order_by('id')
+    examens_termines = consultation.examens.filter(statut='TERMINE').select_related('prestation')
+
+    if request.method == 'POST':
+        diagnostic = request.POST.get('diagnostic_final') or ordonnance.diagnostic
+        type_ord = request.POST.get('type_ordonnance') or ordonnance.type_ordonnance
+
+        destination = request.POST.get('destination', '').upper()
+        observation_orient = request.POST.get('observation_orientation')
+
+        noms = request.POST.getlist('nom_medicament[]')
+        posologies = request.POST.getlist('posologie[]')
+        durees = request.POST.getlist('duree[]')
+        quantites = request.POST.getlist('quantite[]')
+
+        try:
+            with transaction.atomic():
+                # Mise à jour diagnostic consultation si champ présent
+                if hasattr(consultation, 'diagnostic_final'):
+                    consultation.diagnostic_final = diagnostic
+                    consultation.save(update_fields=['diagnostic_final'])
+
+                # 3. Mise à jour ordonnance
+                ordonnance.type_ordonnance = type_ord
+                ordonnance.diagnostic = diagnostic
+                ordonnance.hopital = hopital_user
+                ordonnance.save()
+
+                # 4. Remplacer les médicaments
+                ordonnance.medicaments.all().delete()
+
+                for nom, pos, dur, qty in zip(noms, posologies, durees, quantites):
+                    if nom and nom.strip():
+                        Medicament.objects.create(
+                            ordonnance=ordonnance,
+                            nom=nom.strip(),
+                            posologie=pos.strip() if pos else '',
+                            duree=dur.strip() if dur else '',
+                            quantite=int(qty) if qty and qty.isdigit() else 1,
+                            hopital=hopital_user
+                        )
+
+                # 5. Orientation (optionnelle)
+                if destination:
+                    Orientation.objects.create(
+                        consultation=consultation,
+                        medecin_orientateur=request.user,
+                        destination=destination,
+                        observation=observation_orient,
+                        est_admis=False,
+                        hopital=hopital_user
+                    )
+
+                    if destination == 'HOSPITALISATION':
+                        lit_id = request.POST.get('lit_id')
+                        date_entree = request.POST.get('date_entree')
+                        motif_admission = request.POST.get('motif_admission') or diagnostic
+
+                        if lit_id:
+                            Hospitalisation.objects.create(
+                                patient=consultation.triage.patient,
+                                lit_id=lit_id,
+                                hopital=hopital_user,
+                                date_entree=date_entree if date_entree else timezone.now(),
+                                motif_admission=motif_admission,
+                                statut='EN_COURS'
+                            )
+
+                            lit = Lit.objects.filter(id=lit_id, hopital=hopital_user).first()
+                            if lit:
+                                lit.est_occupe = True
+                                lit.save(update_fields=['est_occupe'])
+
+            messages.success(request, "Ordonnance modifiée avec succès.")
+            return redirect('liste_attente_medecin')
+
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification : {str(e)}")
+
+    # GET : afficher les infos existantes
+    context = {
+        'consultation': consultation,
+        'ordonnance': ordonnance,
+        'medicaments': medicaments,
+        'examens_termines': examens_termines,
+        'fonctionKey': fonctionKey,
+        'now': timezone.now(),
+    }
+    return render(request, 'back-end/medecin/modifier_ordonnance_med.html', context)
 # ==================================================================================================
 # 44 : RESULTAT HISTORIQUE SOIT LABO , RADIO OU ECHO
 # ==================================================================================================

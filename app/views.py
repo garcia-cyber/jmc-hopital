@@ -5239,13 +5239,21 @@ def dashboard_ventes(request):
 # LISTE DES VENTES
 # ==================================================================================================
 @login_required
+@login_required
 def liste_ventes(request):
     role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
 
+    # Taux de change (1 USD = taux CDF)
+    taux = Decimal(str(ConfigurationHopital.get_taux()))
+    if not taux or taux <= 0:
+        taux = Decimal('2300.00')
+
+    # Base : toutes les ventes pharmacie de l’hôpital
     ventes = Paiement.objects.filter(service='PHARMACIE', hopital=hopital_user).order_by('-date_paiement')
 
+    # Filtres
     q = request.GET.get('q', '').strip()
     devise = request.GET.get('devise', '').strip()
     date_debut = request.GET.get('date_debut', '').strip()
@@ -5268,9 +5276,11 @@ def liste_ventes(request):
     if date_fin:
         ventes = ventes.filter(date_paiement__date__lte=date_fin)
 
+    # Séparation par devise
     usd_ventes = ventes.filter(devise='USD')
     cdf_ventes = ventes.filter(devise='CDF')
 
+    # Totaux bruts (dans leur devise)
     total_verse_usd = usd_ventes.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
     total_verse_cdf = cdf_ventes.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
 
@@ -5280,20 +5290,43 @@ def liste_ventes(request):
     total_reduction_usd = usd_ventes.aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
     total_reduction_cdf = cdf_ventes.aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
 
+    # Conversion CDF <-> USD pour l’affichage
+    # On considère que les totaux "principaux" sont en CDF
+    total_verse_cdf_total = total_verse_cdf + (total_verse_usd * taux)
+    total_verse_usd_total = total_verse_cdf_total / taux if taux else Decimal('0.00')
+
+    total_reste_cdf_total = total_reste_cdf + (total_reste_usd * taux)
+    total_reste_usd_total = total_reste_cdf_total / taux if taux else Decimal('0.00')
+
+    total_reduction_cdf_total = total_reduction_cdf + (total_reduction_usd * taux)
+    total_reduction_usd_total = total_reduction_cdf_total / taux if taux else Decimal('0.00')
+
     return render(request, 'back-end/pharmacie/liste_ventes.html', {
         'ventes': ventes,
         'fonctionKey': fonctionKey,
+
+        # Totaux par devise (bruts)
         'total_verse_usd': total_verse_usd,
         'total_verse_cdf': total_verse_cdf,
         'total_reste_usd': total_reste_usd,
         'total_reste_cdf': total_reste_cdf,
         'total_reduction_usd': total_reduction_usd,
         'total_reduction_cdf': total_reduction_cdf,
+
+        # Totaux globaux (CDF + USD convertis)
+        'total_verse_cdf_total': total_verse_cdf_total,
+        'total_verse_usd_total': total_verse_usd_total,
+        'total_reste_cdf_total': total_reste_cdf_total,
+        'total_reste_usd_total': total_reste_usd_total,
+        'total_reduction_cdf_total': total_reduction_cdf_total,
+        'total_reduction_usd_total': total_reduction_usd_total,
+
         'nb_ventes': ventes.count(),
         'q': q,
         'devise': devise,
         'date_debut': date_debut,
         'date_fin': date_fin,
+        'taux_actuel': float(taux),
     })
 #
 # ===================================================================================================
@@ -6313,33 +6346,42 @@ def ajouter_paiement_dette(request, paiement_id):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     paiement = get_object_or_404(Paiement, id=paiement_id, hopital=hopital_user)
+
+    # Taux de change (1 USD = taux CDF)
     taux = Decimal(str(ConfigurationHopital.get_taux()))
+    if not taux or taux <= 0:
+        taux = Decimal('2300.00')
 
     if request.method == 'POST':
         montant_saisi = Decimal(str(request.POST.get('montant') or '0'))
-        devise_paiement = request.POST.get('devise_paiement')
-        devise_dette = paiement.devise
+        devise_paiement = request.POST.get('devise_paiement', 'CDF')
 
-        montant_converti = montant_saisi
+        if montant_saisi <= 0:
+            messages.error(request, "Le montant saisi doit être supérieur à 0.")
+            return redirect('liste_ventes')
 
-        if devise_paiement != devise_dette:
-            if devise_paiement == 'USD' and devise_dette == 'CDF':
-                montant_converti = montant_saisi * taux
-            elif devise_paiement == 'CDF' and devise_dette == 'USD':
-                montant_converti = montant_saisi / taux
+        # Convertir le montant saisi en CDF
+        if devise_paiement == 'CDF':
+            montant_cdf = montant_saisi
+        else:  # USD
+            montant_cdf = montant_saisi * taux
 
-        montant_converti = montant_converti.quantize(Decimal('0.01'))
+        # Arrondir à 2 décimales
+        montant_cdf = montant_cdf.quantize(Decimal('0.01'))
 
-        if montant_converti > paiement.reste_a_payer:
+        # Vérifier qu’on ne paie pas plus que le reste (qui est en CDF)
+        if montant_cdf > paiement.reste_a_payer:
             messages.error(
                 request,
-                f"Le montant saisi ({montant_saisi} {devise_paiement}) dépasse la dette restante ({paiement.reste_a_payer} {devise_dette})."
+                f"Le montant saisi ({montant_saisi} {devise_paiement}) dépasse la dette restante "
+                f"({paiement.reste_a_payer} CDF)."
             )
             return redirect('liste_ventes')
 
         with transaction.atomic():
-            paiement.reste_a_payer -= montant_converti
-            paiement.montant_verse += montant_converti
+            # On met à jour uniquement le reste et le montant versé (en CDF)
+            paiement.reste_a_payer -= montant_cdf
+            paiement.montant_verse += montant_cdf
             paiement.save()
 
         messages.success(request, "Dette mise à jour avec succès.")
@@ -6347,7 +6389,7 @@ def ajouter_paiement_dette(request, paiement_id):
 
     return render(request, 'back-end/pharmacie/ajouter_paiement_dette.html', {
         'paiement': paiement,
-        'taux': taux,
+        'taux': float(taux),
         'fonctionKey': fonctionKey
     })
 # 

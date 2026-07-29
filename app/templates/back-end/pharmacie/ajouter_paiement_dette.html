@@ -4,21 +4,126 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Régularisation de dette | JMC</title>
+    <title>Régularisation de dette | Pharmacie JMC</title>
     {% include 'back-end/includes/css.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .card { border-radius: 20px; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-        .btn-primary { border-radius: 12px; }
+        :root {
+            --pharm-primary: #10b981;
+            --pharm-primary-dark: #059669;
+            --pharm-accent: #14b8a6;
+            --pharm-bg: #f8fafc;
+            --card-radius: 16px;
+            --input-radius: 12px;
+            --btn-radius: 12px;
+        }
+
+        body {
+            background: var(--pharm-bg);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pharm-header {
+            background: linear-gradient(135deg, var(--pharm-primary), var(--pharm-accent));
+            color: #fff;
+            border-radius: var(--card-radius);
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+
+        .pharm-header h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .pharm-header small {
+            opacity: 0.95;
+            font-size: 0.85rem;
+        }
+
+        .card {
+            border-radius: var(--card-radius);
+            border: none;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.04);
+            background: #ffffff;
+        }
+
+        .card-title-pharm {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
         .summary-box {
             background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #e5e7eb;
             border-radius: 14px;
             padding: 16px;
         }
-        .label-title { color: #64748b; font-size: .85rem; margin-bottom: 4px; }
-        .value-text { font-weight: 700; font-size: 1rem; color: #0f172a; }
+
+        .label-title {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .value-text {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: var(--input-radius);
+            border: 1px solid #d1d5db;
+            padding: 0.7rem 0.85rem;
+            min-height: 46px;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            border-radius: var(--btn-radius);
+            min-height: 46px;
+            font-weight: 600;
+        }
+
+        .btn-primary-pharm {
+            background: var(--pharm-primary);
+            border-color: var(--pharm-primary);
+            color: #fff;
+        }
+
+        .btn-primary-pharm:hover {
+            background: var(--pharm-primary-dark);
+            border-color: var(--pharm-primary-dark);
+            color: #fff;
+        }
+
+        .btn-outline-pharm {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+
+        .btn-outline-pharm:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+            color: #111827;
+        }
+
+        .info-alert {
+            background: #ecfeff;
+            border: 1px solid #cffafe;
+            color: #0e7490;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -29,20 +134,22 @@
     <div class="page-wrapper">
         <div class="content container-fluid">
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 class="fw-bold m-0">Régularisation de dette</h4>
-                    <small class="text-muted">Paiement partiel ou total d’une vente</small>
+            <div class="pharm-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h4><i class="fas fa-hand-holding-dollar me-2"></i>Régularisation de dette – Pharmacie</h4>
+                        <small>Taux actuel : 1 USD = <strong>{{ taux|floatformat:2 }} FC</strong></small>
+                    </div>
+                    <a href="{% url 'liste_ventes' %}" class="btn btn-light text-success fw-bold">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
                 </div>
-                <a href="{% url 'liste_ventes' %}" class="btn btn-outline-secondary rounded-pill">
-                    <i class="fas fa-arrow-left me-2"></i>Retour
-                </a>
             </div>
 
             <div class="row">
                 <div class="col-lg-7">
                     <div class="card p-4">
-                        <h5 class="mb-4">Informations du paiement</h5>
+                        <h5 class="card-title-pharm">Informations du paiement</h5>
 
                         <form method="POST">
                             {% csrf_token %}
@@ -50,19 +157,19 @@
                             <div class="summary-box mb-4">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <div class="label-title">Montant restant</div>
+                                        <div class="label-title">Reste à payer (CDF)</div>
                                         <div class="value-text">
-                                            {{ paiement.reste_a_payer|floatformat:2 }} {{ paiement.devise }}
+                                            {{ paiement.reste_a_payer|floatformat:2 }} FC
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <div class="label-title">Montant déjà versé</div>
+                                        <div class="label-title">Déjà versé (CDF)</div>
                                         <div class="value-text">
-                                            {{ paiement.montant_verse|floatformat:2 }} {{ paiement.devise }}
+                                            {{ paiement.montant_verse|floatformat:2 }} FC
                                         </div>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <div class="label-title">Devise de la dette</div>
+                                        <div class="label-title">Devise de la vente</div>
                                         <div class="value-text">{{ paiement.devise }}</div>
                                     </div>
                                     <div class="col-md-6 mb-3">
@@ -75,21 +182,22 @@
                             <div class="mb-3">
                                 <label class="form-label">Montant reçu</label>
                                 <input type="number" name="montant" step="0.01" min="0" class="form-control" required>
+                                <small class="text-muted">Le montant sera converti en CDF avant application.</small>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Devise du paiement</label>
                                 <select name="devise_paiement" class="form-select" required>
-                                    <option value="USD">USD</option>
-                                    <option value="CDF">CDF</option>
+                                    <option value="CDF">CDF (FC)</option>
+                                    <option value="USD">USD ($)</option>
                                 </select>
                             </div>
 
                             <div class="d-flex gap-2 mt-4">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary-pharm">
                                     <i class="fas fa-check me-2"></i>Enregistrer le paiement
                                 </button>
-                                <a href="{% url 'liste_ventes' %}" class="btn btn-light">
+                                <a href="{% url 'liste_ventes' %}" class="btn btn-outline-pharm">
                                     Annuler
                                 </a>
                             </div>
@@ -99,10 +207,13 @@
 
                 <div class="col-lg-5">
                     <div class="card p-4">
-                        <h5 class="mb-3">Rappel</h5>
-                        <div class="alert alert-info mb-0">
-                            Si la dette est en <strong>USD</strong> et tu paies en <strong>CDF</strong>, le montant sera converti avant le calcul.
-                            Si la dette est en <strong>CDF</strong> et tu paies en <strong>USD</strong>, la conversion sera aussi faite automatiquement.
+                        <h5 class="card-title-pharm">Rappel</h5>
+                        <div class="info-alert mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Si la dette est en <strong>CDF</strong> et tu paies en <strong>USD</strong>,
+                            le montant saisi sera converti en CDF avant le calcul.<br><br>
+                            De même, si tu paies en <strong>CDF</strong> une dette en <strong>USD</strong>,
+                            la conversion sera appliquée automatiquement.
                         </div>
                     </div>
                 </div>

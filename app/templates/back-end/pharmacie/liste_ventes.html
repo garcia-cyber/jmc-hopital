@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historique des Ventes | JMC</title>
+    <title>Historique des Ventes | Pharmacie JMC</title>
     {% include 'back-end/includes/css.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -25,7 +25,8 @@
             height: 100%;
         }
         .stat-label { color: #64748b; font-size: .85rem; }
-        .stat-value { font-size: 1.2rem; font-weight: 700; color: #0f172a; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+        .stat-sub { font-size: 0.8rem; color: #94a3b8; }
         .filter-card {
             background: #fff;
             border-radius: 18px;
@@ -33,6 +34,16 @@
             box-shadow: 0 8px 18px rgba(0,0,0,.04);
             padding: 18px;
         }
+        .pharm-header {
+            background: linear-gradient(135deg, #10b981, #14b8a6);
+            color: #fff;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+        .pharm-header h4 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+        .pharm-header small { opacity: 0.95; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -42,57 +53,45 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h4 class="fw-bold m-0">Historique des Ventes</h4>
-                        <small class="text-muted">Vue transparente des ventes enregistrées</small>
+
+                <div class="pharm-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4><i class="fas fa-cash-register me-2"></i>Historique des Ventes – Pharmacie</h4>
+                            <small>Taux actuel : 1 USD = <strong>{{ taux_actuel|floatformat:2 }} FC</strong></small>
+                        </div>
+                        <a href="{% url 'enregistrer_vente' %}" class="btn btn-light text-success fw-bold">
+                            <i class="fas fa-plus me-2"></i>Nouvelle Vente
+                        </a>
                     </div>
-                    <a href="{% url 'enregistrer_vente' %}" class="btn btn-primary rounded-pill">
-                        <i class="fas fa-plus me-2"></i>Nouvelle Vente
-                    </a>
                 </div>
 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="stat-card">
                             <div class="stat-label">Nombre de ventes</div>
                             <div class="stat-value">{{ nb_ventes }}</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="stat-card">
-                            <div class="stat-label">Total versé USD</div>
-                            <div class="stat-value">{{ total_verse_usd|floatformat:2 }} USD</div>
+                            <div class="stat-label">Total versé (CDF)</div>
+                            <div class="stat-value">{{ total_verse_cdf_total|floatformat:2 }} FC</div>
+                            <div class="stat-sub">≈ {{ total_verse_usd_total|floatformat:2 }} USD</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="stat-card">
-                            <div class="stat-label">Total versé CDF</div>
-                            <div class="stat-value">{{ total_verse_cdf|floatformat:2 }} CDF</div>
+                            <div class="stat-label">Total reste à payer (CDF)</div>
+                            <div class="stat-value">{{ total_reste_cdf_total|floatformat:2 }} FC</div>
+                            <div class="stat-sub">≈ {{ total_reste_usd_total|floatformat:2 }} USD</div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="stat-card">
-                            <div class="stat-label">Total reste USD</div>
-                            <div class="stat-value">{{ total_reste_usd|floatformat:2 }} USD</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Total reste CDF</div>
-                            <div class="stat-value">{{ total_reste_cdf|floatformat:2 }} CDF</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Total réduction USD</div>
-                            <div class="stat-value">{{ total_reduction_usd|floatformat:2 }} USD</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-label">Total réduction CDF</div>
-                            <div class="stat-value">{{ total_reduction_cdf|floatformat:2 }} CDF</div>
+                            <div class="stat-label">Total réductions (CDF)</div>
+                            <div class="stat-value">{{ total_reduction_cdf_total|floatformat:2 }} FC</div>
+                            <div class="stat-sub">≈ {{ total_reduction_usd_total|floatformat:2 }} USD</div>
                         </div>
                     </div>
                 </div>
@@ -158,10 +157,15 @@
                                             <span class="text-muted">Aucun article</span>
                                         {% endfor %}
                                     </td>
-                                    <td class="fw-bold">{{ v.montant_verse|floatformat:2 }} {{ v.devise }}</td>
+                                    <td class="fw-bold">
+                                        {{ v.montant_verse|floatformat:2 }} {{ v.devise }}
+                                    </td>
                                     <td>
                                         {% if v.reste_a_payer > 0 %}
-                                            <span class="text-danger fw-bold d-block">{{ v.reste_a_payer|floatformat:2 }} {{ v.devise }}</span>
+                                            <span class="text-danger fw-bold d-block">{{ v.reste_a_payer|floatformat:2 }} FC</span>
+                                            <small class="text-muted d-block mb-1">
+                                                ≈ {{ v.reste_a_payer|floatformat:2|default:"0" }} / {{ taux_actuel|default:"1" }} USD
+                                            </small>
                                             <button type="button" class="btn btn-sm btn-outline-warning mt-1" data-bs-toggle="modal" data-bs-target="#modalDette{{ v.id }}">
                                                 Payer dette
                                             </button>
@@ -201,28 +205,32 @@
                         </div>
                         <div class="modal-body">
                             <p class="mb-3">
-                                Reste à payer :
-                                <strong>{{ v.reste_a_payer|floatformat:2 }} {{ v.devise }}</strong>
+                                Reste à payer (CDF) :
+                                <strong>{{ v.reste_a_payer|floatformat:2 }} FC</strong>
                             </p>
-                            <p class="text-muted mb-3">
+                            <p class="text-muted mb-1">
                                 Vente du {{ v.date_paiement|date:"d/m/Y H:i" }}
+                            </p>
+                            <p class="text-muted mb-3 small">
+                                ≈ {{ v.reste_a_payer|floatformat:2|default:"0" }} / {{ taux_actuel|default:"1" }} USD
                             </p>
 
                             <div class="mb-3">
                                 <label class="form-label">Montant reçu</label>
                                 <input type="number" name="montant" step="0.01" min="0" class="form-control" required>
+                                <small class="text-muted">Le montant saisi sera converti en CDF avant application.</small>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Devise du paiement</label>
                                 <select name="devise_paiement" class="form-select" required>
-                                    <option value="USD">USD</option>
-                                    <option value="CDF">CDF</option>
+                                    <option value="CDF">CDF (FC)</option>
+                                    <option value="USD">USD ($)</option>
                                 </select>
                             </div>
 
                             <div class="alert alert-info mb-0">
-                                Le système convertira automatiquement le montant avant de calculer le reste.
+                                Le système convertira automatiquement le montant en CDF avant de mettre à jour la dette.
                             </div>
                         </div>
                         <div class="modal-footer">

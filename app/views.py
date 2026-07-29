@@ -2838,6 +2838,12 @@ def modifier_ordonnance_view_med(request, consultation_id):
     medicaments = ordonnance.medicaments.all().order_by('id')
     examens_termines = consultation.examens.filter(statut='TERMINE').select_related('prestation')
 
+    # Lits disponibles pour cet hôpital
+    lits_disponibles = Lit.objects.filter(
+        est_occupe=False,
+        hopital=hopital_user
+    ).select_related('chambre').order_by('nom_lit')
+
     if request.method == 'POST':
         diagnostic = request.POST.get('diagnostic_final') or ordonnance.diagnostic
         type_ord = request.POST.get('type_ordonnance') or ordonnance.type_ordonnance
@@ -2879,7 +2885,7 @@ def modifier_ordonnance_view_med(request, consultation_id):
 
                 # 5. Orientation (optionnelle)
                 if destination:
-                    Orientation.objects.create(
+                    orientation = Orientation.objects.create(
                         consultation=consultation,
                         medecin_orientateur=request.user,
                         destination=destination,
@@ -2894,19 +2900,27 @@ def modifier_ordonnance_view_med(request, consultation_id):
                         motif_admission = request.POST.get('motif_admission') or diagnostic
 
                         if lit_id:
+                            # Vérifier que le lit appartient bien à l'hôpital et est libre
+                            lit = Lit.objects.filter(
+                                id=lit_id,
+                                hopital=hopital_user,
+                                est_occupe=False
+                            ).select_related('chambre').first()
+
+                            if not lit:
+                                raise ValueError("Le lit sélectionné n'est pas disponible ou n'appartient pas à votre hôpital.")
+
                             Hospitalisation.objects.create(
                                 patient=consultation.triage.patient,
-                                lit_id=lit_id,
+                                lit=lit,  # attention: champ 'lit', pas 'lit_id' si FK
                                 hopital=hopital_user,
                                 date_entree=date_entree if date_entree else timezone.now(),
                                 motif_admission=motif_admission,
                                 statut='EN_COURS'
                             )
 
-                            lit = Lit.objects.filter(id=lit_id, hopital=hopital_user).first()
-                            if lit:
-                                lit.est_occupe = True
-                                lit.save(update_fields=['est_occupe'])
+                            lit.est_occupe = True
+                            lit.save(update_fields=['est_occupe'])
 
             messages.success(request, "Ordonnance modifiée avec succès.")
             return redirect('liste_attente_medecin')
@@ -2921,9 +2935,11 @@ def modifier_ordonnance_view_med(request, consultation_id):
         'medicaments': medicaments,
         'examens_termines': examens_termines,
         'fonctionKey': fonctionKey,
+        'lits_disponibles': lits_disponibles,  # <- ajouté
         'now': timezone.now(),
     }
     return render(request, 'back-end/medecin/modifier_ordonnance_med.html', context)
+
 # ==================================================================================================
 # 44 : RESULTAT HISTORIQUE SOIT LABO , RADIO OU ECHO
 # ==================================================================================================

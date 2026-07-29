@@ -18,6 +18,7 @@
         .page-banner h3 { margin: 0 0 6px 0; font-weight: 700; }
         .page-banner small { font-size: 0.85rem; }
 
+
         .card {
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -32,6 +33,7 @@
             padding: 18px;
         }
 
+
         .section-title {
             border-left: 4px solid #0d6efd;
             padding-left: 8px;
@@ -42,6 +44,7 @@
             font-size: 0.95rem;
         }
 
+
         .orientation-box {
             background: #f8f9fa;
             border: 1px solid #e5e7eb;
@@ -51,10 +54,12 @@
             margin-bottom: 16px;
         }
 
+
         .btn-add-row {
             border-radius: 999px;
             font-size: 0.85rem;
         }
+
 
         @media (max-width: 768px) {
             .page-banner {
@@ -68,12 +73,14 @@
     {% include 'back-end/includes/header.html' %}
     {% include 'back-end/includes/sidebar.html' %}
 
+
     <div class="page-wrapper">
         <div class="content container-fluid">
             <div class="page-banner">
                 <h3>Modifier l’ordonnance</h3>
                 <small>Patient : {{ consultation.triage.patient.noms }} &mdash; Consultation #{{ consultation.id }}</small>
             </div>
+
 
             {% if messages %}
                 {% for message in messages %}
@@ -86,6 +93,7 @@
                 {% endfor %}
             {% endif %}
 
+
             <!-- Bloc de debug (à retirer après test) -->
             <div class="alert alert-info mb-3">
                 Ordonnance ID : {{ ordonnance.id }}<br>
@@ -94,6 +102,7 @@
                 Nombre de médicaments : {{ medicaments|length }}
             </div>
 
+
             <div class="card">
                 <div class="card-header">
                     <strong>Détails de l’ordonnance existante</strong>
@@ -101,6 +110,7 @@
                 <div class="card-body">
                     <form method="POST">
                         {% csrf_token %}
+
 
                         <div class="row">
                             <div class="col-md-6 form-group">
@@ -126,13 +136,14 @@
                             </div>
                         </div>
 
+
                         <div class="orientation-box mt-2">
                             <label class="font-weight-bold text-success">
                                 <i class="fa fa-map-signs"></i> Orientation (optionnelle)
                             </label>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <select name="destination" class="form-control" onchange="toggleLit(this)">
+                                    <select name="destination" class="form-control" id="destination" onchange="toggleLit()">
                                         <option value="">-- Choisir une destination --</option>
                                         <option value="PHARMACIE">Pharmacie</option>
                                         <option value="HOSPITALISATION">Hospitalisation</option>
@@ -150,30 +161,36 @@
                                 </div>
                             </div>
 
-                            <div class="row mt-3" id="zone-lit" style="display:none;">
-                                <div class="col-md-6">
-                                    <label>Date d'entrée</label>
-                                    <input type="datetime-local"
-                                           name="date_entree"
-                                           class="form-control"
-                                           value="{{ now|date:'Y-m-d\\TH:i' }}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label>Lit disponible</label>
-                                    <select name="lit_id" class="form-control">
-                                        {% for lit in lits_disponibles %}
-                                            <option value="{{ lit.id }}">{{ lit.nom_lit }} ({{ lit.chambre.nom_chambre }})</option>
-                                        {% empty %}
-                                            <option value="">Aucun lit disponible</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-12 mt-2">
-                                    <label>Motif d'admission</label>
-                                    <textarea name="motif_admission" class="form-control" rows="2"></textarea>
+
+                            <div id="zone-lit" style="display:none;">
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label>Date d'entrée</label>
+                                        <input type="datetime-local"
+                                               name="date_entree"
+                                               class="form-control"
+                                               value="{{ now|date:'Y-m-d\\TH:i' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label>Lit disponible</label>
+                                        <select name="lit_id" class="form-control">
+                                            {% for lit in lits_disponibles %}
+                                                <option value="{{ lit.id }}">
+                                                    {{ lit.nom_lit }}{% if lit.chambre %} - {{ lit.chambre.nom_chambre }}{% endif %}
+                                                </option>
+                                            {% empty %}
+                                                <option value="">Aucun lit disponible</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mt-2">
+                                        <label>Motif d'admission</label>
+                                        <textarea name="motif_admission" class="form-control" rows="2"></textarea>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
 
                         <div class="section-title">Prescription actuelle</div>
                         <div id="zone-medicaments">
@@ -252,11 +269,13 @@
                             {% endfor %}
                         </div>
 
+
                         <button type="button"
                                 class="btn btn-info btn-sm btn-add-row mt-2"
                                 onclick="ajouterLigne()">
                             + Ajouter un médicament
                         </button>
+
 
                         <div class="mt-4 text-right">
                             <a href="{% url 'liste_attente_medecin' %}" class="btn btn-secondary">Annuler</a>
@@ -271,12 +290,21 @@
     </div>
 </div>
 
+
 {% include 'back-end/includes/js.html' %}
 <script>
-function toggleLit(select) {
+function toggleLit() {
+    const destination = document.getElementById('destination');
     const zone = document.getElementById('zone-lit');
-    zone.style.display = (select.value === 'HOSPITALISATION') ? 'flex' : 'none';
+    zone.style.display = (destination.value === 'HOSPITALISATION') ? 'block' : 'none';
+
+    // Si on quitte HOSPITALISATION, on vide le lit sélectionné
+    if (destination.value !== 'HOSPITALISATION') {
+        const selectLit = zone.querySelector('select[name="lit_id"]');
+        if (selectLit) selectLit.value = '';
+    }
 }
+
 
 function ajouterLigne() {
     const zone = document.getElementById('zone-medicaments');
@@ -301,6 +329,9 @@ function ajouterLigne() {
     `;
     zone.appendChild(div);
 }
+
+// Au chargement de la page, appliquer l’état selon la valeur actuelle (ex: après re-render POST)
+document.addEventListener('DOMContentLoaded', toggleLit);
 </script>
 </body>
 </html>

@@ -3356,11 +3356,28 @@ def admettre_patient(request):
 # ============================================================================================
 @login_required
 def liste_hospitalisations(request):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    # 1. Rôle et hôpital de l’utilisateur
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    hospitalisations = Hospitalisation.objects.select_related(
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')
+
+    # 2. Taux de change depuis la configuration
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')  # 1 USD = taux CDF
+    if not taux or taux == 0:
+        taux = Decimal('2500.00')
+
+    # 3. Récupérer les hospitalisations de l’hôpital
+    hospitalisations_qs = Hospitalisation.objects.select_related(
         'patient',
         'lit__chambre__type_chambre'
     ).prefetch_related(
@@ -3369,10 +3386,49 @@ def liste_hospitalisations(request):
         hopital=hopital_user
     ).order_by('-date_entree')
 
+    # 4. Calcul pour chaque hospitalisation : dette, payé, reste (en CDF + USD)
+    hospitalisations = []
+    now = timezone.now()
+
+    for hosp in hospitalisations_qs:
+        # Coût total en USD (depuis ton modèle)
+        cout_total_usd = hosp.cout_total or Decimal('0')
+
+        # Conversion en CDF
+        cout_total_cdf = (cout_total_usd * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+        # Total déjà payé (en CDF)
+        total_deja_paye_cdf = Decimal('0')
+        for p in hosp.paiements.all():
+            montant = p.montant_verse or Decimal('0')
+            if p.devise == 'CDF':
+                total_deja_paye_cdf += montant
+            else:  # USD
+                total_deja_paye_cdf += montant * taux
+
+        # Reste à payer (en CDF)
+        reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
+        reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # Nombre de jours (si pas déjà dans le modèle)
+        date_entree = hosp.date_entree or now
+        nombre_jours = (now - date_entree).days + 1 if hosp.statut == 'EN_COURS' else getattr(hosp, 'nombre_jours', 0)
+
+        hospitalisations.append({
+            'hosp': hosp,
+            'cout_total_usd': cout_total_usd,
+            'cout_total_cdf': cout_total_cdf,
+            'reste_a_payer_usd': reste_a_payer_usd,
+            'reste_a_payer_cdf': reste_a_payer_cdf,
+            'nombre_jours': nombre_jours,
+        })
+
     return render(request, 'back-end/hospitalisation/liste_hospitalisations.html', {
-        'hospitalisations': hospitalisations,
-        'fonctionKey': fonctionKey
+        'hospitalisations': hospitalisations,  # liste de dicts, pas queryset brut
+        'fonctionKey': fonctionKey,
+        'taux': taux,
     })
+    
 #
 # =====================================================================================================
 # PAIEMENT DE L'HOSPITALISATION

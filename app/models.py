@@ -213,7 +213,7 @@ class Paiement(models.Model):
         ('PHARMACIE', 'Pharmacie'), ('EXAMEN_EXTERNE', 'Examen Externe'),
         ('ENTREPRISE', 'Paiement Entreprise'), ('HOSPITALISATION', 'Hospitalisation')
     ]
-    
+
     # Relations
     bloc_op = models.ForeignKey('BlocOperatoire', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, null=True, blank=True)
@@ -225,7 +225,7 @@ class Paiement(models.Model):
     entreprise = models.ForeignKey('Entreprise', on_delete=models.CASCADE, null=True, blank=True, related_name='paiements')
     hospitalisation = models.ForeignKey('Hospitalisation', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
     compte_rendu = models.OneToOneField('CompteRenduAccouchement', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiement')
-    clientEx     = models.ForeignKey(ClientExterne , on_delete= models.SET_NULL , null = True) 
+    clientEx = models.ForeignKey('ClientExterne', on_delete=models.SET_NULL, null=True, blank=True)
 
     # Champs de paiement
     service = models.CharField(max_length=20, choices=SERVICES)
@@ -234,8 +234,18 @@ class Paiement(models.Model):
     devise = models.CharField(max_length=3, choices=CURRENCY, default='CDF')
     date_paiement = models.DateTimeField(default=timezone.now)
     caissier = models.ForeignKey(User, on_delete=models.PROTECT)
-    reste_a_payer = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name="Dette / Reste à payer")
-    hopital = models.ForeignKey(Hopital , on_delete = models.SET_NULL, null = True , related_name="paiement_hopital")
+    reste_a_payer = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Dette / Reste à payer"
+    )
+    hopital = models.ForeignKey(
+        'Hopital',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="paiement_hopital"
+    )
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -258,8 +268,11 @@ class Paiement(models.Model):
             paiements_existants = self.hospitalisation.paiements.exclude(pk=self.pk)
             total_deja_verse = paiements_existants.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
             total_deja_reduit = paiements_existants.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
-            
-            self.reste_a_payer = max(0, total_due - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse))
+
+            self.reste_a_payer = max(
+                0,
+                total_due - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse)
+            )
             self.hospitalisation.est_payee = (self.reste_a_payer <= 0)
             self.hospitalisation.save()
 
@@ -268,17 +281,52 @@ class Paiement(models.Model):
             tous_paiements = self.session.paiements.exclude(pk=self.pk)
             total_deja_verse = tous_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
             total_deja_reduit = tous_paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
-            self.reste_a_payer = max(0, self.session.total_a_payer - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse))
+
+            self.reste_a_payer = max(
+                0,
+                self.session.total_a_payer - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse)
+            )
             self.session.est_payee = (self.reste_a_payer <= 0)
             self.session.save()
 
         # --- LOGIQUE EXAMEN EXTERNE ---
         if self.demande_examen_externe:
-            total_due = self.demande_examen_externe.total_a_payer
+            from .models import ConfigurationHopital
+
+            # Récupérer le taux
+            config = ConfigurationHopital.objects.first()
+            taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
+            if not taux or taux == 0:
+                taux = Decimal('2300.00')
+
+            # total_a_payer est en USD, on le convertit en CDF
+            total_due_cdf = (self.demande_examen_externe.total_a_payer * taux)
+
+            # Paiements existants (hors celui en cours)
             paiements_existants = self.demande_examen_externe.paiements.exclude(pk=self.pk)
-            total_deja_verse = paiements_existants.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
-            self.reste_a_payer = max(0, total_due - (total_deja_verse + self.montant_verse))
-            if self.reste_a_payer <= 0:
+
+            # Convertir tous les paiements existants en CDF
+            total_deja_verse_cdf = Decimal('0')
+            for p in paiements_existants:
+                if p.devise == 'CDF':
+                    total_deja_verse_cdf += p.montant_verse or Decimal('0')
+                else:  # USD
+                    total_deja_verse_cdf += (p.montant_verse or Decimal('0')) * taux
+
+            # Convertir le paiement actuel en CDF
+            if self.devise == 'CDF':
+                montant_verse_cdf = self.montant_verse or Decimal('0')
+            else:  # USD
+                montant_verse_cdf = (self.montant_verse or Decimal('0')) * taux
+
+            # Calcul du reste à payer en CDF
+            self.reste_a_payer = max(
+                Decimal('0'),
+                total_due_cdf - (total_deja_verse_cdf + montant_verse_cdf)
+            )
+
+            # Si le reste est <= 0, la demande est considérée comme payée
+            if self.reste_a_payer <= Decimal('1'):  # tolérance 1 CDF
                 self.demande_examen_externe.statut = 'PAYE'
                 self.demande_examen_externe.save()
 
@@ -296,7 +344,10 @@ class Paiement(models.Model):
                 taux = ConfigurationHopital.get_taux()
                 montant_usd = self.montant_verse / taux
             total_a_deduire = montant_usd + self.montant_reduction
-            self.entreprise.dette_mensuelle = max(Decimal('0.00'), self.entreprise.dette_mensuelle - total_a_deduire)
+            self.entreprise.dette_mensuelle = max(
+                Decimal('0.00'),
+                self.entreprise.dette_mensuelle - total_a_deduire
+            )
             self.entreprise.save()
 
         super().save(*args, **kwargs)
@@ -307,7 +358,6 @@ class Paiement(models.Model):
                 paiement=self,
                 numero_facture=f"FAC-{timezone.now().strftime('%y%m%d')}-{self.id}"
             )
-
 
 
 
@@ -1164,20 +1214,23 @@ class FicheAccouchement(models.Model):
 
 class DemandeExamenExterne(models.Model):
     STATUT_CHOICES = [('EN_ATTENTE', 'En attente'), ('PAYE', 'Payé'), ('TERMINE', 'Terminé')]
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
-    
-    # On lie à la personne de passage, pas au Patient du système
-    client = models.ForeignKey(ClientExterne, on_delete=models.CASCADE, related_name='demandes')
+    hopital = models.ForeignKey(Hopital, on_delete=models.SET_NULL, null=True)
+
+    client = models.ForeignKey(
+        ClientExterne,
+        on_delete=models.CASCADE,
+        related_name='demandes'
+    )
     prestations = models.ManyToManyField('Prestation', verbose_name="Examens choisis")
-    
+
+    total_cdf = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_a_payer = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
     statut = models.CharField(max_length=15, choices=STATUT_CHOICES, default='EN_ATTENTE')
     date_demande = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Demande pour {self.client.noms} - {self.statut}"
-    
-
 
 
 

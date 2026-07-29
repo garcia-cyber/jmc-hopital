@@ -4,28 +4,101 @@
     <meta charset="utf-8">
     <title>Rapport Médical - {{ demande.client.noms }}</title>
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.5; }
-        
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            padding: 40px;
+            color: #333;
+            line-height: 1.5;
+        }
+
         /* En-tête de l'hôpital */
-        .hospital-header { display: flex; justify-content: space-between; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; margin-bottom: 30px; }
-        .hospital-info h1 { margin: 0; color: #2c3e50; font-size: 24px; text-transform: uppercase; }
-        .doc-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; text-decoration: underline; }
+        .hospital-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .hospital-info h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+        .doc-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-decoration: underline;
+        }
 
         /* Infos patient */
-        .patient-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 30px; }
-        
+        .patient-box {
+            background: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
         /* Tableaux */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th { background-color: #2c3e50; color: white; padding: 10px; text-align: left; }
-        td { border: 1px solid #ddd; padding: 10px; }
-        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
         /* Résultats */
-        .result-item { margin-bottom: 20px; page-break-inside: avoid; }
-        .exam-name { font-weight: bold; color: #2c3e50; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-        
+        .result-item {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        .exam-name {
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        /* Récap financier */
+        .finance-summary {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .finance-line {
+            margin-bottom: 6px;
+        }
+        .reste-highlight {
+            font-weight: bold;
+            color: #b82c39;
+            font-size: 1.1rem;
+        }
+
         /* Print */
-        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #777; }
-        @media print { .no-print { display: none; } }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -77,6 +150,27 @@
     {% empty %}
         <p>En attente des résultats du laboratoire.</p>
     {% endfor %}
+
+    <!-- Récapitulatif financier -->
+    <div class="finance-summary">
+        <div class="finance-line">
+            <strong>Total des examens :</strong>
+            {{ total_usd }} USD ({{ total_cdf|floatformat:0 }} CDF)
+        </div>
+        <div class="finance-line">
+            <strong>Déjà payé :</strong>
+            {{ deja_paye_usd }} USD ({{ deja_paye_cdf|floatformat:0 }} CDF)
+        </div>
+        <div class="finance-line">
+            <strong>Reste à payer :</strong>
+            <span class="reste-highlight">
+                {{ reste_a_payer_usd }} USD ({{ reste_a_payer_cdf|floatformat:0 }} CDF)
+            </span>
+        </div>
+        <div class="finance-line" style="font-size: 0.85rem; color: #666;">
+            Taux utilisé : 1 USD = {{ taux }} CDF
+        </div>
+    </div>
 
     <div class="footer">
         <p>Ce document est une pièce officielle de l'hôpital. Cachet et signature :</p>

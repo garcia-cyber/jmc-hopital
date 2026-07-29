@@ -275,7 +275,11 @@ urlpatterns =[
     path('liste-examens/', views.liste_examens_technicien, name='liste_examens_technicien'),
     path('saisir-rapport/<int:demande_id>/<int:prestation_id>/', views.saisir_rapport, name='saisir_rapport'),
     path('historique-technicien/', views.historique_examen_externe_technicien, name='historique_examen_externe_technicien'),
-    path('encaisser-examen-externe/<int:demande_id>/', views.encaisser_examen_externe, name='encaisser_examen'),
+    path(
+    'encaisser-examen-externe/<int:demande_id>/',
+    views.encaisser_examen_externe,
+    name='encaisser_examen_externe'
+),
     path('liste-facturation/', views.liste_facturation, name='liste_facturation'),
     path('imprimer-rapport/<int:demande_id>/', views.imprimer_rapport_complet, name='imprimer_rapport_complet'),
     path('client/detail/<int:client_id>/', views.detail_client_externe, name='detail_client_externe'),

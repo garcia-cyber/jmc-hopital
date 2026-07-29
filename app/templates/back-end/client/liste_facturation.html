@@ -7,74 +7,176 @@
     <title>Liste des Facturations</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .badge-info { background-color: #17a2b8; color: #fff; margin-right: 4px; font-size: 0.75rem; }
-        .fin-val { display: block; font-size: 0.85rem; }
-        .text-reduction { color: #dc3545; }
-        .text-verse { color: #28a745; }
-        .btn-print { margin-top: 8px; font-size: 0.75rem; display: inline-block; }
+        .page-title {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .info-bar {
+            background: #f8f9fa;
+            border-left: 5px solid #0d6efd;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .table-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .table thead {
+            background-color: #f8f9fa;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        .table thead th {
+            border-top: none;
+            color: #6c757d;
+            font-weight: 700;
+            padding: 16px 12px;
+        }
+        .table tbody td {
+            padding: 14px 12px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .badge-examen {
+            margin: 2px 0;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+        .badge-labo { background-color: #2c3e50; }
+        .badge-radio { background-color: #e67e22; }
+        .badge-echo { background-color: #27ae60; }
+        .badge-default { background-color: #6c757d; }
+
+        .badge-statut {
+            font-size: 0.75rem;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-solde { background-color: #d4edda; color: #155724; }
+        .badge-reste { background-color: #fff3cd; color: #856404; }
+
+        .montant-principal {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .montant-secondaire {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .text-reduction {
+            color: #dc3545;
+        }
+        .text-verse {
+            color: #28a745;
+        }
+        .action-btn {
+            transition: all 0.3s;
+            border-radius: 50px !important;
+            padding: 6px 14px !important;
+            margin: 2px;
+            font-size: 0.8rem;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <h3 class="page-title">Gestion des encaissements</h3>
-                
-                <div class="card">
-                    <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="page-title mb-0">Gestion des encaissements</h3>
+                </div>
+
+                <div class="info-bar">
+                    <strong>Taux utilisé :</strong> 1 USD = {{ taux|default:"2300" }} CDF
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Patient</th>
+                                        <th class="pl-3">Patient</th>
                                         <th>Examens</th>
-                                        <th>Détails Financiers</th>
-                                        <th>État Financier</th>
-                                        <th>Actions</th>
+                                        <th>Total</th>
+                                        <th>Payé</th>
+                                        <th>Reste à payer</th>
+                                        <th>État</th>
+                                        <th class="text-right pr-3">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for d in demandes %}
+                                    {% for d in demandes_data %}
                                     <tr>
-                                        <td><strong>{{ d.client.noms }}</strong><br><small>#{{ d.id }}</small></td>
+                                        <td class="pl-3">
+                                            <div class="font-weight-bold">{{ d.demande.client.noms }}</div>
+                                            <small class="text-muted">#{{ d.demande.id }}</small>
+                                        </td>
                                         <td>
-                                            {% for p in d.prestations.all %}
-                                                <span class="badge badge-info">{{ p.libelle }}</span>
+                                            {% for p in d.demande.prestations.all %}
+                                                <span class="badge-examen badge-{% if p.categorie == 'LABO' %}labo{% elif p.categorie == 'RADIO' %}radio{% elif p.categorie == 'ECHO' %}echo{% else %}default{% endif %}">
+                                                    {{ p.libelle }}
+                                                </span>
                                             {% endfor %}
                                         </td>
                                         <td>
-                                            <span class="fin-val">Total: <strong>{{ d.total_a_payer }} $</strong></span>
-                                            <span class="fin-val text-reduction">Réduc: {{ d.total_reduit|floatformat:2 }} $</span>
-                                            <span class="fin-val text-verse">Versé: {{ d.total_verse|floatformat:2 }} $</span>
+                                            <div class="montant-principal">{{ d.total_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.total_cdf|floatformat:0 }} CDF</div>
                                         </td>
                                         <td>
-                                            {% if d.reste_usd <= 0 %}
-                                                <span class="badge badge-success">Soldé</span>
+                                            <div class="montant-principal text-verse">{{ d.deja_paye_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.deja_paye_cdf|floatformat:0 }} CDF</div>
+                                        </td>
+                                        <td>
+                                            <div class="montant-principal text-danger">{{ d.reste_a_payer_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.reste_a_payer_cdf|floatformat:0 }} CDF</div>
+                                        </td>
+                                        <td>
+                                            {% if d.reste_a_payer_cdf <= 1 %}
+                                                <span class="badge-statut badge-solde">Soldé</span>
                                             {% else %}
-                                                <span class="badge badge-warning">
-                                                    {{ d.reste_usd|floatformat:2 }} $ 
-                                                    <br>
-                                                    (<small>{% widthratio d.reste_usd 1 taux %} CDF</small>)
+                                                <span class="badge-statut badge-reste">
+                                                    {{ d.reste_a_payer_usd }} USD
                                                 </span>
                                             {% endif %}
-                                            
-                                            <br>
-                                            <a href="{% url 'imprimer_rapport_complet' d.id %}" target="_blank" class="btn btn-sm btn-info btn-print">
-                                                <i class="fa fa-print"></i> Imprimer Reçu
-                                            </a>
                                         </td>
-                                        <td>
-                                            {% if d.reste_usd > 0 %}
-                                                <a href="{% url 'encaisser_examen' d.id %}" class="btn btn-sm btn-success">
+                                        <td class="text-right pr-3">
+                                            <a href="{% url 'imprimer_rapport_complet' d.demande.id %}" target="_blank" class="btn btn-sm bg-info-light action-btn">
+                                                <i class="fa fa-print"></i> Reçu
+                                            </a>
+
+                                            {% if d.reste_a_payer_cdf > 1 %}
+                                                <a href="{% url 'encaisser_examen_externe' d.demande.id %}" class="btn btn-sm bg-success-light action-btn">
                                                     <i class="fa fa-money-bill"></i> Payer
                                                 </a>
                                             {% else %}
                                                 <span class="text-muted">Finalisé</span>
                                             {% endif %}
                                         </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">Aucune facture trouvée.</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -85,6 +187,7 @@
             </div>
         </div>
     </div>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

@@ -7,17 +7,59 @@
     <title>Encaissement - {{ demande.client.noms }}</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .payment-card { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: none; }
-        .info-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
-        .badge-info { background-color: #17a2b8; color: #fff; margin-right: 5px; }
-        .live-preview { font-weight: bold; color: #28a745; }
+        .payment-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: none;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .badge-info {
+            background-color: #17a2b8;
+            color: #fff;
+            margin-right: 5px;
+        }
+        .live-preview {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .reste-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .reste-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .reste-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #b82c39;
+        }
+        .reste-secondaire {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .equivalent-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
                 <div class="page-header">
@@ -31,22 +73,38 @@
                                 <div class="info-box mb-4">
                                     <h5 class="text-primary">Détails de la demande</h5>
                                     <p class="mb-1"><strong>Patient :</strong> {{ demande.client.noms }}</p>
-                                    <p class="mb-1"><strong>Examens :</strong> 
+                                    <p class="mb-1">
+                                        <strong>Examens :</strong>
                                         {% for p in prestations %}
                                             <span class="badge badge-info">{{ p.libelle }}</span>
                                         {% endfor %}
                                     </p>
-                                    <p class="mb-1"><strong>Total à payer :</strong> {{ demande.total_a_payer }} USD</p>
-                                    <p class="mb-0"><strong>Reste à payer :</strong> <span id="resteSpan" data-value="{{ reste_a_payer }}">{{ reste_a_payer|floatformat:2 }}</span> USD</p>
+                                    <p class="mb-1">
+                                        <strong>Total à payer :</strong>
+                                        {{ demande.total_a_payer }} USD
+                                        ({{ demande.total_cdf|floatformat:0 }} CDF)
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Reste à payer :</strong><br>
+                                        <span class="reste-value">{{ reste_a_payer_usd|floatformat:2 }} USD</span><br>
+                                        <small class="reste-secondaire">{{ reste_a_payer_cdf|floatformat:0 }} CDF</small>
+                                    </p>
                                 </div>
 
-                                {% if error %}
-                                    <div class="alert alert-danger">{{ error }}</div>
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                            {{ message }}
+                                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                    {% endfor %}
                                 {% endif %}
 
                                 <form method="POST" id="paymentForm">
                                     {% csrf_token %}
-                                    
+
                                     <div class="form-group">
                                         <label>Taux du jour</label>
                                         <input type="text" class="form-control" value="1 USD = {{ taux }} CDF" disabled>
@@ -55,24 +113,24 @@
                                     <div class="form-group">
                                         <label>Devise de paiement</label>
                                         <select name="devise" id="devise" class="form-control" onchange="updatePreview()">
-                                            <option value="USD">USD</option>
                                             <option value="CDF">CDF</option>
+                                            <option value="USD">USD</option>
                                         </select>
                                     </div>
 
                                     <div class="form-group">
                                         <label>Montant versé</label>
-                                        <input type="number" step="0.01" name="montant_verse" id="montant_verse" class="form-control" required placeholder="Ex: 50.00" oninput="updatePreview()">
-                                        <small class="text-muted">Équivalent en USD : <span id="previewUSD" class="live-preview">0.00</span> $</small>
+                                        <input type="number" step="0.01" name="montant_verse" id="montant_verse" class="form-control" required placeholder="Ex: 50.00">
+                                        <small id="equivalent" class="equivalent-text"></small>
                                     </div>
 
                                     <div class="form-group">
                                         <label>Réduction (en USD)</label>
-                                        <input type="number" step="0.01" name="montant_reduction" id="montant_reduction" class="form-control" value="0.00" oninput="updatePreview()">
+                                        <input type="number" step="0.01" name="montant_reduction" id="montant_reduction" class="form-control" value="0.00">
                                     </div>
 
                                     <div class="text-right mt-4">
-                                        <a href="{% url 'liste_facturation' %}" class="btn btn-secondary">Annuler</a>
+                                        <a href="{% url 'liste_demandes_externes' %}" class="btn btn-secondary">Annuler</a>
                                         <button type="submit" class="btn btn-success px-4">
                                             <i class="fa fa-money-bill-wave"></i> Encaisser
                                         </button>
@@ -87,38 +145,67 @@
     </div>
 
     {% include 'back-end/includes/js.html' %}
-    
+
     <script>
-        const taux = {{ taux|stringformat:"f" }};
-        const reste = parseFloat(document.getElementById('resteSpan').dataset.value);
+        const TAUX = parseFloat('{{ taux|stringformat:"f" }}'.replace(',', '.'));
+        const RESTE_CDF = parseFloat('{{ reste_a_payer_cdf|floatformat:"0" }}'.replace(',', '.'));
+        const RESTE_USD = parseFloat('{{ reste_a_payer_usd|floatformat:"2" }}'.replace(',', '.'));
 
         function updatePreview() {
-            let montantSaisi = parseFloat(document.getElementById('montant_verse').value) || 0;
-            let devise = document.getElementById('devise').value;
-            let reduction = parseFloat(document.getElementById('montant_reduction').value) || 0;
-            
-            let enUSD = (devise === 'CDF') ? (montantSaisi / taux) : montantSaisi;
-            document.getElementById('previewUSD').innerText = enUSD.toFixed(2);
-            
-            // Visual feedback
-            if ((enUSD + reduction) > (reste + 0.01)) {
-                document.getElementById('previewUSD').style.color = 'red';
+            const montantSaisi = parseFloat(document.getElementById('montant_verse').value) || 0;
+            const devise = document.getElementById('devise').value;
+            const reduction = parseFloat(document.getElementById('montant_reduction').value) || 0;
+            const equivalentEl = document.getElementById('equivalent');
+
+            if (!montantSaisi) {
+                equivalentEl.textContent = '';
+                return;
+            }
+
+            let montantEnCDF, montantEnUSD;
+
+            if (devise === 'CDF') {
+                montantEnCDF = montantSaisi;
+                montantEnUSD = montantSaisi / TAUX;
+                equivalentEl.textContent = `Équivalent : ${montantEnUSD.toFixed(2)} USD`;
             } else {
-                document.getElementById('previewUSD').style.color = '#28a745';
+                montantEnUSD = montantSaisi;
+                montantEnCDF = montantSaisi * TAUX;
+                equivalentEl.textContent = `Équivalent : ${Math.round(montantEnCDF)} CDF`;
+            }
+
+            // Vérification visuelle (en CDF)
+            if (montantEnCDF > (RESTE_CDF + 1)) {
+                equivalentEl.style.color = 'red';
+            } else {
+                equivalentEl.style.color = '#6c757d';
             }
         }
 
         document.getElementById('paymentForm').addEventListener('submit', function(e) {
-            let montantSaisi = parseFloat(document.getElementById('montant_verse').value) || 0;
-            let devise = document.getElementById('devise').value;
-            let reduction = parseFloat(document.getElementById('montant_reduction').value) || 0;
-            let enUSD = (devise === 'CDF') ? (montantSaisi / taux) : montantSaisi;
-            
-            if ((enUSD + reduction) > (reste + 0.01)) {
-                alert("Erreur : Le montant total dépasse le reste à payer !");
+            const montantSaisi = parseFloat(document.getElementById('montant_verse').value) || 0;
+            const devise = document.getElementById('devise').value;
+            const reduction = parseFloat(document.getElementById('montant_reduction').value) || 0;
+
+            let montantEnCDF, montantEnUSD;
+
+            if (devise === 'CDF') {
+                montantEnCDF = montantSaisi;
+                montantEnUSD = montantSaisi / TAUX;
+            } else {
+                montantEnUSD = montantSaisi;
+                montantEnCDF = montantSaisi * TAUX;
+            }
+
+            // Tolérance 1 CDF
+            if (montantEnCDF > (RESTE_CDF + 1)) {
+                alert(`Erreur : Le montant total dépasse le reste à payer (${RESTE_CDF.toFixed(0)} CDF / ${RESTE_USD.toFixed(2)} USD).`);
                 e.preventDefault();
             }
         });
+
+        // Mettre à jour l'équivalence quand on tape le montant
+        document.getElementById('montant_verse').addEventListener('input', updatePreview);
     </script>
 </body>
 </html>

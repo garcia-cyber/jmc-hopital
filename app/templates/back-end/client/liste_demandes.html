@@ -7,31 +7,113 @@
     <title>Liste des Demandes - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .table-card { border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        .table thead { background-color: #f8f9fa; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
-        .table thead th { border-top: none; color: #6c757d; font-weight: 700; padding: 20px; }
-        .table tbody td { padding: 20px; vertical-align: middle; }
-        
-        .badge-examen { margin: 3px; display: inline-block; padding: 6px 12px; border-radius: 4px; font-weight: 500; font-size: 0.75rem; color: #ffffff; }
+        .page-title {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .info-bar {
+            background: #f8f9fa;
+            border-left: 5px solid #0d6efd;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .table-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .table thead {
+            background-color: #f8f9fa;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        .table thead th {
+            border-top: none;
+            color: #6c757d;
+            font-weight: 700;
+            padding: 16px 12px;
+        }
+        .table tbody td {
+            padding: 14px 12px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .badge-examen {
+            margin: 2px 0;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
         .badge-labo { background-color: #2c3e50; }
         .badge-radio { background-color: #e67e22; }
         .badge-echo { background-color: #27ae60; }
-        
-        .search-container { margin-bottom: 20px; }
-        .search-box { border-radius: 50px; padding: 10px 20px; border: 1px solid #ddd; width: 300px; outline: none; }
-        .action-btn { transition: all 0.3s; border-radius: 50px !important; padding: 5px 15px !important; margin: 2px; }
-        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .badge-default { background-color: #6c757d; }
+
+        .badge-statut {
+            font-size: 0.75rem;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-payee { background-color: #d4edda; color: #155724; }
+        .badge-attente { background-color: #fff3cd; color: #856404; }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .search-box {
+            border-radius: 50px;
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 320px;
+            outline: none;
+        }
+        .action-btn {
+            transition: all 0.3s;
+            border-radius: 50px !important;
+            padding: 6px 14px !important;
+            margin: 2px;
+            font-size: 0.8rem;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .montant-principal {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .montant-secondaire {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="page-header">
-                    <h3 class="page-title">Demandes d'Examens Externes</h3>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="page-title mb-0">Demandes d'Examens Externes</h3>
+                </div>
+
+                <div class="info-bar">
+                    <strong>Taux utilisé :</strong> 1 USD = {{ taux|default:"2300" }} CDF
                 </div>
 
                 <div class="search-container">
@@ -44,50 +126,69 @@
                             <table class="table table-hover mb-0" id="demandeTable">
                                 <thead>
                                     <tr>
-                                        <th class="pl-4">ID</th>
+                                        <th class="pl-3">ID</th>
                                         <th>Patient</th>
                                         <th>Date</th>
                                         <th>Examens</th>
                                         <th>Total</th>
+                                        <th>Payé</th>
+                                        <th>Reste à payer</th>
                                         <th>Statut</th>
-                                        <th class="text-right pr-4">Actions</th>
+                                        <th class="text-right pr-3">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for demande in demandes %}
+                                    {% for d in demandes_data %}
                                     <tr>
-                                        <td class="pl-4 font-weight-bold text-primary">#{{ demande.id }}</td>
-                                        <td><div class="font-weight-bold">{{ demande.client.noms }}</div></td>
-                                        <td class="text-muted">{{ demande.date_demande|date:"d M Y" }}<br><small>{{ demande.date_demande|date:"H:i" }}</small></td>
+                                        <td class="pl-3 font-weight-bold text-primary">#{{ d.demande.id }}</td>
                                         <td>
-                                            {% for p in demande.prestations.all %}
+                                            <div class="font-weight-bold">{{ d.demande.client.noms }}</div>
+                                            <small class="text-muted">{{ d.demande.client.contact|default:"" }}</small>
+                                        </td>
+                                        <td class="text-muted">
+                                            {{ d.demande.date_demande|date:"d M Y" }}<br>
+                                            <small>{{ d.demande.date_demande|date:"H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            {% for p in d.demande.prestations.all %}
                                                 <span class="badge-examen badge-{% if p.categorie == 'LABO' %}labo{% elif p.categorie == 'RADIO' %}radio{% elif p.categorie == 'ECHO' %}echo{% else %}default{% endif %}">
                                                     {{ p.libelle }}
                                                 </span>
                                             {% endfor %}
                                         </td>
-                                        <td><span class="font-weight-bold text-success">{{ demande.total_a_payer }} $</span></td>
                                         <td>
-                                            {% if demande.statut == 'PAYE' %}
-                                                <span class="badge badge-success">Payé</span>
+                                            <div class="montant-principal">{{ d.total_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.total_cdf|floatformat:0 }} CDF</div>
+                                        </td>
+                                        <td>
+                                            <div class="montant-principal">{{ d.deja_paye_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.deja_paye_cdf|floatformat:0 }} CDF</div>
+                                        </td>
+                                        <td>
+                                            <div class="montant-principal text-danger">{{ d.reste_a_payer_usd }} USD</div>
+                                            <div class="montant-secondaire">{{ d.reste_a_payer_cdf|floatformat:0 }} CDF</div>
+                                        </td>
+                                        <td>
+                                            {% if d.demande.statut == 'PAYE' %}
+                                                <span class="badge-statut badge-payee">Payé</span>
                                             {% else %}
-                                                <span class="badge badge-warning">En attente</span>
+                                                <span class="badge-statut badge-attente">En attente</span>
                                             {% endif %}
                                         </td>
-                                        <td class="text-right pr-4">
+                                        <td class="text-right pr-3">
                                             <a href="#" class="btn btn-sm bg-primary-light action-btn">
                                                 <i class="fa fa-eye"></i>
                                             </a>
-                                            {% if demande.statut != 'PAYE' %}
-                                            <a href="{% url 'encaisser_examen' demande.id %}" class="btn btn-sm bg-success-light action-btn">
-                                                <i class="fa fa-money-bill"></i> Payer
-                                            </a>
+                                            {% if d.demande.statut != 'PAYE' %}
+                                                <a href="{% url 'encaisser_examen_externe' d.demande.id %}" class="btn btn-sm bg-success-light action-btn">
+                                                    <i class="fa fa-money-bill"></i> Payer
+                                                </a>
                                             {% endif %}
                                         </td>
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="7" class="text-center py-4">Aucune demande trouvée.</td>
+                                        <td colspan="9" class="text-center py-4 text-muted">Aucune demande trouvée.</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -106,7 +207,7 @@
             $("#searchInput").on("keyup", function() {
                 var value = $(this).val().toLowerCase();
                 $("#demandeTable tbody tr").filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
                 });
             });
         });

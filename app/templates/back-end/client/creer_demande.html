@@ -7,30 +7,98 @@
     <title>Sélection Examens - {{ client.noms }}</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .category-box { border: 1px solid #dee2e6; padding: 15px; margin-bottom: 20px; border-radius: 8px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .category-title { font-weight: 700; color: #2c3e50; border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-bottom: 15px; display: block; text-transform: uppercase; font-size: 0.9rem; }
-        .scroll-list { max-height: 350px; overflow-y: auto; padding-right: 10px; }
-        .checkbox-item { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
-        .search-input { border: 1px solid #ced4da; border-radius: 4px; padding: 8px; font-size: 0.85rem; width: 100%; margin-bottom: 10px; }
-        .price-tag { color: #28a745; font-weight: bold; float: right; }
-        .total-box { background: #e9ecef; padding: 15px; border-radius: 8px; font-weight: bold; text-align: right; margin-top: 20px; }
-        .btn-more { color: #007bff; cursor: pointer; text-decoration: underline; font-size: 0.85rem; }
+        .category-box {
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .category-title {
+            font-weight: 700;
+            color: #2c3e50;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            display: block;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        .scroll-list {
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .checkbox-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .search-input {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.85rem;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .price-tag {
+            color: #28a745;
+            font-weight: bold;
+            float: right;
+        }
+        .total-box {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 20px;
+        }
+        .btn-more {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.85rem;
+        }
+        .info-bar {
+            background: #f8f9fa;
+            border-left: 5px solid #0d6efd;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .total-cdf {
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+        .total-usd {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
                 <div class="page-header">
                     <div class="row align-items-center">
                         <div class="col">
                             <h3 class="page-title">Nouvelle demande d'examens</h3>
-                            <p class="text-muted">Patient : <strong>{{ client.noms }}</strong> | Rôle : {{ fonctionKey }}</p>
+                            <p class="text-muted">
+                                Patient : <strong>{{ client.noms }}</strong> | Rôle : {{ fonctionKey }}
+                            </p>
                         </div>
                     </div>
+                </div>
+
+                <div class="info-bar">
+                    <strong>Taux utilisé :</strong> 1 USD = {{ taux|default:"2300" }} CDF
                 </div>
 
                 <form method="POST" id="examenForm">
@@ -42,10 +110,10 @@
                                 <input type="text" class="search-input" placeholder="Rechercher labo...">
                                 <div class="scroll-list">
                                     {% for p in prestations_labo %}
-                                        <div class="checkbox-item" style="display:none;">
+                                        <div class="checkbox-item">
                                             <label class="w-100">
                                                 <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
-                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix|floatformat:0 }} CDF</span>
                                             </label>
                                         </div>
                                     {% endfor %}
@@ -59,10 +127,10 @@
                                 <input type="text" class="search-input" placeholder="Rechercher radio...">
                                 <div class="scroll-list">
                                     {% for p in prestations_radio %}
-                                        <div class="checkbox-item" style="display:none;">
+                                        <div class="checkbox-item">
                                             <label class="w-100">
                                                 <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
-                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix|floatformat:0 }} CDF</span>
                                             </label>
                                         </div>
                                     {% endfor %}
@@ -76,10 +144,10 @@
                                 <input type="text" class="search-input" placeholder="Rechercher écho...">
                                 <div class="scroll-list">
                                     {% for p in prestations_echo %}
-                                        <div class="checkbox-item" style="display:none;">
+                                        <div class="checkbox-item">
                                             <label class="w-100">
                                                 <input type="checkbox" name="prestations" value="{{ p.id }}" data-prix="{{ p.prix }}" class="examen-checkbox"> 
-                                                {{ p.libelle }} <span class="price-tag">{{ p.prix }} $</span>
+                                                {{ p.libelle }} <span class="price-tag">{{ p.prix|floatformat:0 }} CDF</span>
                                             </label>
                                         </div>
                                     {% endfor %}
@@ -90,7 +158,12 @@
 
                     <div class="row">
                         <div class="col-md-12 total-box">
-                            <h4>Total à payer : <span id="total-display" class="text-primary">0.00</span> $</h4>
+                            <div class="total-cdf">
+                                Total à payer : <span id="total-display-cdf" class="text-primary">0</span> CDF
+                            </div>
+                            <div class="total-usd">
+                                (~ <span id="total-display-usd">0.00</span> USD)
+                            </div>
                         </div>
                     </div>
 
@@ -106,49 +179,85 @@
     {% include 'back-end/includes/js.html' %}
 
     <script>
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function() {
             const LIMIT = 5;
+            const TAUX = parseFloat('{{ taux|default:"2300" }}'.replace(',', '.'));
 
-            // Fonction pagination
+            // Pagination
             function applyPagination() {
-                $('.category-box').each(function() {
-                    let items = $(this).find('.checkbox-item');
-                    items.hide().slice(0, LIMIT).show();
-                    
-                    if (items.length > LIMIT && $(this).find('.btn-more').length === 0) {
-                        $(this).append('<div class="btn-more">Voir plus...</div>');
+                document.querySelectorAll('.category-box').forEach(function(box) {
+                    const items = box.querySelectorAll('.checkbox-item');
+                    items.forEach((item, index) => {
+                        item.style.display = index < LIMIT ? '' : 'none';
+                    });
+
+                    if (items.length > LIMIT && !box.querySelector('.btn-more')) {
+                        const more = document.createElement('div');
+                        more.className = 'btn-more';
+                        more.textContent = 'Voir plus...';
+                        box.appendChild(more);
                     }
                 });
             }
 
             applyPagination();
 
-            // Clic Voir plus
-            $(document).on('click', '.btn-more', function() {
-                $(this).closest('.category-box').find('.checkbox-item').show();
-                $(this).hide();
+            // Voir plus
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('btn-more')) {
+                    const box = e.target.closest('.category-box');
+                    if (box) {
+                        box.querySelectorAll('.checkbox-item').forEach(item => {
+                            item.style.display = '';
+                        });
+                        e.target.style.display = 'none';
+                    }
+                }
             });
 
             // Recherche
-            $('.search-input').on('keyup', function() {
-                var value = $(this).val().toLowerCase();
-                var box = $(this).closest('.category-box');
-                box.find('.checkbox-item').filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+            document.querySelectorAll('.search-input').forEach(function(input) {
+                input.addEventListener('keyup', function() {
+                    const value = this.value.toLowerCase();
+                    const box = this.closest('.category-box');
+                    if (!box) return;
+
+                    box.querySelectorAll('.checkbox-item').forEach(function(item) {
+                        const text = item.textContent.toLowerCase();
+                        item.style.display = text.indexOf(value) > -1 ? '' : 'none';
+                    });
+
+                    const btnMore = box.querySelector('.btn-more');
+                    if (btnMore) {
+                        btnMore.style.display = value !== '' ? 'none' : '';
+                    }
                 });
-                
-                if (value !== "") { box.find('.btn-more').hide(); }
-                else { box.find('.btn-more').show(); applyPagination(); }
             });
 
-            // Calcul Total
-            $('.examen-checkbox').on('change', function() {
-                let total = 0;
-                $('.examen-checkbox:checked').each(function() {
-                    total += parseFloat($(this).attr('data-prix')) || 0;
+            // Calcul du total
+            function updateTotal() {
+                let totalCdf = 0;
+                document.querySelectorAll('.examen-checkbox:checked').forEach(function(cb) {
+                    const prix = parseFloat(cb.getAttribute('data-prix'));
+                    if (!isNaN(prix)) {
+                        totalCdf += prix;
+                    }
                 });
-                $('#total-display').text(total.toFixed(2));
+
+                const totalUsd = TAUX ? totalCdf / TAUX : 0;
+
+                document.getElementById('total-display-cdf').textContent = Math.round(totalCdf).toString();
+                document.getElementById('total-display-usd').textContent = totalUsd.toFixed(2);
+            }
+
+            document.getElementById('examenForm').addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('examen-checkbox')) {
+                    updateTotal();
+                }
             });
+
+            // Calcul initial (au cas où des cases sont pré-cochées)
+            updateTotal();
         });
     </script>
 </body>

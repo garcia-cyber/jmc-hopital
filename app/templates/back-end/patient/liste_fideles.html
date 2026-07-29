@@ -7,6 +7,54 @@
     <title>Patients Fidèles | JMC</title>
     {% include 'back-end/includes/css.html' %}
     <style>
+        .page-title {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .info-bar {
+            background: #f8f9fa;
+            border-left: 5px solid #0d6efd;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .table thead th {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-reste {
+            font-size: 0.85rem;
+            padding: 6px 10px;
+            border-radius: 999px;
+        }
+        .modal-header {
+            border-radius: 12px 12px 0 0;
+        }
+        .reste-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .reste-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .reste-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #b82c39;
+        }
+        .equivalent-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
         @media (max-width: 767px) {
             .table thead { display: none; }
             .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
@@ -23,8 +71,12 @@
 
     <div class="page-wrapper">
         <div class="content container-fluid">
-            <div class="page-header mb-4">
-                <h3 class="page-title">Patients Fidèles - {{ mois }}/{{ annee }}</h3>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="page-title mb-0">Patients Fidèles - {{ mois }}/{{ annee }}</h3>
+            </div>
+
+            <div class="info-bar">
+                <strong>Taux utilisé :</strong> 1 USD = {{ taux|default:"2300" }} CDF
             </div>
 
             <div class="card mb-4">
@@ -41,7 +93,7 @@
                                 <tr>
                                     <th>Code</th>
                                     <th>Nom</th>
-                                    <th>Total (USD)</th>
+                                    <th>Total</th>
                                     <th>Reste à payer</th>
                                     <th>Actions</th>
                                 </tr>
@@ -50,9 +102,19 @@
                                 {% for data in patients_data %}
                                 <tr>
                                     <td data-label="Code">{{ data.patient.code_patient }}</td>
-                                    <td data-label="Nom">{{ data.patient.noms }}</td>
-                                    <td data-label="Total">{{ data.montant_total }}</td>
-                                    <td data-label="Reste" class="font-weight-bold text-danger">{{ data.reste_a_payer }}</td>
+                                    <td data-label="Nom">
+                                        <strong>{{ data.patient.noms }}</strong>
+                                    </td>
+                                    <td data-label="Total">
+                                        {{ data.montant_total_usd|default:"0" }} USD<br>
+                                        <small class="text-muted">{{ data.montant_total|default:"0" }} CDF</small>
+                                    </td>
+                                    <td data-label="Reste">
+                                        <span class="badge badge-reste bg-danger text-white">
+                                            {{ data.reste_a_payer|default:"0" }} USD
+                                        </span><br>
+                                        <small class="text-muted">{{ data.reste_a_payer_cdf|default:"0" }} CDF</small>
+                                    </td>
                                     <td data-label="Actions">
                                         {% if fonctionKey %}
                                             <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#payModal{{ data.consultation_id }}">
@@ -75,40 +137,46 @@
     </div>
 </div>
 
+<!-- Modals de paiement -->
 {% for data in patients_data %}
 <div class="modal fade" id="payModal{{ data.consultation_id }}" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <form method="POST" class="modal-content border-0 shadow">
             {% csrf_token %}
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fa fa-hand-holding-usd"></i> Encaisser : {{ data.patient.noms }}</h5>
+                <h5 class="modal-title">
+                    <i class="fa fa-hand-holding-usd"></i> Encaisser : {{ data.patient.noms }}
+                </h5>
                 <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" name="consultation_id" value="{{ data.consultation_id }}">
-                
-                <div class="bg-light p-3 mb-4 rounded border text-center">
-                    <p class="mb-1 text-muted small text-uppercase">Reste à payer</p>
-                    <h3 class="text-danger m-0 font-weight-bold">{{ data.reste_a_payer }} USD</h3>
+
+                <div class="reste-box">
+                    <p class="reste-label mb-1">Reste à payer</p>
+                    <div class="reste-value">{{ data.reste_a_payer|default:"0" }} USD</div>
+                    <small class="text-muted">{{ data.reste_a_payer_cdf|default:"0" }} CDF</small>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="font-weight-bold">Montant versé</label>
-                            <input type="number" name="montant" step="0.01" class="form-control form-control-lg" required>
+                            <input type="number" name="montant" id="montant-{{ data.consultation_id }}" step="0.01" class="form-control form-control-lg" required>
+                            <small id="equivalent-{{ data.consultation_id }}" class="equivalent-text"></small>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="font-weight-bold">Devise</label>
-                            <select name="devise" class="form-control form-control-lg">
-                                <option value="USD">USD</option>
+                            <select name="devise" id="devise-{{ data.consultation_id }}" class="form-control form-control-lg" onchange="updateEquivalence('{{ data.consultation_id }}')">
                                 <option value="CDF">CDF</option>
+                                <option value="USD">USD</option>
                             </select>
                         </div>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label class="font-weight-bold">Réduction (USD)</label>
                     <input type="number" name="reduction" step="0.01" value="0" class="form-control form-control-lg">
@@ -116,7 +184,9 @@
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> Valider le paiement</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-check"></i> Valider le paiement
+                </button>
             </div>
         </form>
     </div>
@@ -124,6 +194,39 @@
 {% endfor %}
 
 <script>
+    const TAUX = {{ taux|default:"2300" }};
+
+    function updateEquivalence(id) {
+        const deviseEl = document.getElementById('devise-' + id);
+        const montantEl = document.getElementById('montant-' + id);
+        const equivalentEl = document.getElementById('equivalent-' + id);
+
+        const devise = deviseEl.value;
+        const montant = parseFloat(montantEl.value) || 0;
+
+        if (!montant) {
+            equivalentEl.textContent = '';
+            return;
+        }
+
+        if (devise === 'CDF') {
+            const usd = (montant / TAUX).toFixed(2);
+            equivalentEl.textContent = `Équivalent : ${usd} USD`;
+        } else {
+            const cdf = Math.round(montant * TAUX);
+            equivalentEl.textContent = `Équivalent : ${cdf} CDF`;
+        }
+    }
+
+    // Mettre à jour l'équivalence quand on tape le montant
+    document.querySelectorAll('[id^="montant-"]').forEach(function(el) {
+        el.addEventListener('input', function() {
+            const id = this.id.split('montant-')[1];
+            updateEquivalence(id);
+        });
+    });
+
+    // Recherche
     document.getElementById('searchInput').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();
         let rows = document.querySelectorAll('#patientTable tbody tr');

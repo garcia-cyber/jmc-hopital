@@ -181,6 +181,7 @@
                                         <th>Lit / Catégorie</th>
                                         <th>Hôpital</th>
                                         <th>Date Entrée</th>
+                                        {% comment %} <th>Date Sortie</th> {% endcomment %}
                                         <th>Durée</th>
                                         <th>Coût Total (CDF)</th>
                                         <th>Reste à payer (CDF)</th>
@@ -204,6 +205,13 @@
                                                 {{ hosp.hopital }}
                                             </td>
                                             <td>{{ hosp.date_entree|date:"d M, Y" }}</td>
+                                            {% comment %} <td>
+                                                {% if hosp.date_sortie %}
+                                                    {{ hosp.date_sortie|date:"d M, Y" }}
+                                                {% else %}
+                                                    <span class="text-muted">–</span>
+                                                {% endif %}
+                                            </td> {% endcomment %}
                                             <td>
                                                 <span class="badge badge-soft-dark">{{ item.nombre_jours }} j</span>
                                                 <br>
@@ -233,8 +241,20 @@
                                                     <span class="badge badge-soft-success text-success">En cours</span>
                                                 {% elif hosp.statut == 'TERMINE' %}
                                                     <span class="badge badge-soft-info text-info">Terminé</span>
+                                                    {% if hosp.date_sortie %}
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            Sortie le {{ hosp.date_sortie|date:"d M, Y" }}
+                                                        </small>
+                                                    {% endif %}
                                                 {% else %}
                                                     <span class="badge badge-soft-secondary text-secondary">Annulé</span>
+                                                    {% if hosp.date_sortie %}
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            Sortie le {{ hosp.date_sortie|date:"d M, Y" }}
+                                                        </small>
+                                                    {% endif %}
                                                 {% endif %}
                                             </td>
 
@@ -256,28 +276,23 @@
                                                         <a href="{% url 'payer_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-danger" title="Encaisser">
                                                             <i class="la la-money-bill"></i>
                                                         </a>
-
-                                                        {% if item.reste_a_payer_cdf <= 1 %}
-                                                            <a href="{% url 'finir_hospitalisation' hosp.id %}" class="btn btn-sm btn-success" title="Valider Sortie">
-                                                                <i class="la la-door-open"></i>
-                                                            </a>
-                                                        {% else %}
-                                                            <button class="btn btn-sm btn-secondary" disabled title="Paiement incomplet">
-                                                                <i class="la la-lock"></i>
-                                                            </button>
-                                                        {% endif %}
                                                     {% endif %}
-                                                {% else %}
-                                                    <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-light" title="Voir">
-                                                        <i class="la la-eye"></i>
-                                                    </a>
+                                                
                                                 {% endif %}
+
+                                                {# Bouton Imprimer la facture #}
+                                                <a href="{% url 'imprimer_facture_hospitalisation' hosp.id %}"
+                                                   class="btn btn-sm btn-light"
+                                                   title="Imprimer la facture"
+                                                   target="_blank">
+                                                    <i class="la la-print"></i>
+                                                </a>
                                             </td>
                                         </tr>
                                         {% endwith %}
                                     {% empty %}
                                         <tr>
-                                            <td colspan="9" class="text-center py-5">Aucune donnée disponible.</td>
+                                            <td colspan="10" class="text-center py-5">Aucune donnée disponible.</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -285,6 +300,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>

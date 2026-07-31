@@ -3357,7 +3357,7 @@ def admettre_patient(request):
 
 @login_required
 def liste_hospitalisations(request):
-    # 1. Rôle et hôpital de l’utilisateur
+    # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
         .select_related('hopital', 'fonctionKey')
@@ -3367,7 +3367,7 @@ def liste_hospitalisations(request):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # Vérifier si l’utilisateur peut voir tous les hôpitaux
+    # Vérifier si l'utilisateur peut voir tous les hôpitaux
     peut_voir_tous_hopitaux = (
         request.user.is_superuser
         or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur'])
@@ -3382,7 +3382,7 @@ def liste_hospitalisations(request):
 
     if afficher_tous and not peut_voir_tous_hopitaux:
         afficher_tous = False
-        messages.warning(request, "Vous n’avez pas l’autorisation de voir toutes les hospitalisations.")
+        messages.warning(request, "Vous n'avez pas l'autorisation de voir toutes les hospitalisations.")
 
     # 2. Taux de change
     config = ConfigurationHopital.objects.first()
@@ -3402,11 +3402,11 @@ def liste_hospitalisations(request):
         'paiements'
     ).order_by('-date_entree')
 
-    # Filtre par hôpital “par défaut” si on n’affiche pas tous
+    # Filtre par hôpital "par défaut" si on n'affiche pas tous
     if not afficher_tous:
         hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_user)
 
-    # Filtre par hôpital via ?hopital=ID (uniquement si l’utilisateur peut voir tous)
+    # Filtre par hôpital via ?hopital=ID (uniquement si l'utilisateur peut voir tous)
     hopital_selectionne_id = request.GET.get('hopital')
     hopital_selectionne = None
 
@@ -3423,13 +3423,18 @@ def liste_hospitalisations(request):
 
     for hosp in hospitalisations_qs:
         date_entree = hosp.date_entree or now
+
+        # --- Nombre de jours ---
         if hosp.statut == 'EN_COURS':
+            # Comptage en cours jusqu'à maintenant
             nombre_jours = (now - date_entree).days + 1
         else:
-            nombre_jours = getattr(hosp, 'nombre_jours', 1)
+            # Hospitalisation terminée ou annulée : on utilise la propriété du modèle
+            nombre_jours = hosp.nombre_jours
             if nombre_jours <= 0:
                 nombre_jours = 1
 
+        # --- Prix du lit par nuit (en CDF) ---
         prix_lit_cdf = Decimal('0')
 
         if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
@@ -3438,9 +3443,11 @@ def liste_hospitalisations(request):
         if prix_lit_cdf <= 0:
             prix_lit_cdf = Decimal('50000')
 
+        # --- Coût total en CDF ---
         cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         cout_total_usd = (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+        # --- Total déjà payé en CDF ---
         total_deja_paye_cdf = Decimal('0')
         for p in hosp.paiements.all():
             montant = p.montant_verse or Decimal('0')
@@ -3449,6 +3456,7 @@ def liste_hospitalisations(request):
             else:  # USD
                 total_deja_paye_cdf += montant * taux
 
+        # --- Reste à payer (en CDF + USD) ---
         reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
         reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
@@ -3477,14 +3485,60 @@ def liste_hospitalisations(request):
 # =====================================================================================================
 @login_required
 def enregistrer_paiement_hospitalisation(request, hosp_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    # 1. Rôle et hôpital de l'utilisateur
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    # 2. Récupérer l'hospitalisation
     hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
 
     if hosp.statut != 'EN_COURS':
         messages.warning(request, "Cette hospitalisation est déjà clôturée ou annulée.")
         return redirect('liste_hospitalisations')
+
+    # 3. Taux de change (même logique que liste_hospitalisations)
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')  # 1 USD = taux CDF
+    if not taux or taux == 0:
+        taux = Decimal('2500.00')
+
+    # 4. Calcul du coût total en CDF (comme dans liste_hospitalisations)
+    now = timezone.now()
+    date_entree = hosp.date_entree or now
+
+    if hosp.statut == 'EN_COURS':
+        nombre_jours = (now - date_entree).days + 1
+    else:
+        nombre_jours = getattr(hosp, 'nombre_jours', 1)
+        if nombre_jours <= 0:
+            nombre_jours = 1
+
+    prix_lit_cdf = Decimal('0')
+    if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
+        prix_lit_cdf = hosp.lit.chambre.type_chambre.prix_nuitée or Decimal('0')
+
+    if prix_lit_cdf <= 0:
+        prix_lit_cdf = Decimal('50000')
+
+    cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+
+    # 5. Calcul du total déjà payé en CDF
+    total_deja_paye_cdf = Decimal('0')
+    for p in hosp.paiements.all():
+        montant = p.montant_verse or Decimal('0')
+        if p.devise == 'CDF':
+            total_deja_paye_cdf += montant
+        else:  # USD
+            total_deja_paye_cdf += montant * taux
+
+    reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
+    reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     if request.method == 'POST':
         try:
@@ -3505,35 +3559,50 @@ def enregistrer_paiement_hospitalisation(request, hosp_id):
 
             devise = request.POST.get('devise', 'USD')
 
-            montant_verse_usd = montant_brut
-            reduction_usd = reduction
+            # On stocke le montant TEL QUEL dans Paiement.montant_verse
+            # (20 000 si CDF, 10 si USD, etc.)
+            montant_verse = montant_brut
+            reduction_stockee = reduction
+
+            # Pour la vérification et le calcul du reste, on convertit tout en CDF
             if devise == 'CDF':
-                taux = ConfigurationHopital.get_taux()
-                if not taux or taux <= 0:
-                    raise ValueError("Taux de change non configuré ou invalide.")
-                montant_verse_usd = montant_brut / Decimal(str(taux))
-                reduction_usd = reduction / Decimal(str(taux))
+                montant_verse_cdf = montant_brut
+                reduction_cdf = reduction
+            else:  # USD
+                montant_verse_cdf = montant_brut * taux
+                reduction_cdf = reduction * taux
 
-            reste_actuel = hosp.get_reste_a_payer()
-            total_paye_ce_coup_ci = montant_verse_usd + reduction_usd
+            total_paye_ce_coup_ci_cdf = montant_verse_cdf + reduction_cdf
 
-            if total_paye_ce_coup_ci > (reste_actuel + Decimal('0.01')):
-                messages.error(request, f"Le montant saisi dépasse le solde restant ({reste_actuel:.2f} USD).")
+            # Vérification : ne pas payer plus que le reste en CDF
+            if total_paye_ce_coup_ci_cdf > (reste_a_payer_cdf + Decimal('1')):
+                messages.error(
+                    request,
+                    "Le montant saisi dépasse le solde restant ({} CDF / {} USD).".format(
+                        int(round(reste_a_payer_cdf)),
+                        float(reste_a_payer_usd)
+                    )
+                )
                 return redirect('payer_hospitalisation', hosp_id=hosp.id)
 
+            # Création du paiement
+            # montant_verse et reduction_stockee sont dans la devise choisie
             Paiement.objects.create(
                 hospitalisation=hosp,
                 patient=hosp.patient,
                 service='HOSPITALISATION',
-                montant_verse=montant_verse_usd,
-                montant_reduction=reduction_usd,
-                devise=devise,
+                montant_verse=montant_verse,          # 20000 si CDF, 10 si USD, etc.
+                montant_reduction=reduction_stockee,  # idem
+                devise=devise,                        # 'CDF' ou 'USD'
                 caissier=request.user,
                 hopital=hopital_user
             )
 
-            nouveau_reste = hosp.get_reste_a_payer()
-            if nouveau_reste <= 0:
+            # Recalculer le nouveau reste après ce paiement
+            nouveau_total_deja_paye_cdf = total_deja_paye_cdf + total_paye_ce_coup_ci_cdf
+            nouveau_reste_cdf = max(Decimal('0'), cout_total_cdf - nouveau_total_deja_paye_cdf)
+
+            if nouveau_reste_cdf <= 0:
                 hosp.statut = 'TERMINE'
                 hosp.date_sortie = timezone.now()
                 hosp.est_payee = True
@@ -3548,16 +3617,106 @@ def enregistrer_paiement_hospitalisation(request, hosp_id):
             messages.error(request, f"Erreur critique lors du paiement : {str(e)}")
             return redirect('payer_hospitalisation', hosp_id=hosp.id)
 
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
+    # Contexte pour le template
     return render(request, 'back-end/hospitalisation/paiement_hosp.html', {
         'hosp': hosp,
-        'reste_a_payer': hosp.get_reste_a_payer(),
-        'fonctionKey': fonctionKey
+        'reste_a_payer_cdf': reste_a_payer_cdf,
+        'reste_a_payer_usd': reste_a_payer_usd,
+        'cout_total_cdf': cout_total_cdf,
+        'cout_total_usd': (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+        'fonctionKey': fonctionKey,
+        'taux': taux,
+        'nombre_jours': nombre_jours,
+        'prix_lit_cdf': prix_lit_cdf,
     })
 
+# 
+# ============================================================================================
+# IMPRIMER FACTURE HOPITAL
+# ============================================================================================
+@login_required
+def imprimer_facture_hospitalisation(request, hosp_id):
+    # 1. Rôle et hôpital de l'utilisateur
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    # Utilisateur autorisé : même hôpital OU admin/superuser
+    peut_voir_tous_hopitaux = (
+        request.user.is_superuser
+        or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur'])
+    )
 
+    # 2. Récupérer l'hospitalisation
+    hosp = get_object_or_404(Hospitalisation, id=hosp_id)
+
+    # Vérification des droits
+    if not peut_voir_tous_hopitaux and hosp.hopital != hopital_user:
+        messages.error(request, "Vous n'avez pas accès à cette hospitalisation.")
+        return redirect('liste_hospitalisations')
+
+    # 3. Taux de change
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')
+    if not taux or taux == 0:
+        taux = Decimal('2500.00')
+
+    # 4. Calcul du coût total en CDF
+    now = timezone.now()
+    date_entree = hosp.date_entree or now
+
+    if hosp.statut == 'EN_COURS':
+        nombre_jours = (now - date_entree).days + 1
+    else:
+        nombre_jours = getattr(hosp, 'nombre_jours', 1)
+        if nombre_jours <= 0:
+            nombre_jours = 1
+
+    prix_lit_cdf = Decimal('0')
+    if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
+        prix_lit_cdf = hosp.lit.chambre.type_chambre.prix_nuitée or Decimal('0')
+
+    if prix_lit_cdf <= 0:
+        prix_lit_cdf = Decimal('50000')
+
+    cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    cout_total_usd = (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # 5. Calcul du total déjà payé en CDF
+    total_deja_paye_cdf = Decimal('0')
+    for p in hosp.paiements.all():
+        montant = p.montant_verse or Decimal('0')
+        if p.devise == 'CDF':
+            total_deja_paye_cdf += montant
+        else:  # USD
+            total_deja_paye_cdf += montant * taux
+
+    reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
+    reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    context = {
+        'hosp': hosp,
+        'patient': hosp.patient,
+        'nombre_jours': nombre_jours,
+        'prix_lit_cdf': prix_lit_cdf,
+        'cout_total_cdf': cout_total_cdf,
+        'cout_total_usd': cout_total_usd,
+        'total_deja_paye_cdf': total_deja_paye_cdf,
+        'total_deja_paye_usd': (total_deja_paye_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+        'reste_a_payer_cdf': reste_a_payer_cdf,
+        'reste_a_payer_usd': reste_a_payer_usd,
+        'taux': taux,
+        'paiements': hosp.paiements.all().order_by('-date_paiement'),
+        'fonctionKey': fonctionKey,
+        'date_impression': timezone.now(),
+    }
+
+    return render(request, 'back-end/hospitalisation/facture_hospitalisation.html', context)
 
 #
 # ===========================================================================================

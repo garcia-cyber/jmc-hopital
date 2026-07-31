@@ -4,61 +4,277 @@
 <head>
     <meta charset="utf-8">
     <title>Paiement Hospitalisation | {{ hosp.patient.noms }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% include 'back-end/includes/css.html' %}
     <style>
-        .summary-card { background: #f8f9fe; border-left: 4px solid #5a8dee; }
-        .info-label { font-size: 0.85rem; color: #707e8c; }
-        .info-value { font-weight: 600; color: #2d3436; }
+        .page-wrapper {
+            background: #f4f7fa;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .card-header-custom {
+            background: #f8f9fe;
+            border-bottom: 1px solid #eef0f5;
+            border-radius: 12px 12px 0 0;
+            padding: 1rem 1.25rem;
+        }
+
+        .summary-box {
+            background: #ffffff;
+            border-left: 4px solid #5a8dee;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .info-label {
+            color: #707e8c;
+            margin-right: 0.5rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #2d3436;
+            text-align: right;
+        }
+
+        .total-highlight {
+            font-size: 1rem;
+            color: #2d3436;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed #eef0f5;
+        }
+
+        .reste-highlight {
+            font-size: 1.2rem;
+            color: #dc3545;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        .table thead {
+            background: #f8f9fe;
+            color: #707e8c;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody td {
+            vertical-align: middle;
+            font-size: 0.85rem;
+        }
+
+        .form-section-title {
+            font-size: 1rem;
+            color: #5a8dee;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .btn-paiement {
+            min-width: 160px;
+        }
+
+        .info-alert {
+            background: #eef2ff;
+            border-left: 4px solid #5a8dee;
+            color: #2d3436;
+        }
+
+        .resume-box {
+            background: #f8f9fe;
+            border: 1px solid #eef0f5;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .resume-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .resume-label {
+            color: #707e8c;
+        }
+
+        .resume-value {
+            font-weight: 600;
+            color: #2d3436;
+            text-align: right;
+        }
+
+        .total-row {
+            margin-top: 0.6rem;
+            padding-top: 0.6rem;
+            border-top: 1px dashed #dcdfe6;
+            font-weight: 700;
+            color: #2d3436;
+        }
+
+        @media (max-width: 768px) {
+            .info-row,
+            .resume-row {
+                flex-direction: column;
+            }
+            .info-value,
+            .resume-value {
+                text-align: left;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
+
+                <!-- En-tête -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="mb-0">Enregistrement de Paiement</h4>
                         <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb text-muted">
+                            <ol class="breadcrumb text-muted mb-0">
                                 <li class="breadcrumb-item">Hospitalisation</li>
                                 <li class="breadcrumb-item active">{{ hosp.patient.noms }}</li>
                             </ol>
                         </nav>
                     </div>
+                    <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">
+                        <i class="la la-arrow-left"></i> Retour à la liste
+                    </a>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="card shadow">
-                            <div class="card-body summary-card">
-                                <h5 class="card-title text-primary">Informations séjour</h5>
-                                <div class="mb-2"><span class="info-label">Lit :</span> <span class="info-value">{{ hosp.lit.nom_lit }}</span></div>
-                                <div class="mb-2"><span class="info-label">Catégorie :</span> <span class="info-value">{{ hosp.lit.chambre.type_chambre.libelle }}</span></div>
-                                <div class="mb-2"><span class="info-label">Date Entrée :</span> <span class="info-value">{{ hosp.date_entree|date:"d/m/Y" }}</span></div>
-                                <div class="mb-2"><span class="info-label">Durée :</span> <span class="info-value">{{ hosp.nombre_jours }} jours</span></div>
-                                <hr>
-                                <div class="mb-2">Coût Total : <strong>{{ hosp.cout_total }} USD</strong></div>
-                                <h4 class="text-danger mt-3">Reste à payer : {{ reste_a_payer }} USD</h4>
+                    <!-- Colonne gauche : résumé + historique -->
+                    <div class="col-lg-4">
+                        <!-- Résumé du séjour -->
+                        <div class="card mb-3">
+                            <div class="card-header-custom">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="la la-bed"></i> Informations du séjour
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="summary-box">
+                                    <div class="info-row">
+                                        <span class="info-label">Patient :</span>
+                                        <span class="info-value">{{ hosp.patient.noms }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Lit :</span>
+                                        <span class="info-value">{{ hosp.lit.nom_lit }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Catégorie :</span>
+                                        <span class="info-value">{{ hosp.lit.chambre.type_chambre.libelle }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Date d'entrée :</span>
+                                        <span class="info-value">{{ hosp.date_entree|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Durée :</span>
+                                        <span class="info-value">{{ nombre_jours }} jours</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Prix par nuit :</span>
+                                        <span class="info-value">
+                                            {{ prix_lit_cdf|floatformat:0 }} CDF
+                                            <br>
+                                            <small class="text-muted">
+                                                ≈ {{ cout_total_usd|floatformat:2 }} USD
+                                            </small>
+                                        </span>
+                                    </div>
+
+                                    <div class="total-highlight">
+                                        <div class="info-row">
+                                            <span class="info-label">Coût total :</span>
+                                            <span class="info-value">
+                                                {{ cout_total_cdf|floatformat:0 }} CDF
+                                                <br>
+                                                <small class="text-muted">
+                                                    ≈ {{ cout_total_usd|floatformat:2 }} USD
+                                                    (1 USD = {{ taux|floatformat:0 }} CDF)
+                                                </small>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="reste-highlight">
+                                        Reste à payer :
+                                        <br>
+                                        {{ reste_a_payer_cdf|floatformat:0 }} CDF
+                                        <br>
+                                        <small class="text-muted">
+                                            ≈ {{ reste_a_payer_usd|floatformat:2 }} USD
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="card shadow mt-3">
-                            <div class="card-body">
-                                <h6 class="text-muted">Historique des versements</h6>
+                        <!-- Historique des versements -->
+                        <div class="card">
+                            <div class="card-header-custom">
+                                <h6 class="mb-0 text-muted">
+                                    <i class="la la-history"></i> Historique des versements
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-sm text-xs">
-                                        <thead><tr><th>Date</th><th>Montant</th></tr></thead>
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th class="text-right">Montant</th>
+                                                <th>Devise</th>
+                                            </tr>
+                                        </thead>
                                         <tbody>
                                             {% for paiement in hosp.paiements.all %}
                                             <tr>
                                                 <td>{{ paiement.date_paiement|date:"d/m/y" }}</td>
-                                                <td>{{ paiement.montant_verse|floatformat:2 }} USD</td>
+                                                <td class="text-right">
+                                                    {{ paiement.montant_verse|floatformat:2 }}
+                                                    {% if paiement.devise == 'CDF' %}
+                                                        <br><small class="text-muted">CDF</small>
+                                                    {% else %}
+                                                        <br><small class="text-muted">USD</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-soft-primary">
+                                                        {{ paiement.devise }}
+                                                    </span>
+                                                </td>
                                             </tr>
                                             {% empty %}
-                                            <tr><td colspan="2" class="text-center">Aucun versement.</td></tr>
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-3">
+                                                    Aucun versement enregistré.
+                                                </td>
+                                            </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -67,46 +283,235 @@
                         </div>
                     </div>
 
-                    <div class="col-md-8">
-                        <div class="card shadow">
+                    <!-- Colonne droite : formulaire de paiement -->
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header-custom">
+                                <h5 class="mb-0 text-success">
+                                    <i class="la la-money-bill"></i> Nouveau paiement
+                                </h5>
+                            </div>
                             <div class="card-body">
-                                <form method="POST" id="formPaiement" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+                                <form method="POST" id="formPaiement">
                                     {% csrf_token %}
+
+                                    <div class="form-section-title">
+                                        Montants à encaisser
+                                    </div>
+
+                                    <div class="alert alert-info mb-3 info-alert">
+                                        <i class="la la-info-circle"></i>
+                                        Saisis les montants dans la devise que tu reçois (CDF ou USD).
+                                        Le système utilise le taux :
+                                        <strong>1 USD = {{ taux|floatformat:0 }} CDF</strong>
+                                        pour calculer le reste à payer.
+                                    </div>
+
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Montant Versé (USD)</label>
-                                            <input type="number" step="0.01" min="0" name="montant_verse" class="form-control" required placeholder="0.00">
+                                            <label class="form-label" id="labelMontantVerse">
+                                                Montant versé (USD)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                name="montant_verse"
+                                                id="montantVerse"
+                                                class="form-control"
+                                                required
+                                                placeholder="0.00"
+                                            >
+                                            <small class="form-text text-muted" id="montantVerseHelp">
+                                                Montant encaissé en USD (ex: 40).
+                                            </small>
                                         </div>
+
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Réduction (USD)</label>
-                                            <input type="number" step="0.01" min="0" name="montant_reduction" class="form-control" value="0" placeholder="0.00">
+                                            <label class="form-label" id="labelReduction">
+                                                Réduction (USD)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                name="montant_reduction"
+                                                id="montantReduction"
+                                                class="form-control"
+                                                value="0"
+                                                placeholder="0.00"
+                                            >
+                                            <small class="form-text text-muted">
+                                                Montant de la réduction accordée (même devise).
+                                            </small>
                                         </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Devise de réception</label>
-                                        <select name="devise" class="form-control">
-                                            <option value="USD">USD</option>
-                                            <option value="CDF">CDF</option>
-                                        </select>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">
+                                                Devise de réception
+                                            </label>
+                                            <select name="devise" id="deviseSelect" class="form-control">
+                                                <option value="USD">USD</option>
+                                                <option value="CDF">CDF</option>
+                                            </select>
+                                            <small class="form-text text-muted">
+                                                Devise dans laquelle tu reçois l'argent.
+                                            </small>
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">
+                                                Commentaire (facultatif)
+                                            </label>
+                                            <textarea
+                                                name="commentaire"
+                                                class="form-control"
+                                                rows="2"
+                                                placeholder="Précisions sur le paiement…"
+                                            ></textarea>
+                                        </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Commentaire (facultatif)</label>
-                                        <textarea name="commentaire" class="form-control" rows="2"></textarea>
+
+                                    <!-- Récapitulatif dynamique -->
+                                    <div class="resume-box" id="resumePaiement" style="display:none;">
+                                        <div class="form-section-title mb-2">
+                                            <i class="la la-calculator"></i> Récapitulatif
+                                        </div>
+                                        <div class="resume-row">
+                                            <span class="resume-label">Montant versé :</span>
+                                            <span class="resume-value" id="resumeMontant">0</span>
+                                        </div>
+                                        <div class="resume-row">
+                                            <span class="resume-label">Réduction :</span>
+                                            <span class="resume-value" id="resumeReduction">0</span>
+                                        </div>
+                                        <div class="resume-row total-row">
+                                            <span class="resume-label">Total de ce paiement :</span>
+                                            <span class="resume-value" id="resumeTotal">0</span>
+                                        </div>
+                                        <div class="resume-row mt-2">
+                                            <span class="resume-label">Équivalent en :</span>
+                                            <span class="resume-value" id="resumeEquivalent">0</span>
+                                        </div>
                                     </div>
+
                                     <div class="d-flex justify-content-end mt-4">
-                                        <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-secondary mr-2">Annuler</a>
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="la la-save"></i> Enregistrer le Paiement
+                                        <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-secondary mr-2">
+                                            <i class="la la-times"></i> Annuler
+                                        </a>
+                                        <button type="submit" class="btn btn-success btn-paiement">
+                                            <i class="la la-save"></i> Enregistrer le paiement
                                         </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
+
+                        <!-- Rappel -->
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h6 class="text-muted mb-2">
+                                    <i class="la la-lightbulb"></i> Rappel
+                                </h6>
+                                <ul class="mb-0 pl-3">
+                                    <li>
+                                        Le reste à payer est calculé en CDF. La conversion en USD est indicative.
+                                    </li>
+                                    <li>
+                                        Si le total des paiements atteint le coût total, l'hospitalisation est automatiquement
+                                        clôturée.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
-    {% include 'back-end/includes/js.html' %}
-</body>
-</html>
+
+    <script>
+        (function() {
+            var deviseSelect = document.getElementById('deviseSelect');
+            var montantVerse = document.getElementById('montantVerse');
+            var montantReduction = document.getElementById('montantReduction');
+            var labelMontantVerse = document.getElementById('labelMontantVerse');
+            var labelReduction = document.getElementById('labelReduction');
+            var montantVerseHelp = document.getElementById('montantVerseHelp');
+
+            var resumeBox = document.getElementById('resumePaiement');
+            var resumeMontant = document.getElementById('resumeMontant');
+            var resumeReduction = document.getElementById('resumeReduction');
+            var resumeTotal = document.getElementById('resumeTotal');
+            var resumeEquivalent = document.getElementById('resumeEquivalent');
+
+            var taux = {{ taux|floatformat:0 }}; // ex: 2500
+
+            function formatNumber(num, decimals) {
+                return num.toFixed(decimals).replace(/\d(?=(\d{3})+\.)/g, '$& ');
+            }
+
+            function updateLabels() {
+                var devise = deviseSelect.value;
+                if (devise === 'CDF') {
+                    labelMontantVerse.textContent = 'Montant versé (CDF)';
+                    labelReduction.textContent = 'Réduction (CDF)';
+                    montantVerseHelp.textContent = 'Montant encaissé en CDF (ex: 100000).';
+                    montantVerse.setAttribute('step', '1');
+                    montantVerse.setAttribute('placeholder', '0');
+                } else {
+                    labelMontantVerse.textContent = 'Montant versé (USD)';
+                    labelReduction.textContent = 'Réduction (USD)';
+                    montant                                    labelMontantVerse.textContent = 'Montant versé (USD)';
+                                    labelReduction.textContent = 'Réduction (USD)';
+                                    montantVerseHelp.textContent = 'Montant encaissé en USD (ex: 40).';
+                                    montantVerse.setAttribute('step', '0.01');
+                                    montantVerse.setAttribute('placeholder', '0.00');
+                                }
+                                updateResume();
+                            }
+
+                            function updateResume() {
+                                var devise = deviseSelect.value;
+                                var montant = parseFloat(montantVerse.value) || 0;
+                                var reduction = parseFloat(montantReduction.value) || 0;
+                                var total = montant + reduction;
+
+                                if (montant === 0 && reduction === 0) {
+                                    resumeBox.style.display = 'none';
+                                    return;
+                                }
+
+                                resumeBox.style.display = 'block';
+
+                                if (devise === 'CDF') {
+                                    resumeMontant.textContent = formatNumber(montant, 0) + ' CDF';
+                                    resumeReduction.textContent = formatNumber(reduction, 0) + ' CDF';
+                                    resumeTotal.textContent = formatNumber(total, 0) + ' CDF';
+                                    var equivalentUsd = total / taux;
+                                    resumeEquivalent.textContent = '≈ ' + formatNumber(equivalentUsd, 2) + ' USD';
+                                } else {
+                                    resumeMontant.textContent = formatNumber(montant, 2) + ' USD';
+                                    resumeReduction.textContent = formatNumber(reduction, 2) + ' USD';
+                                    resumeTotal.textContent = formatNumber(total, 2) + ' USD';
+                                    var equivalentCdf = total * taux;
+                                    resumeEquivalent.textContent = '≈ ' + formatNumber(equivalentCdf, 0) + ' CDF';
+                                }
+                            }
+
+                            // Écouteurs d'événements
+                            deviseSelect.addEventListener('change', updateLabels);
+                            montantVerse.addEventListener('input', updateResume);
+                            montantReduction.addEventListener('input', updateResume);
+
+                            // Initialisation
+                            updateLabels();
+                        })();
+                    </script>
+
+                    {% include 'back-end/includes/js.html' %}
+                </body>
+                </html>

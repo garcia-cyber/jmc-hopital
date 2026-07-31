@@ -158,12 +158,8 @@ urlpatterns =[
     path('kardex/changer-statut/<int:kardex_id>/', views.changer_statut_kardex, name='changer_statut_kardex'),
     path('payer-hospitalisation/<int:hosp_id>/', views.enregistrer_paiement_hospitalisation, name='payer_hospitalisation'),
     path('hospitalisation/modifier/<int:hospitalisation_id>/', views.modifier_hospitalisation_view, name='modifier_hospitalisation'),
-
-    path(
-        'types-chambre/',
-        views.liste_types_chambre,
-        name='type_chambre_list',
-    ),
+     path('hospitalisations/<int:hosp_id>/facture/',views.imprimer_facture_hospitalisation,name='imprimer_facture_hospitalisation'),
+    path('types-chambre/',views.liste_types_chambre,name='type_chambre_list'),
     path('chambres-liste/', views.liste_chambres, name='chambre_list'),
     path('lits-liste/', views.liste_lits, name='lit_list'),
     # Modifications

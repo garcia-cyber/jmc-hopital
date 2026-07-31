@@ -14,7 +14,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
 
-
         .search-box {
             width: 100%;
             max-width: 320px;
@@ -24,7 +23,6 @@
             outline: none;
         }
 
-
         .table thead {
             background: #f8f9fe;
             color: #707e8c;
@@ -33,15 +31,12 @@
             letter-spacing: 1px;
         }
 
-
         .table tbody td {
             padding: 20px;
             vertical-align: middle;
         }
 
-
         .btn-sm { border-radius: 6px; }
-
 
         .avatar-info {
             background: #eef2ff;
@@ -52,17 +47,14 @@
             font-weight: bold;
         }
 
-
         .badge {
             padding: 0.5em 1em;
             border-radius: 50px;
             font-weight: 500;
         }
 
-
         .text-debt { color: #dc3545; font-weight: bold; }
         .text-paid { color: #28a745; font-weight: bold; }
-
 
         .header-top {
             display: flex;
@@ -73,7 +65,6 @@
             flex-wrap: wrap;
         }
 
-
         .header-actions {
             display: flex;
             align-items: center;
@@ -83,12 +74,10 @@
             justify-content: flex-end;
         }
 
-
         .search-input-wrap {
             width: 100%;
             max-width: 320px;
         }
-
 
         @media (max-width: 768px) {
             .page-wrapper { padding: 10px !important; }
@@ -99,23 +88,19 @@
                 max-width: 100%;
             }
 
-
             .header-top {
                 align-items: flex-start;
             }
-
 
             .header-actions {
                 justify-content: stretch;
                 width: 100%;
             }
 
-
             .header-actions .btn,
             .header-actions a {
                 width: 100%;
             }
-
 
             .table tbody td {
                 padding: 14px;
@@ -128,32 +113,63 @@
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
-
         <div class="page-wrapper">
             <div class="content container-fluid">
-
 
                 <div class="header-top">
                     <div>
                         <h4 class="mb-0">Suivi des Séjours</h4>
                         <small class="text-muted">Gestion complète des hospitalisations en cours.</small>
+                        {% if afficher_tous %}
+                            <br>
+                            <small class="text-primary">
+                                <i class="la la-globe"></i> Affichage : tous les hôpitaux
+                            </small>
+                        {% endif %}
                     </div>
-
 
                     <div class="header-actions">
                         <div class="search-input-wrap">
                             <input type="text" id="searchInput" class="search-box" placeholder="Rechercher par nom ou ID...">
                         </div>
 
-
                         {% if fonctionKey == 'medecin' %}
                         <a href="{% url 'admettre_patient' %}" class="btn btn-primary">
                             <i class="la la-plus"></i> Nouvelle Admission
                         </a>
                         {% endif %}
+
+                        {# Filtre par hôpital (admin / tous les hôpitaux) #}
+                        {% if peut_voir_tous_hopitaux and afficher_tous %}
+                            <form method="get" action="{% url 'liste_hospitalisations' %}" class="d-flex align-items-center gap-2">
+                                {# Conserver tous_hopitaux=1 #}
+                                <input type="hidden" name="tous_hopitaux" value="1">
+
+                                <select name="hopital" class="form-control" style="min-width: 180px;" onchange="this.form.submit()">
+                                    <option value="">Tous les hôpitaux</option>
+                                    {% for h in hopitaux %}
+                                        <option value="{{ h.id }}" {% if hopital_selectionne and hopital_selectionne.id == h.id %}selected{% endif %}>
+                                            {{ h }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        {% endif %}
+
+                        {# Bouton pour basculer entre mon hôpital / tous les hôpitaux #}
+                        {% if peut_voir_tous_hopitaux %}
+                            {% if afficher_tous %}
+                                <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">
+                                    <i class="la la-building"></i> Voir uniquement mon hôpital
+                                </a>
+                            {% else %}
+                                <a href="{% url 'liste_hospitalisations' %}?tous_hopitaux=1" class="btn btn-info">
+                                    <i class="la la-globe"></i> Voir toutes les hospitalisations
+                                </a>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 </div>
-
 
                 <div class="card">
                     <div class="card-body p-0">
@@ -194,14 +210,12 @@
                                                 <small class="text-muted">{{ item.prix_lit_cdf|floatformat:0 }} CDF / nuit</small>
                                             </td>
 
-
                                             {# Coût total en CDF #}
                                             <td>
                                                 {{ item.cout_total_cdf|floatformat:0 }} CDF
                                                 <br>
                                                 <small class="text-muted">({{ item.cout_total_usd|floatformat:2 }} USD)</small>
                                             </td>
-
 
                                             {# Reste à payer en CDF #}
                                             <td>
@@ -214,7 +228,6 @@
                                                 {% endif %}
                                             </td>
 
-
                                             <td>
                                                 {% if hosp.statut == 'EN_COURS' %}
                                                     <span class="badge badge-soft-success text-success">En cours</span>
@@ -225,7 +238,6 @@
                                                 {% endif %}
                                             </td>
 
-
                                             <td class="text-right">
                                                 {% if hosp.statut == 'EN_COURS' %}
                                                     {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
@@ -234,19 +246,16 @@
                                                         </a>
                                                     {% endif %}
 
-
                                                     {% if fonctionKey == 'infirmier' or fonctionKey == 'medecin' %}
                                                         <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-primary" title="Suivi">
                                                             <i class="la la-stethoscope"></i>
                                                         </a>
                                                     {% endif %}
 
-
                                                     {% if fonctionKey == 'receptionniste' or fonctionKey == 'admin' %}
                                                         <a href="{% url 'payer_hospitalisation' hosp.id %}" class="btn btn-sm btn-outline-danger" title="Encaisser">
                                                             <i class="la la-money-bill"></i>
                                                         </a>
-
 
                                                         {% if item.reste_a_payer_cdf <= 1 %}
                                                             <a href="{% url 'finir_hospitalisation' hosp.id %}" class="btn btn-sm btn-success" title="Valider Sortie">
@@ -280,7 +289,6 @@
         </div>
     </div>
 
-
     <script>
         document.getElementById('searchInput').addEventListener('keyup', function() {
             let filter = this.value.toLowerCase();
@@ -291,7 +299,6 @@
             });
         });
     </script>
-
 
     {% include 'back-end/includes/js.html' %}
 </body>

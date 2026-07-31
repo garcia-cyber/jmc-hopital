@@ -3367,33 +3367,61 @@ def liste_hospitalisations(request):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    if not hopital_user:
+    # Vérifier si l’utilisateur peut voir tous les hôpitaux
+    peut_voir_tous_hopitaux = (
+        request.user.is_superuser
+        or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur'])
+    )
+
+    # Paramètre URL : ?tous_hopitaux=1
+    afficher_tous = request.GET.get('tous_hopitaux') == '1'
+
+    if not hopital_user and not afficher_tous:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    # 2. Taux de change depuis la configuration
+    if afficher_tous and not peut_voir_tous_hopitaux:
+        afficher_tous = False
+        messages.warning(request, "Vous n’avez pas l’autorisation de voir toutes les hospitalisations.")
+
+    # 2. Taux de change
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')  # 1 USD = taux CDF
+    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')
     if not taux or taux == 0:
         taux = Decimal('2500.00')
 
-    # 3. Récupérer les hospitalisations de l’hôpital
+    # 3. Récupérer les hôpitaux pour le filtre (admin / tous hopitaux)
+    hopitaux_qs = Hopital.objects.all().order_by('nomH')
+
+    # 4. Récupérer les hospitalisations
     hospitalisations_qs = Hospitalisation.objects.select_related(
         'patient',
         'lit__chambre__type_chambre',
         'hopital'
     ).prefetch_related(
         'paiements'
-    ).filter(
-        hopital=hopital_user
     ).order_by('-date_entree')
 
-    # 4. Calcul pour chaque hospitalisation
+    # Filtre par hôpital “par défaut” si on n’affiche pas tous
+    if not afficher_tous:
+        hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_user)
+
+    # Filtre par hôpital via ?hopital=ID (uniquement si l’utilisateur peut voir tous)
+    hopital_selectionne_id = request.GET.get('hopital')
+    hopital_selectionne = None
+
+    if peut_voir_tous_hopitaux and afficher_tous and hopital_selectionne_id:
+        try:
+            hopital_selectionne = Hopital.objects.get(pk=hopital_selectionne_id)
+            hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_selectionne)
+        except (ValueError, Hopital.DoesNotExist):
+            hopital_selectionne = None
+
+    # 5. Calcul pour chaque hospitalisation
     hospitalisations = []
     now = timezone.now()
 
     for hosp in hospitalisations_qs:
-        # --- Nombre de jours ---
         date_entree = hosp.date_entree or now
         if hosp.statut == 'EN_COURS':
             nombre_jours = (now - date_entree).days + 1
@@ -3402,22 +3430,17 @@ def liste_hospitalisations(request):
             if nombre_jours <= 0:
                 nombre_jours = 1
 
-        # --- Prix du lit par nuit (en CDF) ---
         prix_lit_cdf = Decimal('0')
 
         if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
             prix_lit_cdf = hosp.lit.chambre.type_chambre.prix_nuitée or Decimal('0')
 
         if prix_lit_cdf <= 0:
-            prix_lit_cdf = Decimal('50000')  # valeur par défaut 50 000 CDF
+            prix_lit_cdf = Decimal('50000')
 
-        # --- Coût total en CDF ---
         cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-
-        # --- Coût total en USD ---
         cout_total_usd = (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-        # --- Total déjà payé (en CDF) ---
         total_deja_paye_cdf = Decimal('0')
         for p in hosp.paiements.all():
             montant = p.montant_verse or Decimal('0')
@@ -3426,7 +3449,6 @@ def liste_hospitalisations(request):
             else:  # USD
                 total_deja_paye_cdf += montant * taux
 
-        # --- Reste à payer (en CDF + USD) ---
         reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
         reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
@@ -3444,8 +3466,11 @@ def liste_hospitalisations(request):
         'hospitalisations': hospitalisations,
         'fonctionKey': fonctionKey,
         'taux': taux,
-    })
-    
+        'afficher_tous': afficher_tous,
+        'peut_voir_tous_hopitaux': peut_voir_tous_hopitaux,
+        'hopitaux': hopitaux_qs if peut_voir_tous_hopitaux else [],
+        'hopital_selectionne': hopital_selectionne,
+    })    
 #
 # =====================================================================================================
 # PAIEMENT DE L'HOSPITALISATION

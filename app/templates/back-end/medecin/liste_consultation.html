@@ -116,7 +116,7 @@
                           {% else %}
                             <!-- Patient déjà consulté: proposer la reconsultation (préremplie) -->
                             <a href="{% url 'reconsulter' signe.id %}" class="btn btn-sm btn-warning btn-space">
-                              <i class="fa fa-undo"></i> Reconsulter
+                              <i class="fa fa-undo"></i> Modiifer
                             </a>
                             <!-- Optionnel: accès en lecture seule à la consultation précédente -->
                             {% comment %} <a href="{% url 'detail_consultation' signe.id %}" class="btn btn-sm btn-outline-secondary">

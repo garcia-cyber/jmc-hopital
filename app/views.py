@@ -6579,6 +6579,15 @@ def liste_sessions_infirmier(request):
 def saisir_signes_vitaux(request, session_id):
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
+
+    # Debug temporaire
+    print("role:", role)
+    print("hopital_user:", hopital_user)
+
+    if not hopital_user:
+        # Pour l’instant, on bloque simplement
+        return redirect('liste_sessions_infirmier')
+
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     session = get_object_or_404(
@@ -6590,13 +6599,16 @@ def saisir_signes_vitaux(request, session_id):
     if request.method == 'POST':
         form = SigneVitalForm(request.POST)
         if form.is_valid():
+            print("Formulaire valide")
             signes = form.save(commit=False)
             signes.session = session
             signes.patient = session.patient
             signes.infirmier = request.user
             signes.hopital = hopital_user
             signes.save()
+            print("Signes vitaux enregistrés")
             return redirect('liste_sessions_infirmier')
+        
     else:
         form = SigneVitalForm()
 

@@ -26,45 +26,99 @@
                         <div class="card-body">
                             <h5 class="card-title text-primary"><i class="fa fa-heartbeat"></i> Informations Médicales</h5>
                             <hr>
-                            <form method="post">
+
+                            {% if form.errors %}
+                            <div class="alert alert-danger mb-4">
+                                <strong><i class="fa fa-exclamation-circle"></i> Le formulaire contient des erreurs :</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <form method="post" novalidate>
                                 {% csrf_token %}
                                 
                                 <div class="row">
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.temperature.label }}</label>
+                                        <label for="{{ form.temperature.id_for_label }}">
+                                            {{ form.temperature.label }}
+                                            {% if form.temperature.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.temperature }}
+                                        {% if form.temperature.errors %}
+                                            <small class="text-danger">{{ form.temperature.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.poids.label }}</label>
+                                        <label for="{{ form.poids.id_for_label }}">
+                                            {{ form.poids.label }}
+                                            {% if form.poids.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.poids }}
+                                        {% if form.poids.errors %}
+                                            <small class="text-danger">{{ form.poids.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.tension_arterielle.label }}</label>
+                                        <label for="{{ form.tension_arterielle.id_for_label }}">
+                                            {{ form.tension_arterielle.label }}
+                                            {% if form.tension_arterielle.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.tension_arterielle }}
+                                        {% if form.tension_arterielle.errors %}
+                                            <small class="text-danger">{{ form.tension_arterielle.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.frequence_cardiaque.label }}</label>
+                                        <label for="{{ form.frequence_cardiaque.id_for_label }}">
+                                            {{ form.frequence_cardiaque.label }}
+                                            {% if form.frequence_cardiaque.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.frequence_cardiaque }}
+                                        {% if form.frequence_cardiaque.errors %}
+                                            <small class="text-danger">{{ form.frequence_cardiaque.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.frequence_respiratoire.label }}</label>
+                                        <label for="{{ form.frequence_respiratoire.id_for_label }}">
+                                            {{ form.frequence_respiratoire.label }}
+                                            {% if form.frequence_respiratoire.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.frequence_respiratoire }}
+                                        {% if form.frequence_respiratoire.errors %}
+                                            <small class="text-danger">{{ form.frequence_respiratoire.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                     <div class="col-12 col-md-6 form-group">
-                                        <label>{{ form.saturation_oxygene.label }}</label>
+                                        <label for="{{ form.saturation_oxygene.id_for_label }}">
+                                            {{ form.saturation_oxygene.label }}
+                                            {% if form.saturation_oxygene.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
                                         {{ form.saturation_oxygene }}
+                                        {% if form.saturation_oxygene.errors %}
+                                            <small class="text-danger">{{ form.saturation_oxygene.errors.0 }}</small>
+                                        {% endif %}
                                     </div>
                                 </div>
 
                                 <div class="mt-4 text-center">
-                                    <button type="submit" class="btn btn-primary btn-lg px-5">Enregistrer</button>
-                                    <a href="{% url 'liste_sessions_infirmier' %}" class="btn btn-secondary btn-lg px-5">Annuler</a>
+                                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                                        <i class="fa fa-save"></i> Enregistrer
+                                    </button>
+                                    <a href="{% url 'liste_sessions_infirmier' %}" class="btn btn-secondary btn-lg px-5">
+                                        <i class="fa fa-times"></i> Annuler
+                                    </a>
                                 </div>
                             </form>
                         </div>

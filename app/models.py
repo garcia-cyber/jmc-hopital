@@ -411,7 +411,7 @@ class SigneVital(models.Model):
     infirmier = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     est_consulte = models.BooleanField(default=False)
     session = models.ForeignKey(SessionSoins, on_delete=models.CASCADE, related_name='signes_vitaux', null=True)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True, blank =True)
 
     def __str__(self):
         return f"Signes vitaux de {self.patient.noms} le {self.date_prelevement}"

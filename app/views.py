@@ -4133,6 +4133,8 @@ def imprimer_facture_hospitalisation(request, hosp_id):
 # ============================================================================================
 @login_required
 def dossier_medical_complet(request, patient_id):
+    """Dossier médical complet - Affiche TOUT l'historique du patient"""
+    
     role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
@@ -4140,36 +4142,80 @@ def dossier_medical_complet(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
 
     if not patient.fiche_payee:
-        messages.error(request, "Accès refusé.")
+        messages.error(request, "Accès refusé. Fiche patient non payée.")
         return redirect('liste_patients')
 
-    historique_consultations = Consultation.objects.filter(
+    # --- CONSULTATIONS (avec examens et ordonnances) ---
+    consultations = Consultation.objects.filter(
         triage__patient=patient,
         hopital=hopital_user
-    ).order_by('-date_creation').prefetch_related(
+    ).order_by('-date_creation').select_related(
+        'triage', 'medecin', 'session'
+    ).prefetch_related(
         'examens__prestation',
         'ordonnance_set__medicaments'
-    ).select_related('triage', 'medecin')
+    )
 
+    # --- HOSPITALISATIONS (avec Kardex, Suivi, Ordonnance Sortie, RDV) ---
     hospitalisations = Hospitalisation.objects.filter(
         patient=patient,
         hopital=hopital_user
-    ).order_by('-date_entree')
+    ).order_by('-date_entree').prefetch_related(
+        'kardex_items__administrations',
+        'suivis_journaliers',
+        'ordonnance_sortie',
+        'rendezvous_set',
+        'lit__chambre__type_chambre'
+    )
 
+    # --- SIGNES VITAUX ---
     signes_vitaux = SigneVital.objects.filter(
-        patient=patient
-    ).order_by('-date_prelevement')
+        patient=patient,
+        hopital=hopital_user
+    ).order_by('-date_prelevement').select_related('infirmier', 'session')
+
+    # --- MATERNITÉ ---
+    maternites = Maternite.objects.filter(
+        patient=patient,
+        hopital=hopital_user
+    ).order_by('-date_admission').prefetch_related(
+        'consultations__effectue_par'
+    )
+
+    # --- SESSIONS DE SOINS ---
+    sessions = SessionSoins.objects.filter(
+        patient=patient,
+        hopital=hopital_user
+    ).order_by('-date_creation').prefetch_related(
+        'items__prestation',
+        'signes_vitaux'
+    )
+
+    # --- STATS ---
+    total_consultations = consultations.count()
+    total_hospitalisations = hospitalisations.count()
+    total_examens = DemandeExamen.objects.filter(
+        consultation__in=consultations
+    ).count()
+    total_ordonnances = Ordonnance.objects.filter(
+        consultation__in=consultations
+    ).count()
 
     context = {
         'patient': patient,
-        'consultations': historique_consultations,
+        'consultations': consultations,
         'hospitalisations': hospitalisations,
         'signes_vitaux': signes_vitaux,
-        'fonctionKey': fonctionKey
+        'maternites': maternites,
+        'sessions': sessions,
+        'fonctionKey': fonctionKey,
+        'total_consultations': total_consultations,
+        'total_hospitalisations': total_hospitalisations,
+        'total_examens': total_examens,
+        'total_ordonnances': total_ordonnances,
     }
 
     return render(request, 'back-end/patient/dossier_medical.html', context)
-
 #
 # ===========================================================================================
 # DETAIL HOSPITALIERE

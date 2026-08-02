@@ -20,9 +20,11 @@
             --gray-700: #334155;
         }
 
+
         body {
             background: #f8fafc;
         }
+
 
         .admin-header {
             background: white;
@@ -31,6 +33,7 @@
             margin-bottom: 2rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+
 
         .admin-title {
             font-size: 1.75rem;
@@ -42,23 +45,28 @@
             gap: 0.75rem;
         }
 
+
         .admin-title i {
             color: var(--danger);
         }
+
 
         .breadcrumb {
             margin: 0;
             font-size: 0.875rem;
         }
 
+
         .breadcrumb-item a {
             color: var(--danger);
             text-decoration: none;
         }
 
+
         .breadcrumb-item.active {
             color: var(--gray-600);
         }
+
 
         .alert-count {
             background: var(--danger);
@@ -69,6 +77,7 @@
             font-weight: 700;
             margin-left: 0.5rem;
         }
+
 
         .filter-bar {
             background: white;
@@ -82,10 +91,12 @@
             align-items: flex-end;
         }
 
+
         .filter-group {
             flex: 1;
             min-width: 200px;
         }
+
 
         .filter-label {
             font-size: 0.875rem;
@@ -94,6 +105,7 @@
             margin-bottom: 0.5rem;
             display: block;
         }
+
 
         .filter-select {
             width: 100%;
@@ -104,11 +116,13 @@
             background: white;
         }
 
+
         .filter-select:focus {
             outline: none;
             border-color: var(--danger);
             box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
         }
+
 
         .btn-filter {
             background: var(--danger);
@@ -121,10 +135,12 @@
             transition: all 0.2s;
         }
 
+
         .btn-filter:hover {
             background: #dc2626;
             transform: translateY(-2px);
         }
+
 
         .alert-card {
             background: white;
@@ -135,9 +151,11 @@
             border-left: 4px solid;
         }
 
+
         .alert-card.rupture { border-left-color: var(--danger); }
         .alert-card.faible { border-left-color: var(--warning); }
         .alert-card.peremption { border-left-color: #f97316; }
+
 
         .alert-header {
             padding: 1.25rem 1.5rem;
@@ -149,23 +167,28 @@
             gap: 1rem;
         }
 
+
         .alert-title {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
 
+
         .alert-title i {
             font-size: 1.5rem;
         }
+
 
         .alert-card.rupture .alert-title i { color: var(--danger); }
         .alert-card.faible .alert-title i { color: var(--warning); }
         .alert-card.peremption .alert-title i { color: #f97316; }
 
+
         .alert-body {
             padding: 1.25rem 1.5rem;
         }
+
 
         .product-info {
             display: flex;
@@ -174,12 +197,14 @@
             flex-wrap: wrap;
         }
 
+
         .product-name {
             font-size: 1.125rem;
             font-weight: 700;
             color: var(--dark);
             flex: 1;
         }
+
 
         .stock-badge {
             padding: 0.5rem 1rem;
@@ -188,15 +213,31 @@
             font-size: 0.9375rem;
         }
 
+
         .stock-badge.rupture {
             background: #fee2e2;
             color: var(--danger);
         }
 
+
         .stock-badge.faible {
             background: #fef3c7;
             color: var(--warning);
         }
+
+
+        .hospital-badge {
+            background: #dbeafe;
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
 
         .btn-action {
             padding: 0.5rem 1rem;
@@ -208,15 +249,18 @@
             transition: all 0.2s;
         }
 
+
         .btn-primary {
             background: var(--primary);
             color: white;
         }
 
+
         .btn-primary:hover {
             background: var(--primary-dark);
             color: white;
         }
+
 
         .empty-state {
             text-align: center;
@@ -226,11 +270,13 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
+
         .empty-state i {
             font-size: 4rem;
             color: var(--success);
             margin-bottom: 1rem;
         }
+
 
         .currency-badge {
             display: inline-block;
@@ -241,19 +287,30 @@
             margin-left: 0.5rem;
         }
 
+
         .currency-usd {
             background: #dbeafe;
             color: var(--primary);
         }
+
 
         .currency-cdf {
             background: #fef3c7;
             color: var(--warning);
         }
 
+
         @media (max-width: 768px) {
             .admin-header {
                 padding: 1.25rem 1.5rem;
+            }
+            .product-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .stock-badge, .hospital-badge {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -262,6 +319,7 @@
     <div class="main-wrapper">
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
+
 
         <div class="page-wrapper">
             <div class="content container-fluid">
@@ -289,6 +347,7 @@
                     </div>
                 </div>
 
+
                 <!-- Filtres -->
                 <form method="GET" class="filter-bar">
                     <div class="filter-group">
@@ -308,6 +367,7 @@
                         <i class="fa fa-filter"></i> Filtrer
                     </button>
                 </form>
+
 
                 <!-- Alertes -->
                 {% if alertes %}
@@ -345,6 +405,15 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                                
+                                <!-- Badge Hôpital -->
+                                {% if alerte.hopital %}
+                                <div class="hospital-badge">
+                                    <i class="fa fa-hospital"></i>
+                                    {{ alerte.hopital.nomH|truncatechars:25 }}
+                                </div>
+                                {% endif %}
+                                
                                 {% if alerte.statut == 'peremption' %}
                                 <div>
                                     <span class="badge badge-warning">
@@ -375,6 +444,7 @@
             </div>
         </div>
     </div>
+
 
     {% include 'back-end/includes/js.html' %}
 </body>

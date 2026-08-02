@@ -2449,17 +2449,22 @@ def dashboard_finance(request):
     if not request.user.is_authenticated:
         return redirect('login')
 
+
     role = Fonction.objects.select_related('fonctionKey').filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
 
     if fonctionKey != 'admin':
         messages.error(request, "Accès refusé : réservée à l'administration.")
         return redirect('home')
 
+
     maintenant = timezone.now()
     debut_aujourdhui = maintenant.replace(hour=0, minute=0, second=0, microsecond=0)
     debut_semaine = debut_aujourdhui - timedelta(days=7)
-    debut_mois = debut_aujourdhui.replace(day=1)
+    debut_mois = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    debut_annee = maintenant.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)  # NOUVEAU
+
 
     hopital_id = request.GET.get('hopital')
     devise = request.GET.get('devise')
@@ -2467,43 +2472,61 @@ def dashboard_finance(request):
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
 
+
     paiements_qs = Paiement.objects.select_related('patient', 'caissier', 'hopital')
     depenses_qs = Depense.objects.select_related('auteur', 'hopital')
+
 
     if hopital_id:
         paiements_qs = paiements_qs.filter(hopital_id=hopital_id)
         depenses_qs = depenses_qs.filter(hopital_id=hopital_id)
 
+
     if devise:
         paiements_qs = paiements_qs.filter(devise=devise)
         depenses_qs = depenses_qs.filter(devise=devise)
 
+
     if service:
         paiements_qs = paiements_qs.filter(service=service)
+
 
     if date_debut:
         paiements_qs = paiements_qs.filter(date_paiement__date__gte=date_debut)
 
+
     if date_fin:
         paiements_qs = paiements_qs.filter(date_paiement__date__lte=date_fin)
 
-    total_usd = paiements_qs.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-    total_cdf = paiements_qs.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    depense_totale_usd = depenses_qs.filter(devise='USD').aggregate(total=Sum('montant'))['total'] or 0
-    depense_totale_cdf = depenses_qs.filter(devise='CDF').aggregate(total=Sum('montant'))['total'] or 0
+    total_usd = paiements_qs.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    total_cdf = paiements_qs.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
 
-    restant_usd = float(total_usd) - float(depense_totale_usd)
-    restant_cdf = float(total_cdf) - float(depense_totale_cdf)
 
-    aujourdhui_usd = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-    aujourdhui_cdf = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+    depense_totale_usd = depenses_qs.filter(devise='USD').aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+    depense_totale_cdf = depenses_qs.filter(devise='CDF').aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
 
-    semaine_usd = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-    semaine_cdf = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
 
-    mois_usd = paiements_qs.filter(date_paiement__gte=debut_mois, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-    mois_cdf = paiements_qs.filter(date_paiement__gte=debut_mois, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+    restant_usd = total_usd - depense_totale_usd
+    restant_cdf = total_cdf - depense_totale_cdf
+
+
+    aujourdhui_usd = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    aujourdhui_cdf = paiements_qs.filter(date_paiement__gte=debut_aujourdhui, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
+
+    semaine_usd = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    semaine_cdf = paiements_qs.filter(date_paiement__gte=debut_semaine, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
+
+    mois_usd = paiements_qs.filter(date_paiement__gte=debut_mois, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    mois_cdf = paiements_qs.filter(date_paiement__gte=debut_mois, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    
+    
+    # NOUVEAU : Stats par année
+    annee_usd = paiements_qs.filter(date_paiement__gte=debut_annee, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    annee_cdf = paiements_qs.filter(date_paiement__gte=debut_annee, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
 
     recettes_par_hopital = paiements_qs.values(
         'hopital__id',
@@ -2512,6 +2535,7 @@ def dashboard_finance(request):
         total_usd=Sum('montant_verse', filter=Q(devise='USD')),
         total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
     ).order_by('hopital__nomH')
+
 
     recettes_par_hopital_par_jour = paiements_qs.annotate(
         jour=TruncDay('date_paiement')
@@ -2524,6 +2548,7 @@ def dashboard_finance(request):
         total_cdf=Sum('montant_verse', filter=Q(devise='CDF')),
     ).order_by('jour', 'hopital__nomH')
 
+
     depenses_par_hopital = depenses_qs.values(
         'hopital__id',
         'hopital__nomH'
@@ -2532,10 +2557,11 @@ def dashboard_finance(request):
         depenses_cdf=Sum('montant', filter=Q(devise='CDF')),
     ).order_by('hopital__nomH')
 
+
     services_stats = []
     for code, nom_service in Paiement.SERVICES:
-        usd_service = paiements_qs.filter(service=code, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-        cdf_service = paiements_qs.filter(service=code, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+        usd_service = paiements_qs.filter(service=code, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+        cdf_service = paiements_qs.filter(service=code, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
         services_stats.append({
             'code': code,
             'nom': nom_service,
@@ -2543,9 +2569,74 @@ def dashboard_finance(request):
             'cdf': cdf_service,
         })
 
+
+    # NOUVEAU : Stats par mois (année en cours)
+    paiements_annee = paiements_qs.filter(date_paiement__gte=debut_annee)
+    
+    mois_stats = []
+    for m in range(1, 13):
+        debut_mois_courant = maintenant.replace(month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        if m == 12:
+            fin_mois_courant = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            fin_mois_courant = maintenant.replace(month=m + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+
+        m_usd = paiements_annee.filter(
+            date_paiement__range=(debut_mois_courant, fin_mois_courant),
+            devise='USD'
+        ).aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
+        m_cdf = paiements_annee.filter(
+            date_paiement__range=(debut_mois_courant, fin_mois_courant),
+            devise='CDF'
+        ).aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+
+        nom_mois = debut_mois_courant.strftime('%B').capitalize()
+
+        mois_stats.append({
+            'nom': nom_mois,
+            'mois_num': m,
+            'usd': m_usd,
+            'cdf': m_cdf,
+        })
+    
+    
+    # NOUVEAU : Dépenses par mois
+    depenses_annee = depenses_qs.filter(date_depense__gte=debut_annee)
+    
+    depenses_mois_stats = []
+    for m in range(1, 13):
+        debut_mois_courant = maintenant.replace(month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        if m == 12:
+            fin_mois_courant = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            fin_mois_courant = maintenant.replace(month=m + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+
+        d_usd = depenses_annee.filter(
+            date_depense__range=(debut_mois_courant, fin_mois_courant),
+            devise='USD'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+
+        d_cdf = depenses_annee.filter(
+            date_depense__range=(debut_mois_courant, fin_mois_courant),
+            devise='CDF'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+
+        nom_mois = debut_mois_courant.strftime('%B').capitalize()
+
+        depenses_mois_stats.append({
+            'nom': nom_mois,
+            'mois_num': m,
+            'usd': d_usd,
+            'cdf': d_cdf,
+        })
+
+
     tous_les_paiements = paiements_qs.order_by('-date_paiement')
 
+
     hopitaux = Paiement.objects.values('hopital__id', 'hopital__nomH').distinct().order_by('hopital__nomH')
+
 
     context = {
         'aujourdhui_usd': aujourdhui_usd,
@@ -2554,6 +2645,8 @@ def dashboard_finance(request):
         'semaine_cdf': semaine_cdf,
         'mois_usd': mois_usd,
         'mois_cdf': mois_cdf,
+        'annee_usd': annee_usd,  # NOUVEAU
+        'annee_cdf': annee_cdf,  # NOUVEAU
         'total_usd': total_usd,
         'total_cdf': total_cdf,
         'depense_totale_usd': depense_totale_usd,
@@ -2568,6 +2661,8 @@ def dashboard_finance(request):
         'hopitaux': hopitaux,
         'fonctionKey': fonctionKey,
         'titre_page': "Journal de Caisse & Finances - JMC",
+        'mois_stats': mois_stats,  # NOUVEAU
+        'depenses_mois_stats': depenses_mois_stats,  # NOUVEAU
         'filtres': {
             'hopital': hopital_id or '',
             'devise': devise or '',
@@ -2577,6 +2672,7 @@ def dashboard_finance(request):
         }
     }
     return render(request, 'back-end/finance/dashboard_finance.html', context)
+
 # ==================================================================================================
 # #41 : FINANCE GESTION DE DETTE 
 # ==================================================================================================
@@ -8470,35 +8566,48 @@ def admin_pharmacie_dashboard(request):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
+    filtre_actif = False
     
-    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
-    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
-        # Pharmacien ne voit que son hôpital
+    # 1. Admin global ou super_admin peut tout voir OU filtrer
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        if hopital_id:
+            # Admin a choisi un hôpital spécifique
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+            filtre_actif = True
+        else:
+            # Admin n'a pas filtré → voit TOUS les hôpitaux (None = pas de filtre)
+            hopital_selectionne = None
+            filtre_actif = False
+    
+    # 2. Pharmacien, admin_pharmacie, responsable_stock → limité à son hôpital
+    elif fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
         hopital_selectionne = hopital_user
-    elif hopital_id:
-        # Admin peut filtrer par hôpital
-        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        filtre_actif = True
+    
+    # 3. Autres utilisateurs → hôpital par défaut
     else:
-        # Par défaut, on prend l'hôpital de l'utilisateur
         hopital_selectionne = hopital_user
+        filtre_actif = True
     
-    # Base queryset - Filtrage par hôpital
-    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
-    lots = LotPharmacie.objects.filter(hopital=hopital_selectionne)
-    sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
-    mouvements = MouvementStock.objects.filter(hopital=hopital_selectionne)
+    # --- BASE QUERYSET ---
+    if hopital_selectionne:
+        produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+        lots = LotPharmacie.objects.filter(hopital=hopital_selectionne)
+        sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
+        mouvements = MouvementStock.objects.filter(hopital=hopital_selectionne)
+    else:
+        # Admin voit TOUS les hôpitaux
+        produits = ProduitPharmacie.objects.all()
+        lots = LotPharmacie.objects.all()
+        sorties = SortiePharmacie.objects.all()
+        mouvements = MouvementStock.objects.all()
     
     # Filtres par date
     if date_debut:
@@ -8516,20 +8625,24 @@ def admin_pharmacie_dashboard(request):
     total_lots = lots.count()
     total_sorties = sorties.count()
     
-    # Récupérer le taux de change depuis ConfigurationHopital
-    try:
-        from .models import ConfigurationHopital
-        config = ConfigurationHopital.objects.filter(hopital=hopital_selectionne).first()
-        taux_change = config.taux if config and hasattr(config, 'taux') else 2500
-    except:
-        taux_change = 2500  # Valeur par défaut
+    # --- TAUX DE CHANGE PAR DÉFAUT : 2500 CDF = 1 USD ---
+    # Si l'hôpital a une config, on prend son taux, sinon 2500 CDF
+    taux_change = 2500  # Taux par défaut : 1 USD = 2500 CDF
     
-    # Calcul du stock et valeur totale - USD et CDF
+    if hopital_selectionne:
+        try:
+            config = ConfigurationHopital.objects.filter(hopital=hopital_selectionne).first()
+            if config and hasattr(config, 'taux'):
+                taux_change = config.taux
+        except:
+            pass
+    
+    # --- CALCULS : TOUT EN CDF PAR DÉFAUT, PUIS CONVERSION USD ---
     stock_total = 0
-    valeur_stock_achat_usd = 0
-    valeur_stock_vente_usd = 0
     valeur_stock_achat_cdf = 0
     valeur_stock_vente_cdf = 0
+    valeur_stock_achat_usd = 0
+    valeur_stock_vente_usd = 0
     
     for produit in produits:
         entrees = LotPharmacie.objects.filter(
@@ -8543,17 +8656,28 @@ def admin_pharmacie_dashboard(request):
         stock = entrees - sorties_prod
         stock_total += stock
         
-        # Récupérer les prix
+        # Prix du produit
         prix_achat = float(produit.prix_achat_unitaire) if produit.prix_achat_unitaire else 0
         prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+        devise_produit = produit.devise if produit.devise else 'CDF'  # CDF par défaut
         
-        # Vérifier la devise du produit
-        if produit.devise == 'CDF':
+        # Si le produit est en CDF
+        if devise_produit == 'CDF':
             valeur_stock_achat_cdf += stock * prix_achat
             valeur_stock_vente_cdf += stock * prix_vente
+            
+            # Conversion en USD pour affichage
+            valeur_stock_achat_usd += (stock * prix_achat) / taux_change
+            valeur_stock_vente_usd += (stock * prix_vente) / taux_change
+        
+        # Si le produit est en USD
         else:
             valeur_stock_achat_usd += stock * prix_achat
             valeur_stock_vente_usd += stock * prix_vente
+            
+            # Conversion en CDF pour affichage
+            valeur_stock_achat_cdf += (stock * prix_achat) * taux_change
+            valeur_stock_vente_cdf += (stock * prix_vente) * taux_change
     
     benefice_potentiel_usd = valeur_stock_vente_usd - valeur_stock_achat_usd
     benefice_potentiel_cdf = valeur_stock_vente_cdf - valeur_stock_achat_cdf
@@ -8581,18 +8705,27 @@ def admin_pharmacie_dashboard(request):
         
         if quantite_vendue > 0:
             prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
-            chiffre = quantite_vendue * prix_vente
+            devise_produit = produit.devise if produit.devise else 'CDF'
+            
+            # Calcul du chiffre d'affaire dans la devise du produit
+            if devise_produit == 'CDF':
+                chiffre = quantite_vendue * prix_vente
+                chiffre_usd = chiffre / taux_change
+            else:
+                chiffre_usd = quantite_vendue * prix_vente
+                chiffre = chiffre_usd * taux_change
             
             top_ventes.append({
                 'produit': produit,
                 'quantite_vendue': quantite_vendue,
                 'chiffre_affaire': round(chiffre, 2),
-                'devise': produit.devise
+                'chiffre_affaire_usd': round(chiffre_usd, 2),
+                'devise': devise_produit
             })
     
     top_ventes = sorted(top_ventes, key=lambda x: x['quantite_vendue'], reverse=True)[:10]
     
-    # Bénéfice réalisé (ventes effectives) - USD et CDF
+    # --- BÉNÉFICE RÉALISÉ (VENTES EFFECTIVES) ---
     benefice_realise_usd = 0
     benefice_realise_cdf = 0
     chiffre_affaire_total_usd = 0
@@ -8601,27 +8734,36 @@ def admin_pharmacie_dashboard(request):
     for sortie in sorties:
         prix_achat = float(sortie.lot.produit.prix_achat_unitaire) if sortie.lot.produit.prix_achat_unitaire else 0
         prix_vente = float(sortie.lot.produit.prix_vente_unitaire) if sortie.lot.produit.prix_vente_unitaire else 0
+        devise_produit = sortie.lot.produit.devise if sortie.lot.produit.devise else 'CDF'
+        
         benefice = (prix_vente - prix_achat) * sortie.quantite_vendue
         chiffre = prix_vente * sortie.quantite_vendue
         
-        # Vérifier la devise
-        if sortie.lot.produit.devise == 'CDF':
+        if devise_produit == 'CDF':
             benefice_realise_cdf += benefice
             chiffre_affaire_total_cdf += chiffre
+            
+            # Conversion USD
+            benefice_realise_usd += benefice / taux_change
+            chiffre_affaire_total_usd += chiffre / taux_change
         else:
             benefice_realise_usd += benefice
             chiffre_affaire_total_usd += chiffre
+            
+            # Conversion CDF
+            benefice_realise_cdf += benefice * taux_change
+            chiffre_affaire_total_cdf += chiffre * taux_change
     
     # Liste des hôpitaux pour le filtre
-    hopitaux = Hopital.objects.all()
-    
-    # Si l'utilisateur n'est pas admin global, on limite la liste
-    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     context = {
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
+        'filtre_actif': filtre_actif,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
         'date_debut': date_debut,
@@ -8630,19 +8772,18 @@ def admin_pharmacie_dashboard(request):
         'total_lots': total_lots,
         'total_sorties': total_sorties,
         'stock_total': stock_total,
-        # USD
+        'taux_change': taux_change,  # Taux utilisé pour les conversions
+        # Valeurs principales (devise du produit)
         'valeur_stock_achat_usd': round(valeur_stock_achat_usd, 2),
         'valeur_stock_vente_usd': round(valeur_stock_vente_usd, 2),
         'benefice_potentiel_usd': round(benefice_potentiel_usd, 2),
         'benefice_realise_usd': round(benefice_realise_usd, 2),
         'chiffre_affaire_total_usd': round(chiffre_affaire_total_usd, 2),
-        # CDF
         'valeur_stock_achat_cdf': round(valeur_stock_achat_cdf, 2),
         'valeur_stock_vente_cdf': round(valeur_stock_vente_cdf, 2),
         'benefice_potentiel_cdf': round(benefice_potentiel_cdf, 2),
         'benefice_realise_cdf': round(benefice_realise_cdf, 2),
         'chiffre_affaire_total_cdf': round(chiffre_affaire_total_cdf, 2),
-        'taux_change': taux_change,
         'produits_rupture': len(produits_rupture),
         'top_ventes': top_ventes,
     }
@@ -8666,44 +8807,63 @@ def admin_historique_stock(request, produit_id=None):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
     type_mouvement = request.GET.get('type_mouvement')
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
+    filtre_actif = False
     
-    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
-    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
-        # Pharmacien ne voit que son hôpital
+    # 1. Admin global ou super_admin peut tout voir OU filtrer
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        if hopital_id:
+            # Admin a choisi un hôpital spécifique
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+            filtre_actif = True
+        else:
+            # Admin n'a pas filtré → voit TOUS les hôpitaux (None = pas de filtre)
+            hopital_selectionne = None
+            filtre_actif = False
+    
+    # 2. Pharmacien, admin_pharmacie, responsable_stock → limité à son hôpital
+    elif fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
         hopital_selectionne = hopital_user
-    elif hopital_id:
-        # Admin peut filtrer par hôpital
-        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        filtre_actif = True
+    
+    # 3. Autres utilisateurs → hôpital par défaut
     else:
-        # Par défaut, on prend l'hôpital de l'utilisateur
         hopital_selectionne = hopital_user
+        filtre_actif = True
     
-    # Produit spécifique ou tous - AVEC GESTION D'ERREUR
+    # --- PRODUIT SPÉCIFIQUE OU TOUS ---
     produit = None
+    
     if produit_id:
-        try:
-            produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
-            mouvements = MouvementStock.objects.filter(lot__produit=produit)
-        except ProduitPharmacie.DoesNotExist:
-            messages.error(request, "Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
-            return redirect('admin_historique_stock')
+        # Si un produit est demandé
+        if hopital_selectionne:
+            # Utilisateur non-admin ou admin avec filtre → produit de cet hôpital
+            try:
+                produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
+                mouvements = MouvementStock.objects.filter(lot__produit=produit)
+            except ProduitPharmacie.DoesNotExist:
+                messages.error(request, "Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
+                return redirect('admin_historique_stock')
+        else:
+            # Admin sans filtre → peut voir n'importe quel produit
+            try:
+                produit = ProduitPharmacie.objects.get(pk=produit_id)
+                mouvements = MouvementStock.objects.filter(lot__produit=produit)
+            except ProduitPharmacie.DoesNotExist:
+                messages.error(request, "Le produit demandé n'existe pas.")
+                return redirect('admin_historique_stock')
     else:
+        # Tous les mouvements
         mouvements = MouvementStock.objects.all()
     
-    # Filtres
+    # --- FILTRES ---
     if hopital_selectionne:
         mouvements = mouvements.filter(hopital=hopital_selectionne)
     
@@ -8716,16 +8876,22 @@ def admin_historique_stock(request, produit_id=None):
     if type_mouvement:
         mouvements = mouvements.filter(type_mouvement=type_mouvement)
     
-    # Tri par date décroissante
+    # --- TRI ET OPTIMISATION ---
     mouvements = mouvements.select_related(
         'lot', 
         'lot__produit', 
-        'effectue_par'
+        'effectue_par',
+        'lot__produit__hopital'
     ).order_by('-date_mouvement')
     
-    # Calcul des totaux par produit
+    # --- PAGINATION (10 par page) ---
+    paginator = Paginator(mouvements, 10)
+    page_number = request.GET.get('page')
+    mouvements_page = paginator.get_page(page_number)
+    
+    # --- CALCUL DES TOTAUX PAR PRODUIT ---
     resume_par_produit = {}
-    for mouvement in mouvements:
+    for mouvement in mouvements_page:  # Utiliser la page paginée
         produit_nom = mouvement.lot.produit.nom
         if produit_nom not in resume_par_produit:
             resume_par_produit[produit_nom] = {
@@ -8746,27 +8912,28 @@ def admin_historique_stock(request, produit_id=None):
             resume_par_produit[produit_nom]['ajustements'] += mouvement.quantite_unites
             resume_par_produit[produit_nom]['total'] += mouvement.quantite_unites
     
-    # Liste des hôpitaux pour le filtre
-    hopitaux = Hopital.objects.all()
-    
-    # Si l'utilisateur n'est pas admin global, on limite la liste
-    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    # --- LISTE DES HÔPITAUX POUR LE FILTRE ---
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     context = {
         'produit': produit,
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
+        'filtre_actif': filtre_actif,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
         'date_debut': date_debut,
         'date_fin': date_fin,
         'type_mouvement': type_mouvement,
-        'mouvements': mouvements,
+        'mouvements': mouvements_page,  # Paginé
         'resume_par_produit': resume_par_produit.values(),
     }
     
     return render(request, 'back-end/pharmacie/pharmacie_historique.html', context)
+
 #
 # ====================================================================================================
 # BENEFICE PHARMACIE
@@ -8785,32 +8952,53 @@ def admin_benefices_pharmacie(request):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     mois = request.GET.get('mois')
     annee = request.GET.get('annee', timezone.now().year)
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
+    filtre_actif = False
     
-    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
-    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
-        # Pharmacien ne voit que son hôpital
+    # 1. Admin global ou super_admin peut tout voir OU filtrer
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        if hopital_id:
+            # Admin a choisi un hôpital spécifique
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+            filtre_actif = True
+        else:
+            # Admin n'a pas filtré → voit TOUS les hôpitaux (None = pas de filtre)
+            hopital_selectionne = None
+            filtre_actif = False
+    
+    # 2. Pharmacien, admin_pharmacie, responsable_stock → limité à son hôpital
+    elif fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
         hopital_selectionne = hopital_user
-    elif hopital_id:
-        # Admin peut filtrer par hôpital
-        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        filtre_actif = True
+    
+    # 3. Autres utilisateurs → hôpital par défaut
     else:
-        # Par défaut, on prend l'hôpital de l'utilisateur
         hopital_selectionne = hopital_user
+        filtre_actif = True
     
-    # Toutes les sorties - Filtrage par hôpital
-    sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
+    # --- TAUX DE CHANGE PAR DÉFAUT : 2500 CDF = 1 USD ---
+    taux_change = 2500  # Taux par défaut : 1 USD = 2500 CDF
+    
+    if hopital_selectionne:
+        try:
+            config = ConfigurationHopital.objects.filter(hopital=hopital_selectionne).first()
+            if config and hasattr(config, 'taux'):
+                taux_change = config.taux
+        except:
+            pass
+    
+    # --- TOUTES LES SORTIES ---
+    if hopital_selectionne:
+        sorties = SortiePharmacie.objects.filter(hopital=hopital_selectionne)
+    else:
+        # Admin voit TOUTES les sorties de tous les hôpitaux
+        sorties = SortiePharmacie.objects.all()
     
     # Filtre par période
     if mois:
@@ -8818,11 +9006,16 @@ def admin_benefices_pharmacie(request):
     else:
         sorties = sorties.filter(date_sortie__year=annee)
     
-    # Tous les produits - Filtrage par hôpital
-    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    # --- TOUS LES PRODUITS ---
+    if hopital_selectionne:
+        produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    else:
+        # Admin voit TOUS les produits
+        produits = ProduitPharmacie.objects.all()
     
-    # Calcul par produit - USD et CDF
+    # --- CALCUL PAR PRODUIT - AVEC GESTION CDF/USD ---
     benefices_par_produit = []
+    
     for produit in produits:
         sorties_produit = sorties.filter(lot__produit=produit)
         quantite_vendue = sorties_produit.aggregate(
@@ -8832,10 +9025,25 @@ def admin_benefices_pharmacie(request):
         if quantite_vendue > 0:
             prix_achat = float(produit.prix_achat_unitaire) if produit.prix_achat_unitaire else 0
             prix_vente = float(produit.prix_vente_unitaire) if produit.prix_vente_unitaire else 0
+            devise_produit = produit.devise if produit.devise else 'CDF'  # CDF par défaut
+            
+            # Calculs dans la devise du produit
             benefice_unitaire = prix_vente - prix_achat
             benefice_total = benefice_unitaire * quantite_vendue
             chiffre_affaire = prix_vente * quantite_vendue
             marge = (benefice_total / chiffre_affaire * 100) if chiffre_affaire > 0 else 0
+            
+            # Conversions pour affichage
+            if devise_produit == 'CDF':
+                benefice_total_usd = benefice_total / taux_change
+                chiffre_affaire_usd = chiffre_affaire / taux_change
+                benefice_total_cdf = benefice_total
+                chiffre_affaire_cdf = chiffre_affaire
+            else:
+                benefice_total_usd = benefice_total
+                chiffre_affaire_usd = chiffre_affaire
+                benefice_total_cdf = benefice_total * taux_change
+                chiffre_affaire_cdf = chiffre_affaire * taux_change
             
             benefices_par_produit.append({
                 'produit': produit,
@@ -8844,9 +9052,14 @@ def admin_benefices_pharmacie(request):
                 'prix_vente': round(prix_vente, 2),
                 'benefice_unitaire': round(benefice_unitaire, 2),
                 'benefice_total': round(benefice_total, 2),
+                'benefice_total_usd': round(benefice_total_usd, 2),
+                'benefice_total_cdf': round(benefice_total_cdf, 2),
                 'chiffre_affaire': round(chiffre_affaire, 2),
+                'chiffre_affaire_usd': round(chiffre_affaire_usd, 2),
+                'chiffre_affaire_cdf': round(chiffre_affaire_cdf, 2),
                 'marge': round(marge, 2),
-                'devise': produit.devise  # USD ou CDF
+                'devise': devise_produit,
+                'taux_change': taux_change,
             })
     
     # Tri par bénéfice total
@@ -8856,46 +9069,49 @@ def admin_benefices_pharmacie(request):
         reverse=True
     )
     
-    # Séparer USD et CDF
-    benefices_usd = [x for x in benefices_par_produit if x['devise'] == 'USD']
-    benefices_cdf = [x for x in benefices_par_produit if x['devise'] == 'CDF']
+    # --- TOTAUX GLOBAUX (TOUS PRODUITS CONFONDUS) ---
+    benefice_total_global_usd = 0
+    benefice_total_global_cdf = 0
+    chiffre_affaire_global_usd = 0
+    chiffre_affaire_global_cdf = 0
     
-    # Totaux USD
-    benefice_total_global_usd = sum(x['benefice_total'] for x in benefices_usd)
-    chiffre_affaire_global_usd = sum(x['chiffre_affaire'] for x in benefices_usd)
+    for item in benefices_par_produit:
+        benefice_total_global_usd += item['benefice_total_usd']
+        benefice_total_global_cdf += item['benefice_total_cdf']
+        chiffre_affaire_global_usd += item['chiffre_affaire_usd']
+        chiffre_affaire_global_cdf += item['chiffre_affaire_cdf']
+    
     marge_moyenne_usd = (benefice_total_global_usd / chiffre_affaire_global_usd * 100) if chiffre_affaire_global_usd > 0 else 0
-    
-    # Totaux CDF
-    benefice_total_global_cdf = sum(x['benefice_total'] for x in benefices_cdf)
-    chiffre_affaire_global_cdf = sum(x['chiffre_affaire'] for x in benefices_cdf)
     marge_moyenne_cdf = (benefice_total_global_cdf / chiffre_affaire_global_cdf * 100) if chiffre_affaire_global_cdf > 0 else 0
     
-    # Liste des hôpitaux pour le filtre
-    hopitaux = Hopital.objects.all()
-    
-    # Si l'utilisateur n'est pas admin global, on limite la liste
-    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    # --- LISTE DES HÔPITAUX POUR LE FILTRE ---
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     context = {
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
+        'filtre_actif': filtre_actif,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
         'mois': mois,
         'annee': annee,
         'benefices_par_produit': benefices_par_produit,
-        # USD
+        # Totaux USD
         'benefice_total_global_usd': round(benefice_total_global_usd, 2),
         'chiffre_affaire_global_usd': round(chiffre_affaire_global_usd, 2),
         'marge_moyenne_usd': round(marge_moyenne_usd, 2),
-        # CDF
+        # Totaux CDF
         'benefice_total_global_cdf': round(benefice_total_global_cdf, 2),
         'chiffre_affaire_global_cdf': round(chiffre_affaire_global_cdf, 2),
         'marge_moyenne_cdf': round(marge_moyenne_cdf, 2),
+        'taux_change': taux_change,
     }
     
     return render(request, 'back-end/pharmacie/pharmacie_benefices.html', context)
+
 #
 # ======================================================================================================
 # ALERT STOCK PHARMACIE
@@ -8914,44 +9130,59 @@ def admin_alertes_stock(request):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
+    filtre_actif = False
     
-    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
-    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
-        # Pharmacien ne voit que son hôpital
+    # 1. Admin global ou super_admin peut tout voir OU filtrer
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        if hopital_id:
+            # Admin a choisi un hôpital spécifique
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+            filtre_actif = True
+        else:
+            # Admin n'a pas filtré → voit TOUS les hôpitaux (None = pas de filtre)
+            hopital_selectionne = None
+            filtre_actif = False
+    
+    # 2. Pharmacien, admin_pharmacie, responsable_stock → limité à son hôpital
+    elif fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
         hopital_selectionne = hopital_user
-    elif hopital_id:
-        # Admin peut filtrer par hôpital
-        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        filtre_actif = True
+    
+    # 3. Autres utilisateurs → hôpital par défaut
     else:
-        # Par défaut, on prend l'hôpital de l'utilisateur
         hopital_selectionne = hopital_user
+        filtre_actif = True
     
-    # Tous les produits - Filtrage par hôpital
-    produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    # --- TOUS LES PRODUITS ---
+    if hopital_selectionne:
+        produits = ProduitPharmacie.objects.filter(hopital=hopital_selectionne)
+    else:
+        # Admin voit TOUS les produits de tous les hôpitaux
+        produits = ProduitPharmacie.objects.all()
     
+    # --- CALCUL DES ALERTES ---
     alertes = []
+    
     for produit in produits:
-        # Calcul du stock - Version améliorée avec LotPharmacie.quantite_actuelle
+        # Déterminer l'hôpital du produit pour filtrer les lots
+        produit_hopital = produit.hopital
+        
+        # Calcul du stock - Tous les lots de ce produit dans cet hôpital
         lots = LotPharmacie.objects.filter(
             produit=produit,
-            hopital=hopital_selectionne
+            hopital=produit_hopital
         )
         stock = sum(lot.quantite_actuelle or 0 for lot in lots)
         
-        # Lots proches de péremption
+        # Lots proches de péremption (30 jours)
         lots_peremption = LotPharmacie.objects.filter(
             produit=produit,
-            hopital=hopital_selectionne,
+            hopital=produit_hopital,
             quantite_actuelle__gt=0
         ).filter(
             date_peremption__lte=timezone.now().date() + timedelta(days=30)
@@ -8968,7 +9199,7 @@ def admin_alertes_stock(request):
         elif lots_peremption > 0:
             statut = 'peremption'
         else:
-            continue  # Pas d'alerte
+            continue  # Pas d'alerte, on passe au produit suivant
         
         alertes.append({
             'produit': produit,
@@ -8976,44 +9207,43 @@ def admin_alertes_stock(request):
             'seuil_alerte': seuil_alerte,
             'statut': statut,
             'lots_peremption': lots_peremption,
-            'devise': produit.devise  # USD ou CDF
+            'devise': produit.devise if produit.devise else 'CDF',
+            'hopital': produit_hopital,
         })
     
     # Trier par statut (rupture d'abord, puis faible, puis péremption)
     statut_order = {'rupture': 0, 'faible': 1, 'peremption': 2}
     alertes = sorted(alertes, key=lambda x: statut_order.get(x['statut'], 3))
     
-    # Liste des hôpitaux pour le filtre
-    hopitaux = Hopital.objects.all()
-    
-    # Si l'utilisateur n'est pas admin global, on limite la liste
-    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    # --- LISTE DES HÔPITAUX POUR LE FILTRE ---
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     # Compter les alertes par type
     alertes_rupture = len([a for a in alertes if a['statut'] == 'rupture'])
-    alertes_fortible = len([a for a in alertes if a['statut'] == 'faible'])
+    alertes_faible = len([a for a in alertes if a['statut'] == 'faible'])
     alertes_peremption = len([a for a in alertes if a['statut'] == 'peremption'])
     
     context = {
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
+        'filtre_actif': filtre_actif,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
         'alertes': alertes,
         'alertes_rupture': alertes_rupture,
-        'alertes_faible': alertes_fortible,
+        'alertes_faible': alertes_faible,
         'alertes_peremption': alertes_peremption,
         'total_alertes': len(alertes),
     }
     
     return render(request, 'back-end/pharmacie/pharmacie_alertes.html', context)
-
 #
 # ================================================================================================================
 # HISTORIQUE DE PRODUIT ADMIN 
 # =================================================================================================================
-
 @login_required
 @staff_member_required
 def admin_historique_produit(request, produit_id):
@@ -9028,40 +9258,62 @@ def admin_historique_produit(request, produit_id):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
     type_mouvement = request.GET.get('type_mouvement')
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
+    filtre_actif = False
     
-    # Si l'utilisateur a un rôle spécifique, on limite à son hôpital
-    if fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
-        # Pharmacien ne voit que son hôpital
+    # 1. Admin global ou super_admin peut tout voir OU filtrer
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        if hopital_id:
+            # Admin a choisi un hôpital spécifique
+            hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+            filtre_actif = True
+        else:
+            # Admin n'a pas filtré → voit TOUS les hôpitaux (None = pas de filtre)
+            hopital_selectionne = None
+            filtre_actif = False
+    
+    # 2. Pharmacien, admin_pharmacie, responsable_stock → limité à son hôpital
+    elif fonction_key and fonction_key.roleName.lower() in ['pharmacien', 'admin_pharmacie', 'responsable_stock']:
         hopital_selectionne = hopital_user
-    elif hopital_id:
-        # Admin peut filtrer par hôpital
-        hopital_selectionne = get_object_or_404(Hopital, pk=hopital_id)
+        filtre_actif = True
+    
+    # 3. Autres utilisateurs → hôpital par défaut
     else:
-        # Par défaut, on prend l'hôpital de l'utilisateur
         hopital_selectionne = hopital_user
+        filtre_actif = True
     
-    # Récupérer le produit - AVEC GESTION D'ERREUR
-    try:
-        produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
-    except ProduitPharmacie.DoesNotExist:
-        messages.error(request, f"Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
-        return redirect('admin_historique_stock')
+    # --- RÉCUPÉRER LE PRODUIT ---
+    # Admin peut voir TOUS les produits, pas seulement ceux de son hôpital
+    if hopital_selectionne:
+        # Utilisateur normal ou admin avec filtre → limité à un hôpital
+        try:
+            produit = ProduitPharmacie.objects.get(pk=produit_id, hopital=hopital_selectionne)
+        except ProduitPharmacie.DoesNotExist:
+            messages.error(request, f"Le produit demandé n'existe pas ou n'appartient pas à cet hôpital.")
+            return redirect('admin_historique_stock')
+    else:
+        # Admin sans filtre → peut voir n'importe quel produit
+        try:
+            produit = ProduitPharmacie.objects.get(pk=produit_id)
+        except ProduitPharmacie.DoesNotExist:
+            messages.error(request, f"Le produit demandé n'existe pas.")
+            return redirect('admin_historique_stock')
     
-    # Récupérer les mouvements pour ce produit
-    mouvements = MouvementStock.objects.filter(lot__produit=produit, hopital=hopital_selectionne)
+    # --- RÉCUPÉRER LES MOUVEMENTS ---
+    # Si admin sans filtre, on prend TOUS les mouvements de ce produit
+    if hopital_selectionne:
+        # Utilisateur normal ou admin avec filtre → limité à un hôpital
+        mouvements = MouvementStock.objects.filter(lot__produit=produit, hopital=hopital_selectionne)
+    else:
+        # Admin sans filtre → TOUS les mouvements de ce produit dans tous les hôpitaux
+        mouvements = MouvementStock.objects.filter(lot__produit=produit)
     
     # Filtres
     if date_debut:
@@ -9077,10 +9329,11 @@ def admin_historique_produit(request, produit_id):
     mouvements = mouvements.select_related(
         'lot', 
         'lot__produit', 
-        'effectue_par'
+        'effectue_par',
+        'hopital'
     ).order_by('-date_mouvement')
     
-    # Calcul des totaux
+    # --- CALCUL DES TOTAUX ---
     entrees = mouvements.filter(type_mouvement='ENTREE').aggregate(
         total=Coalesce(Sum('quantite_unites'), 0)
     )['total'] or 0
@@ -9095,17 +9348,17 @@ def admin_historique_produit(request, produit_id):
     
     stock_net = entrees - sorties + ajustements
     
-    # Liste des hôpitaux pour le filtre
-    hopitaux = Hopital.objects.all()
-    
-    # Si l'utilisateur n'est pas admin global, on limite la liste
-    if fonction_key and fonction_key.roleName.lower() not in ['admin', 'super_admin', 'directeur']:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+    # --- LISTE DES HÔPITAUX POUR LE FILTRE ---
+    if fonction_key and fonction_key.roleName.lower() in ['admin', 'super_admin', 'directeur']:
+        hopitaux = Hopital.objects.all()
+    else:
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     context = {
         'produit': produit,
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
+        'filtre_actif': filtre_actif,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
         'date_debut': date_debut,
@@ -9119,7 +9372,6 @@ def admin_historique_produit(request, produit_id):
     }
     
     return render(request, 'back-end/pharmacie/pharmacie_historique_produit.html', context)
-
 
 #
 # =======================================================================================================
@@ -9139,11 +9391,6 @@ def admin_paiements_list(request):
     fonction_key = role_obj.fonctionKey if role_obj else None
     fonction_key_name = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
     
-    # Vérification des permissions
-    if not hopital_user:
-        messages.error(request, "Accès non autorisé. Aucun hôpital associé.")
-        return redirect('dashboard')
-    
     # Filtres
     hopital_id = request.GET.get('hopital')
     patient_id = request.GET.get('patient')
@@ -9152,8 +9399,9 @@ def admin_paiements_list(request):
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
     devise = request.GET.get('devise')
+    query = request.GET.get('q', '')  # Recherche
     
-    # Gestion du filtre par hôpital selon le rôle
+    # --- GESTION DU FILTRE PAR HÔPITAL ---
     hopital_selectionne = None
     est_admin_global = False
     
@@ -9168,20 +9416,18 @@ def admin_paiements_list(request):
         # Caissier, comptable ne voient que leur hôpital
         hopital_selectionne = hopital_user
     
-    # Requête de base
+    # --- REQUÊTE DE BASE ---
     if hopital_selectionne:
         paiements = Paiement.objects.filter(hopital=hopital_selectionne)
     else:
         # Admin global voit TOUS les paiements
         paiements = Paiement.objects.all()
     
-    # Filtres
+    # --- FILTRES ---
     if patient_id:
         paiements = paiements.filter(patient_id=patient_id)
     
     if prestation_id:
-        # Filtrer par prestation spécifique (consultation, session soins, etc.)
-        from .models import Consultation, SessionSoins, DemandExamenExterne
         if prestation_id == 'consultation':
             consultations = Consultation.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else Consultation.objects.all()
             paiements = paiements.filter(consultation__in=consultations)
@@ -9189,7 +9435,7 @@ def admin_paiements_list(request):
             sessions = SessionSoins.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else SessionSoins.objects.all()
             paiements = paiements.filter(session__in=sessions)
         elif prestation_id == 'examen_externe':
-            examens = DemandExamenExterne.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else DemandExamenExterne.objects.all()
+            examens = DemandeExamenExterne.objects.filter(hopital=hopital_selectionne) if hopital_selectionne else DemandeExamenExterne.objects.all()
             paiements = paiements.filter(demande_examen_externe__in=examens)
     
     if service:
@@ -9204,7 +9450,14 @@ def admin_paiements_list(request):
     if devise:
         paiements = paiements.filter(devise=devise)
     
-    # Tri par date décroissante
+    # Recherche par nom
+    if query:
+        paiements = paiements.filter(
+            Q(patient__noms__icontains=query) |
+            Q(clientEx__noms__icontains=query)
+        )
+    
+    # --- SÉLECTION LIÉE (SELECT_RELATED) ---
     paiements = paiements.select_related(
         'patient', 
         'caissier', 
@@ -9213,29 +9466,118 @@ def admin_paiements_list(request):
         'session',
         'hospitalisation',
         'dossier_maternite',
-        'demande_examen_externe'
+        'demande_examen_externe',
+        'clientEx'
     ).order_by('-date_paiement')
     
-    # Stats
+    # --- CRÉER LA LISTE DES PAIEMENTS AVEC TOUTES LES INFOS ---
+    paiements_data = []
+    
+    for paiement in paiements:
+        # 1. NOM DU PATIENT / CLIENT
+        nom_patient = ""
+        
+        if paiement.patient:
+            # Patient interne
+            nom_patient = f"{paiement.patient.noms.upper()}"
+        elif paiement.clientEx:
+            # Client externe (via Paiement.clientEx, PAS via DemandeExamenExterne)
+            nom_patient = f"{paiement.clientEx.noms.upper()} (Externe)"
+        elif paiement.entreprise:
+            # Entreprise
+            nom_patient = paiement.entreprise.nom or "Entreprise"
+        else:
+            nom_patient = "N/A"
+        
+        # 2. PRESTATION
+        prestation = ""
+        numero_dossier = ""
+        
+        if paiement.consultation:
+            prestation = f"Consultation - {paiement.consultation.motif_consultation[:50] or 'N/A'}"
+            numero_dossier = f"CONS-{paiement.consultation.id}"
+        elif paiement.session:
+            session = paiement.session
+            prestation = f"Session Soins - {session.total_a_payer:.2f} {paiement.devise or 'CDF'}"
+            numero_dossier = f"SESSION-{session.id}"
+        elif paiement.hospitalisation:
+            hosp = paiement.hospitalisation
+            prestation = f"Hospitalisation - {hosp.motif_admission[:50] or 'N/A'}"
+            numero_dossier = f"HOSP-{hosp.id}"
+        elif paiement.dossier_maternite:
+            maternite = paiement.dossier_maternite
+            prestation = f"Maternité - Terme: {maternite.terme_prevu.strftime('%d/%m/%Y') if maternite.terme_prevu else 'N/A'}"
+            numero_dossier = f"MAT-{maternite.id}"
+        elif paiement.demande_examen_externe:
+            examen = paiement.demande_examen_externe
+            prestation = f"Examen Externe - Total: {examen.total_a_payer:.2f} USD"
+            numero_dossier = f"EXAM-{examen.id}"
+        elif paiement.bloc_op:
+            bloc = paiement.bloc_op
+            prestation = f"Bloc Opératoire"
+            numero_dossier = f"BLOC-{bloc.id}"
+        elif paiement.deces:
+            deces = paiement.deces
+            prestation = f"Décès"
+            numero_dossier = f"DECES-{deces.id}"
+        elif paiement.compte_rendu:
+            cr = paiement.compte_rendu
+            prestation = f"Accouchement"
+            numero_dossier = f"CR-{cr.id}"
+        else:
+            prestation = f"Service: {paiement.service or 'N/A'}"
+        
+        # 3. MONTANT
+        montant = float(paiement.montant_verse) if paiement.montant_verse else 0
+        
+        # 4. HÔPITAL
+        nom_hopital = paiement.hopital.nomH if paiement.hopital else "N/A"
+        
+        # 5. CAISSIER
+        if paiement.caissier:
+            nom_caissier = f"{paiement.caissier.first_name or ''} {paiement.caissier.last_name or paiement.caissier.username}".strip()
+        else:
+            nom_caissier = "Système"
+        
+        # 6. RESTE À PAYER
+        reste_a_payer = float(paiement.reste_a_payer) if paiement.reste_a_payer else 0
+        
+        # Ajouter à la liste
+        paiements_data.append({
+            'paiement': paiement,
+            'id': paiement.id,
+            'nom_patient': nom_patient,
+            'prestation': prestation,
+            'numero_dossier': numero_dossier,
+            'montant': round(montant, 2),
+            'devise': paiement.devise or 'CDF',
+            'date_paiement': paiement.date_paiement,
+            'hopital': nom_hopital,
+            'caissier': nom_caissier,
+            'service': paiement.service or 'N/A',
+            'reste_a_payer': round(reste_a_payer, 2),
+        })
+    
+    # --- STATS ---
     if hopital_selectionne:
-        total_usd = paiements.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
-        total_cdf = paiements.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
+        total_usd = Paiement.objects.filter(hopital=hopital_selectionne, devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
+        total_cdf = Paiement.objects.filter(hopital=hopital_selectionne, devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
     else:
         total_usd = Paiement.objects.filter(devise='USD').aggregate(total=Sum('montant_verse'))['total'] or 0
         total_cdf = Paiement.objects.filter(devise='CDF').aggregate(total=Sum('montant_verse'))['total'] or 0
     
-    # Liste des hôpitaux pour le filtre (admin global voit TOUS)
+    # --- LISTE DES HÔPITAUX POUR LE FILTRE ---
     if est_admin_global:
         hopitaux = Hopital.objects.all()
     else:
-        hopitaux = Hopital.objects.filter(pk=hopital_user.pk)
+        hopitaux = Hopital.objects.filter(pk=hopital_user.pk) if hopital_user else Hopital.objects.none()
     
     context = {
         'hopitaux': hopitaux,
         'hopital_selectionne': hopital_selectionne,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
-        'paiements': paiements,
+        'paiements': paiements_data,
         'total_usd': round(total_usd, 2),
         'total_cdf': round(total_cdf, 2),
         'patient_id': patient_id,
@@ -9244,12 +9586,12 @@ def admin_paiements_list(request):
         'date_debut': date_debut,
         'date_fin': date_fin,
         'devise': devise,
+        'query': query,
         'SERVICES': Paiement.SERVICES,
         'est_admin_global': est_admin_global,
     }
     
     return render(request, 'back-end/paiements/paiements_list.html', context)
-
 #
 # ===============================================================================================================
 # SUPPRESSION DU PAIEMENT PAR L'ADMIN
@@ -9480,16 +9822,71 @@ def admin_paiement_detail(request, paiement_id):
     elif paiement.dossier_maternite:
         autres_paiements = Paiement.objects.filter(dossier_maternite=paiement.dossier_maternite).exclude(pk=paiement_id)
     
+    # --- LOGIQUE NOM DU PATIENT (MÊME QUE LA VUE LISTE) ---
+    nom_patient = ""
+    
+    if paiement.patient:
+        # Patient interne - Utiliser 'noms'
+        nom_patient = f"{paiement.patient.noms.upper()}"
+    elif paiement.clientEx:
+        # Client externe - Utiliser 'clientEx.noms'
+        nom_patient = f"{paiement.clientEx.noms.upper()} (Externe)"
+    elif paiement.entreprise:
+        # Entreprise
+        nom_patient = paiement.entreprise.nom or "Entreprise"
+    else:
+        nom_patient = "N/A"
+    
+    # --- PRESTATION ---
+    prestation = ""
+    numero_dossier = ""
+    
+    if paiement.consultation:
+        prestation = f"Consultation - {paiement.consultation.motif_consultation[:50] or 'N/A'}"
+        numero_dossier = f"CONS-{paiement.consultation.id}"
+    elif paiement.session:
+        session = paiement.session
+        prestation = f"Session Soins - {session.total_a_payer:.2f} {paiement.devise or 'CDF'}"
+        numero_dossier = f"SESSION-{session.id}"
+    elif paiement.hospitalisation:
+        hosp = paiement.hospitalisation
+        prestation = f"Hospitalisation - {hosp.motif_admission[:50] or 'N/A'}"
+        numero_dossier = f"HOSP-{hosp.id}"
+    elif paiement.dossier_maternite:
+        maternite = paiement.dossier_maternite
+        prestation = f"Maternité - Terme: {maternite.terme_prevu.strftime('%d/%m/%Y') if maternite.terme_prevu else 'N/A'}"
+        numero_dossier = f"MAT-{maternite.id}"
+    elif paiement.demande_examen_externe:
+        examen = paiement.demande_examen_externe
+        prestation = f"Examen Externe - Total: {examen.total_a_payer:.2f} USD"
+        numero_dossier = f"EXAM-{examen.id}"
+    elif paiement.bloc_op:
+        bloc = paiement.bloc_op
+        prestation = f"Bloc Opératoire"
+        numero_dossier = f"BLOC-{bloc.id}"
+    elif paiement.deces:
+        deces = paiement.deces
+        prestation = f"Décès"
+        numero_dossier = f"DECES-{deces.id}"
+    elif paiement.compte_rendu:
+        cr = paiement.compte_rendu
+        prestation = f"Accouchement"
+        numero_dossier = f"CR-{cr.id}"
+    else:
+        prestation = f"Service: {paiement.service or 'N/A'}"
+    
     context = {
         'paiement': paiement,
         'facture': facture,
         'autres_paiements': autres_paiements,
         'fonctionKey': fonction_key_name,
         'role_utilisateur': fonction_key,
+        'nom_patient': nom_patient,  # ← Ajouté
+        'prestation': prestation,     # ← Ajouté
+        'numero_dossier': numero_dossier,  # ← Ajouté
     }
     
     return render(request, 'back-end/paiements/paiement_detail.html', context)
-
 #
 # ===========================================================================================================================
 # ===========================================================================================================================

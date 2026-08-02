@@ -4,17 +4,18 @@
             <ul>
                 <li class="menu-title"> <span>MENU PRINCIPAL</span> </li>
                 <li class="submenu">
-                    <a href="#"><i class="la la-hospital"></i> <span> Dashboard</span> <span class="menu-arrow"></span></a>
+                    <a href="#"><i class="fa fa-hospital"></i> <span> Dashboard</span> <span class="menu-arrow"></span></a>
                     <ul style="display: none;">
                         <li><a class="active" href="{% url 'dashboard' %}">Vue d'ensemble</a></li>
                     </ul>
                 </li>
 
 
+
                 {% if fonctionKey == 'admin' or fonctionKey == 'gestionnaire' %}
                     <li class="menu-title"> <span>ADMINISTRATION</span> </li>
                     <li class="submenu">
-                        <a href="#"><i class="la la-user-md"></i> <span> Personnel Médical</span> <span class="menu-arrow"></span></a>
+                        <a href="#"><i class="fa fa-user-md"></i> <span> Personnel Médical</span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'employeAdd' %}">Inscrire un utilisateur</a></li>
                             {% if fonctionKey == 'admin' %}
@@ -24,7 +25,7 @@
                         </ul>
                     </li>
                     <li class="submenu">
-                        <a href="#"><i class="la la-cog"></i> <span> Configuration </span> <span class="menu-arrow"></span></a>
+                        <a href="#"><i class="fa fa-cog"></i> <span> Configuration </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'hopitalAdd' %}">hopital</a></li>
                             <li><a href="{% url 'hopital_liste' %}">Liste hopital</a></li>
@@ -34,7 +35,7 @@
                         </ul>
                     </li>
                     <li class="submenu">
-                        <a href="#"><i class="la la-user-injured"></i> <span> Patients </span> <span class="menu-arrow"></span></a>
+                        <a href="#"><i class="fa fa-user-injured"></i> <span> Patients </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'enregistrement_patient' %}">Tous les patients</a></li>
                             <li><a  href="{% url 'liste_patients_orientations' %}">Patients & Orientations</a></li>
@@ -42,7 +43,7 @@
                     </li>
                     
                     <li class="submenu">
-                        <a href="#"><i class="la la-wallet"></i> <span> Gestion Financière </span> <span class="menu-arrow"></span></a>
+                        <a href="#"><i class="fa fa-wallet"></i> <span> Gestion Financière </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'dashboard_finance_depense' %}">Journal de Caisse</a></li>
                             <li><a href="{% url 'creer_depense' %}">Saisir une Dépense</a></li>
@@ -59,26 +60,29 @@
                         </ul>
                     </li>
 
+
                       <li class="submenu">
                         <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
                         <ul>
                             <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
                            
                             <li><a href="{% url 'type_chambre_list' %}">Liste Type Chambre</a></li>
-                            
+                           
                             <li><a href="{% url 'chambre_list' %}">Liste des Chambres</a></li>
-                            
-                            
+                           
+                           
                             <li><a href="{% url 'lit_list' %}">lite des lists</a></li>
                         </ul>
                     </li>
 
-                  
 
-                    
+                 
+
+
 
 
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
+
 
 
                     <!-- Menu Pharmacie -->
@@ -126,7 +130,9 @@
                     </li>
                     {%endif%}
 
-                    <li><a href="{% url 'liste_consultations' %}"><i class="la la-history"></i> <span>Historique Consultations</span></a></li>
+
+                    <li><a href="{% url 'liste_consultations' %}"><i class="fa fa-history"></i> <span>Historique Consultations</span></a></li>
+
 
 
                     <li>
@@ -136,9 +142,11 @@
                     </li>
 
 
+
                     <li class="menu-title"> 
                         <span>Gestion Matériel</span> 
                     </li>
+
 
 
                     <li class="submenu">
@@ -154,9 +162,10 @@
                 {% endif %}
 
 
+
                 {% if fonctionKey == 'receptionniste' %}
                     <li class="menu-title"> <span>RECEPTION</span> </li>
-                    <li><a href="{% url 'enregistrement_patient' %}"><i class="la la-user-plus"></i> <span>Enregistrement Patient</span></a></li>
+                    <li><a href="{% url 'enregistrement_patient' %}"><i class="fa fa-user-plus"></i> <span>Enregistrement Patient</span></a></li>
                     <li class="{% if request.resolver_match.url_name == 'enregistrer_patient_entreprise' %}active{% endif %}">
                         <a href="{% url 'enregistrer_patient_entreprise' %}"><i class="fa fa-briefcase"></i> <span>Patient d'Entreprise</span></a>
                     </li>
@@ -200,25 +209,29 @@
                         </ul>
                     </li>
 
+
                     <li class="submenu">
                         <a href="#"><i class="fa fa-bed"></i> <span>Gestion des Chambres</span> <span class="menu-arrow"></span></a>
                         <ul>
                             <li><a href="{% url 'dashboard_chambres' %}">Tableau de bord Chambres</a></li>
 
+
                             <li><a href="{% url 'ajouter_type_chambre' %}">Ajouter Type Chambre</a></li>
                            
                             <li><a href="{% url 'ajouter_chambre' %}">Ajouter une Chambre</a></li>
-                            
-                            
+                           
+                           
                             <li><a href="{% url 'ajouter_lit' %}">Ajouter un Lit</a></li>
-                            
+                           
                         </ul>
                     </li>
+
 
 
                     <li class="menu-title">
                         <span>Gestion des Externes</span>
                     </li>
+
 
 
                     <li>
@@ -229,12 +242,14 @@
                     </li>
 
 
+
                     <li>
                         <a href="{% url 'liste_facturation' %}">
-                            <i class="fa fa-user-plus"></i> 
+                            <i class="fa fa-file-invoice"></i> 
                             <span>Examen Externe facture</span>
                         </a>
                     </li>
+
 
 
                     <li class="{% if request.resolver_match.url_name == 'liste_demandes_externes' %}active{% endif %}">
@@ -242,6 +257,7 @@
                             <i class="fa fa-list"></i> <span>Liste des demandes</span>
                         </a>
                     </li>
+
 
                     <li class="nav-item">
     <a class="nav-link" href="{% url 'liste_patients_orientations' %}">
@@ -251,9 +267,11 @@
 </li>
 
 
+
                     <li class="menu-title"> 
                         <span>Gestion Médicale</span>
                     </li>
+
 
 
                     <li class="submenu">
@@ -266,17 +284,18 @@
                     </li> 
 
 
+
                     <li class="menu-title">
                         <span>Hébergement & Hospitalisation</span>
                     </li>
 
 
-                  
 
 
                     <li class="menu-title"> 
                         <span>Réception & Soins</span>
                     </li>
+
 
 
                     <li>
@@ -287,12 +306,14 @@
                     </li>
 
 
+
                     <li>
                         <a href="{% url 'historique_soins' %}">
                             <i class="fa fa-history"></i> 
                             <span>Historique des soins</span>
                         </a>
                     </li>
+
 
 
                     <li>
@@ -302,33 +323,36 @@
                     </li>
 
 
+
                     <li>
                         <a href="{% url 'dashboard_ventes' %}">
-                            <i class="fas fa-chart-line"></i> 
+                            <i class="fa fa-chart-line"></i> 
                             <span>Tableau de Bord</span>
                         </a>
                     </li>
 
 
+
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'liste_ventes' %}">
-                            <i class="fas fa-history me-2"></i> Historique Ventes
+                            <i class="fa fa-history me-2"></i> Historique Ventes
                         </a>
                     </li>
                 {% endif %}
 
 
+
                 {% if fonctionKey == 'medecin' %}
                     <li class="menu-title"> <span>ESPACE MÉDICAL</span> </li>
-                    <li><a href="{% url 'liste_consultation_medecin' %}"><i class="la la-stethoscope"></i> <span>Consultations</span></a></li>
-                    <li><a href="{% url 'liste_consultations' %}"><i class="la la-history"></i> <span>Historique Consultations</span></a></li>
-                    <li><a href="{% url 'liste_hospitalisations' %}"><i class="la la-bed"></i> <span>Suivi Hospitalisations</span></a></li>
+                    <li><a href="{% url 'liste_consultation_medecin' %}"><i class="fa fa-stethoscope"></i> <span>Consultations</span></a></li>
+                    <li><a href="{% url 'liste_consultations' %}"><i class="fa fa-history"></i> <span>Historique Consultations</span></a></li>
+                    <li><a href="{% url 'liste_hospitalisations' %}"><i class="fa fa-bed"></i> <span>Suivi Hospitalisations</span></a></li>
                     <li>
                         <a href="{% url 'liste_rendez_vous' %}">
                             <i class="fa fa-calendar-check"></i> <span>Planning RDV</span>
                         </a>
                     </li>
-                    <li><a href="{% url 'liste_ordonnances' %}"><i class="la la-file-text"></i> <span>Liste des Ordonnances</span></a></li>
+                    <li><a href="{% url 'liste_ordonnances' %}"><i class="fa fa-file-text"></i> <span>Liste des Ordonnances</span></a></li>
                     <li>
                         <a href="{% url 'liste_ordonnances_externes_client' %}">
                             <i class="fa fa-list"></i> <span>Ordonnances client</span>
@@ -341,19 +365,19 @@
                     </li>
                     <li>
                         <a href="{% url 'liste_ordonnances_urgence' %}">
-                            <i class="la la-notes-medical"></i> 
+                            <i class="fa fa-notes-medical"></i> 
                             <span>Ordonnances Urgentes</span>
                         </a>
                     </li>
                     <li class="{% if request.resolver_match.url_name == 'liste_attente_medecin' %}active{% endif %}">
                         <a href="{% url 'liste_attente_medecin' %}">
-                            <i class="fas fa-clock"></i> 
+                            <i class="fa fa-clock"></i> 
                             <span>Liste d'attente examen</span>
                         </a>
                     </li>
                     <li class="{% if request.resolver_match.url_name == 'liste_patients_urgence' %}active{% endif %}">
                         <a href="{% url 'liste_patients_urgence' %}">
-                            <i class="fas fa-user-injured"></i> 
+                            <i class="fa fa-user-injured"></i> 
                             <span>Liste des Patients</span>
                         </a>
                     </li>
@@ -384,7 +408,7 @@
                     </li>
                     <li>
                         <a href="{% url 'historique_bloc_operatoire' %}">
-                            <i class="la la-history"></i> <span>Historique Opérations</span>
+                            <i class="fa fa-history"></i> <span>Historique Opérations</span>
                         </a>
                     </li>
                     <li>
@@ -399,14 +423,15 @@
         <span>Patients & Orientations</span>
     </a>
 </li>
-                    <li><a href="{% url 'historique_examen_externe_technicien' %}"><i class="la la-history"></i> <span>Examens externe</span></a></li>
+                    <li><a href="{% url 'historique_examen_externe_technicien' %}"><i class="fa fa-history"></i> <span>Examens externe</span></a></li>
                 {% endif %}
+
 
 
                 {% if fonctionKey == 'infirmier' %}
                     <li class="menu-title"> <span>SOINS INFIRMIERS</span> </li>
-                    <li><a href="{% url 'liste_attente_triage' %}"><i class="la la-notes-medical"></i> <span>Liste Triage</span></a></li>
-                    <li><a href="{% url 'liste_globale_triage' %}"><i class="la la-list-alt"></i> <span>Registre Global</span></a></li>
+                    <li><a href="{% url 'liste_attente_triage' %}"><i class="fa fa-notes-medical"></i> <span>Liste Triage</span></a></li>
+                    <li><a href="{% url 'liste_globale_triage' %}"><i class="fa fa-list-alt"></i> <span>Registre Global</span></a></li>
                     <li>
                         <a href="{% url 'liste_sessions_infirmier' %}"><i class="fa fa-stethoscope"></i> <span>Triage & Signes Vitaux</span></a>
                     </li>
@@ -442,10 +467,11 @@
                 {% endif %}
 
 
+
                 {% if fonctionKey == 'laborantin' or fonctionKey == 'technique' or fonctionKey == 'echographiste' or fonctionKey == 'radiologue' or fonctionKey == 'imagiste' %}
                     <li class="menu-title"> <span>TECHNIQUE / LABO</span> </li>
-                    <li><a href="{% url 'liste_examens_techniques' %}"><i class="la la-flask"></i> <span>Examens à réaliser</span></a></li>
-                    <li><a href="{% url 'historique_examens' %}"><i class="la la-history"></i> <span>Historique Examens</span></a></li>
+                    <li><a href="{% url 'liste_examens_techniques' %}"><i class="fa fa-flask"></i> <span>Examens à réaliser</span></a></li>
+                    <li><a href="{% url 'historique_examens' %}"><i class="fa fa-history"></i> <span>Historique Examens</span></a></li>
                     <li>
                         <a href="{% url 'liste_examens_technicien' %}">
                             <i class="fa fa-stethoscope"></i> 
@@ -460,15 +486,17 @@
                 {% endif %}
 
 
+
                 {% if fonctionKey == 'receptionniste' or fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
                     <li class="menu-title"> <span>SUIVI HOSPITALISATION</span> </li>
                     <li class="submenu">
-                        <a href="#"><i class="la la-bed"></i> <span> Gestion des Séjours </span> <span class="menu-arrow"></span></a>
+                        <a href="#"><i class="fa fa-bed"></i> <span> Gestion des Séjours </span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
                             <li><a href="{% url 'liste_hospitalisations' %}">Liste des hospitalisés</a></li>
                         </ul>
                     </li>
                 {% endif %}
+
 
 
                 {% if fonctionKey == 'pharmacien' or fonctionKey == 'admin' %}
@@ -495,23 +523,24 @@
                     </li>
                     <li>
                         <a href="{% url 'dashboard_ventes' %}">
-                            <i class="fas fa-chart-line"></i> 
+                            <i class="fa fa-chart-line"></i> 
                             <span>Tableau de Bord</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'liste_ventes' %}">
-                            <i class="fas fa-history me-2"></i> Historique Ventes
+                            <i class="fa fa-history me-2"></i> Historique Ventes
                         </a>
                     </li>
 
+
                      <li>
                         <a href="{% url 'liste_ordonnances_urgence' %}">
-                            <i class="la la-notes-medical"></i> 
+                            <i class="fa fa-notes-medical"></i> 
                             <span>Ordonnances Urgentes</span>
                         </a>
                     </li>
-                    <li><a href="{% url 'liste_ordonnances' %}"><i class="la la-file-text"></i> <span>Liste des Ordonnances</span></a></li>
+                    <li><a href="{% url 'liste_ordonnances' %}"><i class="fa fa-file-text"></i> <span>Liste des Ordonnances</span></a></li>
                     <li>
                         <a href="{% url 'liste_ordonnances_externes_client' %}">
                             <i class="fa fa-list"></i> <span>Ordonnances client</span>
@@ -523,6 +552,7 @@
                         </a>
                     </li>
                 {% endif %}
+
 
 
                 {% if fonctionKey == 'pharmacien' or fonctionKey == 'infirmier' or fonctionKey == 'medecin' %}
@@ -541,9 +571,10 @@
                 {% endif %}
 
 
+
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'change_password' %}">
-                        <i class="fas fa-lock"></i>
+                        <i class="fa fa-lock"></i>
                         <span>Changer le mot de passe</span>
                     </a>
                 </li>
@@ -564,12 +595,14 @@
                     </a>
                 </li>
 
+
                 <li class="menu-title"> <span>SESSION</span> </li>
-                <li><a href="{% url 'deco' %}" class="text-danger"><i class="la la-power-off"></i> <span>Déconnexion</span></a></li>
+                <li><a href="{% url 'deco' %}" class="text-danger"><i class="fa fa-power-off"></i> <span>Déconnexion</span></a></li>
             </ul>
         </div>
     </div>
 </div>
+
 
 
 <div id="overlay"></div>
@@ -590,9 +623,11 @@
         margin-left: 0 !important;
     }
 
+
     #sidebar.active {
         left: 0 !important;
     }
+
 
     #overlay {
         display: none;
@@ -605,11 +640,13 @@
         z-index: 9998;
     }
 
+
     #overlay.active {
         display: block;
     }
 }
 </style>
+
 
 
 <script>
@@ -618,6 +655,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const sidebar = document.getElementById("sidebar");
     const overlay = document.getElementById("overlay");
     const body = document.body;
+
 
     if (toggleBtn && sidebar && overlay) {
         toggleBtn.addEventListener("click", function(e) {
@@ -629,6 +667,7 @@ document.addEventListener("DOMContentLoaded", function() {
             
             body.classList.remove("slide-nav", "sidebar-opened");
         });
+
 
         overlay.addEventListener("click", function() {
             sidebar.classList.remove("active");

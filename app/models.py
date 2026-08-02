@@ -371,7 +371,6 @@ class Facture(models.Model):
         return f"Facture {self.numero_facture} ({self.paiement.get_service_display()})"
 
 
-
 # =================================================================================================================
 class SessionSoins(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
@@ -385,6 +384,7 @@ class SessionSoins(models.Model):
 
     def __str__(self):
         return f"Session de {self.patient.noms} du {self.date_creation.strftime('%d/%m/%Y')}"
+
 
 class LigneFacture(models.Model):
     session = models.ForeignKey(SessionSoins, related_name="items", on_delete=models.CASCADE)
@@ -410,8 +410,28 @@ class SigneVital(models.Model):
     date_prelevement = models.DateTimeField(default=timezone.now)
     infirmier = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     est_consulte = models.BooleanField(default=False)
-    session = models.ForeignKey(SessionSoins, on_delete=models.CASCADE, related_name='signes_vitaux', null=True)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True, blank =True)
+    session = models.ForeignKey(
+        SessionSoins,
+        on_delete=models.CASCADE,
+        related_name='signes_vitaux',
+        null=True
+    )
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    @property
+    def a_prestations(self):
+        """
+        Retourne True si ce signe vital est associé à une session
+        qui contient au moins une prestation (un item).
+        """
+        if not self.session:
+            return False
+        return self.session.items.exists()
 
     def __str__(self):
         return f"Signes vitaux de {self.patient.noms} le {self.date_prelevement}"

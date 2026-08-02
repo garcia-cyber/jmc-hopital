@@ -33,7 +33,13 @@
                     <div class="page-header">
                         <div class="row align-items-center">
                             <div class="col">
-                                <h3 class="page-title">Cabinet de Consultation</h3>
+                                <h3 class="page-title">
+                                    {% if mode == 'reconsultation' %}
+                                        Reconsultation de {{ triage.patient.noms }}
+                                    {% else %}
+                                        Nouvelle consultation de {{ triage.patient.noms }}
+                                    {% endif %}
+                                </h3>
                                 <ul class="breadcrumb">
                                     <li class="breadcrumb-item"><a href="#">Médecin</a></li>
                                     <li class="breadcrumb-item"><a href="{% url 'liste_consultation_medecin' %}">Salle d'attente</a></li>
@@ -49,6 +55,7 @@
                     </div>
                     <!-- /Page Header -->
 
+
                     <!-- Alertes Flash -->
                     {% if messages %}
                         {% for message in messages %}
@@ -60,6 +67,7 @@
                             </div>
                         {% endfor %}
                     {% endif %}
+
 
                     <!-- Récapitulatif Triage & Constantes -->
                     <div class="card bg-light border-danger mb-4">
@@ -96,6 +104,7 @@
                         </div>
                     </div>
 
+
                     <!-- Formulaire de Consultation Principal -->
                     <form method="POST" id="consultationForm">
                         {% csrf_token %}
@@ -125,6 +134,7 @@
                                 </div>
                             </div>
 
+
                             <!-- Partie Droite : Examens complémentaires & Ordonnance d'urgence -->
                             <div class="col-lg-5 col-md-12">
                                 
@@ -145,6 +155,7 @@
                                             </select>
                                         </div>
 
+
                                         <!-- ÉTAPE 2 : Sélectionner l'examen filtré -->
                                         <div class="form-group row">
                                             <div class="col-9">
@@ -163,6 +174,7 @@
                                             </div>
                                         </div>
 
+
                                         <table class="table table-sm table-bordered custom-table" id="table_examens_demandes">
                                             <thead class="bg-light">
                                                 <tr>
@@ -172,11 +184,31 @@
                                                 </tr>
                                             </thead>
                                             <tbody id="wrapper_examens">
-                                                <!-- Généré dynamiquement en JS -->
+                                                <!-- Examens précédents (reconsultation) -->
+                                                {% if mode == 'reconsultation' and examens_precedents %}
+                                                    {% for e in examens_precedents %}
+                                                        <tr id="exam_row_{{ e.prestation.id }}">
+                                                            <td>
+                                                                <input type="hidden" name="examens_ids" value="{{ e.prestation.id }}">
+                                                                <small class="badge badge-secondary">{{ e.prestation.categorie }}</small> {{ e.prestation.libelle }}
+                                                            </td>
+                                                            <td>
+                                                                <input type="number" name="qty_{{ e.prestation.id }}" value="{{ e.quantite }}" min="1" class="form-control form-control-sm text-center">
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('exam_row_{{ e.prestation.id }}').remove();">
+                                                                    <i class="fa fa-times"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                {% endif %}
+                                                <!-- /Examens précédents -->
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
+
 
                                 <!-- Module B: Ordonnance d'Urgence Initiale (Facultative) -->
                                 <div class="card border-warning">
@@ -194,10 +226,32 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody id="wrapper_medicaments">
-                                                    <!-- On démarre sans ligne par défaut pour bien marquer le côté facultatif, ou une ligne vide -->
-                                                    <tr class="placeholder-row">
-                                                        <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
-                                                    </tr>
+                                                    {% if mode == 'reconsultation' and medicaments_precedents %}
+                                                        <!-- Lignes pré-remplies avec les anciens médicaments -->
+                                                        {% for med in medicaments_precedents %}
+                                                            <tr>
+                                                                <td>
+                                                                    <input type="text" name="nom_medicament" class="form-control form-control-sm" value="{{ med.nom_medicament }}" placeholder="Médicament">
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="posologie" class="form-control form-control-sm" value="{{ med.posologie }}" placeholder="Posologie">
+                                                                </td>
+                                                                <td>
+                                                                    <input type="text" name="duree" class="form-control form-control-sm" value="{{ med.duree }}" placeholder="Durée">
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-medoc">
+                                                                        <i class="fa fa-trash"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <!-- Aucune consultation précédente ou première consultation -->
+                                                        <tr class="placeholder-row">
+                                                            <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
+                                                        </tr>
+                                                    {% endif %}
                                                 </tbody>
                                             </table>
                                         </div>
@@ -207,8 +261,10 @@
                                     </div>
                                 </div>
 
+
                             </div>
                         </div>
+
 
                         <!-- Bouton de validation final globale -->
                         <div class="row mb-5">
@@ -216,12 +272,18 @@
                                 <div class="card py-3">
                                     <div class="submit-section mb-0">
                                         <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5">
-                                            <i class="fa fa-save"></i> Enregistrer & Clôturer l'examen clinique
+                                            <i class="fa fa-save"></i> 
+                                            {% if mode == 'reconsultation' %}
+                                                Enregistrer & Clôturer la reconsultation
+                                            {% else %}
+                                                Enregistrer & Clôturer l'examen clinique
+                                            {% endif %}
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
 
                     </form>
                 </div>
@@ -233,15 +295,18 @@
         <!-- jQuery & JS -->
         {% include 'back-end/includes/js.html' %}
 
+
         <!-- Script d'automatisation et de filtrage -->
         <script>
             $(document).ready(function() {
                 // Style des inputs Django
                 $('#consultationForm textarea, #consultationForm input[type="text"], #consultationForm select').addClass('form-control');
 
+
                 // --- OPTIMISATION 1 : FILTRAGE DYNAMIQUE DES EXAMENS ---
                 // Sauvegarde de toutes les options originales pour pouvoir filtrer proprement
                 var allExamenOptions = $('#select_examen option').clone();
+
 
                 $('#filter_categorie').on('change', function() {
                     var selectedCat = $(this).val();
@@ -262,6 +327,7 @@
                     $('#select_examen').val('').trigger('change');
                 });
 
+
                 // --- AJOUT DES EXAMENS DANS LE TABLEAU ---
                 $('#btn_add_examen').on('click', function() {
                     var select = $('#select_examen');
@@ -270,15 +336,18 @@
                     var exLibelle = selectedOption.data('libelle');
                     var exCat = selectedOption.data('cat');
 
+
                     if (!exId) {
                         alert("Veuillez sélectionner un examen d'abord.");
                         return;
                     }
 
+
                     if ($('#exam_row_' + exId).length > 0) {
                         alert("Cet examen a déjà été ajouté.");
                         return;
                     }
+
 
                     var htmlRow = `
                         <tr id="exam_row_${exId}">
@@ -299,11 +368,13 @@
                 });
 
 
+
                 // --- OPTIMISATION 2 : ORDONNANCE FACULTATIVE ---
                 // Ajouter un médicament
                 $('#btn_add_medoc').on('click', function() {
                     // Supprimer la ligne "Aucun médicament" si elle existe
                     $('.placeholder-row').remove();
+
 
                     var htmlMedocRow = `
                         <tr>
@@ -317,6 +388,7 @@
                     `;
                     $('#wrapper_medicaments').append(htmlMedocRow);
                 });
+
 
                 // Supprimer un médicament
                 $(document).on('click', '.btn-remove-medoc', function() {

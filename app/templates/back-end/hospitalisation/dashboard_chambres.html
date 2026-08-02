@@ -1,187 +1,509 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="fr">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>JMC - Gestion des Hospitalisations</title>
-        
-        {% include 'back-end/includes/css.html' %}
-    </head>
-    <body>
-        <div class="main-wrapper">
-        
-            {% include 'back-end/includes/header.html' %}
-            
-            {% include 'back-end/includes/sidebar.html' %}
-            
-            <div class="page-wrapper">
-                <div class="content container-fluid">
-                
-                    <div class="page-header">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h3 class="page-title">Tableau de bord des Hospitalisations</h3>
-                                <ul class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                                    <li class="breadcrumb-item active">Gestion des Chambres</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>JMC - Dashboard Chambres & Lits</title>
 
-                    <div class="row">
-                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
-                            <div class="dash-widget">
-                                <span class="dash-widget-bg1"><i class="la la-bed"></i></span>
-                                <div class="dash-widget-info text-right">
-                                    <h3>{{ total_lits|default:"0" }}</h3>
-                                    <span class="widget-title1">Total Lits</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
-                            <div class="dash-widget">
-                                <span class="dash-widget-bg2"><i class="la la-user-check"></i></span>
-                                <div class="dash-widget-info text-right">
-                                    <h3>{{ lits_occupes|default:"0" }}</h3>
-                                    <span class="widget-title2">Occupés</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
-                            <div class="dash-widget">
-                                <span class="dash-widget-bg3"><i class="la la-door-open"></i></span>
-                                <div class="dash-widget-info text-right">
-                                    <h3>{{ lits_disponibles|default:"0" }}</h3>
-                                    <span class="widget-title3">Disponibles</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
-                            <div class="dash-widget">
-                                <span class="dash-widget-bg4"><i class="la la-hospital"></i></span>
-                                <div class="dash-widget-info text-right">
-                                    <h3>{{ total_chambres|default:"0" }}</h3>
-                                    <span class="widget-title4">Total Chambres</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    {% include 'back-end/includes/css.html' %}
 
-                    <div class="row mb-4">
-                        <div class="col-sm-12 d-flex justify-content-between align-items-center flex-wrap">
-                            <div class="nav-tabs-custom">
-                                <ul class="nav nav-tabs nav-tabs-bottom">
-                                    <li class="nav-item"><a class="nav-link active" href="#vue-chambres" data-toggle="tab">Vue par Chambre</a></li>
-                                    <li class="nav-item"><a class="nav-link" href="#liste-patients" data-toggle="tab">Patients Hospitalisés</a></li>
-                                </ul>
-                            </div>
-                            {% if fonctionKey == 'receptionniste' or fonctionKey == 'administrateur' %}
-                            <div class="action-buttons mt-2 mt-sm-0">
-                                <a href="#" class="btn btn-primary rounded-pill"><i class="fa fa-plus"></i> Nouvelle Chambre</a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <style>
+        /* Cartes dashboard */
+        .dash-widget {
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .dash-widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 .5rem 1.25rem rgba(0,0,0,.08);
+        }
+        .dash-widget-bg1 { background: rgba(33, 150, 243, .12); color: #2196f3; }
+        .dash-widget-bg2 { background: rgba(255, 87, 34, .12);  color: #ff5722; }
+        .dash-widget-bg3 { background: rgba(76, 175, 80, .12);  color: #4caf50; }
+        .dash-widget-bg4 { background: rgba(255, 152, 0, .12);   color: #ff9800; }
 
-                    <div class="tab-content">
-                        
-                        <div class="tab-pane show active" id="vue-chambres">
-                            <div class="row">
-                                {% for chambre in chambres %}
-                                <div class="col-md-4 col-sm-6 col-lg-4 col-xl-3">
-                                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 10px; overflow: hidden;">
-                                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
-                                            <h5 class="m-0 font-weight-bold text-dark">
-                                                <i class="la la-door-closed text-secondary"></i> {{ chambre.nom }}
-                                            </h5>
-                                            <span class="badge badge-pill badge-info">
-                                                {{ chambre.type_chambre.libelle }}
-                                            </span>
-                                        </div>
-                                        <div class="card-body">
-                                            <p class="text-primary font-weight-bold mb-3">
-                                                <i class="la la-money-bill"></i> {{ chambre.type_chambre.prix_nuitée|floatformat:0 }} usd / Nuit
-                                            </p>
-                                            
-                                            <h6 class="font-weight-bold text-muted border-top pt-2">Lits :</h6>
-                                            <div class="list-group list-group-flush">
-                                                {% for lit in chambre.lits.all %}
-                                                <div class="d-flex justify-content-between align-items-center py-2">
-                                                    <span class="small font-weight-medium">
-                                                        <i class="la la-bed {% if lit.est_occupe %}text-danger{% else %}text-success{% endif %}"></i> 
-                                                        {{ lit.nom_lit }}
-                                                    </span>
-                                                    
-                                                    {% if not lit.est_actif %}
-                                                        <span class="badge badge-warning-light text-warning px-2 py-1 small">Maintenance</span>
-                                                    {% elif lit.est_occupe %}
-                                                        <span class="badge badge-danger-light text-danger px-2 py-1 small">Occupé</span>
-                                                    {% else %}
-                                                        <span class="badge badge-success-light text-success px-2 py-1 small">Libre</span>
-                                                    {% endif %}
-                                                </div>
-                                                {% empty %}
-                                                <p class="text-muted small italic m-0">Aucun lit configuré</p>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                        <div class="card-footer bg-white border-0 text-center pb-3">
-                                            <a href="#" class="btn btn-sm btn-block btn-outline-secondary">Détails chambre</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <div class="col-12 text-center py-5">
-                                    <i class="la la-bed" style="font-size: 4rem; color: #ddd;"></i>
-                                    <p class="text-muted mt-2">Aucune chambre disponible dans la base.</p>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
+        .dash-widget-info h3 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 1.6rem;
+        }
 
-                        <div class="tab-pane" id="liste-patients">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Patient</th>
-                                                    <th>Chambre</th>
-                                                    <th>Lit</th>
-                                                    <th>Date Admission</th>
-                                                    <th>Statut</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td colspan="5" class="text-center text-muted">Consultez le module d'hospitalisation pour le registre complet.</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        /* Cartes chambres */
+        .card-chambre {
+            border: none;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,.04);
+            transition: box-shadow .2s ease, transform .2s ease;
+        }
+        .card-chambre:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+            transform: translateY(-2px);
+        }
+        .card-chambre .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        .card-chambre .card-title {
+            font-size: 1rem;
+            margin: 0;
+            font-weight: 700;
+        }
+        .badge-type {
+            font-size: .75rem;
+            padding: .35em .6em;
+            border-radius: 20px;
+        }
 
+        .lit-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .5rem 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .lit-item:last-child {
+            border-bottom: none;
+        }
+        .lit-icon {
+            font-size: 1.1rem;
+            margin-right: .5rem;
+        }
+
+        .badge-lit {
+            font-size: .7rem;
+            padding: .25em .55em;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .badge-lit-occupe {
+            background: rgba(220, 53, 69, .1);
+            color: #dc3545;
+        }
+        .badge-lit-libre {
+            background: rgba(40, 167, 69, .1);
+            color: #28a745;
+        }
+        .badge-lit-maintenance {
+            background: rgba(255, 193, 7, .15);
+            color: #b78900;
+        }
+
+        .prix-nuit {
+            font-weight: 700;
+            color: #2196f3;
+        }
+
+        /* Filtres hôpitaux */
+        .filter-bar {
+            background: #fff;
+            border-radius: 12px;
+            padding: .9rem 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04);
+            margin-bottom: 1.25rem;
+        }
+        .filter-label {
+            font-size: .85rem;
+            color: #6c757d;
+            margin-right: .5rem;
+        }
+
+        .nav-tabs-bottom-custom .nav-link {
+            border: none;
+            color: #495057;
+            font-weight: 600;
+            padding: .6rem .9rem;
+            border-radius: 8px;
+            margin-right: .35rem;
+            background: #f8f9fa;
+        }
+        .nav-tabs-bottom-custom .nav-link.active {
+            background: #e3f2fd;
+            color: #0d6efd;
+        }
+
+        .table-custom th {
+            font-size: .85rem;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            color: #6c757d;
+            border-top: none;
+        }
+        .table-custom td {
+            font-size: .95rem;
+            vertical-align: middle;
+        }
+
+        .badge-statut {
+            font-size: .75rem;
+            padding: .35em .6em;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .badge-en-cours {
+            background: rgba(13, 110, 253, .12);
+            color: #0d6efd;
+        }
+        .badge-termine {
+            background: rgba(40, 167, 69, .12);
+            color: #28a745;
+        }
+        .badge-annule {
+            background: rgba(108, 117, 125, .12);
+            color: #6c757d;
+        }
+    </style>
+</head>
+
+<body>
+<div class="main-wrapper">
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <!-- En-tête de page -->
+            <div class="page-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h3 class="page-title">Tableau de bord des Chambres & Lits</h3>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item active">Gestion des Chambres</li>
+                        </ul>
                     </div>
                 </div>
             </div>
+
+            <!-- Barre de filtres (hôpitaux, tous hopitaux) -->
+            {% if peut_voir_tous_hopitaux %}
+            <div class="filter-bar d-flex flex-wrap align-items-center justify-content-between">
+                <div class="d-flex align-items-center flex-wrap">
+                    <span class="filter-label">Hôpital :</span>
+
+                    {% if afficher_tous %}
+                        <form method="get" class="d-flex align-items-center">
+                            <!-- Conserver tous_hopitaux=1 -->
+                            <input type="hidden" name="tous_hopitaux" value="1">
+
+                            <select name="hopital" class="form-control form-control-sm" style="min-width: 180px;" onchange="this.form.submit()">
+                                <option value="">Tous les hôpitaux</option>
+                                {% for h in hopitaux %}
+                                    <option value="{{ h.id }}" {% if hopital_selectionne and hopital_selectionne.id == h.id %}selected{% endif %}>
+                                        {{ h.nomH }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    {% else %}
+                        <span class="font-weight-medium">{{ hopital_user.nomH|default:"Aucun hôpital" }}</span>
+                    {% endif %}
+                </div>
+
+                <div>
+                    {% if afficher_tous %}
+                        <a href="?tous_hopitaux=0" class="btn btn-sm btn-outline-secondary">
+                            <i class="la la-filter"></i> Voir mon hôpital
+                        </a>
+                    {% else %}
+                        <a href="?tous_hopitaux=1" class="btn btn-sm btn-outline-primary">
+                            <i class="la la-globe"></i> Tous les hôpitaux
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Widgets statistiques -->
+            <div class="row">
+                <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                    <div class="dash-widget">
+                        <span class="dash-widget-bg1 px-3 py-4 d-inline-block">
+                            <i class="la la-bed" style="font-size: 1.6rem;"></i>
+                        </span>
+                        <div class="dash-widget-info text-right px-3 py-3">
+                            <h3>{{ total_lits|default:"0" }}</h3>
+                            <span class="text-muted">Total Lits</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                    <div class="dash-widget">
+                        <span class="dash-widget-bg2 px-3 py-4 d-inline-block">
+                            <i class="la la-user-check" style="font-size: 1.6rem;"></i>
+                        </span>
+                        <div class="dash-widget-info text-right px-3 py-3">
+                            <h3>{{ lits_occupes|default:"0" }}</h3>
+                            <span class="text-muted">Occupés</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                    <div class="dash-widget">
+                        <span class="dash-widget-bg3 px-3 py-4 d-inline-block">
+                            <i class="la la-door-open" style="font-size: 1.6rem;"></i>
+                        </span>
+                        <div class="dash-widget-info text-right px-3 py-3">
+                            <h3>{{ lits_disponibles|default:"0" }}</h3>
+                            <span class="text-muted">Disponibles</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-6 col-lg-6 col-xl-3">
+                    <div class="dash-widget">
+                        <span class="dash-widget-bg4 px-3 py-4 d-inline-block">
+                            <i class="la la-hospital" style="font-size: 1.6rem;"></i>
+                        </span>
+                        <div class="dash-widget-info text-right px-3 py-3">
+                            <h3>{{ total_chambres|default:"0" }}</h3>
+                            <span class="text-muted">Total Chambres</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglets -->
+            <div class="row mb-4 mt-3">
+                <div class="col-sm-12 d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="nav-tabs-custom">
+                        <ul class="nav nav-tabs nav-tabs-bottom nav-tabs-bottom-custom">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#vue-chambres" data-toggle="tab">
+                                    <i class="la la-door-closed"></i> Vue par Chambre
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#liste-patients" data-toggle="tab">
+                                    <i class="la la-user-injured"></i> Patients Hospitalisés
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#historique-patients" data-toggle="tab">
+                                    <i class="la la-history"></i> Historique des patients
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {% if fonctionKey == 'receptionniste' or fonctionKey == 'administrateur' %}
+                    <div class="action-buttons mt-2 mt-sm-0">
+                        <a href="#" class="btn btn-primary btn-sm rounded-pill">
+                            <i class="fa fa-plus"></i> Nouvelle Chambre
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Contenu des onglets -->
+            <div class="tab-content">
+
+                <!-- Vue par chambre -->
+                <div class="tab-pane show active" id="vue-chambres">
+                    <div class="row">
+                        {% for item in chambres %}
+                            {% with chambre=item.chambre %}
+                            <div class="col-md-4 col-sm-6 col-lg-4 col-xl-3">
+                                <div class="card card-chambre mb-4">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title text-dark">
+                                            <i class="la la-door-closed text-secondary"></i>
+                                            {{ chambre.nom }}
+                                        </h5>
+                                        <span class="badge badge-info badge-type">
+                                            {{ chambre.type_chambre.libelle }}
+                                        </span>
+                                    </div>
+
+                                    <div class="card-body">
+                                        <p class="mb-3">
+                                            <i class="la la-money-bill text-primary"></i>
+                                            <span class="prix-nuit">
+                                                {{ item.prix_lit_cdf|floatformat:0 }} CDF
+                                            </span>
+                                            <span class="text-muted small">/ nuit</span>
+                                        </p>
+
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted">
+                                                <i class="la la-bed"></i>
+                                                Total : <strong>{{ item.total_lits }}</strong>
+                                            </small>
+                                            <small class="text-danger">
+                                                <i class="la la-user-check"></i>
+                                                Occupés : <strong>{{ item.lits_occupes }}</strong>
+                                            </small>
+                                            <small class="text-success">
+                                                <i class="la la-check-circle"></i>
+                                                Libres : <strong>{{ item.lits_disponibles }}</strong>
+                                            </small>
+                                        </div>
+
+                                        <h6 class="font-weight-bold text-muted border-top pt-2">Détail des lits :</h6>
+                                        <div class="list-group list-group-flush">
+                                            {% for lit in chambre.lits.all %}
+                                            <div class="lit-item">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="la la-bed lit-icon {% if lit.est_occupe %}text-danger{% else %}text-success{% endif %}"></i>
+                                                    <span class="small font-weight-medium">{{ lit.nom_lit }}</span>
+                                                </div>
+
+                                                {% if not lit.est_actif %}
+                                                    <span class="badge badge-lit badge-lit-maintenance">Maintenance</span>
+                                                {% elif lit.est_occupe %}
+                                                    <span class="badge badge-lit badge-lit-occupe">Occupé</span>
+                                                {% else %}
+                                                    <span class="badge badge-lit badge-lit-libre">Libre</span>
+                                                {% endif %}
+                                            </div>
+                                            {% empty %}
+                                            <p class="text-muted small mb-0">Aucun lit configuré</p>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer bg-white border-0 text-center pb-3">
+                                        <a href="#" class="btn btn-sm btn-outline-secondary btn-block">
+                                            Détails chambre
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% empty %}
+                        <div class="col-12 text-center py-5">
+                            <i class="la la-bed" style="font-size: 4rem; color: #ddd;"></i>
+                            <p class="text-muted mt-3">Aucune chambre disponible dans la base.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Liste des patients hospitalisés (en cours) -->
+                <div class="tab-pane" id="liste-patients">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-custom mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Chambre</th>
+                                        <th>Lit</th>
+                                        <th>Date d’admission</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <!-- À remplir avec les hospitalisations en cours si tu les passes en contexte -->
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            Consultez le module d’hospitalisation pour le registre complet des patients.
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historique des patients hospitalisés -->
+                <div class="tab-pane" id="historique-patients">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <!-- Filtres optionnels (dates, statut, etc.) -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <p class="text-muted small mb-0">
+                                        Historique de toutes les hospitalisations (terminées, annulées et en cours).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover table-custom mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Hôpital</th>
+                                        <th>Chambre</th>
+                                        <th>Lit</th>
+                                        <th>Date d’entrée</th>
+                                        <th>Date de sortie</th>
+                                        <th>Nombre de jours</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% if historique %}
+                                        {% for h in historique %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ h.hospitalisation.patient.noms|default:"Sans nom" }}</strong><br>
+                                                <small class="text-muted">
+                                                    {{ h.hospitalisation.patient.postnom|default:"" }}
+                                                    {{ h.hospitalisation.patient.prenom|default:"" }}
+                                                </small>
+                                            </td>
+                                            <td>{{ h.hospitalisation.hopital.nomH|default:"-" }}</td>
+                                            <td>
+                                                {{ h.hospitalisation.lit.chambre.nom|default:"-" }}
+                                            </td>
+                                            <td>
+                                                {{ h.hospitalisation.lit.nom_lit|default:"-" }}
+                                            </td>
+                                            <td>
+                                                {{ h.hospitalisation.date_entree|date:"d/m/Y H:i"|default:"-" }}
+                                            </td>
+                                            <td>
+                                                {{ h.date_sortie|date:"d/m/Y H:i"|default:"-" }}
+                                            </td>
+                                            <td class="text-center">
+                                                {{ h.nombre_jours|default:"-" }}
+                                            </td>
+                                            <td>
+                                                {% if h.hospitalisation.statut == 'EN_COURS' %}
+                                                    <span class="badge badge-statut badge-en-cours">En cours</span>
+                                                {% elif h.hospitalisation.statut == 'TERMINE' %}
+                                                    <span class="badge badge-statut badge-termine">Terminé</span>
+                                                {% elif h.hospitalisation.statut == 'ANNULE' %}
+                                                    <span class="badge badge-statut badge-annule">Annulé</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted py-4">
+                                                Aucun historique d’hospitalisation disponible.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- fin tab-content -->
+
         </div>
+    </div>
+</div>
 
-        {% include 'back-end/includes/js.html' %}     
+{% include 'back-end/includes/js.html' %}
 
-        <style>
-            .badge-success-light { background-color: rgba(40, 167, 69, 0.1); }
-            .badge-danger-light { background-color: rgba(220, 53, 69, 0.1); }
-            .badge-warning-light { background-color: rgba(255, 193, 7, 0.1); }
-            .dash-widget-bg1 { background: #e3f2fd; color: #2196f3; }
-            .dash-widget-bg2 { background: #fbe9e7; color: #ff5722; }
-            .dash-widget-bg3 { background: #e8f5e9; color: #4caf50; }
-            .dash-widget-bg4 { background: #fff3e0; color: #ff9800; }
-            .dash-widget-info h3 { margin-bottom: 0; font-weight: 700; }
-        </style>
-    </body>
+</body>
 </html>

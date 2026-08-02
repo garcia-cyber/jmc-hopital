@@ -1310,6 +1310,7 @@ def historique_signes_vitaux(request, patient_id):
 # ==================================================================================================
 # MEDECIN LISTE CONSULTATION VOIR SIGNE VITAUX
 # ==================================================================================================
+
 @login_required
 def liste_consultation_medecin(request):
     """
@@ -1319,6 +1320,7 @@ def liste_consultation_medecin(request):
     - Option de filtre: tous | avec_session | sans_session
     """
     filtre = request.GET.get('filtre', 'tous')
+
     role = (
         Fonction.objects
         .select_related('hopital', 'fonctionKey')
@@ -1326,16 +1328,17 @@ def liste_consultation_medecin(request):
         .first()
     )
     hopital_user = role.hopital if role else None
+
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
-    # Base: toutes les prises pour l'hôpital de l'utilisateur, plus les jointures utiles
+
+    # Base: toutes les prises pour l'hôpital de l'utilisateur
     patients_prets = (
         SigneVital.objects
         .filter(patient__hopital=hopital_user)
         .select_related('patient', 'infirmier', 'session')
         .prefetch_related('session__items__prestation')
-        # Annotation de priorité: 0 = non consulté (en haut), 1 = consulté (en bas)
         .annotate(
             priorite=Case(
                 When(est_consulte=False, then=Value(0)),
@@ -1344,24 +1347,28 @@ def liste_consultation_medecin(request):
             )
         )
     )
+
     # Filtres selon la présence de session
     if filtre == 'avec_session':
         patients_prets = patients_prets.filter(session__isnull=False)
     elif filtre == 'sans_session':
         patients_prets = patients_prets.filter(session__isnull=True)
+
     # Tri: d'abord par priorité (non consultés), puis par date (les plus récents en haut)
     patients_prets = patients_prets.order_by('priorite', '-date_prelevement')
+
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
     context = {
         'fonctionKey': fonctionKey,
         'patients_prets': patients_prets,
         'filtre': filtre,
     }
     return render(request, 'back-end/medecin/liste_consultation.html', context)
-# 28
-# ==================================================================================================
-# MEDECIN MARQUER CONSULTER POUR N'EST PLUS VOIR DANS LA LISTE
-# ==================================================================================================
+#
+# ===========================================================================================================
+# MARQUE CONSULTE
+# ============================================================================================================
 @login_required
 def marquer_consulte(request, sv_id):
     """
@@ -1369,11 +1376,13 @@ def marquer_consulte(request, sv_id):
     (elle RESTE visible dans la liste, mais descend sous les non consultées).
     """
     signe = get_object_or_404(SigneVital, id=sv_id)
+
     if not signe.est_consulte:
         signe.est_consulte = True
         signe.save(update_fields=['est_consulte'])
-    # Redirige vers l'espace de consultation (inchangé)
-    return redirect('consultation_medicale', triage_id=sv_id)
+
+    # Redirige vers l'espace de consultation (première consultation)
+    return redirect('consultation_medicale', triage_id=signe.id)
 
 #
 # ==================================================================================================
@@ -1381,7 +1390,12 @@ def marquer_consulte(request, sv_id):
 # ==================================================================================================
 @login_required
 def reconsulter(request, sv_id):
-    signe = get_object_or_404(SigneVital, id=sv_id)
+    """
+    Reconsultation d'un patient déjà consulté.
+    - Affiche les anciennes données (consultation, examens, médicaments).
+    - Permet de modifier et d'enregistrer une nouvelle version de la consultation.
+    """
+    triage = get_object_or_404(SigneVital, id=sv_id)
 
     role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
     hopital_user = role_obj.hopital if role_obj else None
@@ -1391,18 +1405,31 @@ def reconsulter(request, sv_id):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    if signe.patient.hopital != hopital_user:
+    if triage.patient.hopital != hopital_user:
         messages.error(request, "Ce patient appartient à un autre hôpital.")
         return redirect('liste_consultation_medecin')
 
-    consultation = Consultation.objects.filter(triage=signe).first()
-
+    # Consultation précédente (obligatoire pour reconsultation)
+    consultation = Consultation.objects.filter(triage=triage).first()
     if not consultation:
-        messages.error(request, "Aucune consultation existante trouvée pour ce patient.")
-        return redirect('consultation_medicale', triage_id=signe.id)
+        messages.error(request, "Aucune consultation précédente trouvée pour ce patient.")
+        return redirect('liste_consultation_medecin')
+
+    # Chargement des examens et médicaments précédents
+    examens_precedents = DemandeExamen.objects.filter(
+        consultation=consultation
+    ).select_related('prestation')
+
+    ordonnance = Ordonnance.objects.filter(consultation=consultation).first()
+    medicaments_precedents = (
+        LigneMedicament.objects.filter(ordonnance=ordonnance)
+        if ordonnance else []
+    )
 
     if request.method == 'POST':
+        # On modifie la consultation existante
         form = ConsultationForm(request.POST, instance=consultation)
+
         examens_ids = request.POST.getlist('examens_ids')
         noms_medocs = request.POST.getlist('nom_medicament')
         posologies = request.POST.getlist('posologie')
@@ -1412,14 +1439,16 @@ def reconsulter(request, sv_id):
             try:
                 with transaction.atomic():
                     consultation_obj = form.save(commit=False)
+                    consultation_obj.triage = triage
                     consultation_obj.medecin = request.user
                     consultation_obj.hopital = hopital_user
-                    consultation_obj.triage = signe
                     consultation_obj.save()
 
-                    DemandeExamen.objects.filter(consultation=consultation_obj).delete()
-                    LigneMedicament.objects.filter(ordonnance__consultation=consultation_obj).delete()
-                    Ordonnance.objects.filter(consultation=consultation_obj).delete()
+                    # Mettre à jour les examens
+                    DemandeExamen.objects.filter(
+                        consultation=consultation_obj,
+                        statut='EN_ATTENTE'
+                    ).delete()
 
                     for e_id in examens_ids:
                         prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
@@ -1433,19 +1462,26 @@ def reconsulter(request, sv_id):
                             hopital=hopital_user
                         )
 
+                    # Mettre à jour les médicaments
                     if any(n.strip() for n in noms_medocs if n):
-                        ordonnance = Ordonnance.objects.create(
+                        ordonnance_obj, _ = Ordonnance.objects.get_or_create(
                             consultation=consultation_obj,
                             type_ordonnance='URGENCE',
-                            hopital=hopital_user
+                            defaults={'hopital': hopital_user}
                         )
+                        if not ordonnance_obj.hopital:
+                            ordonnance_obj.hopital = hopital_user
+                            ordonnance_obj.save()
+
+                        LigneMedicament.objects.filter(ordonnance=ordonnance_obj).delete()
 
                         for i, nom in enumerate(noms_medocs):
                             if nom and nom.strip():
                                 poso = posologies[i] if i < len(posologies) else ""
                                 dur = durees[i] if i < len(durees) else ""
+
                                 LigneMedicament.objects.create(
-                                    ordonnance=ordonnance,
+                                    ordonnance=ordonnance_obj,
                                     nom_medicament=nom,
                                     posologie=poso,
                                     duree=dur,
@@ -1453,13 +1489,22 @@ def reconsulter(request, sv_id):
                                     hopital=hopital_user
                                 )
 
-                    messages.success(request, "Consultation modifiée avec succès.")
-                    return redirect('liste_consultation_medecin')
+                    triage.est_consulte = True
+                    triage.save()
+
+                messages.success(
+                    request,
+                    f"Reconsultation de {triage.patient.noms} enregistrée avec succès !"
+                )
+                return redirect('liste_consultation_medecin')
+
             except Exception as e:
                 messages.error(request, f"Une erreur technique est survenue : {str(e)}")
         else:
             messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
+
     else:
+        # GET : pré-remplir le formulaire avec l'ancienne consultation
         form = ConsultationForm(instance=consultation)
 
     examens_disponibles = Prestation.objects.filter(
@@ -1467,25 +1512,29 @@ def reconsulter(request, sv_id):
         hopital=hopital_user
     ).order_by('categorie', 'libelle')
 
-    return render(request, 'back-end/medecin/reconsulter_form.html', {
-        'triage': signe,
+    context = {
+        'triage': triage,
         'form': form,
         'examens_disponibles': examens_disponibles,
         'consultation': consultation,
-        'fonctionKey': fonctionKey
-    })
-
-
-
+        'fonctionKey': fonctionKey,
+        'examens_precedents': examens_precedents,
+        'medicaments_precedents': medicaments_precedents,
+        'mode': 'reconsultation',
+    }
+    return render(request, 'back-end/medecin/consultation_medecin.html', context)
 
 
 # 30
 # ==================================================================================================
 # MEDECIN   CONSULTATION PATIENT
 # ==================================================================================================
-
 @login_required
 def consultation_medicale(request, triage_id):
+    """
+    Première consultation d'un patient (ou tentative).
+    Si une consultation existe déjà, on bloque et on redirige.
+    """
     triage = get_object_or_404(SigneVital, id=triage_id)
 
     role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
@@ -1502,13 +1551,20 @@ def consultation_medicale(request, triage_id):
 
     consultation = Consultation.objects.filter(triage=triage).first()
 
+    # Si déjà consulté et consultation existe → on bloque
     if triage.est_consulte and consultation is not None:
-        messages.warning(request, f"Le dossier de consultation pour {triage.patient.noms} a déjà été clôturé.")
+        messages.warning(
+            request,
+            f"Le dossier de consultation pour {triage.patient.noms} a déjà été clôturé."
+        )
         return redirect('liste_consultation_medecin')
 
     if request.method == 'POST':
         if consultation is not None:
-            messages.error(request, "Erreur : Cette consultation a déjà été enregistrée par un autre utilisateur.")
+            messages.error(
+                request,
+                "Erreur : Cette consultation a déjà été enregistrée par un autre utilisateur."
+            )
             return redirect('liste_consultation_medecin')
 
         form = ConsultationForm(request.POST, instance=consultation)
@@ -1530,7 +1586,11 @@ def consultation_medicale(request, triage_id):
                     consultation_obj.hopital = hopital_user
                     consultation_obj.save()
 
-                    DemandeExamen.objects.filter(consultation=consultation_obj, statut='EN_ATTENTE').delete()
+                    # Examens
+                    DemandeExamen.objects.filter(
+                        consultation=consultation_obj,
+                        statut='EN_ATTENTE'
+                    ).delete()
 
                     for e_id in examens_ids:
                         prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
@@ -1544,6 +1604,7 @@ def consultation_medicale(request, triage_id):
                             hopital=hopital_user
                         )
 
+                    # Médicaments
                     if any(n.strip() for n in noms_medocs if n):
                         ordonnance, _ = Ordonnance.objects.get_or_create(
                             consultation=consultation_obj,
@@ -1573,7 +1634,10 @@ def consultation_medicale(request, triage_id):
                     triage.est_consulte = True
                     triage.save()
 
-                messages.success(request, f"Consultation de {triage.patient.noms} enregistrée et clôturée avec succès !")
+                messages.success(
+                    request,
+                    f"Consultation de {triage.patient.noms} enregistrée et clôturée avec succès !"
+                )
                 return redirect('liste_consultation_medecin')
 
             except Exception as e:
@@ -1594,11 +1658,9 @@ def consultation_medicale(request, triage_id):
         'form': form,
         'examens_disponibles': examens_disponibles,
         'consultation': consultation,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        # pas de mode → le template affiche "Nouvelle consultation"
     })
-
-
-
 
 # 30
 # ==================================================================================================
@@ -2609,38 +2671,55 @@ def dashboard_finance_depense(request):
     hopital_user = role.hopital if role and hasattr(role, 'hopital') else None
 
     maintenant = timezone.now()
+
+    # Périodes de temps
     debut_aujourdhui = maintenant.replace(hour=0, minute=0, second=0, microsecond=0)
-    debut_semaine = debut_aujourdhui - timezone.timedelta(days=maintenant.weekday())
+    debut_semaine = debut_aujourdhui - timedelta(days=maintenant.weekday())
     debut_mois = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    debut_annee = maintenant.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
     zero_decimal = Decimal('0.00')
 
-    paiements_qs = Paiement.objects.all().order_by('-date_paiement')
-    depenses_qs = Depense.objects.all()
+    # QuerySets de base (NON filtrés pour les stats)
+    paiements_tous = Paiement.objects.all().order_by('-date_paiement')
+    depenses_toutes = Depense.objects.all().order_by('-date_depense')
 
+    # QuerySets pour stats (avant filtrage)
+    paiements_stats = paiements_tous
+    depenses_stats = depenses_toutes
+
+    # Application du filtre par hôpital
     if fonctionKey != 'admin':
         if hopital_user:
-            paiements_qs = paiements_qs.filter(hopital=hopital_user)
-            depenses_qs = depenses_qs.filter(hopital=hopital_user)
+            paiements_tous = paiements_tous.filter(hopital=hopital_user)
+            depenses_toutes = depenses_toutes.filter(hopital=hopital_user)
+            paiements_stats = paiements_stats.filter(hopital=hopital_user)
+            depenses_stats = depenses_stats.filter(hopital=hopital_user)
         else:
-            paiements_qs = paiements_qs.none()
-            depenses_qs = depenses_qs.none()
+            paiements_tous = paiements_tous.none()
+            depenses_toutes = depenses_toutes.none()
+            paiements_stats = paiements_stats.none()
+            depenses_stats = depenses_stats.none()
 
-    recettes_stats = paiements_qs.aggregate(
+    # --- Statistiques temporelles (recettes) ---
+    recettes_stats = paiements_stats.aggregate(
         auj_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_aujourdhui, devise='USD')), zero_decimal, output_field=DecimalField()),
         auj_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_aujourdhui, devise='CDF')), zero_decimal, output_field=DecimalField()),
         sem_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_semaine, devise='USD')), zero_decimal, output_field=DecimalField()),
         sem_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_semaine, devise='CDF')), zero_decimal, output_field=DecimalField()),
         mois_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_mois, devise='USD')), zero_decimal, output_field=DecimalField()),
         mois_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_mois, devise='CDF')), zero_decimal, output_field=DecimalField()),
+        annee_usd=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_annee, devise='USD')), zero_decimal, output_field=DecimalField()),
+        annee_cdf=Coalesce(Sum('montant_verse', filter=Q(date_paiement__gte=debut_annee, devise='CDF')), zero_decimal, output_field=DecimalField()),
     )
 
-    total_entrees = paiements_qs.aggregate(
+    # --- Totaux globaux ---
+    total_entrees = paiements_stats.aggregate(
         usd=Coalesce(Sum('montant_verse', filter=Q(devise='USD')), zero_decimal, output_field=DecimalField()),
         cdf=Coalesce(Sum('montant_verse', filter=Q(devise='CDF')), zero_decimal, output_field=DecimalField())
     )
 
-    total_depenses = depenses_qs.aggregate(
+    total_depenses = depenses_stats.aggregate(
         usd=Coalesce(Sum('montant', filter=Q(devise='USD')), zero_decimal, output_field=DecimalField()),
         cdf=Coalesce(Sum('montant', filter=Q(devise='CDF')), zero_decimal, output_field=DecimalField())
     )
@@ -2648,35 +2727,120 @@ def dashboard_finance_depense(request):
     restant_usd = total_entrees['usd'] - total_depenses['usd']
     restant_cdf = total_entrees['cdf'] - total_depenses['cdf']
 
+    # --- Stats par service (TOP 5) ---
     services_liste = ['FICHE', 'LABO', 'ECHOGRAPHIE', 'RADIO']
     services_stats = []
     for s in services_liste:
-        s_usd = paiements_qs.filter(service=s, devise='USD').aggregate(
+        s_usd = paiements_stats.filter(service=s, devise='USD').aggregate(
             t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField())
         )['t']
-        s_cdf = paiements_qs.filter(service=s, devise='CDF').aggregate(
+        s_cdf = paiements_stats.filter(service=s, devise='CDF').aggregate(
             t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField())
         )['t']
         services_stats.append({'nom': s, 'usd': s_usd, 'cdf': s_cdf})
+    
+    services_stats = services_stats[:5]
+
+    # --- Stats par mois (recettes) ---
+    paiements_annee = paiements_stats.filter(date_paiement__gte=debut_annee)
+
+    mois_stats = []
+    for m in range(1, 13):
+        debut_mois_courant = maintenant.replace(month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        if m == 12:
+            fin_mois_courant = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            fin_mois_courant = maintenant.replace(month=m + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+
+        m_usd = paiements_annee.filter(
+            date_paiement__range=(debut_mois_courant, fin_mois_courant),
+            devise='USD'
+        ).aggregate(t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField()))['t']
+
+        m_cdf = paiements_annee.filter(
+            date_paiement__range=(debut_mois_courant, fin_mois_courant),
+            devise='CDF'
+        ).aggregate(t=Coalesce(Sum('montant_verse'), zero_decimal, output_field=DecimalField()))['t']
+
+        nom_mois = debut_mois_courant.strftime('%B').capitalize()
+
+        mois_stats.append({
+            'nom': nom_mois,
+            'mois_num': m,
+            'usd': m_usd,
+            'cdf': m_cdf,
+        })
+
+    # --- Dépenses par mois ---
+    depenses_annee = depenses_stats.filter(date_depense__gte=debut_annee)
+
+    depenses_mois_stats = []
+    for m in range(1, 13):
+        debut_mois_courant = maintenant.replace(month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+        if m == 12:
+            fin_mois_courant = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            fin_mois_courant = maintenant.replace(month=m + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+
+        d_usd = depenses_annee.filter(
+            date_depense__range=(debut_mois_courant, fin_mois_courant),
+            devise='USD'
+        ).aggregate(t=Coalesce(Sum('montant'), zero_decimal, output_field=DecimalField()))['t']
+
+        d_cdf = depenses_annee.filter(
+            date_depense__range=(debut_mois_courant, fin_mois_courant),
+            devise='CDF'
+        ).aggregate(t=Coalesce(Sum('montant'), zero_decimal, output_field=DecimalField()))['t']
+
+        nom_mois = debut_mois_courant.strftime('%B').capitalize()
+
+        depenses_mois_stats.append({
+            'nom': nom_mois,
+            'mois_num': m,
+            'usd': d_usd,
+            'cdf': d_cdf,
+        })
+
+    # --- PAGINATION des paiements (10 par page) ---
+    paginator = Paginator(paiements_tous, 10)  # 10 paiements par page
+    page_number = request.GET.get('page')
+    paiements_page = paginator.get_page(page_number)
 
     context = {
         'titre_page': "Journal Général de Caisse",
         'fonctionKey': fonctionKey,
-        'paiements': paiements_qs,
+
+        # Paiements PAGINÉS
+        'paiements': paiements_page,
+
+        'depenses': depenses_toutes,
+
+        # Stats temporelles
         'aujourdhui_usd': recettes_stats['auj_usd'],
         'aujourdhui_cdf': recettes_stats['auj_cdf'],
         'semaine_usd': recettes_stats['sem_usd'],
         'semaine_cdf': recettes_stats['sem_cdf'],
         'mois_usd': recettes_stats['mois_usd'],
         'mois_cdf': recettes_stats['mois_cdf'],
+        'annee_usd': recettes_stats['annee_usd'],
+        'annee_cdf': recettes_stats['annee_cdf'],
+
+        # Totaux
         'total_usd': total_entrees['usd'],
         'total_cdf': total_entrees['cdf'],
         'depense_totale_usd': total_depenses['usd'],
         'depense_totale_cdf': total_depenses['cdf'],
         'restant_usd': restant_usd,
         'restant_cdf': restant_cdf,
+
+        # Stats par service (limité à 5)
         'services_stats': services_stats,
+
+        # Stats par mois
+        'mois_stats': mois_stats,
+        'depenses_mois_stats': depenses_mois_stats,
     }
+
     return render(request, 'back-end/finance/journal_caisse.html', context)
 # ==================================================================================================
 # 43 : RESULTAT DU LABO RADIO ET ECHO PAR LE MEDECIN
@@ -2995,36 +3159,178 @@ def historique_examens_view(request):
 # FONCTION : Récupère toutes les chambres (avec jointures optimisées), calcule les statistiques 
 #            d'occupation globales en temps réel et génère l'affichage du plan des salles.
 # --------------------------------------------------------------------------------------------------
+
 @login_required
 def dashboard_chambres(request):
-    """ Affichage global de la situation des chambres, prix et lits """
-    
-    # 1. Récupération des chambres avec jointures optimisées
-    chambres = Chambre.objects.all().select_related('type_chambre').prefetch_related('lits')
+    """
+    Affichage global de la situation des chambres, prix et lits,
+    avec logique multi-hôpitaux similaire à liste_hospitalisations.
+    """
 
-    # 2. Gestion des rôles utilisateur
-    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey').first()
-    fonctionKey = role.fonctionKey.roleName if role else None
+    # 1. Rôle et hôpital de l'utilisateur
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 3. Statistiques globales en UNE SEULE requête SQL (Agrégation)
-    # Cela évite de solliciter la base de données plusieurs fois inutilement.
-    stats = Lit.objects.aggregate(
+    # Peut voir tous les hôpitaux ?
+    peut_voir_tous_hopitaux = (
+        request.user.is_superuser
+        or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur'])
+    )
+
+    # Paramètre URL : ?tous_hopitaux=1
+    afficher_tous = request.GET.get('tous_hopitaux') == '1'
+
+    if not hopital_user and not afficher_tous:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('enregistrement_patient')  # ou autre vue par défaut
+
+    if afficher_tous and not peut_voir_tous_hopitaux:
+        afficher_tous = False
+        messages.warning(
+            request,
+            "Vous n'avez pas l'autorisation de voir tous les hôpitaux."
+        )
+
+    # 2. Taux de change (par défaut en CDF)
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2500.00')
+    if not taux or taux == 0:
+        taux = Decimal('2500.00')
+
+    # 3. Récupérer les hôpitaux pour le filtre (admin / tous hopitaux)
+    hopitaux_qs = Hopital.objects.all().order_by('nomH')
+
+    # 4. Récupération des chambres avec jointures optimisées
+    chambres_qs = (
+        Chambre.objects
+        .select_related('type_chambre', 'hopital')
+        .prefetch_related('lits')
+        .order_by('nom')  # ou autre champ pertinent
+    )
+
+    # Filtre par hôpital "par défaut" si on n'affiche pas tous
+    if not afficher_tous:
+        chambres_qs = chambres_qs.filter(hopital=hopital_user)
+
+    # Filtre par hôpital via ?hopital=ID (uniquement si l'utilisateur peut voir tous)
+    hopital_selectionne_id = request.GET.get('hopital')
+    hopital_selectionne = None
+
+    if peut_voir_tous_hopitaux and afficher_tous and hopital_selectionne_id:
+        try:
+            hopital_selectionne = Hopital.objects.get(pk=hopital_selectionne_id)
+            chambres_qs = chambres_qs.filter(hopital=hopital_selectionne)
+        except (ValueError, Hopital.DoesNotExist):
+            hopital_selectionne = None
+
+    # 5. Statistiques globales (sur le queryset filtré)
+    # On se base sur les lits liés aux chambres filtrées
+    lits_qs = Lit.objects.filter(
+        chambre__in=chambres_qs
+    )
+
+    stats = lits_qs.aggregate(
         total_lits=Count('id', filter=Q(est_actif=True)),
         lits_occupes=Count('id', filter=Q(est_occupe=True, est_actif=True)),
-        lits_disponibles=Count('id', filter=Q(est_occupe=False, est_actif=True))
+        lits_disponibles=Count('id', filter=Q(est_occupe=False, est_actif=True)),
     )
+
+    # Calculs supplémentaires par chambre (prix, occupation, etc.)
+    chambres = []
+    now = timezone.now()
+
+    for chambre in chambres_qs:
+        lits_chambre = chambre.lits.all()
+        total_lits_chambre = lits_chambre.filter(est_actif=True).count()
+        lits_occupes_chambre = lits_chambre.filter(est_actif=True, est_occupe=True).count()
+        lits_dispos_chambre = total_lits_chambre - lits_occupes_chambre
+
+        # Prix par nuit (en CDF)
+        prix_lit_cdf = Decimal('0')
+        if hasattr(chambre, 'type_chambre') and chambre.type_chambre:
+            prix_lit_cdf = chambre.type_chambre.prix_nuitée or Decimal('0')
+        if prix_lit_cdf <= 0:
+            prix_lit_cdf = Decimal('50000')  # valeur par défaut
+
+        chambres.append({
+            'chambre': chambre,
+            'total_lits': total_lits_chambre,
+            'lits_occupes': lits_occupes_chambre,
+            'lits_disponibles': lits_dispos_chambre,
+            'prix_lit_cdf': prix_lit_cdf,
+        })
+
+    # 6. Construire l'historique des hospitalisations
+    hospitalisations_qs = (
+        Hospitalisation.objects
+        .select_related(
+            'patient',
+            'lit__chambre',
+            'hopital'
+        )
+        .order_by('-date_entree')
+    )
+
+    # Même logique de filtrage que pour les chambres
+    if not afficher_tous:
+        hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_user)
+
+    if peut_voir_tous_hopitaux and afficher_tous and hopital_selectionne:
+        hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_selectionne)
+
+    historique = []
+
+    for hosp in hospitalisations_qs:
+        date_entree = hosp.date_entree or now
+
+        # Nombre de jours
+        if hosp.statut == 'EN_COURS':
+            nombre_jours = (now - date_entree).days + 1
+            date_sortie = None
+        else:
+            date_sortie = getattr(hosp, 'date_sortie', None)
+            nombre_jours = getattr(hosp, 'nombre_jours', None)
+
+            if nombre_jours is None or nombre_jours <= 0:
+                if date_sortie:
+                    nombre_jours = (date_sortie - date_entree).days + 1
+                else:
+                    nombre_jours = (now - date_entree).days + 1
+
+        historique.append({
+            'hospitalisation': hosp,
+            'nombre_jours': nombre_jours,
+            'date_sortie': date_sortie,
+        })
 
     context = {
         'fonctionKey': fonctionKey,
+        'taux': taux,
+        'afficher_tous': afficher_tous,
+        'peut_voir_tous_hopitaux': peut_voir_tous_hopitaux,
+        'hopitaux': hopitaux_qs if peut_voir_tous_hopitaux else [],
+        'hopital_selectionne': hopital_selectionne,
+
         'chambres': chambres,
-        'total_chambres': chambres.filter(est_active=True).count(),
+        'total_chambres': len(chambres),
         'total_lits': stats['total_lits'],
         'lits_occupes': stats['lits_occupes'],
         'lits_disponibles': stats['lits_disponibles'],
-    }
-    
-    return render(request, 'back-end/hospitalisation/dashboard_chambres.html', context)
 
+        'historique': historique,
+    }
+
+    return render(
+        request,
+        'back-end/hospitalisation/dashboard_chambres.html',
+        context
+    )
 
 # --------------------------------------------------------------------------------------------------
 # VUE : Première étape de la configuration de l'infrastructure de soins.
@@ -3354,7 +3660,6 @@ def admettre_patient(request):
 # ===========================================================================================
 # LISTE DES PATIENT HOSPITALISE
 # ============================================================================================
-
 @login_required
 def liste_hospitalisations(request):
     # 1. Rôle et hôpital de l'utilisateur
@@ -3429,10 +3734,18 @@ def liste_hospitalisations(request):
             # Comptage en cours jusqu'à maintenant
             nombre_jours = (now - date_entree).days + 1
         else:
-            # Hospitalisation terminée ou annulée : on utilise la propriété du modèle
-            nombre_jours = hosp.nombre_jours
-            if nombre_jours <= 0:
-                nombre_jours = 1
+            # Hospitalisation terminée ou annulée : on utilise date_entree et date_sortie
+            date_sortie = hosp.date_sortie
+            if date_sortie:
+                nombre_jours = (date_sortie - date_entree).days + 1
+                # On s'assure qu'il y a au moins 1 jour
+                nombre_jours = max(1, nombre_jours)
+            else:
+                # Cas de sécurité : pas de date_sortie mais statut != EN_COURS
+                # On utilise la propriété du modèle
+                nombre_jours = hosp.nombre_jours
+                if nombre_jours <= 0:
+                    nombre_jours = 1
 
         # --- Prix du lit par nuit (en CDF) ---
         prix_lit_cdf = Decimal('0')
@@ -3478,7 +3791,7 @@ def liste_hospitalisations(request):
         'peut_voir_tous_hopitaux': peut_voir_tous_hopitaux,
         'hopitaux': hopitaux_qs if peut_voir_tous_hopitaux else [],
         'hopital_selectionne': hopital_selectionne,
-    })    
+    })
 #
 # =====================================================================================================
 # PAIEMENT DE L'HOSPITALISATION

@@ -49,7 +49,7 @@ class ConsultationAdmin(admin.ModelAdmin):
 
 @admin.register(SigneVital)
 class SigneVitalAdmin(admin.ModelAdmin):
-    list_display = ('patient', 'temperature', 'tension_arterielle', 'date_prelevement')
+    list_display = ('patient', 'temperature', 'tension_arterielle', 'date_prelevement','hopital','session')
 
 @admin.register(DemandeExamen)
 class DemandeExamenAdmin(admin.ModelAdmin):

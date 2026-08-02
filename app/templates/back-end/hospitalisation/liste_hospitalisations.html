@@ -149,7 +149,7 @@
                                     <option value="">Tous les hôpitaux</option>
                                     {% for h in hopitaux %}
                                         <option value="{{ h.id }}" {% if hopital_selectionne and hopital_selectionne.id == h.id %}selected{% endif %}>
-                                            {{ h }}
+                                            {{ h.nomH }}
                                         </option>
                                     {% endfor %}
                                 </select>
@@ -181,7 +181,6 @@
                                         <th>Lit / Catégorie</th>
                                         <th>Hôpital</th>
                                         <th>Date Entrée</th>
-                                        {% comment %} <th>Date Sortie</th> {% endcomment %}
                                         <th>Durée</th>
                                         <th>Coût Total (CDF)</th>
                                         <th>Reste à payer (CDF)</th>
@@ -202,16 +201,10 @@
                                                 <span class="avatar-info">{{ hosp.lit.chambre.type_chambre.libelle }}</span>
                                             </td>
                                             <td>
-                                                {{ hosp.hopital }}
+                                                {{ hosp.hopital.nomH|default:"-" }}
                                             </td>
                                             <td>{{ hosp.date_entree|date:"d M, Y" }}</td>
-                                            {% comment %} <td>
-                                                {% if hosp.date_sortie %}
-                                                    {{ hosp.date_sortie|date:"d M, Y" }}
-                                                {% else %}
-                                                    <span class="text-muted">–</span>
-                                                {% endif %}
-                                            </td> {% endcomment %}
+
                                             <td>
                                                 <span class="badge badge-soft-dark">{{ item.nombre_jours }} j</span>
                                                 <br>
@@ -277,7 +270,6 @@
                                                             <i class="la la-money-bill"></i>
                                                         </a>
                                                     {% endif %}
-                                                
                                                 {% endif %}
 
                                                 {# Bouton Imprimer la facture #}
@@ -292,7 +284,7 @@
                                         {% endwith %}
                                     {% empty %}
                                         <tr>
-                                            <td colspan="10" class="text-center py-5">Aucune donnée disponible.</td>
+                                            <td colspan="9" class="text-center py-5">Aucune donnée disponible.</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

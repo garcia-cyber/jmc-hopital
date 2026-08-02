@@ -4,21 +4,82 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Patients Prêts - JMC Médicale</title>
+    <title>Salle d'Attente - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
     <style>
       .dataTables_filter { display: none; }
-      /* Teintes légères selon le statut */
-      tr.row-non-consulte { background-color: #fff5f5; }   /* rouge pâle */
-      tr.row-consulte     { background-color: #f4fff6; }   /* vert pâle */
-      /* Badges statut */
-      .badge-new  { background-color: #dc3545; }  /* rouge */
-      .badge-done { background-color: #28a745; }  /* vert */
-      .status-col { width: 120px; }
-      .order-col  { width: 70px; }
-      .action-col { width: 260px; } /* de la place pour 2 boutons */
-      .nowrap { white-space: nowrap; }
-      .btn-space { margin-right: 6px; margin-bottom: 4px; }
+
+      tr.row-non-consulte {
+        background-color: #fff5f5;
+      }
+      tr.row-consulte {
+        background-color: #f4fff6;
+      }
+
+      .badge-new {
+        background-color: #dc3545;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .badge-done {
+        background-color: #28a745;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .table thead th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #6c757d;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      .patient-name {
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      .text-small {
+        font-size: 0.8rem;
+      }
+
+      .action-col {
+        width: 260px;
+      }
+
+      .nowrap {
+        white-space: nowrap;
+      }
+
+      .btn-space {
+        margin-right: 6px;
+        margin-bottom: 4px;
+      }
+
+      .table td {
+        vertical-align: middle;
+      }
+
+      .badge-info-custom {
+        background-color: #17a2b8;
+        color: #fff;
+        padding: 3px 7px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+      }
+
+      .badge-temp {
+        font-size: 0.8rem;
+      }
     </style>
   </head>
   <body>
@@ -54,15 +115,16 @@
                 <table class="table table-striped custom-table mb-0" id="waitingTable">
                   <thead>
                     <tr>
-                      <th class="order-col">Ordre</th>
-                      <th class="status-col">Statut</th>
+                      <th style="width: 70px;">Ordre</th>
+                      <th style="width: 110px;">Statut</th>
                       <th>Matricule</th>
                       <th>Nom Complet</th>
                       <th>Âge</th>
+                      <th style="width: 110px;">Date</th>
                       <th>Prestations (Motif)</th>
-                      <th>Température</th>
-                      <th>Tension</th>
-                      <th>Trié par</th>
+                      <th style="width: 100px;">Température</th>
+                      <th style="width: 100px;">Tension</th>
+                      <th style="width: 110px;">Trié par</th>
                       <th class="text-right action-col">Action</th>
                     </tr>
                   </thead>
@@ -73,33 +135,42 @@
 
                         <td>
                           {% if signe.est_consulte %}
-                            <span class="badge badge-done">Consulté</span>
+                            <span class="badge-done">Consulté</span>
                           {% else %}
-                            <span class="badge badge-new">Nouveau</span>
+                            <span class="badge-new">Nouveau</span>
                           {% endif %}
                         </td>
 
-                        <td><span class="badge badge-info">{{ signe.patient.code_patient }}</span></td>
-                        <td><strong>{{ signe.patient.noms }}</strong></td>
+                        <td>
+                          <span class="badge-info-custom">{{ signe.patient.code_patient }}</span>
+                        </td>
+                        <td>
+                          <span class="patient-name">{{ signe.patient.noms }}</span>
+                        </td>
                         <td class="nowrap">{{ signe.patient.age }} ans</td>
+
+                        <td class="text-small">
+                          <div>{{ signe.date_prelevement|date:"d/m/Y" }}</div>
+                          <div class="text-muted">{{ signe.date_prelevement|date:"H:i" }}</div>
+                        </td>
 
                         <td>
                           {% if signe.session %}
                             <ul class="list-unstyled mb-0">
                               {% for item in signe.session.items.all %}
-                                <li>
+                                <li class="text-small">
                                   <i class="fa fa-caret-right text-primary"></i>
                                   {{ item.prestation.libelle }}
                                 </li>
                               {% endfor %}
                             </ul>
                           {% else %}
-                            <span class="text-muted"><small>Consultation Libre</small></span>
+                            <span class="text-muted text-small">Consultation Libre</span>
                           {% endif %}
                         </td>
 
                         <td class="nowrap">
-                          <span class="badge {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
+                          <span class="badge badge-temp {% if signe.temperature >= 38 %}badge-danger{% else %}badge-success{% endif %}">
                             {{ signe.temperature }} °C
                           </span>
                         </td>
@@ -109,25 +180,28 @@
 
                         <td class="text-right">
                           {% if not signe.est_consulte %}
-                            <!-- Patient non consulté: démarrer la consultation et marquer consulté -->
-                            <a href="{% url 'marquer_consulte' signe.id %}" class="btn btn-sm btn-primary btn-space">
+                            <!-- NOUVEAU : rouge "Consulter" -->
+                            <a href="{% url 'marquer_consulte' signe.id %}" class="btn btn-sm btn-danger btn-space">
                               <i class="fa fa-stethoscope"></i> Consulter
                             </a>
                           {% else %}
-                            <!-- Patient déjà consulté: proposer la reconsultation (préremplie) -->
-                            <a href="{% url 'reconsulter' signe.id %}" class="btn btn-sm btn-warning btn-space">
-                              <i class="fa fa-undo"></i> Modiifer
-                            </a>
-                            <!-- Optionnel: accès en lecture seule à la consultation précédente -->
-                            {% comment %} <a href="{% url 'detail_consultation' signe.id %}" class="btn btn-sm btn-outline-secondary">
-                              <i class="fa fa-eye"></i> Détails
-                            </a> {% endcomment %}
+                            {% if not signe.session %}
+                              <!-- CONSULTÉ + Consultation Libre (pas de session) : vert "Modifier" -->
+                              <a href="{% url 'reconsulter' signe.id %}" class="btn btn-sm btn-success btn-space">
+                                <i class="fa fa-edit"></i> Modifier
+                              </a>
+                            {% else %}
+                              <!-- CONSULTÉ + Avec prestations (session) : bleu "Reconsulter" -->
+                              <a href="{% url 'reconsulter' signe.id %}" class="btn btn-sm btn-primary btn-space">
+                                <i class="fa fa-undo"></i> Reconsulter
+                              </a>
+                            {% endif %}
                           {% endif %}
                         </td>
                       </tr>
                     {% empty %}
                       <tr>
-                        <td colspan="10" class="text-center text-muted">Aucun patient.</td>
+                        <td colspan="11" class="text-center text-muted py-4">Aucun patient dans la salle d'attente.</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -151,7 +225,11 @@
           ordering: false,
           paging: true,
           searching: true,
-          info: false
+          info: false,
+          language: {
+            emptyTable: "Aucun patient dans la salle d'attente",
+            search: "Rechercher :"
+          }
         });
 
         $('#searchWaitingList').on('keyup', function () {

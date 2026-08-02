@@ -36,7 +36,7 @@
             color: var(--dark);
         }
 
-        /* Header Patient - Style Hôpital */
+        /* Header Patient */
         .patient-header {
             background: white;
             border-top: 4px solid var(--primary);
@@ -385,18 +385,18 @@
 
         .modal-dialog {
             background-color: white;
-            margin: 10% auto;
+            margin: 5% auto;
             border-radius: var(--border-radius);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            width: 90%;
+            max-width: 900px;
+            width: 95%;
             border: 1px solid var(--gray-300);
         }
 
         @media (max-width: 768px) {
             .modal-dialog {
-                margin: 15% auto;
-                width: 95%;
+                margin: 10% auto;
+                width: 98%;
             }
         }
 
@@ -434,7 +434,7 @@
 
         .modal-body {
             padding: 1.25rem;
-            max-height: 65vh;
+            max-height: 70vh;
             overflow-y: auto;
         }
 
@@ -609,19 +609,14 @@
                             <div class="card-body">
                                 <div class="info-box">
                                     <div class="info-box-label">Motif</div>
-                                    <div class="info-box-content">{{ cons.motif_consultation|default:"N/A" }}</div>
+                                    <div class="info-box-content">{{ cons.motif_consultation|truncatechars:150|default:"N/A" }}</div>
                                 </div>
                                 
-                                <div class="row mb-3">
-                                    <div class="col-md-6 col-sm-12">
-                                        <div class="info-box" style="border-left-color: var(--success);">
-                                            <div class="info-box-label">Diagnostic</div>
-                                            <div class="info-box-content">{{ cons.diagnostic_final|default:cons.hypothese_diagnostique|default:"N/A" }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="d-flex gap-2 flex-wrap mt-3">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button class="btn-action btn-sm" onclick="openModal('detail_modal_{{ cons.id }}')">
+                                        <i class="fa fa-eye"></i> Voir détails complets
+                                    </button>
+                                    
                                     {% if cons.examens.all %}
                                     <button class="btn-action btn-sm" onclick="openModal('examens_modal_{{ cons.id }}')">
                                         <i class="fa fa-flask"></i> Examens ({{ cons.examens.count }})
@@ -633,6 +628,176 @@
                                         <i class="fa fa-file-prescription"></i> Ordonnances ({{ cons.ordonnance_set.count }})
                                     </button>
                                     {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modal DÉTAILS COMPLETS CONSULTATION -->
+                        <div id="detail_modal_{{ cons.id }}" class="modal" onclick="closeModalOnClickOutside(event, 'detail_modal_{{ cons.id }}')">
+                            <div class="modal-dialog" style="max-width: 900px;">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fa fa-file-medical"></i> Consultation du {{ cons.date_creation|date:"d/m/Y à H:i" }}
+                                    </h5>
+                                    <button class="close-modal" onclick="closeModal('detail_modal_{{ cons.id }}')">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    {% if cons.medecin %}
+                                    <div class="mb-3">
+                                        <strong><i class="fa fa-user-md"></i> Médecin:</strong> 
+                                        <span class="badge-custom badge-primary">{{ cons.medecin.username }}</span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="info-box">
+                                        <div class="info-box-label"><i class="fa fa-exclamation-circle"></i> Motif de consultation</div>
+                                        <div class="info-box-content">{{ cons.motif_consultation|default:"N/A" }}</div>
+                                    </div>
+                                    
+                                    {% if cons.histoire_maladie %}
+                                    <div class="info-box" style="border-left-color: var(--info);">
+                                        <div class="info-box-label"><i class="fa fa-history"></i> Histoire de la maladie</div>
+                                        <div class="info-box-content">{{ cons.histoire_maladie }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.antecedent %}
+                                    <div class="info-box" style="border-left-color: var(--warning);">
+                                        <div class="info-box-label"><i class="fa fa-clipboard-list"></i> Antécédents</div>
+                                        <div class="info-box-content">{{ cons.antecedent }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.examen_physique %}
+                                    <div class="info-box" style="border-left-color: var(--success);">
+                                        <div class="info-box-label"><i class="fa fa-user-md"></i> Examen physique</div>
+                                        <div class="info-box-content">{{ cons.examen_physique }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.complement_d_anamnese %}
+                                    <div class="info-box" style="border-left-color: var(--primary);">
+                                        <div class="info-box-label"><i class="fa fa-notes-medical"></i> Complément d'anamnèse</div>
+                                        <div class="info-box-content">{{ cons.complement_d_anamnese }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.hypothese_diagnostique %}
+                                    <div class="info-box" style="border-left-color: var(--info);">
+                                        <div class="info-box-label"><i class="fa fa-book-medical"></i> Hypothèse diagnostique</div>
+                                        <div class="info-box-content">{{ cons.hypothese_diagnostique }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.diagnostic_final %}
+                                    <div class="info-box" style="border-left-color: var(--success);">
+                                        <div class="info-box-label"><i class="fa fa-diagnoses"></i> Diagnostic final</div>
+                                        <div class="info-box-content">{{ cons.diagnostic_final }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.examens.all %}
+                                    <div class="section-title">
+                                        <strong><i class="fa fa-flask"></i> Examens demandés ({{ cons.examens.count }})</strong>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table-custom">
+                                            <thead>
+                                                <tr>
+                                                    <th>Examen</th>
+                                                    <th>Qté</th>
+                                                    <th>Statut</th>
+                                                    <th>Date demande</th>
+                                                    <th>Indication</th>
+                                                    <th>Résultat</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for ex in cons.examens.all %}
+                                                <tr>
+                                                    <td><strong>{{ ex.prestation.libelle }}</strong></td>
+                                                    <td>{{ ex.quantite }}</td>
+                                                    <td>
+                                                        <span class="badge-custom {% if ex.statut == 'TERMINE' %}badge-success{% elif ex.statut == 'EN_ATTENTE' %}badge-warning{% else %}badge-danger{% endif %}">
+                                                            {{ ex.get_statut_display }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ ex.date_demande|date:"d/m/Y" }}</td>
+                                                    <td>{{ ex.indication|default:"N/A" }}</td>
+                                                    <td>
+                                                        {% if ex.resultat %}
+                                                        <span style="color: var(--success);">{{ ex.resultat|truncatechars:100 }}</span>
+                                                        {% else %}
+                                                        <span class="text-muted">En attente</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if cons.ordonnance_set.all %}
+                                    <div class="section-title">
+                                        <strong><i class="fa fa-file-prescription"></i> Ordonnances ({{ cons.ordonnance_set.count }})</strong>
+                                    </div>
+                                    {% for ord in cons.ordonnance_set.all %}
+                                    <div class="card card-custom mb-3">
+                                        <div class="card-header-custom" style="background: var(--danger); color: white;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <strong>{{ ord.get_type_ordonnance_display }}</strong>
+                                                <small>{{ ord.date_prescrite|date:"d/m/Y H:i" }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            {% if ord.diagnostic %}
+                                            <div class="mb-3">
+                                                <strong>Diagnostic:</strong>
+                                                <p class="mb-0 text-secondary">{{ ord.diagnostic }}</p>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if ord.medicaments.all %}
+                                            <h6 class="mb-2">Médicaments ({{ ord.medicaments.count }})</h6>
+                                            <div class="table-responsive">
+                                                <table class="table-custom">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Médicament</th>
+                                                            <th>Posologie</th>
+                                                            <th>Durée</th>
+                                                            <th>Qté</th>
+                                                            <th>Statut</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for med in ord.medicaments.all %}
+                                                        <tr>
+                                                            <td><strong>{{ med.nom }}</strong></td>
+                                                            <td>{{ med.posologie }}</td>
+                                                            <td>{{ med.duree }}</td>
+                                                            <td>{{ med.quantite|default:1 }}</td>
+                                                            <td>
+                                                                <span class="badge-custom {% if med.statut == 'EN_COURS' %}badge-success{% else %}badge-danger{% endif %}">
+                                                                    {{ med.get_statut_display }}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn-action btn-outline" onclick="closeModal('detail_modal_{{ cons.id }}')">
+                                        <i class="fa fa-times"></i> Fermer
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -955,6 +1120,67 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- ===== MATERNITÉ ===== -->
+                    <div class="tab-pane fade" id="mat_tab">
+                        {% for mat in maternites %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="fa fa-baby-carriage"></i> Dossier Maternité #{{ mat.id }}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Admission:</strong> {{ mat.date_admission|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Terme:</strong> {{ mat.terme_prevu|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Groupe:</strong> {{ mat.groupe_sanguin }}
+                                    </div>
+                                </div>
+                                
+                                {% if mat.consultations.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-stethoscope"></i> Consultations ({{ mat.consultations.count }})</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Poids</th>
+                                                <th>TA</th>
+                                                <th>HU</th>
+                                                <th>BCF</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for cons in mat.consultations.all %}
+                                            <tr>
+                                                <td>{{ cons.date_consultation|date:"d/m/Y" }}</td>
+                                                <td>{{ cons.poids }} kg</td>
+                                                <td>{{ cons.tension_arterielle }}</td>
+                                                <td>{{ cons.hauteur_uterine }} cm</td>
+                                                <td>{{ cons.bruits_cardiaques_foetaux }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-baby-carriage"></i>
+                            <p>Aucun dossier maternité</p>
+                        </div>
+                        {% endfor %}
                     </div>
 
                 </div>

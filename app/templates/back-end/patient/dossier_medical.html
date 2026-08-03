@@ -507,7 +507,7 @@
                 <div class="tab-content">
 
                     <!-- ===== FILTRE PAR DATE (CONSULTATIONS) ===== -->
-                    <div class="filter-box" id="cons_tab">
+                    <div class="filter-box">
                         <form method="get">
                             <div class="row">
                                 <div class="col-md-4 col-sm-12 mb-3">
@@ -528,7 +528,7 @@
                     </div>
 
                     <!-- ===== CONSULTATIONS ===== -->
-                    <div class="tab-pane fade show active">
+                    <div class="tab-pane fade show active" id="cons_tab">
                         {% for cons in consultations %}
                         <div class="card card-custom mb-4">
                             <div class="card-header-custom">

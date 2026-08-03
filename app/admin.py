@@ -592,3 +592,58 @@ class SuiviMedecinAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+# ==================================================================================================
+@admin.register(AvisMedecin)
+class AvisMedecinAdmin(admin.ModelAdmin):
+    list_display = (
+        'patient',
+        'medecin',
+        'type_avis',
+        'titre',
+        'date_avis',
+        'hopital',
+        'consultation',
+        'hospitalisation',
+    )
+    list_filter = (
+        'type_avis',
+        'hopital',
+        'date_avis',
+        'medecin',
+    )
+    search_fields = (
+        'patient__noms',
+        'medecin__username',
+        'medecin__first_name',
+        'medecin__last_name',
+        'medecin__email',
+        'titre',
+        'contenu',
+    )
+    readonly_fields = ('date_avis',)
+    date_hierarchy = 'date_avis'
+    ordering = ('-date_avis',)
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'patient',
+                'medecin',
+                'hopital',
+                'type_avis',
+                'date_avis',
+            )
+        }),
+        ('Contenu de l’avis', {
+            'fields': (
+                'titre',
+                'contenu',
+            )
+        }),
+        ('Liens optionnels', {
+            'fields': (
+                'consultation',
+                'hospitalisation',
+            )
+        }),
+    )

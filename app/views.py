@@ -4133,9 +4133,11 @@ def imprimer_facture_hospitalisation(request, hosp_id):
 # ============================================================================================
 @login_required
 def dossier_medical_complet(request, patient_id):
-    """Dossier médical complet - Affiche TOUT l'historique du patient"""
-    
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    """Dossier médical complet - Affiche TOUT l'historique du patient + avis médecins"""
+
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
@@ -4145,7 +4147,56 @@ def dossier_medical_complet(request, patient_id):
         messages.error(request, "Accès refusé. Fiche patient non payée.")
         return redirect('liste_patients')
 
-    # --- CONSULTATIONS (avec examens et ordonnances) ---
+    # ------------------------------
+    # GESTION DU FORMULAIRE (POST) - AJOUT AVIS MÉDECIN
+    # ------------------------------
+    if request.method == 'POST' and request.POST.get('action') == 'avis_medecin':
+        if fonctionKey in ('medecin', 'admin'):
+            type_avis = request.POST.get('type_avis', 'COMMENTAIRE')
+            titre = request.POST.get('titre', '').strip() or None
+            contenu = request.POST.get('contenu', '').strip()
+
+            consultation_id = request.POST.get('consultation')
+            hospitalisation_id = request.POST.get('hospitalisation')
+
+            consultation = None
+            hospitalisation = None
+
+            if consultation_id:
+                consultation = get_object_or_404(
+                    Consultation,
+                    id=consultation_id,
+                    triage__patient=patient,
+                    hopital=hopital_user
+                )
+
+            if hospitalisation_id:
+                hospitalisation = get_object_or_404(
+                    Hospitalisation,
+                    id=hospitalisation_id,
+                    patient=patient,
+                    hopital=hopital_user
+                )
+
+            if not contenu:
+                messages.error(request, "Le contenu de l'avis est obligatoire.")
+            else:
+                AvisMedecin.objects.create(
+                    patient=patient,
+                    medecin=request.user,
+                    hopital=hopital_user,
+                    type_avis=type_avis,
+                    titre=titre,
+                    contenu=contenu,
+                    consultation=consultation,
+                    hospitalisation=hospitalisation,
+                )
+                messages.success(request, "Avis médecin enregistré avec succès.")
+
+        return redirect('dossier_medical_complet', patient_id=patient.id)
+    # ------------------------------
+
+    # --- CONSULTATIONS ---
     consultations = Consultation.objects.filter(
         triage__patient=patient,
         hopital=hopital_user
@@ -4156,7 +4207,7 @@ def dossier_medical_complet(request, patient_id):
         'ordonnance_set__medicaments'
     )
 
-    # --- HOSPITALISATIONS (avec Kardex, Suivi, Ordonnance Sortie, RDV) ---
+    # --- HOSPITALISATIONS ---
     hospitalisations = Hospitalisation.objects.filter(
         patient=patient,
         hopital=hopital_user
@@ -4191,6 +4242,12 @@ def dossier_medical_complet(request, patient_id):
         'signes_vitaux'
     )
 
+    # --- AVIS MÉDECIN ---
+    avis_medecin = AvisMedecin.objects.filter(
+        patient=patient,
+        hopital=hopital_user
+    ).order_by('-date_avis').select_related('medecin', 'consultation', 'hospitalisation')
+
     # --- STATS ---
     total_consultations = consultations.count()
     total_hospitalisations = hospitalisations.count()
@@ -4200,6 +4257,7 @@ def dossier_medical_complet(request, patient_id):
     total_ordonnances = Ordonnance.objects.filter(
         consultation__in=consultations
     ).count()
+    total_avis = avis_medecin.count()
 
     context = {
         'patient': patient,
@@ -4208,11 +4266,13 @@ def dossier_medical_complet(request, patient_id):
         'signes_vitaux': signes_vitaux,
         'maternites': maternites,
         'sessions': sessions,
+        'avis_medecin': avis_medecin,
         'fonctionKey': fonctionKey,
         'total_consultations': total_consultations,
         'total_hospitalisations': total_hospitalisations,
         'total_examens': total_examens,
         'total_ordonnances': total_ordonnances,
+        'total_avis': total_avis,
     }
 
     return render(request, 'back-end/patient/dossier_medical.html', context)
@@ -7878,14 +7938,13 @@ def payer_dette_entreprise(request, entreprise_id):
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # 3. Récupérer les paiements existants pour cette entreprise (service = ENTREPRISE)
+    # 3. Paiements existants pour cette entreprise (service = ENTREPRISE)
     paiements_existants = Paiement.objects.filter(
         entreprise=entreprise,
         service='ENTREPRISE',
         hopital=hopital_user
     )
 
-    # Calcul du total déjà payé en CDF
     total_deja_paye_cdf = Decimal('0')
     for p in paiements_existants:
         if p.devise == 'CDF':
@@ -7893,22 +7952,26 @@ def payer_dette_entreprise(request, entreprise_id):
         else:  # USD
             total_deja_paye_cdf += (p.montant_verse or Decimal('0')) * taux
 
-    # Dette totale de l’entreprise (en USD, convertie en CDF)
-    # Adapte selon ton modèle : si dette_mensuelle est déjà en CDF, retire la conversion
+    # 4. Dette totale de l’entreprise (en CDF)
+    # Si dette_mensuelle est en USD :
     dette_usd = entreprise.dette_mensuelle or Decimal('0')
     dette_cdf = (dette_usd * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
 
-    # Reste à payer en CDF
+    # Si dette_mensuelle est déjà en CDF, utilise directement :
+    # dette_cdf = entreprise.dette_mensuelle or Decimal('0')
+    # dette_usd = dette_cdf / taux
+
+    # 5. Reste à payer
     reste_a_payer_cdf = max(Decimal('0'), dette_cdf - total_deja_paye_cdf)
     reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # 4. Traitement du formulaire de paiement
+    # 6. Traitement du formulaire de paiement
     if request.method == 'POST':
         montant_saisi = Decimal(request.POST.get('montant', '0') or '0')
-        devise = request.POST.get('devise', 'CDF')
+        devise = request.POST.get('devise', 'CDF')  # par défaut CDF
         reduction = Decimal(request.POST.get('reduction', '0') or '0')
 
-        # Conversion du montant saisi en CDF
+        # Convertir le montant saisi en CDF
         if devise == 'CDF':
             montant_saisi_cdf = montant_saisi
         else:  # USD
@@ -7940,8 +8003,6 @@ def payer_dette_entreprise(request, entreprise_id):
             nouveau_reste_cdf = dette_cdf - nouveau_total_cdf
 
             if nouveau_reste_cdf <= Decimal('1'):  # tolérance 1 CDF
-                # Dette considérée comme payée
-                # Tu peux ajouter un champ entreprise.dette_payee = True si tu veux
                 messages.success(
                     request,
                     f"Paiement terminé. La dette de {entreprise.nom} est soldée."
@@ -7956,13 +8017,14 @@ def payer_dette_entreprise(request, entreprise_id):
                 )
                 return redirect('payer_dette_entreprise', entreprise_id=entreprise.id)
 
-    # 5. Contexte pour l’affichage (GET)
+    # 7. Contexte pour l’affichage (GET)
     return render(request, 'back-end/entreprise/payer_dette.html', {
         'entreprise': entreprise,
         'dette_usd': dette_usd,
         'dette_cdf': dette_cdf,
         'reste_a_payer': reste_a_payer_usd,
         'reste_a_payer_cdf': reste_a_payer_cdf,
+        'total_deja_paye_cdf': total_deja_paye_cdf,
         'taux': taux,
         'fonctionKey': fonctionKey,
     })

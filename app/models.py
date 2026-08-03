@@ -1493,3 +1493,98 @@ class RapportJournalierPersonnel(models.Model):
 
     def __str__(self):
         return f"{self.hopital} - {self.titre} - {self.date_rapport}"
+
+# ===========================================================================================
+# 
+#
+class AvisMedecin(models.Model):
+    """
+    Point de vue / avis d'un médecin sur un patient.
+    Permet à tout médecin de l'hôpital de consulter l'historique
+    des avis de tous les médecins sur ce patient.
+    """
+
+    TYPE_CHOICES = [
+        ('DIAGNOSTIC', 'Diagnostic / Synthèse'),
+        ('EVOLUTION', 'Évolution clinique'),
+        ('COMMENTAIRE', 'Commentaire / Note'),
+        ('CONSEIL', 'Conseil / Recommandation'),
+        ('AUTRE', 'Autre'),
+    ]
+
+    patient = models.ForeignKey(
+        'Patient',
+        on_delete=models.CASCADE,
+        related_name='avis_medecin',
+        verbose_name="Patient"
+    )
+
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='avis_medecin_donnes',
+        verbose_name="Médecin"
+    )
+
+    hopital = models.ForeignKey(
+        'Hopital',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='avis_medecin',
+        verbose_name="Hôpital"
+    )
+
+    type_avis = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default='COMMENTAIRE',
+        verbose_name="Type d'avis"
+    )
+
+    titre = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name="Titre (optionnel)"
+    )
+
+    contenu = models.TextField(
+        verbose_name="Point de vue / commentaire"
+    )
+
+    date_avis = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Date de l'avis"
+    )
+
+    # Optionnel : lier à une consultation ou hospitalisation précise
+    consultation = models.ForeignKey(
+        'Consultation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='avis_medecin',
+        verbose_name="Consultation (optionnel)"
+    )
+
+    hospitalisation = models.ForeignKey(
+        'Hospitalisation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='avis_medecin',
+        verbose_name="Hospitalisation (optionnel)"
+    )
+
+    class Meta:
+        verbose_name = "Avis médecin"
+        verbose_name_plural = "Avis médecins"
+        ordering = ['-date_avis']
+        indexes = [
+            models.Index(fields=['patient', '-date_avis']),
+        ]
+
+    def __str__(self):
+        medecin_str = self.medecin.get_full_name() or self.medecin.username if self.medecin else "Inconnu"
+        return f"Avis de {medecin_str} sur {self.patient.noms} le {self.date_avis.strftime('%d/%m/%Y %H:%M')}"

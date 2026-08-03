@@ -8,7 +8,7 @@
     {% include 'back-end/includes/css.html' %}
     <style>
         .dette-box {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             background: #e9ecef;
             padding: 20px;
             border-radius: 8px;
@@ -27,6 +27,14 @@
             border-left: 6px solid #ffc107;
             margin-bottom: 20px;
         }
+        .deja-payé-box {
+            font-size: 1.05rem;
+            background: #d4edda;
+            padding: 14px;
+            border-radius: 8px;
+            border-left: 6px solid #28a745;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -41,19 +49,24 @@
             <div class="dette-box">
                 <div class="info-line">
                     <strong>Dette totale :</strong>
-                    {{ dette_usd|default:"0" }} USD
-                    (soit {{ dette_cdf|default:"0" }} CDF)
+                    {{ dette_cdf|floatformat:0 }} CDF
+                    (~ {{ dette_usd|floatformat:2 }} USD)
                 </div>
                 <div class="info-line">
                     <strong>Taux utilisé :</strong>
-                    1 USD = {{ taux|default:"2300" }} CDF
+                    1 USD = {{ taux|floatformat:2 }} CDF
                 </div>
+            </div>
+
+            <div class="deja-payé-box">
+                <strong>Déjà payé :</strong>
+                {{ total_deja_paye_cdf|floatformat:0 }} CDF
             </div>
 
             <div class="reste-box">
                 <strong>Reste à payer :</strong>
-                {{ reste_a_payer|default:"0" }} USD
-                ({{ reste_a_payer_cdf|default:"0" }} CDF)
+                {{ reste_a_payer_cdf|floatformat:0 }} CDF
+                (~ {{ reste_a_payer|floatformat:2 }} USD)
             </div>
 
             {% if messages %}
@@ -80,7 +93,7 @@
                             <div class="col-md-4 form-group">
                                 <label>Devise</label>
                                 <select name="devise" id="devise" class="form-control" onchange="updateEquivalence()">
-                                    <option value="CDF">CDF</option>
+                                    <option value="CDF" selected>CDF</option>
                                     <option value="USD">USD</option>
                                 </select>
                             </div>
@@ -108,12 +121,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for paiement in entreprise.paiements.all %}
+                        {% for paiement in paiements %}
                             <tr>
                                 <td>{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
                                 <td>{{ paiement.montant_verse }}</td>
                                 <td>{{ paiement.devise }}</td>
-                                <td>{{ paiement.montant_reduction }}</td>
+                                <td>{{ paiement.montant_reduction|default:"0" }}</td>
                                 <td>{{ paiement.caissier.username }}</td>
                             </tr>
                         {% empty %}
@@ -130,7 +143,7 @@
 
 {% include 'back-end/includes/js.html' %}
 <script>
-    const TAUX = {{ taux|default:"2300" }};
+    const TAUX = {{ taux|floatformat:2 }};
 
     function updateEquivalence() {
         const devise = document.getElementById('devise').value;

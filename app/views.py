@@ -4885,32 +4885,45 @@ def enregistrer_ordonnance_urgence(request, consultation_id):
 # ======================================================================================
 @login_required
 def liste_patients_urgence(request):
-    # 1. On filtre pour ne garder QUE les patients dont fiche_payee est True
-    patients = Patient.objects.filter(fiche_payee=True).order_by('-id')
-    
-    # 2. Récupération du rôle
-    role = Fonction.objects.filter(userKey=request.user).first()
+    # 1. Rôle & hôpital de l'utilisateur
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
+    hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    # Si l'utilisateur n'a pas d'hôpital → message + redirection
+    if not hopital_user:
+        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+        return redirect('liste_patients')  # ou une autre vue selon ton besoin
+
+    # 2. On filtre pour ne garder QUE :
+    # - les patients dont fiche_payee est True
+    # - ET qui appartiennent à l'hôpital de l'utilisateur
+    patients = Patient.objects.filter(
+        fiche_payee=True,
+        hopital=hopital_user
+    ).order_by('-id')
+    
     # 3. Enrichissement
     for p in patients:
         # Consultation la plus récente
         p.consultation_active = Consultation.objects.filter(
-            triage__patient=p
+            triage__patient=p,
+            hopital=hopital_user
         ).order_by('-date_creation').first()
         
         # Hospitalisation en cours
         p.hosp_en_cours = Hospitalisation.objects.filter(
             patient=p, 
-            statut='EN_COURS'
+            statut='EN_COURS',
+            hopital=hopital_user
         ).first()
 
     return render(request, 'back-end/medecin/liste_patients.html', {
         'patients': patients, 
         'fonctionKey': fonctionKey
     })
-
-
 
 
 # 

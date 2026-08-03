@@ -7,13 +7,91 @@
     <title>Dossier Patient - {{ hosp.patient.noms }}</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .table thead { background-color: #f8f9fa; color: #333; }
-        .card-header { font-weight: bold; }
-        .pagination .page-link { color: #0d6efd; }
-        .btn-xs { padding: .15rem .4rem; font-size: .75rem; }
-        .table-danger { opacity: 0.8; }
-        .admin-form { display: flex; gap: 3px; align-items: center; justify-content: center; }
-        .cell-date { font-size: 0.70rem; font-weight: bold; }
+        /* Global & layout */
+        body {
+            background: #f4f7fa;
+        }
+        .page-wrapper {
+            padding: 1.2rem 0;
+        }
+
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+        .card-header {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        /* Tables */
+        .table thead {
+            background-color: #f8f9fa;
+            color: #333;
+            font-size: 0.85rem;
+        }
+        .table th {
+            font-weight: 600;
+        }
+        .table td {
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: 8px;
+        }
+        .btn-xs {
+            padding: .15rem .4rem;
+            font-size: .75rem;
+            border-radius: 6px;
+        }
+
+        /* Cardex specific */
+        .table-danger {
+            opacity: 0.85;
+        }
+        .admin-form {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+        }
+        .cell-date {
+            font-size: 0.70rem;
+            font-weight: 700;
+        }
+
+        /* Forms */
+        .form-control,
+        .form-control-sm,
+        textarea.form-control {
+            border-radius: 8px;
+        }
+        .bg-light-custom {
+            background-color: #f8f9fc;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width: 768px) {
+            .d-flex.justify-content-between.align-items-center {
+                flex-direction: column;
+                gap: 0.75rem;
+                align-items: flex-start;
+            }
+            .d-flex.justify-content-between.align-items-center > div {
+                width: 100%;
+            }
+            .btn {
+                width: 100%;
+                margin-bottom: 0.4rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -27,7 +105,9 @@
                     <h3 class="mb-0">Dossier de suivi : {{ hosp.patient.noms }}</h3>
                     <div>
                         {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
-                            <a href="{% url 'creer_rdv' hosp.id %}" class="btn btn-info text-white me-2"><i class="fa fa-calendar"></i> Prendre RDV</a>
+                            <a href="{% url 'creer_rdv' hosp.id %}" class="btn btn-info text-white me-2">
+                                <i class="fa fa-calendar"></i> Prendre RDV
+                            </a>
                             <form method="POST" action="{% url 'finir_hospitalisation' hosp.id %}" class="d-inline" onsubmit="return confirm('Confirmer la fin de l\'hospitalisation ?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-danger me-2">Terminer l'Hospitalisation</button>
@@ -39,6 +119,7 @@
                 
                 <div class="row">
                     <div class="col-md-4">
+                        <!-- Ordonnances -->
                         <div class="card shadow-sm mb-4">
                             <div class="card-header bg-primary text-white">Traitement (Ordonnances)</div>
                             <div class="card-body">
@@ -47,7 +128,9 @@
                                         <h6 class="text-primary">{{ ordonnance.get_type_ordonnance_display }}</h6>
                                         <ul class="list-unstyled mt-2">
                                             {% for med in ordonnance.medicaments.all %}
-                                                <li class="mb-2"><strong>{{ med.nom }}</strong> | <small>{{ med.posologie }}</small></li>
+                                                <li class="mb-2">
+                                                    <strong>{{ med.nom }}</strong> | <small>{{ med.posologie }}</small>
+                                                </li>
                                             {% endfor %}
                                         </ul>
                                     </div>
@@ -55,16 +138,22 @@
                             </div>
                         </div>
 
+                        <!-- Cardex -->
                         <div class="card shadow-sm">
                             <div class="card-header bg-dark text-white">Cardex (Suivi Chronologique)</div>
                             <div class="card-body p-2">
+                                <!-- Formulaire d'ajout kardex : uniquement infirmier / admin -->
                                 {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
-                                    <form method="POST" action="{% url 'ajouter_kardex' hosp.id %}" class="mb-3 p-2 border rounded bg-light">
+                                    <form method="POST" action="{% url 'ajouter_kardex' hosp.id %}" class="mb-3 p-2 border rounded bg-light-custom">
                                         {% csrf_token %}
                                         <input type="text" name="medicament" class="form-control form-control-sm mb-1" placeholder="Nom médicament" required>
                                         <div class="row g-1">
-                                            <div class="col-6"><input type="text" name="posologie" class="form-control form-control-sm" placeholder="Dosage" required></div>
-                                            <div class="col-6"><input type="text" name="voie" class="form-control form-control-sm" placeholder="Voie" required></div>
+                                            <div class="col-6">
+                                                <input type="text" name="posologie" class="form-control form-control-sm" placeholder="Dosage" required>
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="text" name="voie" class="form-control form-control-sm" placeholder="Voie" required>
+                                            </div>
                                         </div>
                                         <button type="submit" class="btn btn-sm btn-success w-100 mt-2">Ajouter</button>
                                     </form>
@@ -74,7 +163,7 @@
                                     <table class="table table-bordered table-sm align-middle">
                                         <thead>
                                             <tr>
-                                                <th>Médicament</th>
+                                                <th>Médicament / Dosage / Voie</th>
                                                 {% for jour in jours %}
                                                     <th class="text-center cell-date">{{ jour|date:"d/m" }}</th>
                                                 {% endfor %}
@@ -84,9 +173,12 @@
                                             {% for row in kardex_data %}
                                             <tr class="{% if not row.est_actif %}table-danger{% endif %}">
                                                 <td style="font-size: 0.8rem;">
-                                                    <strong>{{ row.medicament }}</strong><br>{{ row.posologie }}
-                                                    <br>
-                                                    {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                                    <strong>{{ row.medicament }}</strong><br>
+                                                    <small class="text-muted">Dosage : {{ row.posologie }}</small><br>
+                                                    <small class="text-muted">Voie : {{ row.voie|default:"—" }}</small>
+
+                                                    <!-- Bouton Arrêter / Réactiver : UNIQUEMENT pour le médecin -->
+                                                    {% if fonctionKey == 'medecin' %}
                                                         <form method="POST" action="{% url 'changer_statut_kardex' row.id %}" class="mt-1">
                                                             {% csrf_token %}
                                                             <button type="submit" class="btn btn-xs {% if row.est_actif %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
@@ -97,13 +189,32 @@
                                                 </td>
                                                 {% for cell in row.cellules %}
                                                 <td class="text-center">
-                                                    <form method="POST" action="{% url 'marquer_administration' row.id %}" class="admin-form">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="date_cible" value="{{ cell.date|date:'Y-m-d' }}">
-                                                        <input type="checkbox" name="matin" {% if cell.admin.matin %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
-                                                        <input type="checkbox" name="midi" {% if cell.admin.midi %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
-                                                        <input type="checkbox" name="soir" {% if cell.admin.soir %}checked{% endif %} {% if not row.est_actif %}disabled{% endif %} onchange="this.form.submit()">
-                                                    </form>
+                                                    <!-- Cases cochées uniquement pour infirmier / admin -->
+                                                    {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                                        <form method="POST" action="{% url 'marquer_administration' row.id %}" class="admin-form">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="date_cible" value="{{ cell.date|date:'Y-m-d' }}">
+                                                            <input type="checkbox" name="matin"
+                                                                {% if cell.admin.matin %}checked{% endif %}
+                                                                {% if not row.est_actif %}disabled{% endif %}
+                                                                onchange="this.form.submit()">
+                                                            <input type="checkbox" name="midi"
+                                                                {% if cell.admin.midi %}checked{% endif %}
+                                                                {% if not row.est_actif %}disabled{% endif %}
+                                                                onchange="this.form.submit()">
+                                                            <input type="checkbox" name="soir"
+                                                                {% if cell.admin.soir %}checked{% endif %}
+                                                                {% if not row.est_actif %}disabled{% endif %}
+                                                                onchange="this.form.submit()">
+                                                        </form>
+                                                    {% else %}
+                                                        <!-- Affichage seul pour le médecin (et autres rôles) -->
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            <small class="{% if cell.admin.matin %}text-success fw-bold{% else %}text-muted{% endif %}">M</small>
+                                                            <small class="{% if cell.admin.midi %}text-success fw-bold{% else %}text-muted{% endif %}">I</small>
+                                                            <small class="{% if cell.admin.soir %}text-success fw-bold{% else %}text-muted{% endif %}">S</small>
+                                                        </div>
+                                                    {% endif %}
                                                 </td>
                                                 {% endfor %}
                                             </tr>
@@ -116,16 +227,23 @@
                     </div>
 
                     <div class="col-md-8">
-                        <div class="card shadow-sm"> 
+                        <!-- Suivi infirmier -->
+                        <div class="card shadow-sm mb-4"> 
                             <div class="card-body">
                                 {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
-                                    <form method="POST" action="{% url 'ajouter_suivi' hosp.id %}" class="mb-4 p-4 bg-light rounded border">
+                                    <form method="POST" action="{% url 'ajouter_suivi' hosp.id %}" class="mb-4 p-4 bg-light-custom rounded border">
                                         {% csrf_token %}
                                         <h6 class="mb-3 text-uppercase text-secondary">Ajouter relevé (Signes Vitaux)</h6>
                                         <div class="row">
-                                            <div class="col-md-4"><input name="ta" class="form-control mb-2" placeholder="TA" required></div>
-                                            <div class="col-md-4"><input name="pouls" class="form-control mb-2" placeholder="Pouls" required></div>
-                                            <div class="col-md-4"><input name="temp" class="form-control mb-2" placeholder="Temp (°C)" required></div>
+                                            <div class="col-md-4">
+                                                <input name="ta" class="form-control mb-2" placeholder="TA" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <input name="pouls" class="form-control mb-2" placeholder="Pouls" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <input name="temp" class="form-control mb-2" placeholder="Temp (°C)" required>
+                                            </div>
                                         </div>
                                         <textarea name="etat_general" class="form-control mb-2" placeholder="État général" required></textarea>
                                         <textarea name="soins_effectues" class="form-control mb-2" placeholder="Soins effectués"></textarea>
@@ -133,10 +251,19 @@
                                     </form>
                                 {% endif %}
                                 
-                                <h5 class="text-uppercase text-secondary mb-3">Historique des Signes Vitaux</h5>
+                                <h5 class="text-uppercase text-secondary mb-3">Historique des Signes Vitaux (Infirmier)</h5>
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle">
-                                        <thead><tr><th>Date</th><th>TA</th><th>Pouls</th><th>Temp</th><th>État</th><th>Soins</th></tr></thead>
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>TA</th>
+                                                <th>Pouls</th>
+                                                <th>Temp</th>
+                                                <th>État</th>
+                                                <th>Soins</th>
+                                            </tr>
+                                        </thead>
                                         <tbody>
                                             {% for s in suivis %}
                                             <tr>
@@ -162,6 +289,71 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Suivis médicaux (médecin) -->
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                Suivis médicaux (Médecin)
+                            </div>
+                            <div class="card-body">
+                                {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                    <form method="POST" action="{% url 'detail_hospitalisation' hosp.id %}" class="mb-4 p-3 bg-light-custom rounded border">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="suivi_medecin">
+
+                                        <h6 class="mb-3 text-uppercase text-secondary">Ajouter un suivi médecin</h6>
+
+                                        <div class="form-group mb-2">
+                                            <label class="font-weight-bold">Diagnostic du jour</label>
+                                            <textarea name="diagnostic_du_jour" class="form-control" rows="2" placeholder="Diagnostic principal du jour"></textarea>
+                                        </div>
+
+                                        <div class="form-group mb-2">
+                                            <label class="font-weight-bold">Évolution clinique</label>
+                                            <textarea name="evolution" class="form-control" rows="2" placeholder="Amélioration, aggravation, remarques..."></textarea>
+                                        </div>
+
+                                        <div class="form-group mb-2">
+                                            <label class="font-weight-bold">Consignes / Prescriptions particulières</label>
+                                            <textarea name="consignes" class="form-control" rows="2" placeholder="Consignes pour l'infirmier, examens à prévoir, etc."></textarea>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary px-4">Enregistrer le suivi médecin</button>
+                                    </form>
+                                {% endif %}
+
+                                <h5 class="text-uppercase text-secondary mb-3">Historique des suivis médecins</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Médecin</th>
+                                                <th>Diagnostic du jour</th>
+                                                <th>Évolution</th>
+                                                <th>Consignes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for s in suivis_medecin %}
+                                            <tr>
+                                                <td class="text-nowrap">{{ s.date_suivi|date:"d/m H:i" }}</td>
+                                                <td>{{ s.medecin.get_full_name|default:s.medecin.username }}</td>
+                                                <td>{{ s.diagnostic_du_jour|default:"—" }}</td>
+                                                <td>{{ s.evolution|default:"—" }}</td>
+                                                <td>{{ s.consignes|default:"—" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-muted text-center py-3">Aucun suivi médecin pour le moment.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

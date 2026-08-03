@@ -4222,10 +4222,14 @@ def dossier_medical_complet(request, patient_id):
 # ============================================================================================
 @login_required
 def detail_hospitalisation(request, pk):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    # Rôle de l'utilisateur
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+    # Hospitalisation concernée
     hosp = get_object_or_404(
         Hospitalisation.objects.select_related(
             'patient',
@@ -4235,6 +4239,36 @@ def detail_hospitalisation(request, pk):
         hopital=hopital_user
     )
 
+    # ------------------------------
+    # 1) GESTION DU FORMULAIRE (POST)
+    # ------------------------------
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # --- Suivi médecin ---
+        if action == 'suivi_medecin':
+            if fonctionKey in ('medecin', 'admin'):
+                diagnostic = request.POST.get('diagnostic_du_jour', '')
+                evolution = request.POST.get('evolution', '')
+                consignes = request.POST.get('consignes', '')
+
+                SuiviMedecin.objects.create(
+                    hospitalisation=hosp,
+                    medecin=request.user,
+                    diagnostic_du_jour=diagnostic,
+                    evolution=evolution,
+                    consignes=consignes,
+                    hopital=hopital_user
+                )
+                messages.success(request, "Suivi médecin enregistré avec succès.")
+
+            return redirect('detail_hospitalisation', pk=pk)
+
+        # Tu pourras ajouter d'autres actions ici (ex: action == 'suivi_infirmier', etc.)
+
+    # ------------------------------
+    # 2) PRÉPARATION DES DONNÉES (GET ou après POST)
+    # ------------------------------
     date_debut = hosp.date_entree.date()
     demain = timezone.now().date() + timedelta(days=1)
 
@@ -4261,21 +4295,33 @@ def detail_hospitalisation(request, pk):
             'id': item.id,
             'medicament': item.medicament,
             'posologie': item.posologie,
+            'voie': item.voie_administration,
             'est_actif': item.est_actif,
-            'cellules': [{'date': jour, 'admin': admins.get(jour)} for jour in jours]
+            'cellules': [
+                {'date': jour, 'admin': admins.get(jour)}
+                for jour in jours
+            ]
         }
         kardex_data.append(row)
 
+    # Suivis infirmier
     suivis_list = hosp.suivis_journaliers.all().order_by('-date_suivi')
     paginator = Paginator(suivis_list, 5)
     page_number = request.GET.get('page')
     suivis = paginator.get_page(page_number)
 
+    # Suivis médecin
+    suivis_medecin = hosp.suivis_medecin.all().order_by('-date_suivi')
+
+    # ------------------------------
+    # 3) RENDU DU TEMPLATE
+    # ------------------------------
     return render(request, 'back-end/hospitalisation/detail.html', {
         'hosp': hosp,
         'ordonnances': ordonnances,
         'kardex_data': kardex_data,
         'suivis': suivis,
+        'suivis_medecin': suivis_medecin,
         'fonctionKey': fonctionKey,
         'jours': jours,
     })

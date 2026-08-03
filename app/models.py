@@ -765,6 +765,51 @@ class SuiviQuotidien(models.Model):
         return f"Suivi de {self.hospitalisation.patient.noms} le {self.date_suivi.strftime('%d/%m/%Y')}"
 
 
+# ===============================================================================================
+class SuiviMedecin(models.Model):
+    hospitalisation = models.ForeignKey(
+        Hospitalisation,
+        on_delete=models.CASCADE,
+        related_name='suivis_medecin'
+    )
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+    date_suivi = models.DateTimeField(auto_now_add=True)
+
+    diagnostic_du_jour = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Diagnostic du jour"
+    )
+    evolution = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Évolution clinique"
+    )
+    consignes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Consignes / Prescriptions particulières"
+    )
+
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    class Meta:
+        verbose_name = "Suivi Médecin"
+        verbose_name_plural = "Suivis Médecin"
+        ordering = ['-date_suivi']
+
+    def __str__(self):
+        return f"Suivi médecin de {self.hospitalisation.patient.noms} le {self.date_suivi.strftime('%d/%m/%Y')}"
+
+
 # =============================================================================================
 #
 class Kardex(models.Model):

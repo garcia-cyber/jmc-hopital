@@ -546,3 +546,49 @@ class RapportJournalierPersonnelAdmin(admin.ModelAdmin):
     )
     ordering = ("-date_rapport", "-date_creation")
     date_hierarchy = "date_rapport"
+
+
+
+
+
+# ==============================================================================
+@admin.register(SuiviMedecin)
+class SuiviMedecinAdmin(admin.ModelAdmin):
+    list_display = (
+        'hospitalisation',
+        'medecin',
+        'date_suivi',
+        'hopital',
+    )
+    list_filter = (
+        'date_suivi',
+        'hopital',
+        'medecin',
+    )
+    search_fields = (
+        'hospitalisation__patient__noms',
+        'medecin__username',
+        'diagnostic_du_jour',
+        'evolution',
+        'consignes',
+    )
+    readonly_fields = ('date_suivi',)
+    date_hierarchy = 'date_suivi'
+    ordering = ('-date_suivi',)
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'hospitalisation',
+                'medecin',
+                'hopital',
+                'date_suivi',
+            )
+        }),
+        ('Suivi médical', {
+            'fields': (
+                'diagnostic_du_jour',
+                'evolution',
+                'consignes',
+            )
+        }),
+    )

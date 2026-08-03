@@ -6,193 +6,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Dossier Médical | {{ patient.noms }}</title>
     {% include 'back-end/includes/css.html' %}
-
     <style>
         :root {
             --primary: #2563eb;
-            --primary-dark: #1d4ed8;
+            --primary-dark: #1e40af;
             --secondary: #64748b;
             --success: #059669;
             --danger: #dc2626;
             --warning: #d97706;
             --info: #0284c7;
-            --dark: #0f172a;
+            --dark: #1e293b;
             --light: #f8fafc;
-            --white: #ffffff;
-            --gray-50: #f8fafc;
             --gray-100: #f1f5f9;
             --gray-200: #e2e8f0;
             --gray-300: #cbd5e1;
-            --gray-400: #94a3b8;
-            --gray-500: #64748b;
             --gray-600: #475569;
             --gray-700: #334155;
-            --border-radius: 10px;
-            --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-            --shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-            --shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.15);
+            --border-radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        html, body {
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; }
 
         body {
-            background: var(--gray-50);
+            background: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 0.92rem;
+            font-size: 0.9rem;
             color: var(--dark);
         }
 
-        .page-wrapper {
-            background: var(--gray-50);
-        }
-
-        .content.container-fluid {
-            padding-top: 1.25rem;
-            padding-bottom: 2rem;
-        }
-
         .patient-header {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-            border: 1px solid var(--gray-200);
-            border-top: 5px solid var(--primary);
+            background: white;
+            border-top: 4px solid var(--primary);
             padding: 1.5rem;
-            border-radius: 14px;
+            border-radius: var(--border-radius);
             margin-bottom: 1.5rem;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (max-width: 768px) {
+            .patient-header {
+                padding: 1rem;
+                text-align: center;
+            }
+
+            .patient-info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .patient-info-grid {
+                grid-template-columns: 1fr !important;
+            }
         }
 
         .patient-header h2 {
-            font-size: 1.1rem;
-            font-weight: 700;
+            font-size: 1.25rem;
+            font-weight: 600;
             color: var(--primary);
-            margin-bottom: 0.4rem;
-            letter-spacing: 0.4px;
+            margin-bottom: 0.5rem;
         }
 
         .patient-header h3 {
-            font-size: 1.55rem;
-            font-weight: 800;
+            font-size: 1.5rem;
+            font-weight: 700;
             color: var(--dark);
             margin-bottom: 1rem;
         }
 
         .patient-info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 0.85rem;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
         }
 
         .info-badge {
-            background: var(--white);
-            padding: 0.9rem;
-            border-radius: 12px;
+            background: var(--gray-100);
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
             border: 1px solid var(--gray-200);
-            box-shadow: var(--shadow-sm);
         }
 
         .info-label {
-            font-size: 0.72rem;
-            color: var(--gray-500);
+            font-size: 0.7rem;
+            color: var(--gray-600);
             text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.6px;
-            margin-bottom: 0.35rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
         }
 
         .info-value {
-            font-size: 0.96rem;
-            font-weight: 700;
+            font-size: 0.95rem;
+            font-weight: 600;
             color: var(--dark);
-            line-height: 1.35;
         }
 
         .nav-tabs-custom {
-            border: 1px solid var(--gray-200);
-            border-bottom: none;
-            margin-bottom: 0;
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 1.5rem;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            background: var(--white);
-            border-radius: 14px 14px 0 0;
+            background: white;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
             padding: 0 0.5rem;
-            box-shadow: var(--shadow-sm);
         }
 
         .nav-tabs-custom .nav-item {
-            margin-bottom: 0;
+            margin-bottom: -2px;
         }
 
         .nav-tabs-custom .nav-link {
             border: none;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--gray-600);
             padding: 1rem 1rem;
             background: transparent;
             border-bottom: 3px solid transparent;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             white-space: nowrap;
-            font-size: 0.87rem;
+            font-size: 0.85rem;
         }
 
         .nav-tabs-custom .nav-link:hover {
             color: var(--primary);
             background: var(--gray-100);
-            border-radius: 10px 10px 0 0;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
         }
 
         .nav-tabs-custom .nav-link.active {
             color: var(--primary);
             border-bottom-color: var(--primary);
-            background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 100%);
-        }
-
-        .tab-content {
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-top: none;
-            border-radius: 0 0 14px 14px;
-            padding: 1.2rem;
-            box-shadow: var(--shadow);
+            background: transparent;
         }
 
         .card-custom {
             border: 1px solid var(--gray-200);
-            border-radius: 14px;
-            box-shadow: var(--shadow-sm);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
             margin-bottom: 1rem;
-            background: var(--white);
-            overflow: hidden;
+            background: white;
         }
 
         .card-header-custom {
-            background: linear-gradient(to right, #f8fafc, #f1f5f9);
+            background: var(--gray-100);
             border-bottom: 1px solid var(--gray-200);
-            padding: 0.95rem 1rem;
-            font-weight: 700;
-            font-size: 0.92rem;
+            padding: 0.875rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
         .card-body {
             padding: 1rem;
         }
 
+        @media (max-width: 576px) {
+            .card-body {
+                padding: 0.75rem;
+            }
+        }
+
         .btn-action {
-            padding: 0.58rem 1rem;
-            border-radius: 8px;
-            font-size: 0.84rem;
-            font-weight: 700;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            transition: all 0.2s ease;
+            display: inline-block;
+            transition: all 0.2s;
             cursor: pointer;
             border: 1px solid transparent;
             background: var(--primary);
@@ -201,12 +184,10 @@
 
         .btn-action:hover {
             background: var(--primary-dark);
-            color: white;
-            transform: translateY(-1px);
         }
 
         .btn-sm {
-            padding: 0.45rem 0.85rem;
+            padding: 0.375rem 0.75rem;
             font-size: 0.8rem;
         }
 
@@ -218,7 +199,6 @@
 
         .btn-outline:hover {
             background: var(--gray-100);
-            color: var(--dark);
         }
 
         .btn-danger {
@@ -245,19 +225,16 @@
 
         .btn-back:hover {
             background: var(--gray-100);
-            color: var(--dark);
         }
 
         .badge-custom {
-            padding: 0.35rem 0.7rem;
-            border-radius: 999px;
-            font-size: 0.72rem;
-            font-weight: 700;
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
+            letter-spacing: 0.5px;
+            display: inline-block;
         }
 
         .badge-success { background: #d1fae5; color: var(--success); }
@@ -267,33 +244,32 @@
         .badge-info { background: #e0f2fe; color: var(--info); }
 
         .info-box {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            border-left: 4px solid var(--primary);
-            padding: 0.95rem 1rem;
-            border-radius: 10px;
-            margin-bottom: 0.95rem;
+            background: var(--gray-100);
+            border-left: 3px solid var(--primary);
+            padding: 0.875rem;
+            border-radius: 6px;
+            margin-bottom: 0.875rem;
         }
 
         .info-box-label {
             font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--gray-500);
+            font-weight: 600;
+            color: var(--gray-600);
             text-transform: uppercase;
-            margin-bottom: 0.45rem;
-            letter-spacing: 0.4px;
+            margin-bottom: 0.375rem;
         }
 
         .info-box-content {
             color: var(--dark);
-            line-height: 1.65;
-            font-size: 0.92rem;
+            line-height: 1.5;
+            font-size: 0.9rem;
         }
 
         .section-title {
             font-size: 1rem;
-            font-weight: 800;
+            font-weight: 600;
             color: var(--dark);
-            margin: 1.3rem 0 0.9rem 0;
+            margin: 1.25rem 0 0.875rem 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -303,15 +279,14 @@
 
         .section-title i {
             color: var(--primary);
-            margin-right: 0.4rem;
+            margin-right: 0.5rem;
         }
 
         .table-responsive {
-            border-radius: 12px;
+            border-radius: 6px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             border: 1px solid var(--gray-200);
-            background: white;
         }
 
         .table-custom {
@@ -322,63 +297,34 @@
 
         .table-custom th,
         .table-custom td {
-            padding: 0.75rem 0.7rem;
+            padding: 0.625rem;
             text-align: left;
             border-bottom: 1px solid var(--gray-200);
-            vertical-align: top;
         }
 
         .table-custom th {
             background: var(--gray-100);
-            font-weight: 800;
-            font-size: 0.74rem;
+            font-weight: 600;
+            font-size: 0.75rem;
             text-transform: uppercase;
             color: var(--gray-700);
             white-space: nowrap;
-            letter-spacing: 0.3px;
         }
 
         .table-custom tr:hover {
-            background: #f8fbff;
-        }
-
-        .form-control {
-            width: 100%;
-            min-height: 44px;
-            padding: 0.7rem 0.85rem;
-            border: 1px solid var(--gray-300);
-            border-radius: 10px;
-            background: white;
-            color: var(--dark);
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
-        }
-
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        label {
-            display: inline-block;
-            margin-bottom: 0.45rem;
-            color: var(--gray-700);
+            background: var(--gray-100);
         }
 
         .modal {
             display: none;
             position: fixed;
             z-index: 9999;
-            inset: 0;
-            background-color: rgba(15, 23, 42, 0.55);
-            overflow-y: auto;
-            padding: 24px 12px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
         }
 
         .modal.show {
@@ -387,72 +333,71 @@
 
         .modal-dialog {
             background-color: white;
-            margin: 20px auto;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            max-width: 960px;
-            width: 100%;
-            border: 1px solid var(--gray-200);
-            overflow: hidden;
+            margin: 5% auto;
+            border-radius: var(--border-radius);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 95%;
+            border: 1px solid var(--gray-300);
+        }
+
+        @media (max-width: 768px) {
+            .modal-dialog {
+                margin: 10% auto;
+                width: 98%;
+            }
         }
 
         .modal-header {
-            padding: 1rem 1.15rem;
+            padding: 1rem 1.25rem;
             border-bottom: 1px solid var(--gray-200);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(to right, #eff6ff, #ffffff);
-            position: sticky;
-            top: 0;
-            z-index: 2;
+            background: var(--gray-100);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
         }
 
         .modal-title {
-            font-size: 1.05rem;
-            font-weight: 800;
+            font-size: 1.1rem;
+            font-weight: 600;
             color: var(--dark);
             margin: 0;
         }
 
         .close-modal {
             color: var(--gray-600);
-            font-size: 1.45rem;
+            font-size: 1.5rem;
             font-weight: 700;
             background: none;
             border: none;
             cursor: pointer;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
+            padding: 0.25rem;
             line-height: 1;
         }
 
         .close-modal:hover {
             color: var(--danger);
-            background: #fee2e2;
         }
 
         .modal-body {
-            padding: 1.2rem;
-            max-height: calc(100vh - 150px);
+            padding: 1.25rem;
+            max-height: 70vh;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .modal-footer {
-            padding: 1rem 1.15rem;
+            padding: 1rem 1.25rem;
             border-top: 1px solid var(--gray-200);
             text-align: right;
-            background: var(--gray-50);
-            position: sticky;
-            bottom: 0;
+            background: var(--gray-100);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
         }
 
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
-            color: var(--gray-500);
+            color: var(--gray-600);
         }
 
         .empty-state i {
@@ -477,54 +422,13 @@
         .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
         .text-primary { color: var(--primary); }
         .text-secondary { color: var(--gray-600); }
-        .text-muted { color: var(--gray-500); }
+        .text-muted { color: var(--gray-600); opacity: 0.7; }
         .text-center { text-align: center; }
         .row { display: flex; flex-wrap: wrap; margin: 0 -0.5rem; }
         .col-md-4, .col-md-6, .col-sm-12 { flex: 1; padding: 0 0.5rem; min-width: 0; }
 
         @media (max-width: 768px) {
-            .patient-header {
-                padding: 1rem;
-                text-align: center;
-            }
-
-            .patient-info-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-            }
-
-            .col-md-4, .col-md-6, .col-sm-12 {
-                flex: 100%;
-            }
-
-            .tab-content {
-                padding: 0.85rem;
-            }
-
-            .modal-dialog {
-                margin: 8px auto;
-                width: 100%;
-            }
-
-            .modal-body {
-                max-height: calc(100vh - 120px);
-                padding: 1rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .patient-info-grid {
-                grid-template-columns: 1fr !important;
-            }
-
-            .nav-tabs-custom .nav-link {
-                padding: 0.85rem 0.8rem;
-                font-size: 0.82rem;
-            }
-
-            .btn-action {
-                width: 100%;
-                justify-content: center;
-            }
+            .col-md-4, .col-md-6, .col-sm-12 { flex: 100%; }
         }
 
         .d-none { display: none; }
@@ -561,29 +465,24 @@
                             <div class="info-label">Matricule</div>
                             <div class="info-value">{{ patient.code_patient }}</div>
                         </div>
-
                         <div class="info-badge">
                             <div class="info-label">Âge</div>
                             <div class="info-value">{{ patient.age }}</div>
                         </div>
-
                         <div class="info-badge">
                             <div class="info-label">Sexe</div>
                             <div class="info-value">{{ patient.get_sexe_display }}</div>
                         </div>
-
                         <div class="info-badge">
                             <div class="info-label">Téléphone</div>
-                            <div class="info-value">{{ patient.telephone|default:"Non renseigné" }}</div>
+                            <div class="info-value">{{ patient.telephone }}</div>
                         </div>
-
                         <div class="info-badge">
                             <div class="info-label">Type</div>
                             <div class="info-value">
                                 <span class="badge-custom badge-primary">{{ patient.get_type_patient_display }}</span>
                             </div>
                         </div>
-
                         {% if patient.entreprise %}
                         <div class="info-badge">
                             <div class="info-label">Entreprise</div>
@@ -643,14 +542,12 @@
                                             <i class="fa fa-user-md"></i> {{ cons.medecin.username }}
                                         </span>
                                         {% endif %}
-
                                         <span class="badge-custom {% if cons.consultation_payee %}badge-success{% else %}badge-danger{% endif %}">
                                             {% if cons.consultation_payee %}Payée{% else %}Non payée{% endif %}
                                         </span>
                                     </div>
                                 </div>
                             </div>
-
                             <div class="card-body">
                                 <div class="info-box">
                                     <div class="info-box-label">Motif</div>
@@ -678,12 +575,12 @@
                         </div>
 
                         <div id="detail_modal_{{ cons.id }}" class="modal" onclick="closeModalOnClickOutside(event, 'detail_modal_{{ cons.id }}')">
-                            <div class="modal-dialog" style="max-width: 960px;">
+                            <div class="modal-dialog" style="max-width: 900px;">
                                 <div class="modal-header">
                                     <h5 class="modal-title">
                                         <i class="fa fa-file-medical"></i> Consultation du {{ cons.date_creation|date:"d/m/Y à H:i" }}
                                     </h5>
-                                    <button type="button" class="close-modal" onclick="closeModal('detail_modal_{{ cons.id }}')">&times;</button>
+                                    <button class="close-modal" onclick="closeModal('detail_modal_{{ cons.id }}')">&times;</button>
                                 </div>
                                 <div class="modal-body">
                                     {% if cons.medecin %}
@@ -708,7 +605,6 @@
                                     {% if cons.antecedent %}
                                     <div class="info-box" style="border-left-color: var(--warning);">
                                         <div class="info-box-label"><i class="fa fa-clipboard-list"></i> Antécédents</div>
-                                        <div class="info-box-content">{{
                                         <div class="info-box-content">{{ cons.antecedent }}</div>
                                     </div>
                                     {% endif %}
@@ -726,7 +622,6 @@
                                         <div class="info-box-content">{{ cons.complement_d_anamnese }}</div>
                                     </div>
                                     {% endif %}
-
                                     {% if cons.hypothese_diagnostique %}
                                     <div class="info-box" style="border-left-color: var(--info);">
                                         <div class="info-box-label"><i class="fa fa-book-medical"></i> Hypothèse diagnostique</div>
@@ -771,7 +666,7 @@
                                                     <td>{{ ex.indication|default:"N/A" }}</td>
                                                     <td>
                                                         {% if ex.resultat %}
-                                                        <span style="color: var(--success); font-weight: 600;">{{ ex.resultat|truncatechars:100 }}</span>
+                                                        <span style="color: var(--success);">{{ ex.resultat|truncatechars:100 }}</span>
                                                         {% else %}
                                                         <span class="text-muted">En attente</span>
                                                         {% endif %}
@@ -787,11 +682,10 @@
                                     <div class="section-title">
                                         <strong><i class="fa fa-file-prescription"></i> Ordonnances ({{ cons.ordonnance_set.count }})</strong>
                                     </div>
-
                                     {% for ord in cons.ordonnance_set.all %}
                                     <div class="card card-custom mb-3">
-                                        <div class="card-header-custom" style="background: linear-gradient(to right, #dc2626, #ef4444); color: white;">
-                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div class="card-header-custom" style="background: var(--danger); color: white;">
+                                            <div class="d-flex justify-content-between align-items-center">
                                                 <strong>{{ ord.get_type_ordonnance_display }}</strong>
                                                 <small>{{ ord.date_prescrite|date:"d/m/Y H:i" }}</small>
                                             </div>
@@ -805,7 +699,7 @@
                                             {% endif %}
 
                                             {% if ord.medicaments.all %}
-                                            <h6 class="mb-2" style="font-weight: 800;">Médicaments ({{ ord.medicaments.count }})</h6>
+                                            <h6 class="mb-2">Médicaments ({{ ord.medicaments.count }})</h6>
                                             <div class="table-responsive">
                                                 <table class="table-custom">
                                                     <thead>
@@ -841,7 +735,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn-action btn-outline" onclick="closeModal('detail_modal_{{ cons.id }}')">
+                                    <button class="btn-action btn-outline" onclick="closeModal('detail_modal_{{ cons.id }}')">
                                         <i class="fa fa-times"></i> Fermer
                                     </button>
                                 </div>
@@ -855,7 +749,7 @@
                                     <h5 class="modal-title">
                                         <i class="fa fa-flask"></i> Examens - {{ cons.date_creation|date:"d/m/Y" }}
                                     </h5>
-                                    <button type="button" class="close-modal" onclick="closeModal('examens_modal_{{ cons.id }}')">&times;</button>
+                                    <button class="close-modal" onclick="closeModal('examens_modal_{{ cons.id }}')">&times;</button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="table-responsive">
@@ -884,7 +778,7 @@
                                                     <td>{{ ex.indication|default:"N/A" }}</td>
                                                     <td>
                                                         {% if ex.resultat %}
-                                                        <span style="color: var(--success); font-weight: 600;">{{ ex.resultat|truncatechars:100 }}</span>
+                                                        <span style="color: var(--success);">{{ ex.resultat|truncatechars:100 }}</span>
                                                         {% else %}
                                                         <span class="text-muted">En attente</span>
                                                         {% endif %}
@@ -896,7 +790,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn-action btn-outline" onclick="closeModal('examens_modal_{{ cons.id }}')">
+                                    <button class="btn-action btn-outline" onclick="closeModal('examens_modal_{{ cons.id }}')">
                                         <i class="fa fa-times"></i> Fermer
                                     </button>
                                 </div>
@@ -911,13 +805,13 @@
                                     <h5 class="modal-title">
                                         <i class="fa fa-file-prescription"></i> Ordonnances - {{ cons.date_creation|date:"d/m/Y" }}
                                     </h5>
-                                    <button type="button" class="close-modal" onclick="closeModal('ordonnances_modal_{{ cons.id }}')">&times;</button>
+                                    <button class="close-modal" onclick="closeModal('ordonnances_modal_{{ cons.id }}')">&times;</button>
                                 </div>
                                 <div class="modal-body">
                                     {% for ord in cons.ordonnance_set.all %}
                                     <div class="card card-custom mb-3">
-                                        <div class="card-header-custom" style="background: linear-gradient(to right, #dc2626, #ef4444); color: white;">
-                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div class="card-header-custom" style="background: var(--danger); color: white;">
+                                            <div class="d-flex justify-content-between align-items-center">
                                                 <strong>{{ ord.get_type_ordonnance_display }}</strong>
                                                 <small>{{ ord.date_prescrite|date:"d/m/Y H:i" }}</small>
                                             </div>
@@ -931,7 +825,7 @@
                                             {% endif %}
 
                                             {% if ord.medicaments.all %}
-                                            <h6 class="mb-2" style="font-weight: 800;">Médicaments ({{ ord.medicaments.count }})</h6>
+                                            <h6 class="mb-2">Médicaments ({{ ord.medicaments.count }})</h6>
                                             <div class="table-responsive">
                                                 <table class="table-custom">
                                                     <thead>
@@ -966,7 +860,7 @@
                                     {% endfor %}
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn-action btn-outline" onclick="closeModal('ordonnances_modal_{{ cons.id }}')">
+                                    <button class="btn-action btn-outline" onclick="closeModal('ordonnances_modal_{{ cons.id }}')">
                                         <i class="fa fa-times"></i> Fermer
                                     </button>
                                 </div>
@@ -1001,7 +895,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="card-body">
                                 <div class="mb-3">
                                     <strong><i class="fa fa-calendar"></i> Période:</strong>
@@ -1043,7 +936,7 @@
                                     <h5 class="modal-title">
                                         <i class="fa fa-pills"></i> Kardex - {{ hosp.lit.nom_lit }}
                                     </h5>
-                                    <button type="button" class="close-modal" onclick="closeModal('kardex_modal_{{ hosp.id }}')">&times;</button>
+                                    <button class="close-modal" onclick="closeModal('kardex_modal_{{ hosp.id }}')">&times;</button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="table-responsive">
@@ -1078,7 +971,7 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn-action btn-outline" onclick="closeModal('kardex_modal_{{ hosp.id }}')">
+                                    <button class="btn-action btn-outline" onclick="closeModal('kardex_modal_{{ hosp.id }}')">
                                         <i class="fa fa-times"></i> Fermer
                                     </button>
                                 </div>
@@ -1090,16 +983,15 @@
                             <div class="modal-dialog">
                                 <div class="modal-header">
                                     <h5 class="modal-title">
-                                        <i class="fa fa-file-medical-alt"></i> Ordonnance de sortie
+                                        <i class="fa fa-file-medical-alt"></i> Ordonnance de Sortie
                                     </h5>
-                                    <button type="button" class="close-modal" onclick="closeModal('sortie_modal_{{ hosp.id }}')">&times;</button>
+                                    <button class="close-modal" onclick="closeModal('sortie_modal_{{ hosp.id }}')">&times;</button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="info-box" style="border-left-color: var(--success);">
                                         <div class="info-box-label">Prescriptions</div>
                                         <div class="info-box-content">{{ hosp.ordonnance_sortie.prescriptions|linebreaks }}</div>
                                     </div>
-
                                     {% if hosp.ordonnance_sortie.recommandations %}
                                     <div class="info-box" style="border-left-color: var(--warning);">
                                         <div class="info-box-label">Recommandations</div>
@@ -1108,7 +1000,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn-action btn-outline" onclick="closeModal('sortie_modal_{{ hosp.id }}')">
+                                    <button class="btn-action btn-outline" onclick="closeModal('sortie_modal_{{ hosp.id }}')">
                                         <i class="fa fa-times"></i> Fermer
                                     </button>
                                 </div>
@@ -1145,10 +1037,10 @@
                                             {% for sv in signes_vitaux %}
                                             <tr>
                                                 <td>{{ sv.date_prelevement|date:"d/m/Y H:i" }}</td>
-                                                <td>{{ sv.temperature|default:"N/A" }}</td>
-                                                <td>{{ sv.tension_arterielle|default:"N/A" }}</td>
-                                                <td>{{ sv.frequence_cardiaque|default:"N/A" }}</td>
-                                                <td>{{ sv.poids|default:"N/A" }}</td>
+                                                <td>{{ sv.temperature }}</td>
+                                                <td>{{ sv.tension_arterielle }}</td>
+                                                <td>{{ sv.frequence_cardiaque }}</td>
+                                                <td>{{ sv.poids }}</td>
                                                 <td>{{ sv.saturation_oxygene|default:"N/A" }}</td>
                                                 <td>{{ sv.frequence_respiratoire|default:"N/A" }}</td>
                                             </tr>
@@ -1173,7 +1065,7 @@
                         <div class="card card-custom mb-4">
                             <div class="card-header-custom">
                                 <h5 class="mb-0 text-primary">
-                                    <i class="fa fa-baby-carriage"></i> Dossier maternité #{{ mat.id }}
+                                    <i class="fa fa-baby-carriage"></i> Dossier Maternité #{{ mat.id }}
                                 </h5>
                             </div>
                             <div class="card-body">
@@ -1182,7 +1074,7 @@
                                         <strong>Admission:</strong> {{ mat.date_admission|date:"d/m/Y" }}
                                     </div>
                                     <div class="col-md-4 col-sm-12">
-                                        <strong>Terme prévu:</strong> {{ mat.terme_prevu|date:"d/m/Y"|default:"N/A" }}
+                                        <strong>Terme:</strong> {{ mat.terme_prevu|date:"d/m/Y" }}
                                     </div>
                                     <div class="col-md-4 col-sm-12">
                                         <strong>Statut:</strong> {{ mat.statut|default:"N/A" }}
@@ -1200,7 +1092,6 @@
                                 <div class="section-title">
                                     <strong><i class="fa fa-notes-medical"></i> Consultations maternité</strong>
                                 </div>
-
                                 <div class="table-responsive">
                                     <table class="table-custom">
                                         <thead>
@@ -1248,7 +1139,6 @@
                                 <div class="section-title">
                                     <strong><i class="fa fa-list"></i> Prestations / soins</strong>
                                 </div>
-
                                 <div class="table-responsive">
                                     <table class="table-custom">
                                         <thead>
@@ -1277,7 +1167,6 @@
                                 <div class="section-title">
                                     <strong><i class="fa fa-heartbeat"></i> Signes vitaux liés</strong>
                                 </div>
-
                                 <div class="table-responsive">
                                     <table class="table-custom">
                                         <thead>
@@ -1338,7 +1227,6 @@
                                                 <option value="AUTRE">Autre</option>
                                             </select>
                                         </div>
-
                                         <div class="col-md-6 col-sm-12">
                                             <label><strong>Titre</strong></label>
                                             <input type="text" name="titre" class="form-control" placeholder="Titre optionnel">
@@ -1357,7 +1245,6 @@
                                                 {% endfor %}
                                             </select>
                                         </div>
-
                                         <div class="col-md-6 col-sm-12">
                                             <label><strong>Hospitalisation liée</strong></label>
                                             <select name="hospitalisation" class="form-control">
@@ -1398,13 +1285,11 @@
                                             le {{ avis.date_avis|date:"d/m/Y H:i" }}
                                         </small>
                                     </div>
-
                                     <span class="badge-custom badge-info">
                                         {{ avis.get_type_avis_display }}
                                     </span>
                                 </div>
                             </div>
-
                             <div class="card-body">
                                 <div class="info-box">
                                     <div class="info-box-label">Contenu de l'avis</div>
@@ -1446,24 +1331,22 @@
     <script>
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
-            if (!modal) return;
-
-            modal.classList.add('show');
-            modal.setAttribute('aria-hidden', 'false');
+            if (modal) {
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
         }
 
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
-            if (!modal) return;
-
-            modal.classList.remove('show');
-            modal.setAttribute('aria-hidden', 'true');
+            if (modal) {
+                modal.classList.remove('show');
+                document.body.style.overflow = 'auto';
+            }
         }
 
         function closeModalOnClickOutside(event, modalId) {
             const modal = document.getElementById(modalId);
-            if (!modal) return;
-
             if (event.target === modal) {
                 closeModal(modalId);
             }
@@ -1474,8 +1357,8 @@
                 const openModals = document.querySelectorAll('.modal.show');
                 openModals.forEach(function(modal) {
                     modal.classList.remove('show');
-                    modal.setAttribute('aria-hidden', 'true');
                 });
+                document.body.style.overflow = 'auto';
             }
         });
     </script>

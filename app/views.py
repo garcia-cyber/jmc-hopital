@@ -4148,6 +4148,12 @@ def dossier_medical_complet(request, patient_id):
         return redirect('liste_patients')
 
     # ------------------------------
+    # FILTRE PAR DATE
+    # ------------------------------
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+
+    # ------------------------------
     # GESTION DU FORMULAIRE (POST) - AJOUT AVIS MÉDECIN
     # ------------------------------
     if request.method == 'POST' and request.POST.get('action') == 'avis_medecin':
@@ -4197,15 +4203,33 @@ def dossier_medical_complet(request, patient_id):
     # ------------------------------
 
     # --- CONSULTATIONS ---
-    consultations = Consultation.objects.filter(
+    consultations_qs = Consultation.objects.filter(
         triage__patient=patient,
         hopital=hopital_user
     ).order_by('-date_creation').select_related(
         'triage', 'medecin', 'session'
     ).prefetch_related(
         'examens__prestation',
-        'ordonnance_set__medicaments'
+        'ordonnance_set__medicaments',
+        'ordonnance_set__lignes_medicaments'
     )
+
+    # Filtre par date
+    if date_debut:
+        try:
+            d_debut = datetime.strptime(date_debut, '%Y-%m-%d')
+            consultations_qs = consultations_qs.filter(date_creation__date__gte=d_debut.date())
+        except ValueError:
+            pass
+
+    if date_fin:
+        try:
+            d_fin = datetime.strptime(date_fin, '%Y-%m-%d')
+            consultations_qs = consultations_qs.filter(date_creation__date__lte=d_fin.date())
+        except ValueError:
+            pass
+
+    consultations = consultations_qs
 
     # --- HOSPITALISATIONS ---
     hospitalisations = Hospitalisation.objects.filter(
@@ -4273,6 +4297,8 @@ def dossier_medical_complet(request, patient_id):
         'total_examens': total_examens,
         'total_ordonnances': total_ordonnances,
         'total_avis': total_avis,
+        'date_debut': date_debut or '',
+        'date_fin': date_fin or '',
     }
 
     return render(request, 'back-end/patient/dossier_medical.html', context)

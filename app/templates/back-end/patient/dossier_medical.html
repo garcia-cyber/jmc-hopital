@@ -346,10 +346,10 @@
         .text-muted { color: var(--gray-600); opacity: 0.7; }
         .text-center { text-align: center; }
         .row { display: flex; flex-wrap: wrap; margin: 0 -0.5rem; }
-        .col-md-4, .col-md-6, .col-sm-12 { flex: 1; padding: 0 0.5rem; min-width: 0; }
+        .col-md-3, .col-md-4, .col-md-6, .col-sm-6, .col-sm-12 { flex: 1; padding: 0 0.5rem; min-width: 0; }
 
         @media (max-width: 768px) {
-            .col-md-4, .col-md-6, .col-sm-12 { flex: 100%; }
+            .col-md-3, .col-md-4, .col-md-6, .col-sm-6, .col-sm-12 { flex: 100%; }
         }
 
         .d-none { display: none; }
@@ -386,6 +386,35 @@
             font-weight: 600;
             color: var(--gray-700);
             margin-bottom: 0.25rem;
+        }
+
+        .resultat-box {
+            background: #ecfdf5;
+            border-left: 3px solid var(--success);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .resultat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #065f46;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .resultat-content {
+            color: #064e3b;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .resultat-image {
+            max-width: 100%;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -445,12 +474,12 @@
                 <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
                     <li class="nav-item">
                         <a class="nav-link active" data-toggle="tab" href="#cons_tab">
-                            <i class="fa fa-stethoscope"></i> Consultations ({{ consultations.count }})
+                            <i class="fa fa-stethoscope"></i> Consultations ({{ total_consultations }})
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" data-toggle="tab" href="#hosp_tab">
-                            <i class="fa fa-bed"></i> Hospitalisations ({{ hospitalisations.count }})
+                            <i class="fa fa-bed"></i> Hospitalisations ({{ total_hospitalisations }})
                         </a>
                     </li>
                     <li class="nav-item">
@@ -470,7 +499,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" data-toggle="tab" href="#avis_tab">
-                            <i class="fa fa-user-md"></i> Avis médecins
+                            <i class="fa fa-user-md"></i> Avis médecins ({{ total_avis }})
                         </a>
                     </li>
                 </ul>
@@ -520,6 +549,45 @@
                                 </div>
                             </div>
                             <div class="card-body">
+
+                                <!-- ===== SIGNES VITAUX LIÉS (TRIAGE) ===== -->
+                                {% if cons.triage %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-heartbeat"></i> Signes vitaux (triage)</strong>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Température:</strong> {{ cons.triage.temperature }} °C
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Poids:</strong> {{ cons.triage.poids }} kg
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>TA:</strong> {{ cons.triage.tension_arterielle }}
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Pouls:</strong> {{ cons.triage.frequence_cardiaque }} bpm
+                                    </div>
+                                    {% if cons.triage.frequence_respiratoire %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>FR:</strong> {{ cons.triage.frequence_respiratoire }} /min
+                                    </div>
+                                    {% endif %}
+                                    {% if cons.triage.saturation_oxygene %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>SpO2:</strong> {{ cons.triage.saturation_oxygene }} %
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Date:</strong> {{ cons.triage.date_prelevement|date:"d/m/Y H:i" }}
+                                    </div>
+                                    {% if cons.triage.infirmier %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Infirmier:</strong> {{ cons.triage.infirmier.username }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
 
                                 <!-- Motif -->
                                 <div class="info-box">
@@ -575,7 +643,7 @@
                                 </div>
                                 {% endif %}
 
-                                <!-- Examens -->
+                                <!-- Examens + résultats -->
                                 {% if cons.examens.all %}
                                 <div class="section-title">
                                     <strong><i class="fa fa-flask"></i> Examens ({{ cons.examens.count }})</strong>
@@ -606,8 +674,19 @@
                                                 <td>{{ ex.indication|default:"N/A" }}</td>
                                                 <td>
                                                     {% if ex.resultat %}
-                                                    <span style="color: var(--success);">{{ ex.resultat|truncatechars:100 }}</span>
-                                                    {% else %}
+                                                    <div class="resultat-box">
+                                                        <div class="resultat-label">Résultat</div>
+                                                        <div class="resultat-content">{{ ex.resultat|linebreaks }}</div>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if ex.image_resultat %}
+                                                    <div class="mt-2">
+                                                        <img src="{{ ex.image_resultat.url }}" alt="Résultat" class="resultat-image">
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if not ex.resultat and not ex.image_resultat %}
                                                     <span class="text-muted">En attente</span>
                                                     {% endif %}
                                                 </td>
@@ -618,7 +697,7 @@
                                 </div>
                                 {% endif %}
 
-                                <!-- Ordonnances -->
+                                <!-- Ordonnances complètes -->
                                 {% if cons.ordonnance_set.all %}
                                 <div class="section-title">
                                     <strong><i class="fa fa-file-prescription"></i> Ordonnances ({{ cons.ordonnance_set.count }})</strong>
@@ -627,18 +706,40 @@
                                 <div class="card card-custom mb-3">
                                     <div class="card-header-custom" style="background: var(--danger); color: white;">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <strong>{{ ord.get_type_ordonnance_display }}</strong>
+                                            <div>
+                                                <strong>{{ ord.get_type_ordonnance_display }}</strong>
+                                                {% if ord.note %}
+                                                <span class="badge-custom badge-info ms-2">
+                                                    <i class="fa fa-sticky-note"></i> Note
+                                                </span>
+                                                {% endif %}
+                                            </div>
                                             <small>{{ ord.date_prescrite|date:"d/m/Y H:i" }}</small>
                                         </div>
                                     </div>
                                     <div class="card-body">
                                         {% if ord.diagnostic %}
                                         <div class="mb-3">
-                                            <strong>Diagnostic:</strong>
+                                            <strong><i class="fa fa-diagnoses"></i> Diagnostic:</strong>
                                             <p class="mb-0 text-secondary">{{ ord.diagnostic }}</p>
                                         </div>
                                         {% endif %}
 
+                                        {% if ord.observation %}
+                                        <div class="mb-3">
+                                            <strong><i class="fa fa-comment-medical"></i> Observation:</strong>
+                                            <p class="mb-0 text-secondary">{{ ord.observation|linebreaks }}</p>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if ord.note %}
+                                        <div class="mb-3">
+                                            <strong><i class="fa fa-sticky-note"></i> Note:</strong>
+                                            <p class="mb-0 text-secondary">{{ ord.note|linebreaks }}</p>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Médicaments (modèle Medicament) -->
                                         {% if ord.medicaments.all %}
                                         <h6 class="mb-2">Médicaments ({{ ord.medicaments.count }})</h6>
                                         <div class="table-responsive">
@@ -670,6 +771,40 @@
                                             </table>
                                         </div>
                                         {% endif %}
+
+                                        <!-- Lignes médicaments (modèle LigneMedicament) -->
+                                        {% if ord.lignes_medicaments.all %}
+                                        <h6 class="mb-2 mt-3">Lignes de médicaments ({{ ord.lignes_medicaments.count }})</h6>
+                                        <div class="table-responsive">
+                                            <table class="table-custom">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Médicament</th>
+                                                        <th>Posologie</th>
+                                                        <th>Durée</th>
+                                                        <th>Statut</th>
+                                                        <th>Motif arrêt</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for ligne in ord.lignes_medicaments.all %}
+                                                    <tr>
+                                                        <td><strong>{{ ligne.nom_medicament }}</strong></td>
+                                                        <td>{{ ligne.posologie }}</td>
+                                                        <td>{{ ligne.duree }}</td>
+                                                        <td>
+                                                            <span class="badge-custom {% if ligne.statut == 'EN_COURS' %}badge-success{% else %}badge-danger{% endif %}">
+                                                                {{ ligne.get_statut_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td>{{ ligne.motif_arret|default:"N/A" }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% endif %}
+
                                     </div>
                                 </div>
                                 {% endfor %}

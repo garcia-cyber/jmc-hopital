@@ -80,7 +80,7 @@
 
 
 
-
+                    {% if fonctionKey == 'admin' %}
                     <li class="menu-title"><span>Gestion Pharmacie</span></li>
 
 
@@ -119,7 +119,8 @@
                             </li>
                         </ul>
                     </li>
-                    {% if fonctionKey == 'admin' %}
+
+                    
                     <li class="sidebar-item">
                         <a href="{% url 'admin_global_paiements_list' %}" 
                             class="sidebar-link {% if 'paiement' in request.resolver_match.url_name or 'payments' in request.resolver_match.url_name %}active{% endif %}"
@@ -158,6 +159,20 @@
                             </li>
                             <li><a href="#">Interventions / Pannes</a></li>
                         </ul>
+                    </li>
+
+                    {% comment %} <li><a href="{% url 'liste_examens_techniques' %}"><i class="fa fa-flask"></i> <span>Examens à réaliser</span></a></li> {% endcomment %}
+                    <li><a href="{% url 'historique_examens' %}"><i class="fa fa-history"></i> <span>Historique Examens</span></a></li>
+                    {% comment %} <li>
+                        <a href="{% url 'liste_examens_technicien' %}">
+                            <i class="fa fa-stethoscope"></i> 
+                            <span>Examens externe</span>
+                        </a>
+                    </li> {% endcomment %}
+                    <li>
+                        <a href="{% url 'historique_examen_externe_technicien' %}">
+                            <i class="fa fa-history"></i> <span>Historique Externe</span>
+                        </a>
                     </li>
                 {% endif %}
 

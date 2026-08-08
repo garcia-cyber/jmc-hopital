@@ -130,6 +130,12 @@ class Patient(models.Model):
         ('CONVENTIONNE', 'Patient Conventionné'),
     ]
 
+    TYPE_P = [
+            ('N', 'nouveau/nouvelle'),
+            ('A', 'ancien/ancienne'),
+            
+        ]
+
     code_patient = models.CharField(max_length=20, unique=True, editable=False)
     noms = models.CharField(max_length=100)
     service = models.ForeignKey('Service', on_delete=models.PROTECT, related_name='patients', null=True)
@@ -142,6 +148,7 @@ class Patient(models.Model):
     # 2. Gestion financière
     type_patient = models.CharField(max_length=15, choices=TYPE_CHOICES, default='SIMPLE')
     a_carte_fidelite = models.BooleanField(default=False, verbose_name="Possède carte de fidélité")
+    statut_p = models.CharField(max_length=20 , null = True , blank=True, default='A', choices=TYPE_P)
     
     # Relation avec l'entreprise
     entreprise = models.ForeignKey(

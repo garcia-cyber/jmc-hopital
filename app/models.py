@@ -198,7 +198,7 @@ class ClientExterne(models.Model):
     TYPESEXE = [
         ('M', 'Masculin') , 
         ('F' , 'Feminin')
-    ]
+    ] 
     sexe = models.CharField(max_length = 20 , choices = TYPESEXE , blank=True, null=True)
     poids = models.CharField(max_length = 15 , blank=True, null=True)
     age = models.CharField(max_length = 15 , blank=True, null=True)

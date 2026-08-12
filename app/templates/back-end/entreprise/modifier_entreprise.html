@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nouvelle Entreprise | JMC</title>
+    <title>Modifier Entreprise | JMC</title>
     
     {% include 'back-end/includes/css.html' %}
     
@@ -15,7 +15,6 @@
             --bank-gray: #546e7a;
             --bank-light: #eceff1;
             --bank-gold: #c5a059;
-            --bank-gold-hover: #b08d4a;
         }
 
         body {
@@ -158,37 +157,6 @@
             font-size: 0.8rem;
             color: var(--bank-gray);
         }
-
-        .actions-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 14px;
-            flex-wrap: wrap;
-        }
-
-        .btn-cancel {
-            background: #eceff1;
-            color: #263238;
-            border: 1px solid #cfd8dc;
-            padding: 12px;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            flex: 1 1 auto;
-            transition: background 0.2s;
-        }
-
-        .btn-cancel:hover {
-            background: #e0e4e8;
-            color: #0d1b2a;
-        }
-
-        .btn-save-wrapper {
-            flex: 1 1 auto;
-        }
     </style>
 </head>
 
@@ -205,15 +173,15 @@
                             <i class="fa fa-building"></i>
                         </div>
                         <div>
-                            <h4 class="mb-0">Enregistrement d'un Partenaire</h4>
-                            <small>Dossier d'entreprise partenaire - Administration centrale</small>
+                            <h4 class="mb-0">Modification d’un Partenaire</h4>
+                            <small>Mise à jour du dossier entreprise partenaire</small>
                         </div>
                     </div>
-                    <span class="bank-badge">Hopital</span>
+                    <span class="bank-badge">Espace Institutionnel</span>
                 </div>
                 
                 <div class="card-body">
-                    <div class="section-title">Informations de l'entreprise</div>
+                    <div class="section-title">Informations de l’entreprise</div>
 
                     {% if messages %}
                         {% for message in messages %}
@@ -225,7 +193,7 @@
                         {% csrf_token %}
                         
                         <div class="form-group mb-4">
-                            <label>Nom de l'Entreprise</label>
+                            <label>Nom de l’Entreprise</label>
                             {{ form.nom }}
                             {% if form.nom.errors %}
                                 <div class="error-message">{{ form.nom.errors.as_text }}</div>
@@ -248,19 +216,12 @@
                             {% endif %}
                         </div>
 
-                        <div class="actions-row">
-                            <a href="{% url 'liste_entreprises' %}" class="btn btn-cancel">
-                                <i class="fa fa-arrow-left mr-2"></i> Retour à la liste
-                            </a>
-                            <div class="btn-save-wrapper">
-                                <button type="submit" class="btn btn-save shadow-sm" style="width:100%;">
-                                    <i class="fa fa-check-circle mr-2"></i> Enregistrer le partenaire
-                                </button>
-                            </div>
-                        </div>
+                        <button type="submit" class="btn btn-save shadow-sm">
+                            <i class="fa fa-save mr-2"></i> Enregistrer les modifications
+                        </button>
 
                         <div class="form-footer">
-                            Ce formulaire crée un nouveau dossier partenaire dans le système.
+                            Cette opération mettra à jour le dossier partenaire dans le système.
                         </div>
                     </form>
                 </div>

@@ -4796,7 +4796,19 @@ def creer_ordonnance_view(request, consultation_id):
 # ======================================================================================
 @login_required
 def enregistrer_entreprise_view(request):
-    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    # Vérifier que c'est un staff / admin
+    if not request.user.is_staff:
+        messages.error(request, "Vous n'êtes pas autorisé à enregistrer une entreprise.")
+        return redirect('liste_entreprises')
+
+    # Récupérer la fonction de l'utilisateur connecté
+    role = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
+
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     user_hopital = role.hopital if role else None
 
@@ -4804,7 +4816,10 @@ def enregistrer_entreprise_view(request):
         form = EntrepriseForm(request.POST)
         if form.is_valid():
             entreprise = form.save(commit=False)
-            entreprise.hopital = user_hopital
+            # L'admin choisit l'hôpital via le formulaire, donc on ne le force pas ici
+            # Si tu veux forcer l'hôpital de l'utilisateur, utilise :
+            # entreprise.hopital = user_hopital
+            entreprise.created_by = request.user
             entreprise.save()
             messages.success(request, "L'entreprise a été enregistrée avec succès.")
             return redirect('liste_entreprises')
@@ -4813,7 +4828,7 @@ def enregistrer_entreprise_view(request):
 
     return render(request, 'back-end/entreprise/enregistrer_entreprise.html', {
         'form': form,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
     })
 
 #
@@ -4822,23 +4837,123 @@ def enregistrer_entreprise_view(request):
 # ======================================================================================
 @login_required
 def liste_entreprises_view(request):
-    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    # Optionnel : réserver aux admins
+    if not request.user.is_staff:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('accueil')
+
+    # Récupérer la fonction de l'utilisateur connecté
+    role = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
+
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     user_hopital = role.hopital if role else None
 
-    entreprises = Entreprise.objects.all()
+    # Requête de base
+    qs = Entreprise.objects.select_related('hopital').order_by('-date_enregistrement')
 
-    if fonctionKey != 'admin' and user_hopital:
-        entreprises = entreprises.filter(hopital=user_hopital)
+    # --- Recherche ---
+    query = request.GET.get('q', '').strip()
+    if query:
+        qs = qs.filter(
+            Q(nom__icontains=query) |
+            Q(contact_responsable__icontains=query) |
+            Q(hopital__nomH__icontains=query)
+        )
 
-    entreprises = entreprises.order_by('-date_enregistrement')
+    # --- Pagination ---
+    paginator = Paginator(qs, 10)  # 10 entreprises par page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     return render(request, 'back-end/entreprise/liste_entreprises.html', {
-        'entreprises': entreprises,
-        'fonctionKey': fonctionKey
+        'entreprises': page_obj.object_list,  # liste des objets pour la boucle
+        'page_obj': page_obj,                 # objet de pagination pour le template
+        'fonctionKey': fonctionKey,           # pour ton header / sidebar / logs, etc.
+        'user_hopital': user_hopital,         # optionnel, si tu veux l’utiliser dans le template
+    })
+
+# 
+# =====================================================================================
+# MODIFICATION ENTREPRISE
+# =====================================================================================
+@login_required
+def modifier_entreprise_view(request, pk):
+    # Vérifier que c'est un staff / admin
+    if not request.user.is_staff:
+        messages.error(request, "Vous n'êtes pas autorisé à modifier cette entreprise.")
+        return redirect('liste_entreprises')
+
+    # Récupérer la fonction de l'utilisateur connecté
+    role = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
+
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    # Récupérer l'entreprise à modifier
+    entreprise = get_object_or_404(Entreprise, pk=pk)
+
+    if request.method == 'POST':
+        form = EntrepriseForm(request.POST, instance=entreprise)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "L'entreprise a été modifiée avec succès.")
+            return redirect('liste_entreprises')
+    else:
+        form = EntrepriseForm(instance=entreprise)
+
+    return render(request, 'back-end/entreprise/modifier_entreprise.html', {
+        'form': form,
+        'fonctionKey': fonctionKey,
+        'entreprise': entreprise,
     })
 
 
+#
+# ======================================================================================
+# SUPPRIMER ENTREPRISE 
+# ======================================================================================
+@login_required
+def supprimer_entreprise_view(request, pk):
+    # Réservé aux admins / staff
+    if not request.user.is_staff:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('liste_entreprises')
+
+    # Récupérer la fonction de l'utilisateur connecté
+    role = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    # Récupérer l'entreprise
+    entreprise = get_object_or_404(Entreprise, pk=pk)
+
+    # Nombre de patients liés à cette entreprise
+    nb_patients = entreprise.patients.count()
+
+    if request.method == 'POST':
+        nom = entreprise.nom
+        entreprise.delete()  # on_delete=SET_NULL sur Patient.entreprise → patients conservés
+        messages.success(request, f"L'entreprise « {nom} » a été supprimée avec succès.")
+        return redirect('liste_entreprises')
+
+    return render(request, 'back-end/entreprise/confirmer_suppression_entreprise.html', {
+        'entreprise': entreprise,
+        'fonctionKey': fonctionKey,
+        'nb_patients': nb_patients,
+    })
 
 
 #

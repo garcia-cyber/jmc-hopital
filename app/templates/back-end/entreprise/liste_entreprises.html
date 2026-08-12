@@ -9,10 +9,242 @@
     {% include 'back-end/includes/css.html' %}
     
     <style>
-        .page-wrapper { background-color: #f8fafc; padding: 20px; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .table thead { background-color: #006064; color: #ffffff; }
-        .btn-action { padding: 5px 10px; border-radius: 5px; }
+        :root {
+            --bank-dark: #0d1b2a;
+            --bank-blue: #1b3a57;
+            --bank-gray: #546e7a;
+            --bank-light: #eceff1;
+            --bank-gold: #c5a059;
+        }
+
+        body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .page-wrapper {
+            background: #f5f7fa;
+            padding: 24px 20px 40px;
+            min-height: 90vh;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-title {
+            color: var(--bank-dark);
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin: 0;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, var(--bank-blue) 0%, #27496d 100%);
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 4px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-add:hover {
+            background: linear-gradient(135deg, #224566 0%, #1f3d5a 100%);
+            box-shadow: 0 4px 14px rgba(13, 27, 42, 0.25);
+            color: #fff;
+        }
+
+        .card {
+            border-radius: 6px;
+            border: 1px solid #d0d6dc;
+            box-shadow: 0 6px 20px rgba(13, 27, 42, 0.08);
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--bank-dark) 0%, var(--bank-blue) 100%);
+            color: #ffffff;
+            padding: 16px 20px;
+            border-bottom: 3px solid var(--bank-gold);
+        }
+
+        .card-header-custom h5 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.4px;
+        }
+
+        .card-body {
+            padding: 0;
+        }
+
+        .search-bar {
+            padding: 16px 20px;
+            background: #fafbfc;
+            border-bottom: 1px solid #e0e4e8;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1 1 260px;
+            padding: 9px 12px;
+            border-radius: 4px;
+            border: 1px solid #cfd8dc;
+            font-size: 0.9rem;
+            background: #ffffff;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--bank-blue);
+            box-shadow: 0 0 0 2px rgba(27, 58, 87, 0.12);
+        }
+
+        .btn-search {
+            background: var(--bank-blue);
+            color: #fff;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .btn-search:hover {
+            background: #15314a;
+        }
+
+        .table {
+            margin: 0;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead th {
+            background: #f3f5f7;
+            color: #263238;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 14px 12px;
+            border-bottom: 2px solid #d0d6dc;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            padding: 12px;
+            vertical-align: middle;
+            font-size: 0.92rem;
+            color: #263238;
+            border-bottom: 1px solid #e0e4e8;
+        }
+
+        .table tbody tr:hover {
+            background: #fafbfc;
+        }
+
+        .btn-action {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin: 0 2px;
+        }
+
+        .btn-edit {
+            background: #eceff1;
+            color: var(--bank-blue);
+            border: 1px solid #cfd8dc;
+        }
+
+        .btn-edit:hover {
+            background: #e0e4e8;
+            color: var(--bank-dark);
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #efcdd1;
+        }
+
+        .btn-delete:hover {
+            background: #ffcdd2;
+            color: #b71c1c;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 28px !important;
+            color: var(--bank-gray);
+        }
+
+        .hospital-badge {
+            display: inline-block;
+            background: rgba(27, 58, 87, 0.08);
+            color: var(--bank-blue);
+            border: 1px solid rgba(27, 58, 87, 0.25);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .pagination-wrapper {
+            padding: 14px 20px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #fafbfc;
+            border-top: 1px solid #e0e4e8;
+        }
+
+        .pagination-info {
+            font-size: 0.85rem;
+            color: var(--bank-gray);
+        }
+
+        .pagination {
+            margin: 0;
+        }
+
+        .page-item .page-link {
+            color: var(--bank-blue);
+            border: 1px solid #cfd8dc;
+            background: #ffffff;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            margin-left: 4px;
+            border-radius: 4px;
+        }
+
+        .page-item.active .page-link {
+            background: var(--bank-blue);
+            color: #ffffff;
+            border-color: var(--bank-blue);
+        }
+
+        .page-item.disabled .page-link {
+            color: #90a4ae;
+            background: #f5f7fa;
+            border-color: #d0d6dc;
+        }
     </style>
 </head>
 
@@ -24,21 +256,46 @@
         <div class="page-wrapper">
             <div class="content container-fluid">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
-                    <h3 class="page-title text-primary font-weight-bold">Gestion des Entreprises Partenaires</h3>
-                    <a href="{% url 'enregistrer_entreprise' %}" class="btn btn-success">
+                <div class="page-header-row">
+                    <h3 class="page-title">Gestion des Entreprises Partenaires</h3>
+                    <a href="{% url 'enregistrer_entreprise' %}" class="btn btn-add">
                         <i class="fa fa-plus"></i> Ajouter une entreprise
                     </a>
                 </div>
 
                 <div class="card">
-                    <div class="card-body mt-4">
+                    <div class="card-header-custom">
+                        <h5>Répertoire des entreprises par hôpital</h5>
+                    </div>
+
+                    <!-- Barre de recherche -->
+                    <form method="get" class="search-bar">
+                        <input 
+                            type="text" 
+                            name="q" 
+                            class="search-input" 
+                            placeholder="Rechercher par nom, contact ou hôpital..."
+                            value="{{ request.GET.q|default:'' }}"
+                        >
+                        <button type="submit" class="btn btn-search">
+                            <i class="fa fa-search"></i> Rechercher
+                        </button>
+                        {% if request.GET.q %}
+                            <a href="{{ request.path }}" class="btn btn-sm" 
+                               style="background:#eceff1; color:#263238; border:1px solid #cfd8dc;">
+                                <i class="fa fa-times"></i> Effacer
+                            </a>
+                        {% endif %}
+                    </form>
+
+                    <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
                                         <th>Nom de l'Entreprise</th>
                                         <th>Contact Responsable</th>
+                                        <th>Hôpital</th>
                                         <th>Date d'Enregistrement</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
@@ -48,21 +305,103 @@
                                     <tr>
                                         <td><strong>{{ ent.nom }}</strong></td>
                                         <td>{{ ent.contact_responsable }}</td>
+                                        <td>
+                                            {% if ent.hopital %}
+                                                <span class="hospital-badge">{{ ent.hopital.nomH }}</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ ent.date_enregistrement|date:"d/m/Y H:i" }}</td>
                                         <td class="text-center">
-                                            <a href="#" class="btn btn-sm btn-info btn-action"><i class="fa fa-edit"></i></a>
-                                            <a href="#" class="btn btn-sm btn-danger btn-action"><i class="fa fa-trash"></i></a>
+                                            <a href="{% url 'modifier_entreprise' ent.pk %}" 
+                                               class="btn btn-sm btn-action btn-edit" 
+                                               title="Modifier">
+                                                <i class="fa fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'supprimer_entreprise' ent.pk %}" 
+                                               class="btn btn-sm btn-action btn-delete" 
+                                               title="Supprimer">
+                                                <i class="fa fa-trash"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                     {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center py-4">Aucune entreprise enregistrée pour le moment.</td>
+                                    <tr class="empty-row">
+                                        <td colspan="5">Aucune entreprise trouvée.</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <div class="pagination-wrapper">
+                        <div class="pagination-info">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                            ({{ page_obj.paginator.count }} entreprise{{ page_obj.paginator.count|pluralize }})
+                        </div>
+
+                        <nav aria-label="Pagination">
+                            <ul class="pagination">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                            <i class="fa fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                            <i class="fa fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fa fa-angle-double-left"></i></span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fa fa-angle-left"></i></span>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                            <i class="fa fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                                            <i class="fa fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fa fa-angle-right"></i></span>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fa fa-angle-double-right"></i></span>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+
                 </div>
 
             </div>

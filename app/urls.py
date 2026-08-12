@@ -184,6 +184,16 @@ urlpatterns =[
     # ENTREPRISE
     path('entreprise/enregistrer/', views.enregistrer_entreprise_view, name='enregistrer_entreprise'),
     path('entreprises/', views.liste_entreprises_view, name='liste_entreprises'),
+    path(
+        'entreprises/<int:pk>/modifier/',
+        views.modifier_entreprise_view,
+        name='modifier_entreprise'
+    ),
+    path(
+    'entreprises/<int:pk>/supprimer/',
+    views.supprimer_entreprise_view,
+    name='supprimer_entreprise'
+),
 
     # =====================================
     # MATERNITE

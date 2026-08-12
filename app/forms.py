@@ -391,17 +391,33 @@ class HospitalisationForm(forms.ModelForm):
 class EntrepriseForm(forms.ModelForm):
     class Meta:
         model = Entreprise
-        fields = ['nom', 'contact_responsable']
+        fields = ['nom', 'contact_responsable', 'hopital']
         widgets = {
-            'nom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de l\'entreprise'}),
-            'contact_responsable': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Numéro de téléphone'}),
+            'nom': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': "Nom de l'entreprise"
+            }),
+            'contact_responsable': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Numéro de téléphone'
+            }),
+            'hopital': forms.Select(attrs={
+                'class': 'form-control'
+            }),
         }
 
     def clean_nom(self):
         nom = self.cleaned_data.get('nom')
-        # On vérifie si une entreprise avec ce nom existe déjà (insensible à la casse)
-        if Entreprise.objects.filter(nom__iexact=nom).exists():
-            raise ValidationError(f"L'entreprise '{nom}' est déjà enregistrée dans le système.")
+        instance = getattr(self, 'instance', None)
+
+        # En création : on vérifie sur toutes les entreprises
+        # En modification : on exclut l'entreprise en cours d'édition
+        qs = Entreprise.objects.filter(nom__iexact=nom)
+        if instance and instance.pk:
+            qs = qs.exclude(pk=instance.pk)
+
+        if qs.exists():
+            raise forms.ValidationError(f"L'entreprise '{nom}' est déjà enregistrée dans le système.")
         return nom
 
 

@@ -1392,12 +1392,17 @@ def marquer_consulte(request, sv_id):
 def reconsulter(request, sv_id):
     """
     Reconsultation d'un patient déjà consulté.
-    - Affiche les anciennes données (consultation, examens, médicaments).
-    - Permet de modifier et d'enregistrer une nouvelle version de la consultation.
+    - Si une consultation existe : on la modifie.
+    - Si aucune consultation n'existe : on en crée une nouvelle automatiquement.
     """
-    triage = get_object_or_404(SigneVital, id=sv_id)
+    triage = get_object_or_404(SigneVital.objects.select_related('patient'), id=sv_id)
 
-    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role_obj = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role_obj.hopital if role_obj else None
     fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
 
@@ -1409,13 +1414,23 @@ def reconsulter(request, sv_id):
         messages.error(request, "Ce patient appartient à un autre hôpital.")
         return redirect('liste_consultation_medecin')
 
-    # Consultation précédente (obligatoire pour reconsultation)
+    # Consultation précédente (optionnelle maintenant)
     consultation = Consultation.objects.filter(triage=triage).first()
-    if not consultation:
-        messages.error(request, "Aucune consultation précédente trouvée pour ce patient.")
-        return redirect('liste_consultation_medecin')
 
-    # Chargement des examens et médicaments précédents
+    if not consultation:
+        # Créer automatiquement une nouvelle consultation vide
+        consultation = Consultation.objects.create(
+            triage=triage,
+            medecin=request.user,
+            hopital=hopital_user,
+            # PAS de patient=... car 'patient' est une property
+        )
+        messages.info(
+            request,
+            f"Aucune consultation précédente trouvée. Une nouvelle consultation a été créée pour {triage.patient.noms}."
+        )
+
+    # Chargement des examens et médicaments précédents (s'il y a une consultation)
     examens_precedents = DemandeExamen.objects.filter(
         consultation=consultation
     ).select_related('prestation')
@@ -1504,7 +1519,7 @@ def reconsulter(request, sv_id):
             messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
 
     else:
-        # GET : pré-remplir le formulaire avec l'ancienne consultation
+        # GET : pré-remplir le formulaire avec l'ancienne consultation (ou nouvelle si créée)
         form = ConsultationForm(instance=consultation)
 
     examens_disponibles = Prestation.objects.filter(

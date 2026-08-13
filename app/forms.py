@@ -534,15 +534,47 @@ class PatientForm(forms.ModelForm):
 class ClientExterneForm(forms.ModelForm):
     class Meta:
         model = ClientExterne
-        fields = ['noms', 'sexe','poids','age','telephone']
+        fields = ['noms', 'sexe', 'poids', 'age', 'telephone']
         widgets = {
             'noms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom complet du client'}),
             'telephone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Numéro de téléphone'}),
             'age': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Age du client'}),
-            'sexe' : forms.Select(attrs={'class': 'form-control'}),
-            'poids' : forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'poids'}), 
+            'sexe': forms.Select(attrs={'class': 'form-control'}),
+            'poids': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Poids (kg)'}), 
         }
 
+
+class DemandeExamenExterneForm(forms.ModelForm):
+    class Meta:
+        model = DemandeExamenExterne
+        fields = ['medecin_demandeur', 'clinique', 'but', 'prestations']
+        widgets = {
+            'medecin_demandeur': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Nom du médecin demandeur'
+            }),
+            'clinique': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'Informations cliniques...'
+            }),
+            'but': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 2, 
+                'placeholder': 'But de la demande...'
+            }),
+            'prestations': forms.SelectMultiple(attrs={
+                'class': 'form-control', 
+                'size': '10',
+                'multiple': 'multiple'
+            }),
+        }
+        labels = {
+            'medecin_demandeur': 'Médecin demandeur',
+            'clinique': 'Informations cliniques',
+            'but': 'But de la demande',
+            'prestations': 'Examens à réaliser',
+        }
 
 
 # =================================================================

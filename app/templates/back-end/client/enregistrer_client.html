@@ -12,6 +12,7 @@
         .card-header { border-bottom: 2px solid #f4f4f4 !important; }
         .input-group-text { background-color: #f8f9fa; }
         .btn-lg { padding: 0.75rem 2rem; font-weight: 600; }
+        .hopital-badge { background: #e3f2fd; color: #1976d2; padding: 8px 15px; border-radius: 50px; display: inline-block; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -30,6 +31,11 @@
                                 <li class="breadcrumb-item"><a href="#">Accueil</a></li>
                                 <li class="breadcrumb-item active">Nouvel Enregistrement</li>
                             </ul>
+                            {% if hopital_user %}
+                                <div class="hopital-badge">
+                                    <i class="fa fa-hospital-o"></i> {{ hopital_user.nomH }}
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -43,6 +49,17 @@
                                 </h4>
                             </div>
                             <div class="card-body">
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                            {{ message }}
+                                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+
                                 <form method="POST">
                                     {% csrf_token %}
                                     
@@ -54,6 +71,9 @@
                                                     <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-user"></i></span></div>
                                                     {{ form.noms }}
                                                 </div>
+                                                {% if form.noms.errors %}
+                                                    <small class="text-danger">{{ form.noms.errors.0 }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -63,6 +83,9 @@
                                                     <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-venus-mars"></i></span></div>
                                                     {{ form.sexe }}
                                                 </div>
+                                                {% if form.sexe.errors %}
+                                                    <small class="text-danger">{{ form.sexe.errors.0 }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -75,6 +98,9 @@
                                                     <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-calendar"></i></span></div>
                                                     {{ form.age }}
                                                 </div>
+                                                {% if form.age.errors %}
+                                                    <small class="text-danger">{{ form.age.errors.0 }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -84,6 +110,9 @@
                                                     <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-balance-scale"></i></span></div>
                                                     {{ form.poids }}
                                                 </div>
+                                                {% if form.poids.errors %}
+                                                    <small class="text-danger">{{ form.poids.errors.0 }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
@@ -96,6 +125,9 @@
                                                     <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-phone"></i></span></div>
                                                     {{ form.telephone }}
                                                 </div>
+                                                {% if form.telephone.errors %}
+                                                    <small class="text-danger">{{ form.telephone.errors.0 }}</small>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>

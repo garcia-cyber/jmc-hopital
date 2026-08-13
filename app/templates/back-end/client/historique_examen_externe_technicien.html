@@ -25,7 +25,14 @@
         <div class="page-wrapper">
             <div class="content container-fluid">
                 <div class="page-header d-flex justify-content-between align-items-center">
-                    <h3 class="page-title">Historique des examens : {{ fonctionKey }}</h3>
+                    <div>
+                        <h3 class="page-title">Historique des examens</h3>
+                        <p class="text-muted mb-0">
+                            <i class="fa fa-hospital-o"></i> 
+                            {{ hopital_user.nomH|default:"Hôpital non spécifié" }}
+                        </p>
+                    </div>
+                    <span class="badge badge-info">{{ fonctionKey }}</span>
                 </div>
 
                 <div class="search-container">
@@ -42,7 +49,8 @@
                                         <th>Patient</th>
                                         <th>Date</th>
                                         <th>Détails</th>
-                                        <th>Action</th> </tr>
+                                        <th>Action</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in historique_technique %}
@@ -51,7 +59,11 @@
                                         <td>
                                             <div class="font-weight-bold">{{ item.patient }}</div>
                                         </td>
-                                        <td>{{ item.date|date:"d M Y" }} <br> <small class="text-muted">{{ item.date|date:"H:i" }}</small></td>
+                                        <td>
+                                            {{ item.date|date:"d M Y" }} 
+                                            <br> 
+                                            <small class="text-muted">{{ item.date|date:"H:i" }}</small>
+                                        </td>
                                         <td>
                                             {% for d in item.details %}
                                             <div class="examen-row">
@@ -71,7 +83,7 @@
                                         </td>
                                         <td>
                                             {% if is_medecin %}
-                                                <a href="{% url 'prescrire_ordonnance_client_externe' item.id %}" class="btn btn-sm btn-outline-primary">
+                                                <a href="{% url 'prescrire_ordonnance_client_externe' item.client.id %}" class="btn btn-sm btn-outline-primary">
                                                     <i class="fa fa-prescription"></i> Prescrire
                                                 </a>
                                             {% else %}

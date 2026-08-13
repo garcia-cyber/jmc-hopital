@@ -1,19 +1,137 @@
-{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Historique des Ordonnances</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordonnances - Clients Externes</title>
     {% include 'back-end/includes/css.html' %}
     <style>
-        .table-card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: none; }
-        .search-box { border-radius: 50px; padding: 10px 20px; border: 1px solid #ddd; width: 100%; max-width: 400px; margin-bottom: 20px; }
-        .patient-info { font-size: 0.85em; color: #6c757d; display: block; }
-        
-        @media (max-width: 767px) {
-            .page-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
-            .btn { width: 100%; margin-bottom: 5px; }
+        .page-wrapper .content {
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .card-custom {
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: none;
+            background: #fff;
+        }
+        .card-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px 25px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-custom thead {
+            background: #f8f9fa;
+        }
+        .table-custom thead th {
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #dee2e6;
+            padding: 15px;
+        }
+        .table-custom tbody tr {
+            transition: all 0.2s;
+        }
+        .table-custom tbody tr:hover {
+            background: #f8f9fa;
+            transform: translateX(2px);
+        }
+        .badge-hopital {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .medicament-list {
+            max-width: 300px;
+        }
+        .medicament-item {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .medicament-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .medicament-poso {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-top: 3px;
+        }
+        .btn-action {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+        .stats-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-quantite {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .note-globale-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #856404;
+        }
+        .note-globale-box i {
+            margin-right: 5px;
+        }
+        .note-globale-text {
+            font-style: italic;
+            max-height: 60px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -24,52 +142,192 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="page-header d-flex justify-content-between align-items-center">
-                    <h3 class="page-title">Historique des Ordonnances</h3>
-                    <a href="{% url 'liste_ordonnances_externes_client' %}" class="btn btn-primary">
-                        <i class="fa fa-refresh"></i> Actualiser
-                    </a>
+                <!-- En-tête de page -->
+                <div class="page-header mb-4">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title mb-0">
+                                <i class="fa fa-file-text-o"></i> Ordonnances Clients Externes
+                            </h3>
+                            <p class="text-muted mb-0">
+                                Rôle : <strong>{{ fonctionKey }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'enregistrer_client_externe' %}" class="btn btn-primary">
+                                <i class="fa fa-plus"></i> Nouveau Client
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
-                <input type="text" id="searchOrdo" class="search-box" placeholder="Rechercher par patient ou médecin...">
-
-                <div class="card table-card">
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-sm mb-0" id="ordoTable">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th class="pl-4">Date</th>
-                                        <th>Patient (Infos)</th>
-                                        <th>Médecin</th>
-                                        <th class="text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for ord in ordonnances %}
-                                    <tr>
-                                        <td class="pl-4">{{ ord.date_creation|date:"d/m/Y H:i" }}</td>
-                                        <td>
-                                            <div class="font-weight-bold">{{ ord.client.noms }}</div>
-                                            <span class="patient-info">
-                                                Âge: {{ ord.client.age|default:"-" }} | Tél: {{ ord.client.telephone|default:"-" }}
-                                            </span>
-                                        </td>
-                                        <td>{{ ord.medecin.username }}</td>
-                                        <td class="text-center">
-                                            <a href="{% url 'consulter_ordonnance_externe' ord.id %}" class="btn btn-sm btn-outline-info">
-                                                <i class="fa fa-eye"></i> Consulter
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center py-4">Aucune ordonnance enregistrée.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3" role="alert">
+                            <i class="fa fa-info-circle"></i> {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Stats -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="stats-card">
+                            <div class="stats-number">{{ total }}</div>
+                            <div class="stats-label">Total Ordonnances</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card" style="border-left-color: #28a745;">
+                            <div class="stats-number" style="color: #28a745;">
+                                {{ actives }}
+                            </div>
+                            <div class="stats-label">Actives</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card" style="border-left-color: #ffc107;">
+                            <div class="stats-number" style="color: #ffc107;">
+                                {{ aujourd_hui }}
+                            </div>
+                            <div class="stats-label">Aujourd'hui</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table des ordonnances -->
+                <div class="card card-custom">
+                    <div class="card-header card-header-custom">
+                        <h5 class="mb-0">
+                            <i class="fa fa-list"></i> Liste des Ordonnances
+                        </h5>
+                        <span class="badge bg-light text-dark">
+                            {{ ordonnances.count }} résultat(s)
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if ordonnances %}
+                            <div class="table-responsive">
+                                <table class="table table-custom table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">#ID</th>
+                                            <th>Client</th>
+                                            <th>Médecin</th>
+                                            <th>Hôpital</th>
+                                            <th>Note du médecin</th>
+                                            <th>Médicaments</th>
+                                            <th>Date</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for ordonnance in ordonnances %}
+                                            <tr>
+                                                <td class="text-center">
+                                                    <strong class="text-primary">#{{ ordonnance.id }}</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar bg-primary text-white rounded-circle mr-2" 
+                                                             style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                                            {{ ordonnance.client.noms|slice:":1"|upper }}
+                                                        </div>
+                                                        <strong>{{ ordonnance.client.noms }}</strong>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {% if ordonnance.medecin %}
+                                                        <i class="fa fa-user-md text-primary"></i> 
+                                                        {{ ordonnance.medecin.username|default:"Inconnu" }}
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if ordonnance.hopital %}
+                                                        <span class="badge-hopital">
+                                                            <i class="fa fa-hospital-o"></i> {{ ordonnance.hopital.nomH }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">Non spécifié</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="max-width: 250px;">
+                                                    {% if ordonnance.note_globale %}
+                                                        <div class="note-globale-box">
+                                                            <i class="fa fa-sticky-note-o"></i>
+                                                            <span class="note-globale-text">
+                                                                {{ ordonnance.note_globale|truncatechars:100 }}
+                                                            </span>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="medicament-list">
+                                                    {% if ordonnance.items.exists %}
+                                                        {% for item in ordonnance.items.all|slice:":3" %}
+                                                            <div class="medicament-item">
+                                                                <div class="medicament-name">
+                                                                    {{ item.designation }}
+                                                                    {% if item.quantite %}
+                                                                        <span class="badge-quantite">{{ item.quantite }}</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% if item.posologie %}
+                                                                    <div class="medicament-poso">
+                                                                        <i class="fa fa-clock-o"></i> {{ item.posologie|truncatechars:50 }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                        {% if ordonnance.items.count > 3 %}
+                                                            <small class="text-muted">
+                                                                <i class="fa fa-plus-circle"></i> {{ ordonnance.items.count|add:"-3" }} autre(s)...
+                                                            </small>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted">Aucun médicament</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <i class="fa fa-calendar"></i> 
+                                                    {{ ordonnance.date_creation|date:"d/m/Y" }}
+                                                </td>
+                                                <td class="text-center">
+                                                    <a href="#" class="btn btn-sm btn-primary btn-action" 
+                                                       onclick="alert('Détail non disponible'); return false;">
+                                                        <i class="fa fa-eye"></i> Voir
+                                                    </a>
+                                                    <a href="#" class="btn btn-sm btn-success btn-action" 
+                                                       onclick="alert('Impression non disponible'); return false;">
+                                                        <i class="fa fa-print"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="8" class="text-center text-muted">Aucune ordonnance</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fa fa-folder-open-o"></i>
+                                <h4>Aucune ordonnance trouvée</h4>
+                                <p class="text-muted">Commencez par créer une ordonnance pour un client externe.</p>
+                                <a href="{% url 'enregistrer_client_externe' %}" class="btn btn-primary mt-3">
+                                    <i class="fa fa-plus"></i> Nouveau Client
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -77,15 +335,5 @@
     </div>
 
     {% include 'back-end/includes/js.html' %}
-    
-    <script>
-        document.getElementById('searchOrdo').addEventListener('keyup', function() {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#ordoTable tbody tr');
-            rows.forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
-            });
-        });
-    </script>
 </body>
 </html>

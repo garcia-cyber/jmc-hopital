@@ -77,6 +77,20 @@
             font-size: 0.9rem;
             color: #6c757d;
         }
+        .form-section {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .form-section-title {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -92,6 +106,7 @@
                             <h3 class="page-title">Nouvelle demande d'examens</h3>
                             <p class="text-muted">
                                 Patient : <strong>{{ client.noms }}</strong> | Rôle : {{ fonctionKey }}
+                                {% if user_hopital %} | Hôpital : {{ user_hopital.nomH }}{% endif %}
                             </p>
                         </div>
                     </div>
@@ -101,8 +116,59 @@
                     <strong>Taux utilisé :</strong> 1 USD = {{ taux|default:"2300" }} CDF
                 </div>
 
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
                 <form method="POST" id="examenForm">
                     {% csrf_token %}
+                    
+                    <!-- Section Formulaire -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-section">
+                                <h5 class="form-section-title"><i class="fa fa-file-text"></i> Informations de la demande</h5>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Médecin demandeur</label>
+                                            {{ form.medecin_demandeur }}
+                                            {% if form.medecin_demandeur.errors %}
+                                                <small class="text-danger">{{ form.medecin_demandeur.errors.0 }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">But de la demande</label>
+                                            {{ form.but }}
+                                            {% if form.but.errors %}
+                                                <small class="text-danger">{{ form.but.errors.0 }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Informations cliniques</label>
+                                    {{ form.clinique }}
+                                    {% if form.clinique.errors %}
+                                        <small class="text-danger">{{ form.clinique.errors.0 }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Examens -->
                     <div class="row">
                         <div class="col-md-4">
                             <div class="category-box">

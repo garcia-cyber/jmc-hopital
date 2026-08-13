@@ -104,6 +104,7 @@ def dashboard(request):
 
     role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else 'visiteur'
+
     user_hopital = role.hopital if role else None
     aujourdhui = timezone.now().date()
 
@@ -7578,24 +7579,35 @@ def ajouter_paiement_dette(request, paiement_id):
 # =========================================================================================================== 
 @login_required
 def enregistrer_client_externe(request):
+    # Récupère le rôle et l'hôpital du user connecté
     role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-    user_hopital = role.hopital if role else None
+    
+    if not role or not role.fonctionKey:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    
+    fonctionKey = role.fonctionKey.roleName
+    user_hopital = role.hopital
 
     if request.method == 'POST':
         form = ClientExterneForm(request.POST)
         if form.is_valid():
             client = form.save(commit=False)
+            
+            # Associe le client à l'hôpital du user (sauf si admin)
             if fonctionKey != 'admin' and user_hopital:
                 client.hopital = user_hopital
+            
             client.save()
+            
+            messages.success(request, f"Client {client.noms} enregistré avec succès !")
             return redirect('creer_demande_examen', client_id=client.id)
     else:
         form = ClientExterneForm()
 
     return render(request, 'back-end/client/enregistrer_client.html', {
         'form': form,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'hopital_user': user_hopital,  # ← Ajoute ça pour afficher dans le template
     })
 
 # 
@@ -7605,7 +7617,7 @@ def enregistrer_client_externe(request):
 
 @login_required
 def creer_demande_examen(request, client_id):
-    # 1. Rôle et hôpital de l’utilisateur
+    # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
         .filter(userKey=request.user)
@@ -7615,9 +7627,9 @@ def creer_demande_examen(request, client_id):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     user_hopital = role.hopital if role else None
 
-    # 2. Taux de change depuis la configuration de l’hôpital
+    # 2. Taux de change depuis la configuration de l'hôpital
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')  # 1 USD = taux CDF
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
     if not taux or taux == 0:
         taux = Decimal('2300.00')
 
@@ -7635,9 +7647,18 @@ def creer_demande_examen(request, client_id):
 
     # 4. Traitement du formulaire POST
     if request.method == 'POST':
-        ids_prestations = request.POST.getlist('prestations')
-
-        if ids_prestations:
+        form = DemandeExamenExterneForm(request.POST)
+        
+        if form.is_valid():
+            # Étape 1 : Sauvegarder la demande SANS les prestations
+            demande = form.save(commit=False)
+            demande.client = client
+            demande.hopital = user_hopital if fonctionKey != 'admin' else client.hopital
+            demande.save()  # ← IMPORTANT : Sauvegarde d'abord pour avoir un ID
+            
+            # Étape 2 : Récupérer les IDs des prestations sélectionnées
+            ids_prestations = request.POST.getlist('prestations')
+            
             if fonctionKey != 'admin' and user_hopital:
                 prestations_selectionnees = Prestation.objects.filter(
                     id__in=ids_prestations,
@@ -7645,34 +7666,31 @@ def creer_demande_examen(request, client_id):
                 )
             else:
                 prestations_selectionnees = Prestation.objects.filter(id__in=ids_prestations)
-
-            with transaction.atomic():
-                demande = DemandeExamenExterne.objects.create(
-                    client=client,
-                    hopital=user_hopital if fonctionKey != 'admin' else client.hopital
-                )
-                demande.prestations.set(prestations_selectionnees)
-
-                # Calcul du total en CDF (les prix sont en CDF)
-                total_cdf = (
-                    prestations_selectionnees.aggregate(total=Sum('prix'))['total'] or Decimal('0')
-                )
-
-                # Stockage des totaux
-                demande.total_a_payer = (total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                demande.total_cdf = total_cdf
-                demande.save()
-
+            
+            # Étape 3 : Ajouter les prestations à la demande
+            demande.prestations.set(prestations_selectionnees)
+            
+            # Étape 4 : Calculer et sauvegarder les totaux
+            total_cdf = prestations_selectionnees.aggregate(total=Sum('prix'))['total'] or Decimal('0')
+            demande.total_cdf = total_cdf
+            demande.total_a_payer = (total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            demande.save()
+            
+            messages.success(request, f"Demande créée avec succès ! Total : {demande.total_a_payer} USD")
             return redirect('liste_demandes_externes')
+    else:
+        form = DemandeExamenExterneForm()
 
-    # 5. Contexte pour l’affichage (GET)
+    # 5. Contexte pour l'affichage (GET)
     return render(request, 'back-end/client/creer_demande.html', {
         'client': client,
+        'form': form,
         'fonctionKey': fonctionKey,
         'prestations_labo': prestations_labo,
         'prestations_radio': prestations_radio,
         'prestations_echo': prestations_echo,
         'taux': taux,
+        'user_hopital': user_hopital,
     })
 
 
@@ -7801,45 +7819,33 @@ def liste_examens_technicien(request):
 # =========================================================================================================
 @login_required
 def saisir_rapport(request, demande_id, prestation_id):
-    # 1. On récupère la demande globale et la prestation spécifique
     demande = get_object_or_404(DemandeExamenExterne, id=demande_id)
     prestation = get_object_or_404(Prestation, id=prestation_id)
     
-    # 2. On récupère ou on crée l'objet résultat associé à ce couple (demande + prestation)
-    # Cela évite les erreurs si le résultat n'a pas encore été initialisé
     resultat, created = ExamenExterneResultat.objects.get_or_create(
         demande=demande,
         prestation=prestation,
         defaults={'rapport': '', 'statut': 'EN_ATTENTE'}
     )
     
-    # 3. Traitement du formulaire
     if request.method == 'POST':
         rapport_texte = request.POST.get('rapport')
-        
-        # Enregistrement des données
         resultat.rapport = rapport_texte
-        resultat.statut = 'TERMINE'  # On valide l'examen
+        resultat.statut = 'TERMINE'
         resultat.save()
-        
-        # Optionnel : Vérification globale pour passer la demande en TERMINE si tous les examens sont faits
-        # Si tu veux que la demande passe en "TERMINE" globalement quand tous les examens le sont :
-        # if not demande.resultats_examens.filter(statut='EN_ATTENTE').exists():
-        #     demande.statut = 'TERMINE'
-        #     demande.save()
-            
         return redirect('liste_examens_technicien')
-        
-    # 4. Affichage de la page
-
-    role = Fonction.objects.filter(userKey=request.user).first()
+    
+    # Récupère le rôle et l'hôpital du user
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None  # ← Ajoute ça
 
     return render(request, 'back-end/client/saisir_rapport.html', {
         'demande': demande,
         'prestation': prestation,
-        'resultat': resultat ,
-        'fonctionKey' : fonctionKey
+        'resultat': resultat,
+        'fonctionKey': fonctionKey,
+        'user_hopital': user_hopital,  # ← Ajoute ça
     })
 
 #
@@ -7848,85 +7854,86 @@ def saisir_rapport(request, demande_id, prestation_id):
 # ========================================================================================================
 @login_required
 def historique_examen_externe_technicien(request):
-    role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
-    if not role_obj or not role_obj.fonctionKey:
-        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    try:
+        # Récupère le rôle de l'utilisateur
+        role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+        
+        if not role_obj or not role_obj.fonctionKey:
+            return render(request, 'back-end/error.html', {'message': "Accès refusé."})
 
-    role_name = role_obj.fonctionKey.roleName.upper()
-    user_hopital = role_obj.hopital
+        role_name = role_obj.fonctionKey.roleName.upper()
+        user_hopital = role_obj.hopital  # ← Hôpital du user connecté
 
-    is_medecin = 'MEDECIN' in role_name or 'DOCTEUR' in role_name
+        is_medecin = 'MEDECIN' in role_name or 'DOCTEUR' in role_name
 
-    cat_cible = None
-    if 'LABO' in role_name:
-        cat_cible = 'LABO'
-    elif 'RADIO' in role_name:
-        cat_cible = 'RADIO'
-    elif 'ECHO' in role_name:
-        cat_cible = 'ECHO'
+        cat_cible = None
+        if 'LABO' in role_name:
+            cat_cible = 'LABO'
+        elif 'RADIO' in role_name:
+            cat_cible = 'RADIO'
+        elif 'ECHO' in role_name:
+            cat_cible = 'ECHO'
 
-    if is_medecin:
-        demandes = DemandeExamenExterne.objects.filter(
-            hopital=user_hopital
-        ).select_related('client').prefetch_related(  # <-- CORRIGÉ
-            'prestations',
-            'resultats_examens__prestation'  # <-- Utilise le related_name
-        ).order_by('-date_demande')
-    elif cat_cible:
-        demandes = DemandeExamenExterne.objects.filter(
-            hopital=user_hopital,
-            prestations__categorie=cat_cible
-        ).distinct().select_related('client').prefetch_related(  # <-- CORRIGÉ
-            'prestations',
-            'resultats_examens__prestation'  # <-- Utilise le related_name
-        ).order_by('-date_demande')
-    else:
-        return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
+        # Requête filtrée par l'hôpital du user connecté
+        if is_medecin:
+            demandes = DemandeExamenExterne.objects.filter(
+                hopital=user_hopital  # ← Seulement l'hôpital du user
+            ).select_related('client').order_by('-date_demande')
+        elif cat_cible:
+            demandes = DemandeExamenExterne.objects.filter(
+                hopital=user_hopital,  # ← Seulement l'hôpital du user
+                prestations__categorie=cat_cible
+            ).select_related('client').distinct().order_by('-date_demande')
+        else:
+            return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
 
-    historique_technique = []
+        historique_technique = []
 
-    for dem in demandes:
-        tous_les_examens = dem.prestations.all()
+        for dem in demandes:
+            # Récupère les prestations
+            tous_les_examens = dem.prestations.all()
 
-        # Utilise le related_name 'resultats_examens'
-        resultats_dict = {
-            res.prestation.id: res
-            for res in dem.resultats_examens.all()  # <-- CORRIGÉ
-        }
+            # Récupère les résultats
+            resultats = dem.resultats_examens.all()
+            resultats_dict = {res.prestation_id: res for res in resultats}
 
-        details_examens = []
-        for p in tous_les_examens:
-            res = resultats_dict.get(p.id)
+            details_examens = []
+            for p in tous_les_examens:
+                res = resultats_dict.get(p.id)
 
-            details_examens.append({
-                'prestation': p,
-                'statut': res.statut if res else 'EN_ATTENTE',
-                'id_resultat': res.id if res else None,
-                'rapport': res.rapport if res else None,
-                'est_ma_categorie': is_medecin or (p.categorie == cat_cible)
+                details_examens.append({
+                    'prestation': p,
+                    'statut': res.statut if res else 'EN_ATTENTE',
+                    'id_resultat': res.id if res else None,
+                    'rapport': res.rapport if res else None,
+                    'est_ma_categorie': is_medecin or (p.categorie == cat_cible)
+                })
+
+            historique_technique.append({
+                'id': dem.id,
+                'client': dem.client,
+                'patient': dem.client.noms if dem.client else "Inconnu",
+                'date': dem.date_demande,
+                'details': details_examens,
+                'medecin_demandeur': dem.medecin_demandeur or "Non spécifié",
+                'type_urgence': getattr(dem, 'urgence', 'Standard')
             })
 
-        historique_technique.append({
-            'id': dem.id,
-            'client': dem.client,
-            'patient': dem.client.noms if dem.client else "Inconnu",
-            'date': dem.date_demande,
-            'details': details_examens,
-            'medecin_demandeur': dem.medecin_demandeur or "Non spécifié",
-            'type_urgence': getattr(dem, 'urgence', 'Standard')
+        return render(request, 'back-end/client/historique_examen_externe_technicien.html', {
+            'historique_technique': historique_technique,
+            'fonctionKey': role_obj.fonctionKey.roleName,
+            'is_medecin': is_medecin,
+            'cat_cible': cat_cible,
+            'hopital_user': user_hopital,  # ← Ajoute ça pour afficher dans le template
         })
-
-    return render(request, 'back-end/client/historique_examen_externe_technicien.html', {
-        'historique_technique': historique_technique,
-        'fonctionKey': role_obj.fonctionKey.roleName,
-        'is_medecin': is_medecin,
-        'cat_cible': cat_cible
-    })
+        
+    except Exception as e:
+        # En cas d'erreur, affiche un message
+        return render(request, 'back-end/error.html', {'message': f"Erreur: {str(e)}"})
 # 
 # ==================================================================================
 # PAIEMENT DES L'EXAMEN EXTERNE
 # ==================================================================================
-@login_required
 @login_required
 def encaisser_examen_externe(request, demande_id):
     # 1. Rôle et hôpital de l’utilisateur
@@ -8581,10 +8588,10 @@ def prescrire_ordonnance_client_externe(request, client_id):
     fonctionKey = role.fonctionKey.roleName
     user_hopital = role.hopital
 
-    # Récupération du client externe (on peut aussi s'assurer qu'il appartient au même hôpital)
+    # Récupération du client externe
     client = get_object_or_404(ClientExterne, id=client_id)
 
-    # Vérifier que le client appartient au même hôpital (si vous enregistrez l'hôpital sur ClientExterne)
+    # Vérifier que le client appartient au même hôpital
     if user_hopital and hasattr(client, 'hopital') and client.hopital and client.hopital != user_hopital and fonctionKey != 'admin':
         return render(request, 'back-end/error.html', {'message': "Accès refusé : client hors de votre hôpital."})
 
@@ -8594,6 +8601,7 @@ def prescrire_ordonnance_client_externe(request, client_id):
                 ordonnance = OrdonnanceExterne.objects.create(
                     client=client,
                     medecin=request.user,
+                    hopital=user_hopital if fonctionKey != 'admin' else client.hopital,  # ← IMPORTANT
                     note_globale=request.POST.get('note_globale', '').strip()
                 )
 
@@ -8609,20 +8617,25 @@ def prescrire_ordonnance_client_externe(request, client_id):
                         ordonnance=ordonnance,
                         designation=designation,
                         posologie=posologies[i].strip() if i < len(posologies) else "",
-                        quantite=quantites[i].strip() if i < len(quantites) else ""
+                        quantite=quantites[i].strip() if i < len(quantites) else "",
+                        hopital=user_hopital if fonctionKey != 'admin' else client.hopital  # ← Ajoute ça aussi
                     )
 
             messages.success(request, f"Ordonnance enregistrée pour {client.noms}.")
-            return redirect('detail_client_externe', client_id=client.id)
+            return redirect('liste_ordonnances_externes_client')
 
         except Exception as e:
             messages.error(request, f"Une erreur est survenue lors de l'enregistrement : {e}")
-            return render(request, 'back-end/client/prescrire.html', {'client': client, 'fonctionKey': fonctionKey})
+            return render(request, 'back-end/client/prescrire_ordonnance_client_externe.html', {
+                'client': client, 
+                'fonctionKey': fonctionKey
+            })
 
     # GET : affichage
     return render(request, 'back-end/client/prescrire_ordonnance_client_externe.html', {
         'client': client,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'user_hopital': user_hopital,
     })
 
 #
@@ -8670,9 +8683,18 @@ def liste_ordonnances_externes_client(request):
 
     ordonnances = ordonnances.order_by('-date_creation')
 
+    # Calcul des statistiques
+    today = datetime.now().date()
+    total = ordonnances.count()
+    actives = total
+    aujourd_hui = ordonnances.filter(date_creation__date=today).count()
+
     return render(request, 'back-end/client/liste_ordonnances_client.html', {
         'ordonnances': ordonnances,
-        'fonctionKey': fonction_key
+        'fonctionKey': fonction_key,
+        'total': total,
+        'actives': actives,
+        'aujourd_hui': aujourd_hui,
     })
 
 

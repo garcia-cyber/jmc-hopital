@@ -92,6 +92,7 @@ urlpatterns =[
      path('depense/nouvelle/', views.creer_depense, name='creer_depense'),
      path('patients/', views.liste_patients_urgence, name='liste_patients_urgence'),
      path('patient/<int:patient_id>/imprimer-facture/', views.imprimer_facture, name='imprimer_facture'),
+     path('finance/historique-depenses/', views.historique_depenses, name='historique_depenses'),
 
      # ====================================
      # INFIRMIER

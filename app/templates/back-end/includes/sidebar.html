@@ -47,6 +47,7 @@
                         <ul style="display: none;">
                             <li><a href="{% url 'dashboard_finance_depense' %}">Journal de Caisse</a></li>
                             <li><a href="{% url 'creer_depense' %}">Saisir une Dépense</a></li>
+                            <li class="nav-item"><a href="{% url 'historique_depenses' %}" class="nav-link"><span>Historique des Dépenses</span></a></li>
                             {% if fonctionKey == 'admin' %}
                             <li><a href="{% url 'dashboard_finance' %}">Filtration Caisse</a></li>
                             {%endif%}

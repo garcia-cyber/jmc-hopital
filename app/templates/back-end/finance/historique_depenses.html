@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ titre_page }} - JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --success-dark: #059669;
+            --success-light: #34d399;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .page-wrapper {
+            background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+            min-height: 100vh;
+            padding: 1.5rem 0;
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
+            color: var(--success);
+        }
+
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item a {
+            color: var(--success);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--gray-600);
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--success), var(--success-dark));
+            color: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 3px solid rgba(255,255,255,0.2);
+        }
+
+        .card-header-custom h5 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header-custom .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .balance-box {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 2px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .balance-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .balance-title i {
+            color: var(--success);
+            font-size: 1.25rem;
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .balance-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+        }
+
+        .balance-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .balance-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .balance-note {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .balance-note i {
+            color: var(--success);
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-heading {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-heading i {
+            color: var(--success);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .required {
+            color: var(--success);
+            margin-left: 2px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 0.9375rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            transition: all 0.2s;
+            color: var(--gray-700);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--success);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-300);
+        }
+
+        .input-group {
+            display: flex;
+        }
+
+        .input-group .form-control {
+            flex: 1;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .input-group-addon {
+            background: var(--gray-100);
+            border: 2px solid var(--gray-200);
+            border-left: none;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            border-radius: 0 10px 10px 0;
+        }
+
+        .input-group .form-control:focus + .input-group-addon {
+            border-color: var(--success);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-help {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+            margin-top: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-help i {
+            font-size: 0.75rem;
+        }
+
+        .field-error {
+            font-size: 0.8125rem;
+            color: var(--danger);
+            margin-top: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .alert-soft {
+            background: #fef2f2;
+            border-left: 4px solid var(--danger);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            color: #991b1b;
+            font-size: 0.875rem;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .btn {
+            padding: 0.75rem 1.75rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+        }
+
+        .btn-success-custom {
+            background: linear-gradient(135deg, var(--success), var(--success-dark));
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+            color: white;
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            margin-top: 1.5rem;
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .custom-table thead th {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            font-weight: 700;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .custom-table tbody tr {
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .custom-table tbody tr:hover {
+            background: var(--gray-100);
+            transform: scale(1.005);
+        }
+
+        .custom-table tbody td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+            color: var(--gray-700);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 50px;
+            text-transform: uppercase;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-info {
+            background: #cffafe;
+            color: #164e63;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .page-item {
+            list-style: none;
+        }
+
+        .page-link {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--success);
+            text-decoration: none;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .page-link:hover {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .page-item.active .page-link {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .page-item.disabled .page-link {
+            background: var(--gray-100);
+            color: var(--gray-300);
+            border-color: var(--gray-200);
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 1.25rem 1.5rem;
+            }
+            .card-header-custom {
+                padding: 1.25rem 1.5rem;
+            }
+            .card-body {
+                padding: 1.5rem;
+            }
+            .balance-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-actions {
+                flex-direction: column-reverse;
+                gap: 0.75rem;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="page-header">
+                    <h1 class="page-title">
+                        <i class="fa fa-history"></i>
+                        {{ titre_page }}
+                    </h1>
+                    <ul class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard_finance' %}">Gestion Financière</a></li>
+                        <li class="breadcrumb-item active">Historique</li>
+                    </ul>
+                </div>
+
+                <!-- Form -->
+                <div class="form-card">
+                    <div class="card-header-custom">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <h5>
+                                <i class="fa fa-list"></i>
+                                Liste des Décaissements
+                            </h5>
+                            <span class="badge">
+                                <i class="fa fa-database"></i> {{ depenses.paginator.count }} dépenses
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Balance Box -->
+                        <div class="balance-box">
+                            <div class="balance-title">
+                                <i class="fa fa-chart-pie"></i>
+                                <span>Récapitulatif des Dépenses</span>
+                            </div>
+                            <div class="balance-grid">
+                                <div class="balance-item">
+                                    <div class="balance-label">Total USD</div>
+                                    <div class="balance-value">{{ total_usd|floatformat:2 }} $</div>
+                                </div>
+                                <div class="balance-item">
+                                    <div class="balance-label">Total CDF</div>
+                                    <div class="balance-value">{{ total_cdf|floatformat:2 }} FC</div>
+                                </div>
+                            </div>
+                            <div class="balance-note">
+                                <i class="fa fa-info-circle"></i>
+                                <span>Totaux calculés sur la période sélectionnée</span>
+                            </div>
+                        </div>
+
+                        <!-- Filtres -->
+                        <div class="form-section">
+                            <div class="section-heading">
+                                <i class="fa fa-filter"></i>
+                                Filtres de Recherche
+                            </div>
+
+                            <form method="GET" action="">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="q" class="form-label">Recherche</label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="q" 
+                                               name="q" 
+                                               placeholder="Description, auteur, bénéficiaire..." 
+                                               value="{{ q }}">
+                                    </div>
+                                    
+                                    <div class="col-md-2 mb-3">
+                                        <label for="devise" class="form-label">Devise</label>
+                                        <select class="form-control" id="devise" name="devise">
+                                            <option value="">Toutes</option>
+                                            <option value="USD" {% if devise_filter == 'USD' %}selected{% endif %}>USD</option>
+                                            <option value="CDF" {% if devise_filter == 'CDF' %}selected{% endif %}>CDF</option>
+                                        </select>
+                                    </div>
+                                    
+                                    {% if is_admin %}
+                                    <div class="col-md-3 mb-3">
+                                        <label for="hopital_id" class="form-label">Hôpital</label>
+                                        <select class="form-control" id="hopital_id" name="hopital_id">
+                                            <option value="">Tous</option>
+                                            {% for hop in hopitaux %}
+                                                <option value="{{ hop.id }}" {% if hopital_filter == hop.id|stringformat:"s" %}selected{% endif %}>
+                                                    {{ hop.nom }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="col-md-2 mb-3">
+                                        <label for="date_debut" class="form-label">Du</label>
+                                        <input type="date" class="form-control" id="date_debut" name="date_debut" value="{{ date_debut }}">
+                                    </div>
+                                    
+                                    <div class="col-md-2 mb-3">
+                                        <label for="date_fin" class="form-label">Au</label>
+                                        <input type="date" class="form-control" id="date_fin" name="date_fin" value="{{ date_fin }}">
+                                    </div>
+                                    
+                                    <div class="col-md-12 mb-3">
+                                        <button type="submit" class="btn btn-success-custom">
+                                            <i class="fa fa-search"></i> Filtrer
+                                        </button>
+                                        {% if q or devise_filter or hopital_filter or date_debut or date_fin %}
+                                            <a href="?" class="btn btn-secondary">
+                                                <i class="fa fa-refresh"></i> Réinitialiser
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tableau -->
+                        <div class="table-responsive">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        {% if is_admin %}<th>Hôpital</th>{% endif %}
+                                        <th>Motif</th>
+                                        <th>Devise</th>
+                                        <th>Montant</th>
+                                        <th>Auteur</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dep in depenses %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge badge-primary">{{ dep.id }}</span>
+                                            </td>
+                                            <td>
+                                                <strong>{{ dep.date_depense|date:"d/m/Y" }}</strong><br>
+                                                <small style="color: var(--gray-600);">{{ dep.date_depense|date:"H:i" }}</small>
+                                            </td>
+                                            
+                                            {% if is_admin %}
+                                            <td>
+                                                <span class="badge badge-info">{{ dep.hopital.nom|default:"--" }}</span>
+                                            </td>
+                                            {% endif %}
+                                            
+                                            <td>
+                                                <strong>{{ dep.get_motif_display }}</strong>
+                                                {% if dep.beneficiaire %}
+                                                    <br><small style="color: var(--gray-600);">{{ dep.beneficiaire|truncatechars:30 }}</small>
+                                                {% endif %}
+                                            </td>
+                                            
+                                            <td>
+                                                <span class="badge {% if dep.devise == 'USD' %}badge-primary{% else %}badge-success{% endif %}">
+                                                    {{ dep.devise }}
+                                                </span>
+                                            </td>
+                                            
+                                            <td>
+                                                <strong style="color: {% if dep.devise == 'USD' %}var(--primary){% else %}var(--success){% endif %};">
+                                                    {{ dep.montant|floatformat:2 }} {{ dep.devise }}
+                                                </strong>
+                                            </td>
+                                            
+                                            <td>
+                                                {{ dep.auteur.get_full_name|default:dep.auteur.username }}
+                                            </td>
+                                            
+                                            <td class="text-right">
+                                                <a href="#" 
+                                                   class="btn btn-sm btn-secondary"
+                                                   style="font-size: 0.8125rem; padding: 0.5rem 1rem;"
+                                                   data-toggle="modal"
+                                                   data-target="#modal_detail_{{ dep.id }}">
+                                                    <i class="fa fa-eye"></i> Voir
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="{% if is_admin %}8{% else %}7{% endif %}" 
+                                                style="text-align: center; padding: 3rem 1.25rem; color: var(--gray-600);">
+                                                <i class="fa fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
+                                                Aucune dépense trouvée.
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if depenses.has_other_pages %}
+                        <div class="pagination">
+                            {% if depenses.has_previous %}
+                                <div class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ depenses.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if devise_filter %}&devise={{ devise_filter }}{% endif %}{% if hopital_filter %}&hopital_id={{ hopital_filter }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}">
+                                        &laquo;
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="page-item disabled">
+                                    <span class="page-link">&laquo;</span>
+                                </div>
+                            {% endif %}
+
+                            {% for i in depenses.paginator.page_range %}
+                                {% if depenses.number == i %}
+                                    <div class="page-item active">
+                                        <span class="page-link">{{ i }}</span>
+                                    </div>
+                                {% else %}
+                                    <div class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}{% if devise_filter %}&devise={{ devise_filter }}{% endif %}{% if hopital_filter %}&hopital_id={{ hopital_filter }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}">
+                                            {{ i }}
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if depenses.has_next %}
+                                <div class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ depenses.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if devise_filter %}&devise={{ devise_filter }}{% endif %}{% if hopital_filter %}&hopital_id={{ hopital_filter }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}">
+                                        &raquo;
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="page-item disabled">
+                                    <span class="page-link">&raquo;</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals pour détails -->
+    {% for dep in depenses %}
+    <div class="modal fade" id="modal_detail_{{ dep.id }}" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--success), var(--success-dark)); color: white; border-bottom: 3px solid rgba(255,255,255,0.2);">
+                    <h5 class="modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 700;">
+                        <i class="fa fa-file-invoice-dollar"></i>
+                        Dépense #{{ dep.id }}
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" style="color: white; opacity: 1;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 2rem;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); width: 40%; font-size: 0.875rem; color: var(--gray-700);">Date</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.date_depense|date:"d/m/Y à H:i" }}</td>
+                        </tr>
+                        {% if is_admin %}
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Hôpital</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.hopital.nom|default:"--" }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Motif</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.get_motif_display }}</td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Bénéficiaire</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.beneficiaire|default:"--" }}</td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Description</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.description|default:"--" }}</td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Devise</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">
+                                <span class="badge badge-primary">{{ dep.devise }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Montant</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 1.125rem; font-weight: 700; color: {% if dep.devise == 'USD' %}var(--primary){% else %}var(--success){% endif %};">
+                                {{ dep.montant|floatformat:2 }} {{ dep.devise }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding: 0.75rem 1rem; text-align: left; background: var(--gray-100); font-size: 0.875rem; color: var(--gray-700);">Auteur</th>
+                            <td style="padding: 0.75rem 1rem; text-align: left; font-size: 0.9375rem;">{{ dep.auteur.get_full_name|default:dep.auteur.username }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--gray-200); padding: 1.5rem 2rem;">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fa fa-times"></i> Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

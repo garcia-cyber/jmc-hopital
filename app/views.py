@@ -2779,6 +2779,107 @@ def creer_depense(request):
     return render(request, 'back-end/finance/creer_depense.html', context)
 
 # ==================================================================================================
+# HISTORIQUE DES DEPENSES
+# ==================================================================================================
+@login_required
+def historique_depenses(request):
+    # Rôle / hôpital de l'utilisateur
+    role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
+    
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    hopital_user = role.hopital if role and role.hopital else None
+    hopital_user_id = role.hopital_id if role and role.hopital_id else None
+    
+    # Vérifier si admin
+    is_admin = fonctionKey and fonctionKey.lower() in ['admin', 'administrateur', 'superadmin']
+    
+    # Filtrer les dépenses selon le rôle
+    if is_admin:
+        # Admin voit toutes les dépenses de tous les hôpitaux
+        depenses = Depense.objects.select_related('hopital', 'auteur').all()
+    else:
+        # Les autres ne voient que les dépenses de leur hôpital
+        if hopital_user_id:
+            depenses = Depense.objects.select_related('hopital', 'auteur').filter(
+                hopital_id=hopital_user_id
+            )
+        else:
+            depenses = Depense.objects.none()
+    
+    # Filtres de recherche
+    q = request.GET.get('q', '').strip()
+    if q:
+        depenses = depenses.filter(
+            Q(description__icontains=q) |
+            Q(auteur__username__icontains=q) |
+            Q(auteur__first_name__icontains=q) |
+            Q(auteur__last_name__icontains=q) |
+            Q(motif__icontains=q) |
+            Q(beneficiaire__icontains=q)
+        )
+    
+    # Filtre par devise
+    devise_filter = request.GET.get('devise', '').strip()
+    if devise_filter:
+        depenses = depenses.filter(devise=devise_filter)
+    
+    # Filtre par hôpital (seulement pour admin)
+    hopital_filter = request.GET.get('hopital_id', '').strip()
+    if is_admin and hopital_filter:
+        depenses = depenses.filter(hopital_id=hopital_filter)
+    
+    # Filtre par date_depense
+    date_debut = request.GET.get('date_debut', '').strip()
+    date_fin = request.GET.get('date_fin', '').strip()
+    
+    if date_debut:
+        depenses = depenses.filter(date_depense__gte=date_debut)
+    if date_fin:
+        depenses = depenses.filter(date_depense__lte=date_fin)
+    
+    # Tri : plus récent en premier
+    depenses = depenses.order_by('-date_depense', '-id')
+    
+    # Pagination
+    paginator = Paginator(depenses, 25)
+    page_number = request.GET.get('page', 1)
+    depenses_page = paginator.get_page(page_number)
+    
+    # Calcul des totaux par devise
+    def total_par_devise(devise):
+        qs = depenses.filter(devise=devise)
+        total = qs.aggregate(
+            total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
+        )['total']
+        return total or Decimal('0.00')
+    
+    total_usd = total_par_devise('USD')
+    total_cdf = total_par_devise('CDF')
+    
+    # Liste des hôpitaux (pour le filtre admin)
+    hopitaux = None
+    if is_admin:
+        hopitaux = Hopital.objects.all()
+    
+    context = {
+        'depenses': depenses_page,
+        'titre_page': "Historique des Dépenses",
+        'fonctionKey': fonctionKey,
+        'is_admin': is_admin,
+        'hopital_user': hopital_user,
+        'hopitaux': hopitaux,
+        'total_usd': total_usd,
+        'total_cdf': total_cdf,
+        'q': q,
+        'devise_filter': devise_filter,
+        'hopital_filter': hopital_filter,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+    }
+    
+    return render(request, 'back-end/finance/historique_depenses.html', context)
+
+# ==================================================================================================
 # 42 : FINANCE GESTION DE DETTE  JOURNAL
 # ==================================================================================================
 @login_required

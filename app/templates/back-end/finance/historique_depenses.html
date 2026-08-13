@@ -558,7 +558,7 @@
                                             <option value="">Tous</option>
                                             {% for hop in hopitaux %}
                                                 <option value="{{ hop.id }}" {% if hopital_filter == hop.id|stringformat:"s" %}selected{% endif %}>
-                                                    {{ hop.nom }}
+                                                    {{ hop.nomH }}
                                                 </option>
                                             {% endfor %}
                                         </select>

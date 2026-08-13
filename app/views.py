@@ -2756,7 +2756,7 @@ def creer_depense(request):
                 depense.full_clean()
                 depense.save()
                 messages.success(request, "La dépense a été enregistrée avec succès !")
-                return redirect('dashboard_finance_depense')
+                return redirect('historique_depenses')
 
             except ValidationError as e:
                 if hasattr(e, 'message_dict'):

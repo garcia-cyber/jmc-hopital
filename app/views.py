@@ -1682,6 +1682,7 @@ def consultation_medicale(request, triage_id):
 # MEDECIN  LISTE DES EXAMENS CONSULTER
 # ==================================================================================================
 @login_required
+@login_required
 def liste_consultations_terminees(request):
     # Rôle / hôpital
     role = (
@@ -1716,8 +1717,8 @@ def liste_consultations_terminees(request):
                 Q(medecin__last_name__icontains=q)
             )
 
-        # Tri : plus récente en premier
-        consultations = consultations.order_by('-date_creation')
+        # Tri : ID le plus élevé en premier (décroissant)
+        consultations = consultations.order_by('-id')  # <-- LE '-' EST IMPORTANT
 
     context = {
         'consultations': consultations,

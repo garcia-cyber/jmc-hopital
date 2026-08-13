@@ -72,6 +72,7 @@
                         <table class="table table-hover custom-table mb-0 datatable">
                             <thead class="thead-dark">
                             <tr>
+                                <th>ID</th>
                                 <th>Date & Heure</th>
                                 <th>Patient</th>
                                 <th>Téléphone</th>
@@ -86,6 +87,9 @@
                             <tbody>
                             {% for c in consultations %}
                                 <tr>
+                                    <td>
+                                        <span class="badge badge-primary">{{ c.id }}</span>
+                                    </td>
                                     <td>
                                         <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
                                         <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
@@ -189,14 +193,14 @@
                                         </a>
                                     </td>
                                 </tr>
-                                {% empty %}
+                            {% empty %}
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         <i class="fa fa-folder-open fa-2x"></i><br>
                                         Aucune consultation n'a encore été enregistrée dans le système Moyanoli.
                                     </td>
                                 </tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -297,5 +301,18 @@
 {% endfor %}
 
 {% include 'back-end/includes/js.html' %}
+<script>
+    $(document).ready(function() {
+        // Détruire l'instance existante et réinitialiser avec le bon tri
+        if ($.fn.DataTable.isDataTable('.datatable')) {
+            $('.datatable').DataTable().destroy();
+        }
+        
+        $('.datatable').DataTable({
+            "order": [],  // Aucun tri par défaut
+            "pageLength": 25
+        });
+    });
+</script>
 </body>
 </html>

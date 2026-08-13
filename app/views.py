@@ -7766,12 +7766,24 @@ def historique_examen_externe_technicien(request):
     if is_medecin:
         demandes = DemandeExamenExterne.objects.filter(
             hopital=user_hopital
+        ).select_related('client', 'medecin_demandeur').prefetch_related(
+            'prestations',
+            Prefetch(
+                'examenexternresultat_set',
+                queryset=ExamenExterneResultat.objects.select_related('prestation')
+            )
         ).order_by('-date_demande')
     elif cat_cible:
         demandes = DemandeExamenExterne.objects.filter(
             hopital=user_hopital,
             prestations__categorie=cat_cible
-        ).distinct().order_by('-date_demande')
+        ).distinct().select_related('client', 'medecin_demandeur').prefetch_related(
+            'prestations',
+            Prefetch(
+                'examenexternresultat_set',
+                queryset=ExamenExterneResultat.objects.select_related('prestation')
+            )
+        ).order_by('-date_demande')
     else:
         return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
 
@@ -7780,9 +7792,15 @@ def historique_examen_externe_technicien(request):
     for dem in demandes:
         tous_les_examens = dem.prestations.all()
 
+        # Créer un dictionnaire des résultats par prestation pour accès rapide
+        resultats_dict = {
+            res.prestation.id: res
+            for res in dem.examenexternresultat_set.all()
+        }
+
         details_examens = []
         for p in tous_les_examens:
-            res = ExamenExterneResultat.objects.filter(demande=dem, prestation=p).first()
+            res = resultats_dict.get(p.id)
 
             details_examens.append({
                 'prestation': p,
@@ -7795,7 +7813,7 @@ def historique_examen_externe_technicien(request):
         historique_technique.append({
             'id': dem.id,
             'client': dem.client,
-            'patient': dem.client.noms,
+            'patient': dem.client.noms if dem.client else "Inconnu",
             'date': dem.date_demande,
             'details': details_examens,
             'medecin_demandeur': dem.medecin_demandeur if hasattr(dem, 'medecin_demandeur') else "Non spécifié",

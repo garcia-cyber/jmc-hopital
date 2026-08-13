@@ -232,7 +232,7 @@ class DepenseForm(forms.ModelForm):
         
         # Injection des classes Bootstrap pour le design
         widgets = {
-            'motif': forms.Select(attrs={'class': 'form-control'}),
+            'motif': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Détails de la dépense...'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 150'}),
             'devise': forms.Select(attrs={'class': 'form-control'}),

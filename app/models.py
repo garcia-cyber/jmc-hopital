@@ -588,17 +588,9 @@ class LigneMedicament(models.Model):
 # 14. DEPENSE ======================================================
 class Depense(models.Model):
     CURRENCY = [('USD', 'USD'), ('CDF', 'CDF')]
-    CATEGORIES = [
-        ('LABO_REACTIF', 'Réactifs & Matériel Labo'),
-        ('PHARMA_STOCK', 'Achat Stock Pharmacie'),
-        ('CARBURANT', 'Carburant Générateur'),
-        ('MAINTENANCE', 'Maintenance & Réparations'),
-        ('ADMIN', 'Frais Administratifs & Bureau'),
-        ('SALAIRE', 'Avances & Salaires Personnel'),
-        ('AUTRE', 'Autre dépense'),
-    ]
+    
 
-    motif = models.CharField(max_length=50, choices=CATEGORIES, verbose_name="Motif")
+    motif = models.CharField(max_length=50, verbose_name="Motif")
     description = models.TextField(blank=True, null=True)
     montant = models.DecimalField(max_digits=15, decimal_places=2)
     devise = models.CharField(max_length=3, choices=CURRENCY, default='USD')

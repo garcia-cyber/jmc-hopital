@@ -416,12 +416,12 @@
                             </div>
                         </div>
 
-                        {% if form.non_field_errors %}
-                            <div class="alert-soft">
-                                {% for error in form.non_field_errors %}
-                                    <div><i class="fa fa-exclamation-triangle"></i> {{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert-soft">
+                                    <div><i class="fa fa-exclamation-triangle"></i> {{ message }}</div>
+                                </div>
+                            {% endfor %}
                         {% endif %}
 
                         <form method="POST" autocomplete="off" novalidate>
@@ -439,15 +439,19 @@
                                         <label for="motif" class="form-label">
                                             Motif de la dépense <span class="required">*</span>
                                         </label>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="motif" 
-                                               name="motif" 
-                                               placeholder="Ex: Achat fournitures, Paiement électricité, Transport..." 
-                                               required>
+                                        <select class="form-control" id="motif" name="motif" required>
+                                            <option value="">Sélectionnez un motif</option>
+                                            <option value="LABO_REACTIF">Réactifs & Matériel Labo</option>
+                                            <option value="PHARMA_STOCK">Achat Stock Pharmacie</option>
+                                            <option value="CARBURANT">Carburant Générateur</option>
+                                            <option value="MAINTENANCE">Maintenance & Réparations</option>
+                                            <option value="ADMIN">Frais Administratifs & Bureau</option>
+                                            <option value="SALAIRE">Avances & Salaires Personnel</option>
+                                            <option value="AUTRE">Autre dépense</option>
+                                        </select>
                                         <div class="form-help">
-                                            <i class="fa fa-lightbulb"></i>
-                                            Saisissez librement le motif de votre dépense
+                                            <i class="fa fa-list"></i>
+                                            Sélectionnez le motif correspondant à votre dépense
                                         </div>
                                     </div>
                                 </div>

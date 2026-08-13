@@ -32,7 +32,16 @@ INSTALLED_APPS = [
     "crispy_bootstrap4",
     "channels",
     "video",
-    "csp",  # <-- corrigé de 'cps' à 'csp'
+    "csp",
+    'axes',
+    'honeypot',
+]
+
+
+# Backend d'authentification pour django-axes
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',  # <-- doit être en premier
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 
@@ -43,7 +52,7 @@ ASGI_APPLICATION = "conf.asgi.application"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "csp.middleware.CSPMiddleware",  # <-- doit être après SecurityMiddleware
+    "csp.middleware.CSPMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -51,7 +60,16 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'honeypot.middleware.HoneypotMiddleware',
+    'axes.middleware.AxesMiddleware',  # <-- DOIT ÊTRE EN DERNIER
 ]
+
+
+# bloquage des ip apres plusieurs tentatives
+AXES_FAILURE_LIMIT = 5  # 5 tentatives max
+AXES_COOLOFF_TIME = 1  # 1 heure de blocage
+AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+AXES_RESET_ON_SUCCESS = True
 
 
 ROOT_URLCONF = "conf.urls"

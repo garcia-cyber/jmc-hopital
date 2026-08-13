@@ -65,11 +65,15 @@ MIDDLEWARE = [
 ]
 
 
-# bloquage des ip apres plusieurs tentatives
+# ==========================================
+# DJANGO-AXES - Protection contre brute-force
+# ==========================================
 AXES_FAILURE_LIMIT = 5  # 5 tentatives max
 AXES_COOLOFF_TIME = 1  # 1 heure de blocage
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
 AXES_RESET_ON_SUCCESS = True
+
+# Remplace AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP (déprécié)
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 
 ROOT_URLCONF = "conf.urls"
@@ -138,62 +142,66 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # ==========================================
-# CONTENT SECURITY POLICY (CSP) - django-csp
+# CONTENT SECURITY POLICY (CSP) - django-csp 4.0
 # ==========================================
 
 # Mode report-only (décommente pour tester sans bloquer)
 # CSP_REPORT_ONLY = True
 # CSP_REPORT_URI = "/csp-report/"  # optionnel
 
-# Politique CSP pour production
+# Politique CSP pour production (nouveau format django-csp 4.0)
 if not DEBUG:
-    CSP_DEFAULT_SRC = ("'self'",)
-    
-    CSP_STYLE_SRC = (
-        "'self'",
-        "'unsafe-inline'",  # nécessaire pour Bootstrap/crispy-forms
-        "https://cdn.jsdelivr.net",
-        "https://cdn.datatables.net",
-        "https://stackpath.bootstrapcdn.com",
-        "https://maxcdn.bootstrapcdn.com",
-    )
-    
-    CSP_SCRIPT_SRC = (
-        "'self'",
-        "'unsafe-inline'",  # nécessaire pour certains scripts inline
-        "'unsafe-eval'",    # nécessaire pour DataTables/jQuery
-        "https://cdn.jsdelivr.net",
-        "https://cdn.datatables.net",
-        "https://code.jquery.com",
-        "https://stackpath.bootstrapcdn.com",
-        "https://maxcdn.bootstrapcdn.com",
-        "https://kit.fontawesome.com",
-    )
-    
-    CSP_IMG_SRC = (
-        "'self'",
-        "data:",
-        "https:",
-    )
-    
-    CSP_FONT_SRC = (
-        "'self'",
-        "https:",
-        "data:",
-    )
-    
-    CSP_FRAME_SRC = ("'self'",)
-    
-    CSP_OBJECT_SRC = ("'none'",)
-    
-    CSP_BASE_URI = ("'self'",)
-    
-    CSP_FORM_ACTION = ("'self'",)
-    
-    CSP_CONNECT_SRC = (
-        "'self'",
-        "https://jmc-hopital.onrender.com",
-    )
+    CONTENT_SECURITY_POLICY = {
+        'DIRECTIVES': {
+            'default-src': ("'self'",),
+            
+            'style-src': (
+                "'self'",
+                "'unsafe-inline'",  # nécessaire pour Bootstrap/crispy-forms
+                "https://cdn.jsdelivr.net",
+                "https://cdn.datatables.net",
+                "https://stackpath.bootstrapcdn.com",
+                "https://maxcdn.bootstrapcdn.com",
+            ),
+            
+            'script-src': (
+                "'self'",
+                "'unsafe-inline'",  # nécessaire pour certains scripts inline
+                "'unsafe-eval'",    # nécessaire pour DataTables/jQuery
+                "https://cdn.jsdelivr.net",
+                "https://cdn.datatables.net",
+                "https://code.jquery.com",
+                "https://stackpath.bootstrapcdn.com",
+                "https://maxcdn.bootstrapcdn.com",
+                "https://kit.fontawesome.com",
+            ),
+            
+            'img-src': (
+                "'self'",
+                "data:",
+                "https:",
+            ),
+            
+            'font-src': (
+                "'self'",
+                "https:",
+                "data:",
+            ),
+            
+            'frame-src': ("'self'",),
+            
+            'object-src': ("'none'",),
+            
+            'base-uri': ("'self'",),
+            
+            'form-action': ("'self'",),
+            
+            'connect-src': (
+                "'self'",
+                "https://jmc-hopital.onrender.com",
+            ),
+        }
+    }
 
 
 # Configuration sécurité

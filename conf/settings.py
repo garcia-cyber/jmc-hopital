@@ -31,15 +31,6 @@ INSTALLED_APPS = [
     "crispy_bootstrap4",
     "channels",
     "video",
-    "csp",
-    'axes',
-    'honeypot',
-]
-
-
-AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 
@@ -50,7 +41,6 @@ ASGI_APPLICATION = "conf.asgi.application"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "csp.middleware.CSPMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -58,19 +48,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'honeypot.middleware.HoneypotMiddleware',
-    'axes.middleware.AxesMiddleware',
 ]
-
-
-AXES_FAILURE_LIMIT = 10
-AXES_COOLOFF_TIME = 2
-AXES_RESET_ON_SUCCESS = True
-AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
-
-
-HONEYPOT_FIELD_NAME = 'email'
-HONEYPOT_VALUE = ''
 
 
 ROOT_URLCONF = "conf.urls"
@@ -135,78 +113,12 @@ MEDIA_URL = "/media/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# ==========================================
-# CONTENT SECURITY POLICY (CSP) - django-csp 4.0
-# ==========================================
-
-if not DEBUG:
-    CONTENT_SECURITY_POLICY = {
-        'DIRECTIVES': {
-            'default-src': ("'self'",),
-            
-            'style-src': (
-                "'self'",
-                "'unsafe-inline'",
-                "'unsafe-eval'",
-                "https://cdn.jsdelivr.net",
-                "https://cdn.datatables.net",
-                "https://stackpath.bootstrapcdn.com",
-                "https://maxcdn.bootstrapcdn.com",
-                "https://cdnjs.cloudflare.com",
-                "https://fonts.googleapis.com",
-            ),
-            
-            'script-src': (
-                "'self'",
-                "'unsafe-inline'",
-                "'unsafe-eval'",
-                "https://cdn.jsdelivr.net",
-                "https://cdn.datatables.net",
-                "https://code.jquery.com",
-                "https://stackpath.bootstrapcdn.com",
-                "https://maxcdn.bootstrapcdn.com",
-                "https://kit.fontawesome.com",
-                "https://cdnjs.cloudflare.com",
-            ),
-            
-            'img-src': (
-                "'self'",
-                "data:",
-                "https:",
-                "blob:",
-            ),
-            
-            'font-src': (
-                "'self'",
-                "https:",
-                "data:",
-                "https://fonts.gstatic.com",
-            ),
-            
-            'frame-src': ("'self'", "https:"),
-            
-            'object-src': ("'none'",),
-            
-            'base-uri': ("'self'",),
-            
-            'form-action': ("'self'",),
-            
-            'connect-src': (
-                "'self'",
-                "https://jmc-hopital.onrender.com",
-                "https:",
-            ),
-        }
-    }
-
-
-# Configuration sécurité
+# Configuration sécurité de base (sans CSP)
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
-    SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
     CSRF_TRUSTED_ORIGINS = ["https://jmc-hopital.onrender.com"]

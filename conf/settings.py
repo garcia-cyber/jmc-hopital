@@ -9,7 +9,6 @@ load_dotenv(BASE_DIR / ".env")
 
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-temporary-key")
-# Utiliser True par défaut pour le développement local
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
 
@@ -38,9 +37,8 @@ INSTALLED_APPS = [
 ]
 
 
-# Backend d'authentification pour django-axes
 AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesBackend',  # <-- doit être en premier
+    'axes.backends.AxesBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -61,26 +59,18 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     'honeypot.middleware.HoneypotMiddleware',
-    'axes.middleware.AxesMiddleware',  # <-- DOIT ÊTRE EN DERNIER
+    'axes.middleware.AxesMiddleware',
 ]
 
 
-# ==========================================
-# DJANGO-AXES - Protection contre brute-force
-# ==========================================
-AXES_FAILURE_LIMIT = 5  # 5 tentatives max
-AXES_COOLOFF_TIME = 1  # 1 heure de blocage
+AXES_FAILURE_LIMIT = 10
+AXES_COOLOFF_TIME = 2
 AXES_RESET_ON_SUCCESS = True
-
-# Remplace AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP (déprécié)
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 
-# ==========================================
-# DJANGO-HONEYPOT - Piège pour bots
-# ==========================================
-HONEYPOT_FIELD_NAME = 'email'  # ou le nom de ton champ caché
-HONEYPOT_VALUE = ''  # valeur attendue (vide par défaut)
+HONEYPOT_FIELD_NAME = 'email'
+HONEYPOT_VALUE = ''
 
 
 ROOT_URLCONF = "conf.urls"
@@ -104,21 +94,18 @@ TEMPLATES = [
 ]
 
 
-# --- CONFIGURATION BASE DE DONNÉES ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 if DATABASE_URL:
-    # Production (Render + Neon)
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True,  # Neon nécessite SSL
+            ssl_require=True,
         )
     }
 else:
-    # Développement (SQLite local)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -152,11 +139,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # CONTENT SECURITY POLICY (CSP) - django-csp 4.0
 # ==========================================
 
-# Mode report-only (décommente pour tester sans bloquer)
-# CSP_REPORT_ONLY = True
-# CSP_REPORT_URI = "/csp-report/"  # optionnel
-
-# Politique CSP pour production (nouveau format django-csp 4.0)
 if not DEBUG:
     CONTENT_SECURITY_POLICY = {
         'DIRECTIVES': {
@@ -164,38 +146,44 @@ if not DEBUG:
             
             'style-src': (
                 "'self'",
-                "'unsafe-inline'",  # nécessaire pour Bootstrap/crispy-forms
+                "'unsafe-inline'",
+                "'unsafe-eval'",
                 "https://cdn.jsdelivr.net",
                 "https://cdn.datatables.net",
                 "https://stackpath.bootstrapcdn.com",
                 "https://maxcdn.bootstrapcdn.com",
+                "https://cdnjs.cloudflare.com",
+                "https://fonts.googleapis.com",
             ),
             
             'script-src': (
                 "'self'",
-                "'unsafe-inline'",  # nécessaire pour certains scripts inline
-                "'unsafe-eval'",    # nécessaire pour DataTables/jQuery
+                "'unsafe-inline'",
+                "'unsafe-eval'",
                 "https://cdn.jsdelivr.net",
                 "https://cdn.datatables.net",
                 "https://code.jquery.com",
                 "https://stackpath.bootstrapcdn.com",
                 "https://maxcdn.bootstrapcdn.com",
                 "https://kit.fontawesome.com",
+                "https://cdnjs.cloudflare.com",
             ),
             
             'img-src': (
                 "'self'",
                 "data:",
                 "https:",
+                "blob:",
             ),
             
             'font-src': (
                 "'self'",
                 "https:",
                 "data:",
+                "https://fonts.gstatic.com",
             ),
             
-            'frame-src': ("'self'",),
+            'frame-src': ("'self'", "https:"),
             
             'object-src': ("'none'",),
             
@@ -206,6 +194,7 @@ if not DEBUG:
             'connect-src': (
                 "'self'",
                 "https://jmc-hopital.onrender.com",
+                "https:",
             ),
         }
     }

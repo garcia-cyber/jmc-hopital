@@ -1297,7 +1297,8 @@ class DemandeExamenExterne(models.Model):
         return f"Demande pour {self.client.noms} - {self.statut}"
 
 
-
+# =====================================================================================================
+#
 class ExamenExterneResultat(models.Model):
     # Lien vers la demande globale (le contenant principal)
     demande = models.ForeignKey(

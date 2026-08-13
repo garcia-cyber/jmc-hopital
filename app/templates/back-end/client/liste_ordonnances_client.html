@@ -300,14 +300,13 @@
                                                     {{ ordonnance.date_creation|date:"d/m/Y" }}
                                                 </td>
                                                 <td class="text-center">
-                                                    <a href="#" class="btn btn-sm btn-primary btn-action" 
-                                                       onclick="alert('Détail non disponible'); return false;">
-                                                        <i class="fa fa-eye"></i> Voir
-                                                    </a>
-                                                    <a href="#" class="btn btn-sm btn-success btn-action" 
-                                                       onclick="alert('Impression non disponible'); return false;">
-                                                        <i class="fa fa-print"></i>
-                                                    </a>
+                                                    
+                                                    <a href="{% url 'imprimer_ordonnance_externe' ordonnance.id %}" 
+   target="_blank"
+   class="btn btn-sm btn-success btn-action" 
+   title="Imprimer l'ordonnance">
+    <i class="fa fa-print"></i>
+</a>
                                                 </td>
                                             </tr>
                                         {% empty %}

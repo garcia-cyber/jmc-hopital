@@ -8637,7 +8637,25 @@ def prescrire_ordonnance_client_externe(request, client_id):
         'fonctionKey': fonctionKey,
         'user_hopital': user_hopital,
     })
-
+# ==========================================================================================================
+# imprimer ordonnance externe
+# ==========================================================================================================
+@login_required
+def imprimer_ordonnance_externe(request, ordonnance_id):
+    """Vue pour afficher l'ordonnance à imprimer"""
+    ordonnance = get_object_or_404(OrdonnanceExterne, id=ordonnance_id)
+    
+    # Vérifier les permissions
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+    
+    if fonctionKey != 'admin' and user_hopital and ordonnance.hopital != user_hopital:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    
+    return render(request, 'back-end/client/imprimer_ordonnance.html', {
+        'ordonnance': ordonnance,
+    })
 #
 # ==========================================================================================================
 # DETAIL CLIENT EXTERNE

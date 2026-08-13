@@ -53,6 +53,41 @@
             font-size: 0.85rem;
             color: #6c757d;
         }
+        .repartition-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .repartition-title {
+            font-weight: 600;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+        .repartition-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #c3e6cb;
+        }
+        .repartition-row:last-child {
+            border-bottom: none;
+        }
+        .repartition-label {
+            color: #155724;
+        }
+        .repartition-value {
+            font-weight: 700;
+            color: #28a745;
+        }
+        .medecin-info {
+            background: #e3f2fd;
+            border-left: 4px solid #0d6efd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -67,9 +102,21 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-8 offset-md-2">
                         <div class="card payment-card">
                             <div class="card-body">
+                                <!-- Info: Médecin demandeur -->
+                                {% if demande.medecin_demandeur %}
+                                <div class="medecin-info mb-4">
+                                    <h6 class="text-primary mb-2">
+                                        <i class="fa fa-user-md"></i> Médecin demandeur
+                                    </h6>
+                                    <p class="mb-0">
+                                        <strong>{{ demande.medecin_demandeur }}</strong>
+                                    </p>
+                                </div>
+                                {% endif %}
+
                                 <div class="info-box mb-4">
                                     <h5 class="text-primary">Détails de la demande</h5>
                                     <p class="mb-1"><strong>Patient :</strong> {{ demande.client.noms }}</p>
@@ -129,6 +176,40 @@
                                         <input type="number" step="0.01" name="montant_reduction" id="montant_reduction" class="form-control" value="0.00">
                                     </div>
 
+                                    <!-- NOUVEAU : Pourcentage médecin -->
+                                    <div class="form-group">
+                                        <label>
+                                            Pourcentage médecin référent (%)
+                                            <i class="fa fa-info-circle text-primary" 
+                                               data-bs-toggle="tooltip" 
+                                               title="Ex: 10% sur 100 USD = 10 USD pour le médecin, 90 USD pour l'hôpital">
+                                            </i>
+                                        </label>
+                                        <input type="number" step="0.01" name="pourcentage_medecin" id="pourcentage_medecin" 
+                                               class="form-control" min="0" max="100" value="0" 
+                                               placeholder="Ex: 10 pour 10%">
+                                        <small class="text-muted">
+                                            <i class="fa fa-calculator"></i> 
+                                            Le montant sera réparti : X% pour {{ demande.medecin_demandeur|default:"le médecin" }}, 
+                                            le reste pour l'hôpital
+                                        </small>
+                                    </div>
+
+                                    <!-- NOUVEAU : Affichage dynamique de la répartition -->
+                                    <div class="repartition-box" id="repartition-preview" style="display: none;">
+                                        <div class="repartition-title">
+                                            <i class="fa fa-pie-chart"></i> Répartition du paiement
+                                        </div>
+                                        <div class="repartition-row">
+                                            <span class="repartition-label">Médecin ({{ demande.medecin_demandeur|default:"Référent" }}) :</span>
+                                            <span class="repartition-value" id="montant-medecin">0.00 USD</span>
+                                        </div>
+                                        <div class="repartition-row">
+                                            <span class="repartition-label">Hôpital :</span>
+                                            <span class="repartition-value" id="montant-hopital">0.00 USD</span>
+                                        </div>
+                                    </div>
+
                                     <div class="text-right mt-4">
                                         <a href="{% url 'liste_demandes_externes' %}" class="btn btn-secondary">Annuler</a>
                                         <button type="submit" class="btn btn-success px-4">
@@ -155,10 +236,15 @@
             const montantSaisi = parseFloat(document.getElementById('montant_verse').value) || 0;
             const devise = document.getElementById('devise').value;
             const reduction = parseFloat(document.getElementById('montant_reduction').value) || 0;
+            const pourcentage = parseFloat(document.getElementById('pourcentage_medecin').value) || 0;
             const equivalentEl = document.getElementById('equivalent');
+            const repartitionBox = document.getElementById('repartition-preview');
+            const montantMedecinEl = document.getElementById('montant-medecin');
+            const montantHopitalEl = document.getElementById('montant-hopital');
 
             if (!montantSaisi) {
                 equivalentEl.textContent = '';
+                repartitionBox.style.display = 'none';
                 return;
             }
 
@@ -172,6 +258,19 @@
                 montantEnUSD = montantSaisi;
                 montantEnCDF = montantSaisi * TAUX;
                 equivalentEl.textContent = `Équivalent : ${Math.round(montantEnCDF)} CDF`;
+            }
+
+            // Calcul de la répartition
+            if (pourcentage > 0 && montantEnUSD > 0) {
+                const montantNet = montantEnUSD - reduction;
+                const medecin = (montantNet * pourcentage / 100).toFixed(2);
+                const hopital = (montantNet - medecin).toFixed(2);
+
+                montantMedecinEl.textContent = `${medecin} USD`;
+                montantHopitalEl.textContent = `${hopital} USD`;
+                repartitionBox.style.display = 'block';
+            } else {
+                repartitionBox.style.display = 'none';
             }
 
             // Vérification visuelle (en CDF)
@@ -204,8 +303,10 @@
             }
         });
 
-        // Mettre à jour l'équivalence quand on tape le montant
+        // Mettre à jour l'équivalence et la répartition quand on tape le montant ou le pourcentage
         document.getElementById('montant_verse').addEventListener('input', updatePreview);
+        document.getElementById('montant_reduction').addEventListener('input', updatePreview);
+        document.getElementById('pourcentage_medecin').addEventListener('input', updatePreview);
     </script>
 </body>
 </html>

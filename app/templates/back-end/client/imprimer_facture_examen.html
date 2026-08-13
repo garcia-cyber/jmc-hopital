@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture - Demande #{{ demande.id }}</title>
+    <style>
+        :root { --primary-color: #006064; --bg-light: #f4f7f6; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.5; 
+            color: #2d3436; 
+            max-width: 750px; 
+            margin: 40px auto; 
+            padding: 40px; 
+            background: white; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.05); 
+            border-top: 8px solid var(--primary-color); 
+        }
+        
+        .header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 20px; 
+            margin-bottom: 30px; 
+        }
+        .logo { 
+            max-width: 120px; 
+            height: auto;
+        }
+        .hospital-info { 
+            text-align: right; 
+        }
+        .hospital-info h1 { 
+            margin: 0; 
+            color: var(--primary-color); 
+            font-size: 24px; 
+            text-transform: uppercase; 
+        }
+        
+        .patient-card { 
+            background: var(--bg-light); 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            margin-bottom: 30px; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+        }
+        .patient-card div strong { 
+            color: var(--primary-color); 
+            display: block; 
+            font-size: 0.8rem; 
+            text-transform: uppercase; 
+        }
+        
+        h3 { 
+            border-left: 4px solid var(--primary-color); 
+            padding-left: 10px; 
+            color: var(--primary-color); 
+            margin-top: 30px; 
+            font-size: 1.1rem; 
+        }
+        
+        table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            margin-top: 15px; 
+        }
+        th { 
+            background: #f8f9fa; 
+            color: #636e72; 
+            padding: 12px; 
+            text-align: left; 
+            font-size: 0.9rem; 
+            border-bottom: 2px solid #eee; 
+        }
+        td { 
+            padding: 12px; 
+            border-bottom: 1px solid #f1f1f1; 
+        }
+        
+        .signature-box { 
+            margin-top: 50px; 
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .note-area { 
+            flex: 1; 
+            margin-right: 20px; 
+            font-size: 0.9rem; 
+        }
+        .stamp-area { 
+            width: 250px; 
+            text-align: center; 
+        }
+        
+        .repartition-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        .repartition-box h3 {
+            margin: 0 0 12px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+        .repartition-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ffc107;
+        }
+        .repartition-row:last-child {
+            border-bottom: none;
+        }
+        .repartition-label {
+            color: #856404;
+            font-weight: 600;
+        }
+        .repartition-value {
+            color: #856404;
+            font-weight: 700;
+        }
+        .pourcentage-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        
+        .medecin-demandeur {
+            background: #e3f2fd;
+            border-left: 4px solid #0d6efd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+        .medecin-demandeur h3 {
+            margin: 0 0 10px 0;
+            color: #0d6efd;
+            font-size: 16px;
+        }
+        
+        @media print { 
+            body { 
+                box-shadow: none; 
+                border-top: none; 
+                margin: 0; 
+                padding: 20px;
+            }
+            .no-print { 
+                display: none; 
+            } 
+        }
+    </style>
+</head>
+<body>
+    <!-- Boutons d'impression (cachés à l'impression) -->
+    <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 12px 30px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            🖨️ Imprimer la facture
+        </button>
+        <button onclick="window.close()" style="padding: 12px 30px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-left: 10px;">
+            ✕ Fermer
+        </button>
+    </div>
+
+    <!-- En-tête -->
+    <div class="header">
+        <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo JMC" class="logo">
+        <div class="hospital-info">
+            <h1>{{ demande.hopital.nomH|default:"JMC" }}</h1>
+            <p style="margin:0; font-size: 0.9rem;">Votre santé, notre priorité</p>
+            <p style="margin:5px 0 0 0; font-size: 0.85rem; color: #666;">
+                Facture #{{ demande.id }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Carte Patient -->
+    <div class="patient-card">
+        <div>
+            <strong>Patient</strong> 
+            {{ demande.client.noms }}
+        </div>
+        <div>
+            <strong>Date</strong> 
+            {{ demande.date_demande|date:"d/m/Y" }}
+        </div>
+        <div>
+            <strong>Médecin demandeur</strong> 
+            {{ demande.medecin_demandeur|default:"Non spécifié" }}
+        </div>
+        <div>
+            <strong>Hôpital</strong> 
+            {{ demande.hopital.nomH|default:"-" }}
+        </div>
+    </div>
+
+    <!-- Médecin demandeur -->
+    <div class="medecin-demandeur">
+        <h3><i class="fa fa-user-md"></i> Médecin Demandeur</h3>
+        <p style="font-size: 16px; color: #333; margin: 0;">
+            <strong>{{ demande.medecin_demandeur|default:"Non spécifié" }}</strong>
+        </p>
+    </div>
+
+    <!-- Examens -->
+    <h3>Examens Prescrits</h3>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;">#</th>
+                <th>Examen</th>
+                <th>Catégorie</th>
+                <th style="width: 120px; text-align: right;">Prix (CDF)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prestation in demande.prestations.all %}
+            <tr>
+                <td><strong>{{ forloop.counter }}</strong></td>
+                <td><strong>{{ prestation.libelle }}</strong></td>
+                <td>{{ prestation.categorie }}</td>
+                <td style="text-align: right;">{{ prestation.prix|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="color: #999; text-align: center; padding: 20px;">
+                    Aucun examen prescrit
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Répartition -->
+    <div class="repartition-box">
+        <h3><i class="fa fa-pie-chart"></i> Répartition des Paiements</h3>
+        
+        <div class="repartition-row">
+            <span class="repartition-label">Total Médecin ({{ demande.medecin_demandeur|default:"Référent" }}) :</span>
+            <span class="repartition-value">{{ total_medecin_cdf|floatformat:0 }} CDF</span>
+        </div>
+        <div class="repartition-row">
+            <span class="repartition-label">Total Caisse (Hôpital) :</span>
+            <span class="repartition-value">{{ total_hopital_cdf|floatformat:0 }} CDF</span>
+        </div>
+        <div class="repartition-row" style="border-top: 2px solid #856404; padding-top: 15px; margin-top: 15px;">
+            <span class="repartition-label" style="font-size: 16px;">Total Général :</span>
+            <span class="repartition-value" style="font-size: 18px;">{{ total_general_cdf|floatformat:0 }} CDF</span>
+        </div>
+    </div>
+
+    <!-- Détail des paiements -->
+    {% if paiements %}
+    <h3>Détail des Paiements</h3>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;">#</th>
+                <th>Date</th>
+                <th>Caissier</th>
+                <th style="text-align: right;">Montant (CDF)</th>
+                <th style="text-align: right;">% Médecin</th>
+                <th style="text-align: right;">Médecin (CDF)</th>
+                <th style="text-align: right;">Caisse (CDF)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in paiements %}
+            <tr>
+                <td><strong>{{ forloop.counter }}</strong></td>
+                <td>{{ p.date|date:"d/m/Y H:i" }}</td>
+                <td>{{ p.caissier.username|default:"-" }}</td>
+                <td style="text-align: right;"><strong>{{ p.montant_cdf|floatformat:0 }}</strong></td>
+                <td style="text-align: right;">
+                    <span class="pourcentage-badge">{{ p.pourcentage|floatformat:0 }}%</span>
+                </td>
+                <td style="text-align: right; color: #0d6efd;">{{ p.montant_medecin|floatformat:0 }}</td>
+                <td style="text-align: right; color: #28a745;">{{ p.montant_hopital|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Signature -->
+    <div class="signature-box">
+        <div class="note-area">
+            <strong>Notes :</strong><br>
+            Document généré automatiquement - Facture d'examen externe
+        </div>
+        <div class="stamp-area">
+            <p style="font-weight: 600; color: var(--primary-color);">Signature et Cachet</p>
+            <br><br><br>
+            <div style="border-top: 2px solid var(--primary-color); width: 100%;"></div>
+            <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+                La Caisse
+            </p>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <div style="margin-top: 50px; text-align: center; color: #999; font-size: 13px;">
+        <p><strong>{{ demande.hopital.nomH|default:"Hôpital" }}</strong></p>
+        <p>Document généré automatiquement - Facture d'examen externe</p>
+        <p style="color: #999; font-size: 12px; margin-top: 10px;">
+            ID: #{{ demande.id }} | Généré le {{ now|date:"d/m/Y à H:i" }}
+        </p>
+    </div>
+</body>
+</html>

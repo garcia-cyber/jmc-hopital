@@ -301,6 +301,7 @@ urlpatterns =[
     path('ordonnances/liste-client/', views.liste_ordonnances_externes_client, name='liste_ordonnances_externes_client'),
     path('ordonnance/consulter/<int:ordonnance_id>/', views.consulter_ordonnance_externe, name='consulter_ordonnance_externe'),
     path('ordonnances/<int:ordonnance_id>/imprimerExterne/', views.imprimer_ordonnance_externe, name='imprimer_ordonnance_externe'),
+     path('demandes/<int:demande_id>/facture/', views.imprimer_facture_examen_externe, name='imprimer_facture_examen_externe'),
 
     # ========================================
     # MATERIEL 

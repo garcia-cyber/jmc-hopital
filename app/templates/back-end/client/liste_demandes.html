@@ -67,6 +67,7 @@
         }
         .badge-payee { background-color: #d4edda; color: #155724; }
         .badge-attente { background-color: #fff3cd; color: #856404; }
+        .badge-partiel { background-color: #d1ecf1; color: #0c5460; }
 
         .search-container {
             margin-bottom: 20px;
@@ -98,6 +99,40 @@
         .montant-secondaire {
             font-size: 0.8rem;
             color: #6c757d;
+        }
+        .repartition-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .repartition-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px dashed #dee2e6;
+        }
+        .repartition-row:last-child {
+            border-bottom: none;
+        }
+        .caisse-label {
+            color: #28a745;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .medecin-label {
+            color: #007bff;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .pourcentage-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -131,7 +166,7 @@
                                         <th>Date</th>
                                         <th>Examens</th>
                                         <th>Total</th>
-                                        <th>Payé</th>
+                                        <th>Payé (Caisse + Médecin)</th>
                                         <th>Reste à payer</th>
                                         <th>Statut</th>
                                         <th class="text-right pr-3">Actions</th>
@@ -157,30 +192,81 @@
                                             {% endfor %}
                                         </td>
                                         <td>
-                                            <div class="montant-principal">{{ d.total_usd }} USD</div>
-                                            <div class="montant-secondaire">{{ d.total_cdf|floatformat:0 }} CDF</div>
+                                            <div class="montant-principal">{{ d.total_cdf|floatformat:0 }} CDF</div>
+                                            <div class="montant-secondaire">≈ {{ d.total_usd }} USD</div>
                                         </td>
                                         <td>
-                                            <div class="montant-principal">{{ d.deja_paye_usd }} USD</div>
-                                            <div class="montant-secondaire">{{ d.deja_paye_cdf|floatformat:0 }} CDF</div>
-                                        </td>
-                                        <td>
-                                            <div class="montant-principal text-danger">{{ d.reste_a_payer_usd }} USD</div>
-                                            <div class="montant-secondaire">{{ d.reste_a_payer_cdf|floatformat:0 }} CDF</div>
-                                        </td>
-                                        <td>
-                                            {% if d.demande.statut == 'PAYE' %}
-                                                <span class="badge-statut badge-payee">Payé</span>
+                                            {% if d.nombre_paiements > 0 %}
+                                                <div class="montant-principal text-success">{{ d.deja_paye_cdf|floatformat:0 }} CDF</div>
+                                                <div class="montant-secondaire">≈ {{ d.deja_paye_usd }} USD</div>
+                                                
+                                                <!-- Répartition Caisse / Médecin -->
+                                                <div class="repartition-box">
+                                                    <div class="repartition-row">
+                                                        <span class="caisse-label">
+                                                            <i class="fa fa-university"></i> Caisse:
+                                                        </span>
+                                                        <span class="font-weight-bold text-success">
+                                                            {{ d.total_hopital_cdf|floatformat:0 }} CDF
+                                                        </span>
+                                                    </div>
+                                                    <div class="repartition-row">
+                                                        <span class="medecin-label">
+                                                            <i class="fa fa-user-md"></i> Médecin:
+                                                        </span>
+                                                        <span class="font-weight-bold text-primary">
+                                                            {{ d.total_medecin_cdf|floatformat:0 }} CDF
+                                                        </span>
+                                                    </div>
+                                                    {% if d.paiements_details %}
+                                                        <div class="repartition-row mt-2" style="border-top: 1px solid #dee2e6; padding-top: 6px;">
+                                                            <small class="text-muted">
+                                                                {% for p in d.paiements_details %}
+                                                                    <span class="pourcentage-badge">{{ p.pourcentage_medecin|floatformat:0 }}%</span>
+                                                                {% endfor %}
+                                                            </small>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
                                             {% else %}
-                                                <span class="badge-statut badge-attente">En attente</span>
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="montant-principal text-danger">{{ d.reste_a_payer_cdf|floatformat:0 }} CDF</div>
+                                            <div class="montant-secondaire">≈ {{ d.reste_a_payer_usd }} USD</div>
+                                        </td>
+                                        <td>
+                                            {% if d.statut_paiement == 'PAYE' %}
+                                                <span class="badge-statut badge-payee">
+                                                    <i class="fa fa-check-circle"></i> Payé
+                                                </span>
+                                            {% elif d.statut_paiement == 'PARTIEL' %}
+                                                <span class="badge-statut badge-partiel">
+                                                    <i class="fa fa-clock-o"></i> Partiel
+                                                </span>
+                                            {% else %}
+                                                <span class="badge-statut badge-attente">
+                                                    <i class="fa fa-times-circle"></i> En attente
+                                                </span>
                                             {% endif %}
                                         </td>
                                         <td class="text-right pr-3">
-                                            <a href="#" class="btn btn-sm bg-primary-light action-btn">
+                                            <a href="{% url 'imprimer_facture_examen_externe' d.demande.id %}" 
+                                               target="_blank"
+                                               class="btn btn-sm bg-info-light action-btn" 
+                                               title="Imprimer la facture">
+                                                <i class="fa fa-file-text"></i> Facture
+                                            </a>
+                                            <a href="#" class="btn btn-sm bg-primary-light action-btn" 
+                                               onclick="alert('Détail non disponible'); return false;"
+                                               title="Voir détails">
                                                 <i class="fa fa-eye"></i>
                                             </a>
-                                            {% if d.demande.statut != 'PAYE' %}
-                                                <a href="{% url 'encaisser_examen_externe' d.demande.id %}" class="btn btn-sm bg-success-light action-btn">
+                                            {% if d.statut_paiement != 'PAYE' %}
+                                                <a href="{% url 'encaisser_examen_externe' d.demande.id %}" 
+                                                   class="btn btn-sm bg-success-light action-btn"
+                                                   title="Encaisser">
                                                     <i class="fa fa-money-bill"></i> Payer
                                                 </a>
                                             {% endif %}

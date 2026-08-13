@@ -7701,7 +7701,7 @@ def creer_demande_examen(request, client_id):
 
 @login_required
 def liste_demandes_externes(request):
-    # 1. Rôle et hôpital de l’utilisateur
+    # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
         .filter(userKey=request.user)
@@ -7711,9 +7711,9 @@ def liste_demandes_externes(request):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     user_hopital = role.hopital if role else None
 
-    # 2. Taux de change depuis la configuration de l’hôpital
+    # 2. Taux de change depuis la configuration de l'hôpital
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')  # 1 USD = taux CDF
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
     if not taux or taux == 0:
         taux = Decimal('2300.00')
 
@@ -7734,17 +7734,52 @@ def liste_demandes_externes(request):
         # Paiements liés à cette demande
         paiements = demande.paiements.all()
 
-        # Calcul du déjà payé en CDF
+        # Calcul du déjà payé en CDF (la somme est stockée en CDF dans Paiement)
         deja_paye_cdf = Decimal('0')
+        
+        # Totaux pour le médecin et l'hôpital (en CDF)
+        total_medecin_cdf = Decimal('0')
+        total_hopital_cdf = Decimal('0')
+        
+        # Liste des paiements détaillés
+        paiements_details = []
+
         for p in paiements:
-            if p.devise == 'CDF':
-                deja_paye_cdf += p.montant_verse or Decimal('0')
-            else:  # USD
-                deja_paye_cdf += (p.montant_verse or Decimal('0')) * taux
+            # Le montant est déjà en CDF dans le modèle Paiement
+            montant_cdf = p.montant_verse or Decimal('0')
+            montant_usd = (montant_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            deja_paye_cdf += montant_cdf
+
+            # Récupérer les montants médecin et hôpital (en CDF)
+            montant_medecin = p.montant_medecin or Decimal('0')
+            montant_hopital = p.montant_hopital or Decimal('0')
+            pourcentage = p.pourcentage_medecin or Decimal('0')
+
+            total_medecin_cdf += montant_medecin
+            total_hopital_cdf += montant_hopital
+
+            # Ajouter le détail du paiement
+            paiements_details.append({
+                'paiement': p,
+                'montant_cdf': montant_cdf,
+                'montant_usd': montant_usd,
+                'pourcentage_medecin': pourcentage,
+                'montant_medecin': montant_medecin,
+                'montant_hopital': montant_hopital,
+            })
 
         # Reste à payer en CDF
         reste_a_payer_cdf = max(Decimal('0'), total_cdf - deja_paye_cdf)
         reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        # Statut de paiement
+        if reste_a_payer_cdf <= Decimal('1'):
+            statut_paiement = 'PAYE'
+        elif deja_paye_cdf > Decimal('0'):
+            statut_paiement = 'PARTIEL'
+        else:
+            statut_paiement = 'NON_PAYE'
 
         demandes_data.append({
             'demande': demande,
@@ -7754,6 +7789,13 @@ def liste_demandes_externes(request):
             'deja_paye_usd': (deja_paye_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
             'reste_a_payer_cdf': reste_a_payer_cdf,
             'reste_a_payer_usd': reste_a_payer_usd,
+            'statut_paiement': statut_paiement,
+            'total_medecin_cdf': total_medecin_cdf,
+            'total_hopital_cdf': total_hopital_cdf,
+            'total_medecin_usd': (total_medecin_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+            'total_hopital_usd': (total_hopital_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+            'paiements_details': paiements_details,
+            'nombre_paiements': paiements.count(),
         })
 
     return render(request, 'back-end/client/liste_demandes.html', {
@@ -7936,7 +7978,7 @@ def historique_examen_externe_technicien(request):
 # ==================================================================================
 @login_required
 def encaisser_examen_externe(request, demande_id):
-    # 1. Rôle et hôpital de l’utilisateur
+    # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
         .filter(userKey=request.user)
@@ -7958,14 +8000,13 @@ def encaisser_examen_externe(request, demande_id):
 
     client = demande.client
 
-    # 3. Taux de change depuis la configuration de l’hôpital
+    # 3. Taux de change depuis la configuration de l'hôpital
     config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')  # 1 USD = taux CDF
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
     if not taux or taux == 0:
         taux = Decimal('2300.00')
 
     # 4. Calcul du reste à payer (en CDF)
-    # total_a_payer est en USD, on le convertit en CDF
     total_due_cdf = (demande.total_a_payer * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
 
     # Paiements existants
@@ -7990,23 +8031,31 @@ def encaisser_examen_externe(request, demande_id):
     # 5. Traitement du formulaire POST
     if request.method == 'POST':
         devise = request.POST.get('devise', 'CDF')
-        montant_saisi = Decimal(request.POST.get('montant_verse', '0') or '0')
+        montant_total_patient = Decimal(request.POST.get('montant_verse', '0') or '0')  # Montant TOTAL payé par le patient
         reduction = Decimal(request.POST.get('montant_reduction', '0') or '0')
+        
+        # NOUVEAU : Récupérer le pourcentage du médecin
+        pourcentage_medecin = Decimal(request.POST.get('pourcentage_medecin', '0') or '0')
+
+        # Validation du pourcentage (0-100%)
+        if pourcentage_medecin < 0 or pourcentage_medecin > 100:
+            messages.error(request, "Le pourcentage doit être entre 0 et 100.")
+            return redirect('encaisser_examen_externe', demande_id=demande.id)
 
         # Vérification : montant > 0
-        if montant_saisi <= 0:
+        if montant_total_patient <= 0:
             messages.error(request, "Le montant à payer doit être supérieur à 0.")
             return redirect('encaisser_examen_externe', demande_id=demande.id)
 
         # Conversion du montant saisi en CDF
         if devise == 'CDF':
-            montant_saisi_cdf = montant_saisi
+            montant_total_patient_cdf = montant_total_patient
         else:  # USD
-            montant_saisi_cdf = montant_saisi * taux
+            montant_total_patient_cdf = montant_total_patient * taux
 
         # Vérifier si le montant dépasse le reste à payer (avec tolérance)
         tolerance_cdf = Decimal('1')
-        if montant_saisi_cdf > (reste_a_payer_cdf + tolerance_cdf):
+        if montant_total_patient_cdf > (reste_a_payer_cdf + tolerance_cdf):
             messages.error(
                 request,
                 f"Le montant dépasse le reste à payer "
@@ -8014,25 +8063,45 @@ def encaisser_examen_externe(request, demande_id):
             )
             return redirect('encaisser_examen_externe', demande_id=demande.id)
 
-        # On crée le paiement en stockant le montant dans la devise choisie
-        # (la logique de mise à jour du statut est dans save() de Paiement)
+        # NOUVEAU : Calcul des montants médecin et hôpital
+        montant_net = montant_total_patient - reduction  # Montant net après réduction
+        
+        # Calcul du pourcentage pour le médecin
+        montant_pour_medecin = (montant_net * pourcentage_medecin / 100).quantize(
+            Decimal('0.01'), 
+            rounding=ROUND_HALF_UP
+        )
+        
+        # Montant pour l'hôpital (CAISSE) = montant net - part médecin
+        montant_pour_hopital = (montant_net - montant_pour_medecin).quantize(
+            Decimal('0.01'), 
+            rounding=ROUND_HALF_UP
+        )
+
+        # IMPORTANT : montant_verse = montant pour la CAISSE (90 USD), pas le total (100 USD)
         Paiement.objects.create(
             demande_examen_externe=demande,
             clientEx=client,
             service='EXAMEN_EXTERNE',
-            montant_verse=montant_saisi,
+            montant_verse=montant_pour_hopital,  # ← SEULEMENT ce qui va à la caisse (90 USD)
             montant_reduction=reduction,
+            pourcentage_medecin=pourcentage_medecin,
+            montant_medecin=montant_pour_medecin,  # ← Part du médecin (10 USD)
+            montant_hopital=montant_pour_hopital,  # ← Part de la caisse (90 USD)
             caissier=request.user,
             devise=devise,
             hopital=user_hopital if fonctionKey != 'admin' else demande.hopital
         )
 
         # Nouveau reste à payer (pour message)
-        nouveau_reste_cdf = reste_a_payer_cdf - montant_saisi_cdf
+        # On soustrait le montant TOTAL (médecin + caisse) du reste à payer
+        nouveau_reste_cdf = reste_a_payer_cdf - montant_total_patient_cdf
         if nouveau_reste_cdf <= Decimal('1'):
             messages.success(
                 request,
-                f"Paiement enregistré. La demande de {client.noms} est soldée."
+                f"Paiement enregistré. La demande de {client.noms} est soldée. "
+                f"Répartition : Médecin ({demande.medecin_demandeur}) = {montant_pour_medecin} {devise}, "
+                f"Caisse = {montant_pour_hopital} {devise}"
             )
             return redirect('liste_demandes_externes')
         else:
@@ -8044,7 +8113,7 @@ def encaisser_examen_externe(request, demande_id):
             )
             return redirect('encaisser_examen_externe', demande_id=demande.id)
 
-    # 6. Contexte pour l’affichage (GET)
+    # 6. Contexte pour l'affichage (GET)
     return render(request, 'back-end/client/encaisser_examen.html', {
         'demande': demande,
         'client': client,
@@ -8052,8 +8121,69 @@ def encaisser_examen_externe(request, demande_id):
         'reste_a_payer_usd': reste_a_payer_usd,
         'taux': taux,
         'fonctionKey': fonctionKey,
-        'prestations': demande.prestations.all()
-    })#
+        'prestations': demande.prestations.all(),
+    })
+
+# ==========================================================================================
+# IMPRIMER FACTURE EXAMEN EXTERNE
+# ===========================================================================================
+@login_required
+def imprimer_facture_examen_externe(request, demande_id):
+    """Vue pour afficher la facture à imprimer"""
+    demande = get_object_or_404(DemandeExamenExterne, id=demande_id)
+    
+    # Vérifier les permissions
+    role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    user_hopital = role.hopital if role else None
+    
+    if fonctionKey != 'admin' and user_hopital and demande.hopital != user_hopital:
+        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    
+    # Récupérer le taux
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
+    
+    # Récupérer tous les paiements
+    paiements = demande.paiements.all()
+    
+    # Calculer les totaux
+    total_medecin_cdf = Decimal('0')
+    total_hopital_cdf = Decimal('0')
+    total_general_cdf = Decimal('0')
+    
+    paiements_details = []
+    
+    for p in paiements:
+        montant_cdf = p.montant_verse or Decimal('0')
+        montant_medecin = p.montant_medecin or Decimal('0')
+        montant_hopital = p.montant_hopital or Decimal('0')
+        pourcentage = p.pourcentage_medecin or Decimal('0')
+        
+        total_medecin_cdf += montant_medecin
+        total_hopital_cdf += montant_hopital
+        total_general_cdf += montant_cdf
+        
+        paiements_details.append({
+            'paiement': p,
+            'montant_cdf': montant_cdf,
+            'montant_medecin': montant_medecin,
+            'montant_hopital': montant_hopital,
+            'pourcentage': pourcentage,
+            'date': p.date_paiement,
+            'caissier': p.caissier,
+        })
+    
+    return render(request, 'back-end/client/imprimer_facture_examen.html', {
+        'demande': demande,
+        'taux': taux,
+        'paiements': paiements_details,
+        'total_medecin_cdf': total_medecin_cdf,
+        'total_hopital_cdf': total_hopital_cdf,
+        'total_general_cdf': total_general_cdf,
+    })
+
+#
 # ======================================================================================
 # LISTE DE FACTURATION 
 # ======================================================================================

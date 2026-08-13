@@ -254,6 +254,35 @@ class Paiement(models.Model):
         related_name="paiement_hopital"
     )
 
+    # NOUVEAUX : Pourcentage et répartition
+    pourcentage_medecin = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=0,
+        help_text="Pourcentage pour le médecin référent (ex: 10.00 pour 10%)",
+        null = True , 
+        blank = True
+    )
+    
+    montant_medecin = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        help_text="Montant pour le médecin (calculé automatiquement)",
+        null = True , 
+        blank = True
+    )
+    
+    montant_hopital = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        help_text="Montant pour l'hôpital (calculé automatiquement)",
+        null = True , 
+        blank = True
+    )
+
+
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 

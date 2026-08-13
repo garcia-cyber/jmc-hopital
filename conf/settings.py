@@ -3,18 +3,22 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-temporary-key")
 # Utiliser True par défaut pour le développement local
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "jmc-hopital.onrender.com",
 ]
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -28,14 +32,18 @@ INSTALLED_APPS = [
     "crispy_bootstrap4",
     "channels",
     "video",
+    "csp",  # <-- corrigé de 'cps' à 'csp'
 ]
+
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 ASGI_APPLICATION = "conf.asgi.application"
 
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "csp.middleware.CSPMiddleware",  # <-- doit être après SecurityMiddleware
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -45,8 +53,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
 ROOT_URLCONF = "conf.urls"
 WSGI_APPLICATION = "conf.wsgi.application"
+
 
 TEMPLATES = [
     {
@@ -64,8 +74,10 @@ TEMPLATES = [
     },
 ]
 
+
 # --- CONFIGURATION BASE DE DONNÉES ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
 
 if DATABASE_URL:
     # Production (Render + Neon)
@@ -73,7 +85,7 @@ if DATABASE_URL:
         "default": dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True, # Neon nécessite SSL
+            ssl_require=True,  # Neon nécessite SSL
         )
     }
 else:
@@ -85,21 +97,86 @@ else:
         }
     }
 
+
 AUTH_PASSWORD_VALIDATORS = []
+
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Africa/Kinshasa"
 USE_I18N = True
 USE_TZ = False
 
+
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ==========================================
+# CONTENT SECURITY POLICY (CSP) - django-csp
+# ==========================================
+
+# Mode report-only (décommente pour tester sans bloquer)
+# CSP_REPORT_ONLY = True
+# CSP_REPORT_URI = "/csp-report/"  # optionnel
+
+# Politique CSP pour production
+if not DEBUG:
+    CSP_DEFAULT_SRC = ("'self'",)
+    
+    CSP_STYLE_SRC = (
+        "'self'",
+        "'unsafe-inline'",  # nécessaire pour Bootstrap/crispy-forms
+        "https://cdn.jsdelivr.net",
+        "https://cdn.datatables.net",
+        "https://stackpath.bootstrapcdn.com",
+        "https://maxcdn.bootstrapcdn.com",
+    )
+    
+    CSP_SCRIPT_SRC = (
+        "'self'",
+        "'unsafe-inline'",  # nécessaire pour certains scripts inline
+        "'unsafe-eval'",    # nécessaire pour DataTables/jQuery
+        "https://cdn.jsdelivr.net",
+        "https://cdn.datatables.net",
+        "https://code.jquery.com",
+        "https://stackpath.bootstrapcdn.com",
+        "https://maxcdn.bootstrapcdn.com",
+        "https://kit.fontawesome.com",
+    )
+    
+    CSP_IMG_SRC = (
+        "'self'",
+        "data:",
+        "https:",
+    )
+    
+    CSP_FONT_SRC = (
+        "'self'",
+        "https:",
+        "data:",
+    )
+    
+    CSP_FRAME_SRC = ("'self'",)
+    
+    CSP_OBJECT_SRC = ("'none'",)
+    
+    CSP_BASE_URI = ("'self'",)
+    
+    CSP_FORM_ACTION = ("'self'",)
+    
+    CSP_CONNECT_SRC = (
+        "'self'",
+        "https://jmc-hopital.onrender.com",
+    )
+
 
 # Configuration sécurité
 if not DEBUG:

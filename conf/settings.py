@@ -76,6 +76,13 @@ AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 
+# ==========================================
+# DJANGO-HONEYPOT - Piège pour bots
+# ==========================================
+HONEYPOT_FIELD_NAME = 'email'  # ou le nom de ton champ caché
+HONEYPOT_VALUE = ''  # valeur attendue (vide par défaut)
+
+
 ROOT_URLCONF = "conf.urls"
 WSGI_APPLICATION = "conf.wsgi.application"
 

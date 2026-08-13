@@ -4,9 +4,112 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Nouvelle Cons Patients - JMC Médicale</title>
+    <title>File d'attente Triage - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
+    <style>
+        .page-banner {
+            background: linear-gradient(135deg, #0d6efd, #4f8cff);
+            color: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(13, 110, 253, 0.18);
+        }
+        .page-banner h3 { margin: 0 0 6px 0; font-weight: 700; }
+        .page-banner p { margin: 0; opacity: 0.95; }
+
+        .glass-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            border: 1px solid #eef1f5;
+            overflow: hidden;
+        }
+        .glass-card .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eef1f5;
+            padding: 18px 22px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .glass-card .card-body { padding: 22px; }
+
+        .detail-table thead th {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 700;
+        }
+        .detail-table tbody td {
+            vertical-align: middle;
+        }
+        .empty-note {
+            color: #6b7280;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .btn-action {
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            margin-left: 6px;
+        }
+        .btn-triage {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: #fff;
+        }
+        .btn-triage:hover {
+            background: linear-gradient(135deg, #157347, #17a2b8);
+            color: #fff;
+        }
+        .btn-preleve {
+            background: linear-gradient(135deg, #0d6efd, #4f8cff);
+            color: #fff;
+        }
+        .btn-preleve:hover {
+            background: linear-gradient(135deg, #0b5ed7, #3a7bf8);
+            color: #fff;
+        }
+
+        .dataTables_wrapper {
+            padding: 0;
+        }
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 14px;
+        }
+        .dataTables_wrapper .dataTables_filter input {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            padding: 6px 10px;
+            margin-left: 6px;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            padding: 4px 6px;
+        }
+        .dataTables_wrapper .dataTables_paginate .page-link {
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            margin-left: 4px;
+            text-decoration: none;
+            display: inline-block;
+            color: #0d6efd;
+        }
+        .dataTables_wrapper .dataTables_paginate .active .page-link {
+            background: #0d6efd;
+            color: #fff;
+            border-color: #0d6efd;
+        }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
@@ -15,29 +118,25 @@
         
         <div class="page-wrapper">
             <div class="content container-fluid">
-                <div class="page-header">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h3 class="page-title">File d'attente Triage</h3>
-                            <ul class="breadcrumb">
-                                <li class="breadcrumb-item active">Patients ayant effectué un paiement</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="page-banner">
+                    <h3>File d'attente Triage</h3>
+                    <p class="mb-0">Patients ayant effectué un paiement</p>
                 </div>
 
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="card shadow-sm">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <i class="fa fa-users mr-2"></i> Patients en attente de triage
+                            </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table id="tableInfirmier" class="table table-hover table-striped border">
-                                        <thead class="thead-light">
+                                    <table id="tableInfirmier" class="table table-hover detail-table mb-0">
+                                        <thead>
                                             <tr>
                                                 <th>Date</th>
                                                 <th>Patient</th>
                                                 <th>Prestations</th>
-                                                <!-- <th>Statut</th> -->
                                                 <th class="text-right">Actions</th>
                                             </tr>
                                         </thead>
@@ -46,7 +145,7 @@
                                             <tr>
                                                 <td>{{ session.date_creation|date:"d/m/Y H:i" }}</td>
                                                 <td>
-                                                    <h6 class="mb-0">{{ session.patient.noms }}</h6>
+                                                    <h6 class="mb-0" style="font-weight:600; color:#111827;">{{ session.patient.noms }}</h6>
                                                     <small class="text-muted">Matricule: #{{ session.patient.id|stringformat:"04d" }}</small>
                                                 </td>
                                                 <td>
@@ -54,10 +153,6 @@
                                                         {% for item in session.items.all %}
                                                             <li>
                                                                 <i class="fa fa-caret-right text-primary"></i> 
-                                                                {% comment %} 
-                                                                   Si .nom ne fonctionne pas, remplace par .libelle ou .designation 
-                                                                   selon ton modèle Prestation.
-                                                                {% endcomment %}
                                                                 {{ item.prestation.nom|default:item.prestation }}
                                                             </li>
                                                         {% empty %}
@@ -65,22 +160,19 @@
                                                         {% endfor %}
                                                     </ul>
                                                 </td>
-                                                <!-- <td>
-                                                    {% if session.est_payee %}
-                                                        <span class="badge badge-success">Soldé</span>
-                                                    {% else %}
-                                                        <span class="badge badge-warning">Partiel</span>
-                                                    {% endif %}
-                                                </td> -->
                                                 <td class="text-right">
-                                                    <a href="{% url 'detail_consultation' session.id %}" class="btn btn-primary btn-sm">
+                                                    <a href="{% url 'detail_consultation' session.id %}" class="btn btn-action btn-triage">
                                                         <i class="fa fa-stethoscope"></i> Triage
                                                     </a>
-
-                                                     <a href="{% url 'saisir_signes_vitaux' session.id %}" class="btn btn-info btn-sm">
-                                                        <i class="fa fa-stethoscope"></i> preleve
+                                                    <a href="{% url 'saisir_signes_vitaux' session.id %}" class="btn btn-action btn-preleve">
+                                                        <i class="fa fa-heartbeat"></i> Prélever
                                                     </a>
-
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="empty-note">
+                                                    Aucun patient en attente pour le moment.
                                                 </td>
                                             </tr>
                                             {% endfor %}
@@ -108,7 +200,10 @@
                         "info": "Affichage _START_ à _END_ de _TOTAL_ entrées",
                         "paginate": { "next": "Suivant", "previous": "Précédent" }
                     },
-                    "order": [[ 0, "desc" ]]
+                    "order": [[ 0, "desc" ]],
+                    "dom": "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
+                           "<'row'<'col-sm-12'tr>>" +
+                           "<'row'<'col-sm-6'i><'col-sm-6'p>>"
                 });
             }
         });

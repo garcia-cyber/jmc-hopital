@@ -7167,7 +7167,12 @@ def facture_session(request, session_id):
 # ====================================================================================================================
 @login_required
 def payer_session(request, session_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
@@ -7221,8 +7226,9 @@ def payer_session(request, session_id):
                 hopital=hopital_user
             )
 
-            messages.success(request, "Paiement et remise enregistrés avec succès.")
-            return redirect('liste_sessions')
+            # Après tout paiement réussi, on va à la page de choix
+            return redirect('apres_paiement_session', session_id=session.id)
+
         except Exception as e:
             messages.error(request, f"Erreur lors du paiement : {str(e)}")
             return redirect('paiement_session', session_id=session.id)
@@ -7233,6 +7239,54 @@ def payer_session(request, session_id):
         'reste_a_payer': reste_a_payer,
         'taux': taux,
         'fonctionKey': fonctionKey
+    })
+#
+# ====================================================================================================================
+# APRES PAIEMENT DESE SESSION(CONSULTATION)
+# ====================================================================================================================
+@login_required
+def apres_paiement_session(request, session_id):
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+    hopital_user = role.hopital if role else None
+
+    if not hopital_user:
+        messages.error(request, "Accès non autorisé.")
+        return redirect('liste_sessions')
+
+    session = get_object_or_404(
+        SessionSoins.objects.select_related('patient'),
+        pk=session_id,
+        hopital=hopital_user
+    )
+
+    taux = ConfigurationHopital.get_taux()
+
+    total_session = session.items.aggregate(models.Sum('prix_facture'))['prix_facture__sum'] or Decimal('0')
+    total_deja_paye = Decimal('0')
+    total_reductions = Decimal('0')
+
+    for p in session.paiements.all():
+        if p.devise == 'USD':
+            total_deja_paye += (p.montant_verse or Decimal('0')) * taux
+            total_reductions += (p.montant_reduction or Decimal('0')) * taux
+        else:
+            total_deja_paye += (p.montant_verse or Decimal('0'))
+            total_reductions += (p.montant_reduction or Decimal('0'))
+
+    reste_a_payer = max(Decimal('0'), total_session - total_deja_paye - total_reductions)
+
+    session_soldee = (reste_a_payer == 0)
+
+    return render(request, 'back-end/consultation/apres_paiement_session.html', {
+        'session': session,
+        'reste_a_payer': reste_a_payer,
+        'session_soldee': session_soldee,
+        'fonctionKey': role.fonctionKey.roleName if role and role.fonctionKey else None,
     })
 
 #

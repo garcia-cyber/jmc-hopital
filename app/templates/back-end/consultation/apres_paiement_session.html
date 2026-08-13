@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Après paiement - JMC Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .page-banner {
+            background: linear-gradient(135deg, #0d6efd, #4f8cff);
+            color: #fff;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(13, 110, 253, 0.18);
+        }
+        .page-banner h3 { margin: 0 0 6px 0; font-weight: 700; }
+        .glass-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+            border: 1px solid #eef1f5;
+            overflow: hidden;
+        }
+        .glass-card .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #eef1f5;
+            padding: 18px 22px;
+            font-weight: 600;
+        }
+        .glass-card .card-body { padding: 22px; }
+        .summary-box {
+            background: linear-gradient(135deg, #f8fbff, #eef6ff);
+            border: 1px solid #dbe9ff;
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+        }
+        .summary-line { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+        .summary-line:last-child { margin-bottom: 0; }
+        .summary-label { color: #4b5563; font-weight: 600; }
+        .summary-value { font-weight: 700; color: #111827; }
+        .total-value { color: #0d6efd; font-size: 22px; font-weight: 800; }
+        .status-soldee {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status-partielle {
+            background: linear-gradient(135deg, #fff3cd, #ffeeba);
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            border-radius: 999px;
+            padding: 12px 20px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            flex: 1 1 200px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        .btn-vital {
+            background: linear-gradient(135deg, #198754, #20c997);
+            color: #fff;
+        }
+        .btn-vital:hover {
+            background: linear-gradient(135deg, #157347, #17a2b8);
+            color: #fff;
+        }
+        .btn-list {
+            background: linear-gradient(135deg, #6c757d, #adb5bd);
+            color: #fff;
+        }
+        .btn-list:hover {
+            background: linear-gradient(135deg, #5a6268, #949fa8);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-banner">
+                    <h3>Paiement enregistré</h3>
+                    <p class="mb-0">Patient : <strong>{{ session.patient.noms }}</strong></p>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <i class="fa fa-check-circle mr-2"></i> Que souhaitez-vous faire maintenant ?
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="summary-box {% if session_soldee %}status-soldee{% else %}status-partielle{% endif %}">
+                                    {% if session_soldee %}
+                                        <div class="summary-line">
+                                            <span class="summary-label">État de la session</span>
+                                            <span class="summary-value total-value" style="color:#155724;">Soldée</span>
+                                        </div>
+                                        <div class="summary-line mt-2">
+                                            <span class="summary-label">Message</span>
+                                            <span class="summary-value">La session est complètement payée.</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="summary-line">
+                                            <span class="summary-label">État de la session</span>
+                                            <span class="summary-value total-value" style="color:#856404;">En cours</span>
+                                        </div>
+                                        <div class="summary-line mt-2">
+                                            <span class="summary-label">Reste à payer</span>
+                                            <span class="summary-value total-value" style="color:#856404;">{{ reste_a_payer|floatformat:0 }} CDF</span>
+                                        </div>
+                                        <div class="summary-line mt-2">
+                                            <span class="summary-label">Message</span>
+                                            <span class="summary-value">Vous pouvez continuer les paiements ou saisir les signes vitaux.</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <p class="mb-4" style="font-size: 16px; color: #4b5563;">
+                                    Souhaitez-vous saisir les signes vitaux maintenant ?
+                                </p>
+
+                                <div class="action-buttons justify-content-center">
+                                    <a href="{% url 'saisir_signes_vitaux' session.id %}" class="btn btn-action btn-vital">
+                                        <i class="fa fa-heartbeat mr-2"></i> Saisir les signes vitaux
+                                    </a>
+                                    <a href="{% url 'liste_sessions' %}" class="btn btn-action btn-list">
+                                        <i class="fa fa-list mr-2"></i> Liste des sessions
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -2043,15 +2043,20 @@ def encaisser_examens_prescrits(request, consultation_id):
 def liste_attente_caisse(request):
     taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
 
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    # Toutes les consultations avec examens, pour l'hôpital de l'utilisateur
-    consultations_a_payer = (
+    # Requête de base : consultations avec examens, pour l'hôpital de l'utilisateur
+    consultations_qs = (
         Consultation.objects
         .filter(
             examens__isnull=False,
@@ -2059,22 +2064,20 @@ def liste_attente_caisse(request):
         )
         .select_related('triage__patient', 'medecin')
         .prefetch_related('examens__prestation', 'paiements')
-        .distinct()
-        .order_by('-date_creation')
+        .order_by('-id')  # Ordre décroissant par ID dans la base de données
     )
 
     # Filtre recherche
-    query = request.GET.get('q')
+    query = request.GET.get('q', '').strip()
     if query:
-        consultations_a_payer = consultations_a_payer.filter(
+        consultations_qs = consultations_qs.filter(
             Q(triage__patient__noms__icontains=query) |
             Q(triage__patient__code_patient__icontains=query)
         )
 
     consultations = []
-    for c in consultations_a_payer:
+    for c in consultations_qs:
         # ---- Total des examens en CDF ----
-        # prestation.prix est en CDF
         total_a_payer_cdf = c.examens.aggregate(
             total=Coalesce(
                 Sum(F('prestation__prix') * F('quantite')),
@@ -2095,9 +2098,9 @@ def liste_attente_caisse(request):
         # ---- Reste à payer ----
         reste_a_payer_cdf = total_a_payer_cdf - total_deja_paye_cdf
         if reste_a_payer_cdf <= 0:
-            continue  # cette consultation est déjà entièrement payée
+            continue  # déjà payée, on ne l'affiche pas
 
-        # Conversion en USD pour affichage (optionnel)
+        # Conversion en USD pour affichage
         total_a_payer_usd = total_a_payer_cdf / taux if taux else Decimal('0')
         total_deja_paye_usd = total_deja_paye_cdf / taux if taux else Decimal('0')
         reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
@@ -2113,12 +2116,18 @@ def liste_attente_caisse(request):
 
         consultations.append(c)
 
+    # Force explicitement le tri décroissant sur la liste Python finale
+    consultations.sort(key=lambda x: x.id, reverse=True)
+
     return render(request, 'back-end/caisse/liste_attente.html', {
         'consultations': consultations,
         'fonctionKey': role.fonctionKey.roleName if (role and role.fonctionKey) else None,
         'query': query,
         'taux': taux,
     })
+
+
+    
 # 36
 # ==================================================================================================
 # LISTE DES EXAMENS A FAIRE 

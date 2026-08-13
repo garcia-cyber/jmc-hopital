@@ -118,7 +118,9 @@ class ProduitPharmacieAdmin(admin.ModelAdmin):
         'prix_achat_unitaire',
         'prix_vente_unitaire',
         'devise',
-        'date_enregistrement'
+        'date_enregistrement',
+        'hopital'
+
     )
     list_filter = ('categorie', 'devise')
     search_fields = ('nom', 'forme', 'dosage')

@@ -1286,7 +1286,7 @@ class DemandeExamenExterne(models.Model):
         related_name='demandes'
     )
     prestations = models.ManyToManyField('Prestation', verbose_name="Examens choisis")
-
+    medecin_demandeur = models.CharField(max_length = 70,  null = True , blank = True)
     total_cdf = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_a_payer = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 

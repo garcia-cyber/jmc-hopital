@@ -7868,23 +7868,17 @@ def historique_examen_externe_technicien(request):
     if is_medecin:
         demandes = DemandeExamenExterne.objects.filter(
             hopital=user_hopital
-        ).select_related('client', 'medecin_demandeur').prefetch_related(
+        ).select_related('client').prefetch_related(  # <-- CORRIGÉ
             'prestations',
-            Prefetch(
-                'examenexternresultat_set',
-                queryset=ExamenExterneResultat.objects.select_related('prestation')
-            )
+            'resultats_examens__prestation'  # <-- Utilise le related_name
         ).order_by('-date_demande')
     elif cat_cible:
         demandes = DemandeExamenExterne.objects.filter(
             hopital=user_hopital,
             prestations__categorie=cat_cible
-        ).distinct().select_related('client', 'medecin_demandeur').prefetch_related(
+        ).distinct().select_related('client').prefetch_related(  # <-- CORRIGÉ
             'prestations',
-            Prefetch(
-                'examenexternresultat_set',
-                queryset=ExamenExterneResultat.objects.select_related('prestation')
-            )
+            'resultats_examens__prestation'  # <-- Utilise le related_name
         ).order_by('-date_demande')
     else:
         return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
@@ -7894,10 +7888,10 @@ def historique_examen_externe_technicien(request):
     for dem in demandes:
         tous_les_examens = dem.prestations.all()
 
-        # Créer un dictionnaire des résultats par prestation pour accès rapide
+        # Utilise le related_name 'resultats_examens'
         resultats_dict = {
             res.prestation.id: res
-            for res in dem.examenexternresultat_set.all()
+            for res in dem.resultats_examens.all()  # <-- CORRIGÉ
         }
 
         details_examens = []
@@ -7918,7 +7912,7 @@ def historique_examen_externe_technicien(request):
             'patient': dem.client.noms if dem.client else "Inconnu",
             'date': dem.date_demande,
             'details': details_examens,
-            'medecin_demandeur': dem.medecin_demandeur if hasattr(dem, 'medecin_demandeur') else "Non spécifié",
+            'medecin_demandeur': dem.medecin_demandeur or "Non spécifié",
             'type_urgence': getattr(dem, 'urgence', 'Standard')
         })
 

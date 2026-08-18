@@ -529,26 +529,30 @@ def enregistrement_patient(request):
     hopital_user = user_fonction.hopital if user_fonction else None
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
+
     # Récupérer les paramètres de filtre
     hopital_filter = request.GET.get('hopital', '')
     date_filter = request.GET.get('date', '')
     heure_filter = request.GET.get('heure', '')
 
+
     # Base queryset - ordre décroissant par date_creation (les plus récents en premier)
     patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
 
+
     # Filtre par hôpital
     if hopital_filter:
+        # Si un filtre est spécifié, l'appliquer
         if fonctionKey == 'admin':
             # Admin peut choisir n'importe quel hôpital
             patients = patients.filter(hopital_id=hopital_filter)
         else:
-            # Autres utilisateurs : seulement si c'est leur hôpital
-            if hopital_user and str(hopital_user.id) == hopital_filter:
-                patients = patients.filter(hopital_id=hopital_filter)
+            # Autres utilisateurs : peuvent voir leur hôpital OU les hôpitaux sans restriction
+            patients = patients.filter(hopital_id=hopital_filter)
     elif hopital_user:
-        # Si aucun filtre sélectionné, afficher seulement l'hôpital de l'utilisateur
+        # Si aucun filtre sélectionné, afficher par défaut l'hôpital de l'utilisateur
         patients = patients.filter(hopital=hopital_user)
+
 
     # Filtre par date
     if date_filter:
@@ -558,6 +562,7 @@ def enregistrement_patient(request):
             patients = patients.filter(date_creation__date=date_obj)
         except ValueError:
             pass
+
 
     # Filtre par heure (heure de début)
     if heure_filter:
@@ -571,6 +576,7 @@ def enregistrement_patient(request):
         except ValueError:
             pass
 
+
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
@@ -578,26 +584,34 @@ def enregistrement_patient(request):
                 patient = form.save(commit=False)
                 patient.created_by = request.user
 
+
                 if not hopital_user:
                     messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
                     return redirect('enregistrement_patient')
 
+
                 patient.hopital = hopital_user
+
 
                 if patient.entreprise and patient.entreprise.hopital_id != hopital_user.id:
                     messages.error(request, "Cette entreprise n'appartient pas à votre hôpital.")
                     return redirect('enregistrement_patient')
 
+
                 if patient.entreprise:
                     patient.type_patient = 'CONVENTIONNE'
+
 
                 patient.save()
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
 
+
                 if patient.entreprise:
                     return redirect('liste_attente_triage')
 
+
                 return redirect('payer_fiche', patient_id=patient.id)
+
 
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
@@ -608,13 +622,14 @@ def enregistrement_patient(request):
     else:
         form = PatientForm()
 
+
     # Entreprises pour le formulaire
     entreprises = Entreprise.objects.filter(hopital=hopital_user).order_by('nom') if hopital_user else Entreprise.objects.none()
 
-    # Liste des hôpitaux pour le filtre (admin seulement)
-    hopitaux = None
-    if fonctionKey == 'admin':
-        hopitaux = Hopital.objects.all().order_by('nom')
+
+    # Liste des hôpitaux pour le filtre (TOUS les utilisateurs peuvent voir tous les hôpitaux)
+    hopitaux = Hopital.objects.all().order_by('nomH')  # ← CORRIGÉ ICI
+
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,

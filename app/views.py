@@ -1253,12 +1253,17 @@ def saisir_signes(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     today = timezone.now().date()
     
+    # Récupérer l'hôpital de l'utilisateur
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = role.hopital if role else None
+    
     # On vérifie si un prélèvement non consulté existe déjà pour aujourd'hui
     triage_existant = SigneVital.objects.filter(
         patient=patient,
         date_prelevement__date=today,  
         est_consulte=False
     ).first()
+
 
     if request.method == 'POST':
         try:
@@ -1271,6 +1276,7 @@ def saisir_signes(request, patient_id):
                 triage_existant.frequence_respiratoire = request.POST.get('f_resp')
                 triage_existant.saturation_oxygene = request.POST.get('spo2')
                 triage_existant.infirmier = request.user  # L'infirmier qui fait la modification
+                triage_existant.hopital = hopital_user  # ← AJOUTÉ : Assigner l'hôpital
                 triage_existant.date_prelevement = timezone.now()  # On actualise l'heure du prélèvement
                 triage_existant.save()
                 
@@ -1286,6 +1292,7 @@ def saisir_signes(request, patient_id):
                     frequence_respiratoire=request.POST.get('f_resp'),
                     saturation_oxygene=request.POST.get('spo2'),
                     infirmier=request.user,
+                    hopital=hopital_user,  # ← AJOUTÉ : Assigner l'hôpital
                     est_consulte=False 
                 )
                 messages.success(request, f"Signes vitaux de {patient.noms} enregistrés avec succès.")
@@ -1294,6 +1301,7 @@ def saisir_signes(request, patient_id):
             
         except Exception as e:
             messages.error(request, f"Une erreur s'est produite lors de l'enregistrement : {str(e)}")
+
 
     else:
         # En mode GET : Si le patient a déjà des constantes saisies aujourd'hui
@@ -1304,9 +1312,10 @@ def saisir_signes(request, patient_id):
                 "Modifier les valeurs ci-dessous mettra à jour sa fiche en attente."
             )
 
+
     # Gestion des rôles pour l'interface
-    role = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role.fonctionKey.roleName if role else None
+
 
     return render(request, 'back-end/infirmerie/form_triage.html', {
         'patient': patient, 
@@ -1319,19 +1328,159 @@ def saisir_signes(request, patient_id):
 # ==================================================================================================
 @login_required
 def liste_globale_triage(request):
-    # On récupère tous les signes vitaux, mais on ne garde qu'un seul exemplaire par patient
-    # On trie par date pour avoir les derniers prélèvements en haut
-    historique_global = SigneVital.objects.select_related('patient', 'infirmier').all().order_by('-date_prelevement')
-
-    # Gestion du rôle pour le sidebar
-    role = Fonction.objects.filter(userKey=request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
-
+    # Récupérer les informations de l'utilisateur
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = user_fonction.hopital if user_fonction else None
+    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
+    
+    # Récupérer tous les signes vitaux
+    historique_global = SigneVital.objects.select_related('patient', 'infirmier', 'hopital').order_by('-date_prelevement')
+    
+    # DEBUG: Afficher la requête SQL
+    print("=== REQUÊTE SQL ===")
+    print(str(historique_global.query))
+    print("==================")
+    
+    # DEBUG: Afficher les IDs
+    print("=== IDs des signes vitaux ===")
+    for s in historique_global:
+        print(f"ID: {s.id}, Patient: {s.patient.noms}, Hopital: {s.hopital}")
+    print("============================")
+    
+    # Filtrer par hôpital seulement si l'utilisateur a un hôpital
+    if hopital_user and fonctionKey != 'admin':
+        historique_global = historique_global.filter(
+            models.Q(hopital=hopital_user) | models.Q(hopital__isnull=True)
+        )
+    
     context = {
         'fonctionKey': fonctionKey,
         'historique': historique_global,
+        'hopital_user': hopital_user,
     }
     return render(request, 'back-end/infirmerie/liste_globale_triage.html', context)
+#
+#
+# ********************************************************************************************************************************
+# ********************************************************************************************************************************
+#
+#
+# ************************************************************* Mise en jour 
+@login_required
+def modifier_signes_vitaux(request, signe_id):
+    print(f"=== MODIFICATION SIGNE VITAL ID: {signe_id} ===")
+    
+    # Récupérer le signe vital à modifier
+    try:
+        signe = SigneVital.objects.select_related('patient', 'infirmier', 'hopital', 'session').get(id=signe_id)
+        print(f"Signe trouvé: {signe.patient.noms}")
+    except SigneVital.DoesNotExist:
+        print(f"Signe ID {signe_id} NON TROUVÉ!")
+        messages.error(request, "Ce prélèvement n'existe pas.")
+        return redirect('liste_globale_triage')
+    
+    # Vérifier les permissions
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    hopital_user = user_fonction.hopital if user_fonction else None
+    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
+    
+    print(f"Votre rôle: {fonctionKey}")
+    print(f"Votre hôpital: {hopital_user}")
+    print(f"Hôpital du signe: {signe.hopital}")
+    
+    # Seulement admin, infirmier, médecin et receptionniste peuvent modifier
+    if fonctionKey not in ['admin', 'infirmier', 'medecin', 'receptionniste']:
+        print(f"PERMISSION REFUSÉE: {fonctionKey} n'est pas dans ['admin', 'infirmier', 'medecin', 'receptionniste']")
+        messages.error(request, "Vous n'avez pas la permission de modifier ce prélèvement.")
+        return redirect('liste_globale_triage')
+    
+    # Vérifier que le signe vital appartient à l'hôpital de l'utilisateur (ou pas d'hôpital)
+    if hopital_user and fonctionKey != 'admin':
+        if signe.hopital and signe.hopital.id != hopital_user.id:
+            messages.error(request, "Vous ne pouvez modifier que les signes vitaux de votre hôpital.")
+            return redirect('liste_globale_triage')
+    
+    if request.method == 'POST':
+        try:
+            # Récupérer les données du formulaire
+            temperature = request.POST.get('temperature')
+            tension_arterielle = request.POST.get('tension_arterielle')
+            frequence_cardiaque = request.POST.get('frequence_cardiaque')
+            frequence_respiratoire = request.POST.get('frequence_respiratoire')
+            poids = request.POST.get('poids')
+            saturation_oxygene = request.POST.get('saturation_oxygene')
+            
+            # Validation et conversion des données
+            if temperature:
+                temperature = float(temperature)
+                if temperature < 30 or temperature > 45:
+                    messages.error(request, "La température doit être entre 30°C et 45°C.")
+                    return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            else:
+                messages.error(request, "La température est obligatoire.")
+                return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            
+            if poids:
+                poids = float(poids)
+                if poids < 1 or poids > 300:
+                    messages.error(request, "Le poids doit être entre 1 kg et 300 kg.")
+                    return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            else:
+                messages.error(request, "Le poids est obligatoire.")
+                return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            
+            if frequence_cardiaque:
+                frequence_cardiaque = int(frequence_cardiaque)
+                if frequence_cardiaque < 30 or frequence_cardiaque > 250:
+                    messages.error(request, "La fréquence cardiaque doit être entre 30 et 250 bpm.")
+                    return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            else:
+                messages.error(request, "La fréquence cardiaque est obligatoire.")
+                return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            
+            if frequence_respiratoire:
+                frequence_respiratoire = int(frequence_respiratoire)
+                if frequence_respiratoire < 5 or frequence_respiratoire > 60:
+                    messages.error(request, "La fréquence respiratoire doit être entre 5 et 60 cycles/min.")
+                    return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            
+            if saturation_oxygene:
+                saturation_oxygene = int(saturation_oxygene)
+                if saturation_oxygene < 50 or saturation_oxygene > 100:
+                    messages.error(request, "La saturation en oxygène doit être entre 50% et 100%.")
+                    return redirect('modifier_signes_vitaux', signe_id=signe_id)
+            
+            # Mettre à jour les valeurs
+            signe.temperature = temperature
+            signe.poids = poids
+            signe.tension_arterielle = tension_arterielle if tension_arterielle else signe.tension_arterielle
+            signe.frequence_cardiaque = frequence_cardiaque
+            signe.frequence_respiratoire = frequence_respiratoire if frequence_respiratoire else signe.frequence_respiratoire
+            signe.saturation_oxygene = saturation_oxygene if saturation_oxygene else signe.saturation_oxygene
+            
+            # Sauvegarder
+            signe.save()
+            
+            messages.success(request, f"Signes vitaux de {signe.patient.noms} modifiés avec succès.")
+            return redirect('liste_globale_triage')
+            
+        except ValueError as e:
+            messages.error(request, f"Erreur de format : Veuillez vérifier les valeurs saisies.")
+            return redirect('modifier_signes_vitaux', signe_id=signe_id)
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification : {str(e)}")
+            return redirect('modifier_signes_vitaux', signe_id=signe_id)
+    
+    # Afficher le formulaire de modification
+    context = {
+        'signe': signe,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+    }
+    
+    print(f"Rendu du template avec signe.id={signe.id}")
+    return render(request, 'back-end/infirmerie/modifier_signes_vitaux.html', context)
+# ***********************************************************************************************************************************
 
 # 26
 # ==================================================================================================

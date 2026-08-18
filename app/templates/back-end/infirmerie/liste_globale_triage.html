@@ -34,6 +34,18 @@
                 font-size: 12px;
                 color: #2563eb;
             }
+            .badge-warning {
+                background-color: #ffc107;
+                color: #000;
+            }
+            .badge-danger {
+                background-color: #dc3545;
+                color: #fff;
+            }
+            .badge-success {
+                background-color: #198754;
+                color: #fff;
+            }
         </style>
     </head>
     <body>
@@ -119,6 +131,9 @@
                                                         <div class="dropdown dropdown-action">
                                                             <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false"><i class="material-icons">more_vert</i></a>
                                                             <div class="dropdown-menu dropdown-menu-right">
+                                                                <a class="dropdown-item" href="{% url 'modifier_signes_vitaux' signe.id %}">
+                                                                    <i class="fa fa-pencil m-r-5"></i> Modifier
+                                                                </a>
                                                                 <a class="dropdown-item" href="{% url 'historique_signes_vitaux' signe.patient.id %}">
                                                                     <i class="fa fa-eye m-r-5"></i> Voir historique
                                                                 </a>

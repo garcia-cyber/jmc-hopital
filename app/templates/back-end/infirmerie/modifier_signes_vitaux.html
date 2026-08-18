@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier les Signes Vitaux - JMC Médicale</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .page-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+            padding: 24px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-section-title {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .form-grid .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-control {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            padding: 12px;
+        }
+        .form-control:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            border: none;
+            border-radius: 30px;
+            padding: 12px 40px;
+            min-height: 48px;
+        }
+        .btn-secondary {
+            border-radius: 30px;
+            padding: 12px 40px;
+            min-height: 48px;
+        }
+        .patient-info {
+            background: #f3f4f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .patient-info h4 {
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        .info-badge {
+            display: inline-block;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <h3 class="page-title">Modifier les Signes Vitaux</h3>
+                        <ul class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'liste_globale_triage' %}">Registre Triage</a></li>
+                            <li class="breadcrumb-item active">Modification</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="page-card">
+                <!-- Informations du patient -->
+                <div class="patient-info">
+                    <h4><i class="fa fa-user"></i> Informations du Patient</h4>
+                    <div class="info-badge">
+                        <strong>Nom :</strong> {{ signe.patient.noms }}
+                    </div>
+                    <div class="info-badge">
+                        <strong>ID :</strong> #{{ signe.patient.id|stringformat:"04d" }}
+                    </div>
+                    <div class="info-badge">
+                        <strong>Date du prélèvement :</strong> {{ signe.date_prelevement|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="info-badge">
+                        <strong>Infirmier :</strong> {{ signe.infirmier.get_full_name|default:signe.infirmier.username }}
+                    </div>
+                    {% if signe.hopital %}
+                    <div class="info-badge">
+                        <strong>Hôpital :</strong> {{ signe.hopital.nomH }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Formulaire de modification -->
+                <form method="POST" action="{% url 'modifier_signes_vitaux' signe.id %}">
+                    {% csrf_token %}
+                    
+                    <h5 class="form-section-title">
+                        <i class="fa fa-heartbeat"></i> Signes Vitaux
+                    </h5>
+                    
+                    <div class="row form-grid">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="required-field">Température (°C)</label>
+                                <input type="number" step="0.1" name="temperature" class="form-control" 
+                                       value="{{ signe.temperature }}" placeholder="Ex: 37.5" required>
+                                <small class="text-muted">Valeurs normales : 36°C - 37.5°C</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Tension Artérielle (mmHg)</label>
+                                <input type="text" name="tension_arterielle" class="form-control" 
+                                       value="{{ signe.tension_arterielle }}" placeholder="Ex: 120/80">
+                                <small class="text-muted">Format : SYS/DIA</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="required-field">Fréquence Cardiaque (bpm)</label>
+                                <input type="number" name="frequence_cardiaque" class="form-control" 
+                                       value="{{ signe.frequence_cardiaque }}" placeholder="Ex: 72" required>
+                                <small class="text-muted">Valeurs normales : 60 - 100 bpm</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="required-field">Poids (Kg)</label>
+                                <input type="number" step="0.1" name="poids" class="form-control" 
+                                       value="{{ signe.poids }}" placeholder="Ex: 70.5" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Fréquence Respiratoire (cycles/min)</label>
+                                <input type="number" name="frequence_respiratoire" class="form-control" 
+                                       value="{{ signe.frequence_respiratoire|default:'' }}" placeholder="Ex: 16">
+                                <small class="text-muted">Valeurs normales : 12 - 20</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Saturation O₂ (%)</label>
+                                <input type="number" step="0.1" name="saturation_oxygene" class="form-control" 
+                                       value="{{ signe.saturation_oxygene|default:'' }}" placeholder="Ex: 98">
+                                <small class="text-muted">Valeurs normales : 95% - 100%</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="{% url 'liste_globale_triage' %}" class="btn btn-secondary mr-2">
+                            <i class="fa fa-times"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save"></i> Enregistrer les modifications
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -737,7 +737,7 @@ def modifier_patient(request, pk):
 # ==================================================================================================
 @login_required
 def payer_fiche(request, patient_id):
-    # Rôle et hôpital de l’utilisateur
+    # Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
         .select_related('hopital', 'fonctionKey')
@@ -746,11 +746,14 @@ def payer_fiche(request, patient_id):
     )
     hopital_user = role.hopital if role else None
 
+
     if not hopital_user:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
+
     patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
+
 
     # Taux de change
     config = ConfigurationHopital.objects.first()
@@ -758,7 +761,8 @@ def payer_fiche(request, patient_id):
     if not taux or taux == 0:
         taux = Decimal('2300.00')
 
-    # Heure locale pour info (jour/nuit) – optionnel si tu veux l’afficher
+
+    # Heure locale pour info (jour/nuit)
     now = timezone.now()
     if timezone.is_naive(now):
         now = timezone.make_aware(now, timezone.get_current_timezone())
@@ -767,15 +771,17 @@ def payer_fiche(request, patient_id):
     est_nuit = heure_actuelle >= 16 or heure_actuelle < 7
     libelle_periode = "nuit" if est_nuit else "jour"
 
-    # Récupérer toutes les prestations ADM pour cet hôpital
+
+    # Récupérer TOUTES les prestations ADM pour cet hôpital
     prestations_adm = (
         Prestation.objects
         .filter(
             categorie='ADM',
             hopital=hopital_user
         )
-        .order_by('libelle')
+        .order_by('categorie', 'libelle')
     )
+
 
     if not prestations_adm.exists():
         messages.error(
@@ -785,13 +791,14 @@ def payer_fiche(request, patient_id):
         )
         return redirect('enregistrement_patient')
 
+
     # --- Calcul des paiements existants pour ce patient (service FICHE) ---
-    # On ne filtre plus par libelle, mais seulement par service='FICHE'
     paiements_existants = Paiement.objects.filter(
         patient=patient,
         service='FICHE',
         hopital=hopital_user
     )
+
 
     total_deja_paye_cdf = Decimal('0')
     for p in paiements_existants:
@@ -800,18 +807,17 @@ def payer_fiche(request, patient_id):
         else:  # USD
             total_deja_paye_cdf += (p.montant_verse or Decimal('0')) * taux
 
-    # Dans cette nouvelle logique, le “prix total des fiches” dépend des prestations
-    # que le caissier va sélectionner. On ne calcule donc pas un prix global ici.
-    # On va plutôt, au POST, calculer le coût total choisi et comparer aux paiements.
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+
     # --- Traitement du formulaire de paiement ---
     if request.method == 'POST':
-        # Liste des IDs de prestations cochées (ou sélectionnées)
-        prestation_ids = request.POST.getlist('prestation_ids')  # checkbox ou select multiple
+        # Liste des IDs de prestations cochées
+        prestation_ids = request.POST.getlist('prestation_ids')
         montant_saisi = Decimal(request.POST.get('montant', '0') or '0')
         devise = request.POST.get('devise', 'CDF')
+
 
         if not prestation_ids:
             messages.error(
@@ -820,7 +826,8 @@ def payer_fiche(request, patient_id):
             )
             return redirect('payer_fiche', patient_id=patient.id)
 
-        # Recuperer les prestations sélectionnées (sécurité: re-filter par hôpital)
+
+        # Récupérer les prestations sélectionnées
         prestations_selectionnees = (
             Prestation.objects
             .filter(
@@ -830,14 +837,17 @@ def payer_fiche(request, patient_id):
             )
         )
 
+
         if len(prestations_selectionnees) != len(prestation_ids):
             messages.error(request, "Une ou plusieurs prestations sélectionnées sont invalides.")
             return redirect('payer_fiche', patient_id=patient.id)
+
 
         # Calcul du coût total des prestations sélectionnées (en CDF)
         total_a_payer_cdf = sum(
             (p.prix or Decimal('0')) for p in prestations_selectionnees
         )
+
 
         # Convertir le montant saisi en CDF
         if devise == 'CDF':
@@ -845,8 +855,9 @@ def payer_fiche(request, patient_id):
         else:  # USD
             montant_saisi_cdf = montant_saisi * taux
 
+
         # Vérifier si le montant dépasse le total (avec tolérance)
-        tolerance_cdf = Decimal('1')  # 1 CDF de tolérance
+        tolerance_cdf = Decimal('1')
         if montant_saisi_cdf > (total_a_payer_cdf - total_deja_paye_cdf + tolerance_cdf):
             messages.error(
                 request,
@@ -855,6 +866,7 @@ def payer_fiche(request, patient_id):
                 f"{(total_a_payer_cdf - total_deja_paye_cdf) / taux:.2f} USD)."
             )
             return redirect('payer_fiche', patient_id=patient.id)
+
 
         if montant_saisi_cdf > 0:
             # Créer le paiement
@@ -865,19 +877,23 @@ def payer_fiche(request, patient_id):
                 devise=devise,
                 caissier=request.user,
                 hopital=hopital_user,
-                # Tu peux ajouter un champ pour stocker les prestations liées si besoin
             )
 
+
             nouveau_total_cdf = total_deja_paye_cdf + montant_saisi_cdf
+
 
             if nouveau_total_cdf >= (total_a_payer_cdf - Decimal('1')):  # tolérance 1 CDF
                 patient.fiche_payee = True
                 patient.save()
+                
+                # TOUTES les prestations ADM redirigent vers les signes vitaux
                 messages.success(
                     request,
-                    f"Paiement terminé. Les fiches administratives de {patient.noms} sont validées."
+                    f"Paiement terminé. Veuillez procéder au prélèvement des signes vitaux de {patient.noms}."
                 )
-                return redirect('liste_attente_triage')
+                # Rediriger vers la vue de saisie des signes vitaux
+                return redirect('saisir_signes', patient_id=patient.id)
             else:
                 nouveau_reste_cdf = total_a_payer_cdf - nouveau_total_cdf
                 nouveau_reste_usd = nouveau_reste_cdf / taux
@@ -888,19 +904,18 @@ def payer_fiche(request, patient_id):
                 )
                 return redirect('payer_fiche', patient_id=patient.id)
 
-    # Pour l’affichage initial : on peut pré-calculer un “reste à payer” si on suppose
-    # que toutes les prestations ADM sont dues. Ou tu peux laisser le caissier choisir
-    # sans afficher de total avant sélection.
-    # Option 1 : on considère que toutes les prestations ADM sont dues :
+
+    # Pour l'affichage initial
     total_prestations_adm_cdf = sum((p.prix or Decimal('0')) for p in prestations_adm)
     reste_a_payer_cdf = max(Decimal('0'), total_prestations_adm_cdf - total_deja_paye_cdf)
     reste_a_payer_usd = reste_a_payer_cdf / taux
 
+
     return render(request, 'back-end/finance/payer_fiche.html', {
         'patient': patient,
         'prestations_adm': prestations_adm,
-        'reste_a_payer': reste_a_payer_usd,          # en USD (pour affichage)
-        'reste_a_payer_cdf': reste_a_payer_cdf,      # en CDF (pour affichage)
+        'reste_a_payer': reste_a_payer_usd,
+        'reste_a_payer_cdf': reste_a_payer_cdf,
         'taux': taux,
         'fonctionKey': fonctionKey,
         'deja_paye': patient.fiche_payee,

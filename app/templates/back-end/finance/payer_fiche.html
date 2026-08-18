@@ -22,6 +22,7 @@
             --soft-green: #ecfdf5;
         }
 
+
         body {
             background:
                 radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 25%),
@@ -31,14 +32,17 @@
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
+
         .page-wrapper .content {
             padding-top: 1.2rem;
             padding-bottom: 1.2rem;
         }
 
+
         .page-header {
             margin-bottom: 1.2rem;
         }
+
 
         .page-title {
             font-weight: 800;
@@ -47,12 +51,14 @@
             margin-bottom: 0.25rem;
         }
 
+
         .breadcrumb {
             background: transparent;
             padding-left: 0;
             margin-bottom: 0;
             font-size: 0.9rem;
         }
+
 
         .card {
             border: 1px solid var(--line);
@@ -62,9 +68,11 @@
             background: var(--card);
         }
 
+
         .card-body {
             padding: 1.5rem;
         }
+
 
         .card-title {
             font-weight: 800;
@@ -73,12 +81,14 @@
             color: var(--text);
         }
 
+
         .section-title {
             font-weight: 700;
             color: var(--text);
             margin-bottom: 0.7rem;
             font-size: 1rem;
         }
+
 
         .summary-row {
             display: flex;
@@ -89,17 +99,20 @@
             margin-bottom: 0.5rem;
         }
 
+
         .summary-label {
             color: var(--muted);
             font-size: 0.85rem;
             font-weight: 600;
         }
 
+
         .summary-value {
             font-size: 1.05rem;
             font-weight: 800;
             color: var(--text);
         }
+
 
         .total-box {
             background: linear-gradient(135deg, #f8fbff, #ffffff);
@@ -109,6 +122,7 @@
             margin-top: 0.5rem;
         }
 
+
         .total-box h4 {
             margin: 0;
             font-weight: 900;
@@ -116,11 +130,13 @@
             font-size: 1.05rem;
         }
 
+
         .total-box p {
             margin: 0.25rem 0 0;
             color: var(--muted);
             font-size: 0.85rem;
         }
+
 
         .form-label {
             font-weight: 700;
@@ -128,6 +144,7 @@
             font-size: 0.9rem;
             margin-bottom: 0.35rem;
         }
+
 
         .form-control, .form-select {
             border-radius: 12px;
@@ -138,15 +155,18 @@
             background: #fff;
         }
 
+
         .form-control:focus, .form-select:focus {
             border-color: rgba(37,99,235,0.5);
             box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.1);
         }
 
+
         .search-box {
             position: relative;
             margin-bottom: 0.9rem;
         }
+
 
         .search-box input {
             width: 100%;
@@ -157,11 +177,13 @@
             background: #fff;
         }
 
+
         .search-box input:focus {
             border-color: rgba(37,99,235,0.5);
             box-shadow: 0 0 0 0.2rem rgba(37,99,235,0.1);
             outline: none;
         }
+
 
         .search-icon {
             position: absolute;
@@ -172,6 +194,7 @@
             font-size: 1rem;
         }
 
+
         .prestations-list {
             max-height: 260px;
             overflow-y: auto;
@@ -180,6 +203,7 @@
             background: #fafcff;
             margin-bottom: 0.75rem;
         }
+
 
         .prestation-item {
             display: flex;
@@ -190,13 +214,16 @@
             background: #fff;
         }
 
+
         .prestation-item:last-child {
             border-bottom: none;
         }
 
+
         .prestation-item.hidden {
             display: none;
         }
+
 
         .prestation-item label {
             flex: 1;
@@ -206,12 +233,14 @@
             font-size: 0.93rem;
         }
 
+
         .prestation-price {
             font-weight: 700;
             color: var(--text);
             white-space: nowrap;
             font-size: 0.92rem;
         }
+
 
         .empty-state {
             padding: 1.2rem;
@@ -220,12 +249,14 @@
             font-size: 0.9rem;
         }
 
+
         .submit-section {
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
             margin-top: 1rem;
         }
+
 
         .submit-btn {
             border-radius: 12px;
@@ -234,9 +265,11 @@
             font-size: 0.95rem;
         }
 
+
         .alert {
             border-radius: 14px;
         }
+
 
         .info-card {
             background: linear-gradient(135deg, #eff6ff, #f8fffb);
@@ -247,11 +280,13 @@
             font-size: 0.9rem;
         }
 
+
         .devise-helper {
             font-size: 0.8rem;
             color: var(--muted);
             margin-top: 0.2rem;
         }
+
 
         .payment-card {
             background: linear-gradient(135deg, #f8fbff, #ffffff);
@@ -260,6 +295,7 @@
             padding: 1rem;
             margin-top: 0.5rem;
         }
+
 
         /* Pagination */
         .pagination-container {
@@ -270,6 +306,7 @@
             margin-top: 0.5rem;
             flex-wrap: wrap;
         }
+
 
         .pagination-btn {
             border: 1px solid var(--line);
@@ -283,10 +320,12 @@
             transition: all 0.15s ease;
         }
 
+
         .pagination-btn:hover {
             background: var(--soft-blue);
             border-color: rgba(37,99,235,0.3);
         }
+
 
         .pagination-btn.active {
             background: var(--primary);
@@ -294,10 +333,12 @@
             border-color: var(--primary);
         }
 
+
         .pagination-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
 
         @media (max-width: 768px) {
             .card-body {
@@ -317,8 +358,10 @@
     {% include 'back-end/includes/header.html' %}
     {% include 'back-end/includes/sidebar.html' %}
 
+
     <div class="page-wrapper">
         <div class="content container-fluid">
+
 
             <div class="page-header">
                 <div class="row align-items-center">
@@ -332,6 +375,7 @@
                 </div>
             </div>
 
+
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -341,10 +385,12 @@
                 {% endfor %}
             {% endif %}
 
+
             <div class="row">
                 <div class="col-xl-10 offset-xl-1">
                     <div class="card">
                         <div class="card-body">
+
 
                             <!-- En-tête patient -->
                             <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
@@ -355,6 +401,7 @@
                                     {{ libelle_periode|default:"jour" }} – {{ heure_actuelle }}h
                                 </span>
                             </div>
+
 
                             <!-- Récapitulatif financier -->
                             <div class="summary-row mb-3">
@@ -378,11 +425,13 @@
                                 </div>
                             </div>
 
+
                             <div class="info-card mb-3">
                                 <strong>Fiches administratives :</strong>
                                 Recherchez et cochez les prestations à faire payer pour ce patient.
                                 Le total et le reste à payer se mettront à jour automatiquement.
                             </div>
+
 
                             {% if deja_paye %}
                                 <div class="alert alert-success text-center">
@@ -396,8 +445,10 @@
                                 <form method="POST" id="form_paiement_fiche">
                                     {% csrf_token %}
 
+
                                     <!-- Section : Sélection des prestations -->
                                     <div class="section-title">Sélection des prestations</div>
+
 
                                     <!-- Barre de recherche -->
                                     <div class="search-box">
@@ -409,6 +460,7 @@
                                             placeholder="Rechercher une prestation (ex: dossier, fiche, administratif...)"
                                         >
                                     </div>
+
 
                                     <!-- Liste des prestations (paginée) -->
                                     <div class="prestations-list" id="prestations_list">
@@ -436,10 +488,12 @@
                                         {% endfor %}
                                     </div>
 
+
                                     <!-- Pagination -->
                                     <div class="pagination-container" id="pagination_container">
                                         <!-- Généré dynamiquement par JS -->
                                     </div>
+
 
                                     <!-- Total des fiches sélectionnées -->
                                     <div class="total-box">
@@ -454,6 +508,7 @@
                                         </div>
                                     </div>
 
+
                                     <!-- Info dynamique : reste à payer -->
                                     <div class="info-card mt-3">
                                         <div class="summary-row">
@@ -467,12 +522,14 @@
                                         </div>
                                     </div>
 
+
                                     <!-- Formulaire de paiement -->
                                     <div class="payment-card">
                                         <div class="section-title mb-2">Paiement</div>
 
+
                                         <div class="row g-3">
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <div class="form-group">
                                                     <label class="form-label" for="montant_input">
                                                         Montant à verser <span class="text-danger">*</span>
@@ -491,7 +548,26 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="montant_reduction_input">
+                                                        Réduction (optionnel)
+                                                    </label>
+                                                    <input
+                                                        class="form-control"
+                                                        type="number"
+                                                        name="montant_reduction"
+                                                        id="montant_reduction_input"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value="0"
+                                                    >
+                                                    <div class="devise-helper">
+                                                        Montant de la réduction
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
                                                 <div class="form-group">
                                                     <label class="form-label" for="devise_select">Devise</label>
                                                     <select class="form-select" name="devise" id="devise_select">
@@ -502,12 +578,14 @@
                                             </div>
                                         </div>
 
+
                                         <div class="info-card mt-3">
                                             <small id="info_paiement">
                                                 Le reste à payer actuel est de {{ reste_a_payer_cdf|floatformat:0 }} FC
                                                 (~ {{ reste_a_payer|floatformat:2 }} USD).
                                             </small>
                                         </div>
+
 
                                         <div class="submit-section">
                                             <button class="btn btn-primary submit-btn" type="submit">
@@ -525,21 +603,27 @@
                 </div>
             </div>
 
+
         </div>
     </div>
 </div>
 
+
 {% include 'back-end/includes/js.html' %}
+
 
 <script>
     $(document).ready(function () {
         const taux = parseFloat("{{ taux|floatformat:2 }}");
         const dejaPayeCDF = parseFloat("{{ ResteDejaPayeCDF|floatformat:2 }}") || 0;
 
+
         const $deviseSelect = $('#devise_select');
         const $montantInput = $('#montant_input');
+        const $montantReductionInput = $('#montant_reduction_input');
         const $maxHelper = $('#max_helper');
         const $infoPaiement = $('#info_paiement');
+
 
         const $prestationChecks = $('.prestation-check');
         const $totalSelectionneCdf = $('#total_selectionne_cdf');
@@ -547,20 +631,25 @@
         const $resteAPayerDyn = $('#reste_a_payer_dyn');
         const $resteGlobalDisplay = $('#reste_global_display');
 
+
         const $searchInput = $('#search_prestation');
         const $prestationsItems = $('.prestation-item');
         const $paginationContainer = $('#pagination_container');
+
 
         const ITEMS_PER_PAGE = 3;
         let currentPage = 1;
         let filteredItems = $prestationsItems.toArray();
 
+
         function toFixed(num, digits) {
             return Number(num).toFixed(digits);
         }
 
+
         function updateTotaux() {
             let totalCdf = 0;
+
 
             $prestationChecks.each(function () {
                 if (this.checked) {
@@ -569,9 +658,11 @@
                 }
             });
 
+
             const totalUsd = totalCdf / taux;
             const resteCdf = Math.max(0, totalCdf - dejaPayeCDF);
             const resteUsd = resteCdf / taux;
+
 
             // Total des fiches sélectionnées
             $totalSelectionneCdf.html(
@@ -581,11 +672,13 @@
             );
             $totalSelectionneUsd.text(toFixed(totalUsd, 2));
 
+
             // Mise à jour du "reste à payer" dynamique
             $resteAPayerDyn.html(
                 toFixed(resteCdf, 0) + ' FC ' +
                 '<span class="text-muted">(~ ' + toFixed(resteUsd, 2) + ' USD)</span>'
             );
+
 
             // Mise à jour du "Reste à payer (global)" en haut
             $resteGlobalDisplay.html(
@@ -594,11 +687,14 @@
                 '(~ ' + toFixed(resteUsd, 2) + ' USD)</span>'
             );
 
+
             updateUI(resteCdf, resteUsd);
         }
 
+
         function updateUI(resteCdf, resteUsd) {
             const devise = $deviseSelect.val();
+
 
             if (devise === 'CDF') {
                 $montantInput.attr('max', toFixed(resteCdf, 2));
@@ -617,34 +713,42 @@
             }
         }
 
+
         // Filtrage des prestations
         function filterPrestations() {
             const query = $searchInput.val().trim().toLowerCase();
+
 
             filteredItems = $prestationsItems.toArray().filter(function (item) {
                 const libelle = $(item).data('libelle') || '';
                 return libelle.includes(query);
             });
 
+
             currentPage = 1;
             renderPagination();
             showPage(currentPage);
         }
+
 
         // Pagination
         function getTotalPages() {
             return Math.ceil(filteredItems.length / ITEMS_PER_PAGE) || 1;
         }
 
+
         function showPage(page) {
             const totalPages = getTotalPages();
             if (page < 1) page = 1;
             if (page > totalPages) page = totalPages;
 
+
             const start = (page - 1) * ITEMS_PER_PAGE;
             const end = start + ITEMS_PER_PAGE;
 
+
             $prestationsItems.addClass('hidden');
+
 
             filteredItems.forEach(function (item, index) {
                 if (index >= start && index < end) {
@@ -654,16 +758,20 @@
                 }
             });
 
+
             updatePaginationButtons(page, totalPages);
         }
+
 
         function renderPagination() {
             const totalPages = getTotalPages();
             $paginationContainer.empty();
 
+
             if (totalPages <= 1) {
                 return;
             }
+
 
             // Bouton Précédent
             const $prevBtn = $('<button type="button" class="pagination-btn">Préc.</button>');
@@ -671,6 +779,7 @@
                 showPage(currentPage - 1);
             });
             $paginationContainer.append($prevBtn);
+
 
             // Boutons de page
             for (let i = 1; i <= totalPages; i++) {
@@ -682,6 +791,7 @@
                 $paginationContainer.append($btn);
             }
 
+
             // Bouton Suivant
             const $nextBtn = $('<button type="button" class="pagination-btn">Suiv.</button>');
             $nextBtn.on('click', function () {
@@ -689,13 +799,16 @@
             });
             $paginationContainer.append($nextBtn);
 
+
             updatePaginationButtons(currentPage, totalPages);
         }
+
 
         function updatePaginationButtons(current, total) {
             $paginationContainer.find('.pagination-btn').each(function (index, btn) {
                 const $btn = $(btn);
                 const text = $btn.text().trim();
+
 
                 if (text === 'Préc.' || text === 'Suiv.') {
                     if (text === 'Préc.') {
@@ -714,16 +827,19 @@
             });
         }
 
+
         // Événements
         $searchInput.on('input', filterPrestations);
         $prestationChecks.on('change', updateTotaux);
         $deviseSelect.on('change', updateTotaux);
+
 
         // Initialisation
         filterPrestations();
         updateTotaux();
     });
 </script>
+
 
 </body>
 </html>

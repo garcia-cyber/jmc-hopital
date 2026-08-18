@@ -801,11 +801,15 @@ def payer_fiche(request, patient_id):
 
 
     total_deja_paye_cdf = Decimal('0')
+    total_deja_reduction_cdf = Decimal('0')
+    
     for p in paiements_existants:
         if p.devise == 'CDF':
             total_deja_paye_cdf += p.montant_verse or Decimal('0')
+            total_deja_reduction_cdf += p.montant_reduction or Decimal('0')
         else:  # USD
             total_deja_paye_cdf += (p.montant_verse or Decimal('0')) * taux
+            total_deja_reduction_cdf += (p.montant_reduction or Decimal('0')) * taux
 
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
@@ -816,6 +820,7 @@ def payer_fiche(request, patient_id):
         # Liste des IDs de prestations cochées
         prestation_ids = request.POST.getlist('prestation_ids')
         montant_saisi = Decimal(request.POST.get('montant', '0') or '0')
+        montant_reduction = Decimal(request.POST.get('montant_reduction', '0') or '0')
         devise = request.POST.get('devise', 'CDF')
 
 
@@ -852,28 +857,33 @@ def payer_fiche(request, patient_id):
         # Convertir le montant saisi en CDF
         if devise == 'CDF':
             montant_saisi_cdf = montant_saisi
+            montant_reduction_cdf = montant_reduction
         else:  # USD
             montant_saisi_cdf = montant_saisi * taux
+            montant_reduction_cdf = montant_reduction * taux
 
 
         # Vérifier si le montant dépasse le total (avec tolérance)
         tolerance_cdf = Decimal('1')
-        if montant_saisi_cdf > (total_a_payer_cdf - total_deja_paye_cdf + tolerance_cdf):
+        total_verse_plus_reduction = montant_saisi_cdf + montant_reduction_cdf
+        
+        if total_verse_plus_reduction > (total_a_payer_cdf - total_deja_paye_cdf - total_deja_reduction_cdf + tolerance_cdf):
             messages.error(
                 request,
                 f"Le montant dépasse le reste à payer "
-                f"({total_a_payer_cdf - total_deja_paye_cdf:.0f} CDF / "
-                f"{(total_a_payer_cdf - total_deja_paye_cdf) / taux:.2f} USD)."
+                f"({total_a_payer_cdf - total_deja_paye_cdf - total_deja_reduction_cdf:.0f} CDF / "
+                f"{(total_a_payer_cdf - total_deja_paye_cdf - total_deja_reduction_cdf) / taux:.2f} USD)."
             )
             return redirect('payer_fiche', patient_id=patient.id)
 
 
-        if montant_saisi_cdf > 0:
-            # Créer le paiement
+        if montant_saisi_cdf > 0 or montant_reduction_cdf > 0:
+            # Créer le paiement avec réduction
             Paiement.objects.create(
                 patient=patient,
                 service='FICHE',
                 montant_verse=montant_saisi,
+                montant_reduction=montant_reduction,
                 devise=devise,
                 caissier=request.user,
                 hopital=hopital_user,
@@ -881,9 +891,10 @@ def payer_fiche(request, patient_id):
 
 
             nouveau_total_cdf = total_deja_paye_cdf + montant_saisi_cdf
+            nouveau_total_reduction_cdf = total_deja_reduction_cdf + montant_reduction_cdf
 
 
-            if nouveau_total_cdf >= (total_a_payer_cdf - Decimal('1')):  # tolérance 1 CDF
+            if nouveau_total_cdf + nouveau_total_reduction_cdf >= (total_a_payer_cdf - Decimal('1')):  # tolérance 1 CDF
                 patient.fiche_payee = True
                 patient.save()
                 
@@ -895,7 +906,7 @@ def payer_fiche(request, patient_id):
                 # Rediriger vers la vue de saisie des signes vitaux
                 return redirect('saisir_signes', patient_id=patient.id)
             else:
-                nouveau_reste_cdf = total_a_payer_cdf - nouveau_total_cdf
+                nouveau_reste_cdf = total_a_payer_cdf - nouveau_total_cdf - nouveau_total_reduction_cdf
                 nouveau_reste_usd = nouveau_reste_cdf / taux
                 messages.success(
                     request,
@@ -907,7 +918,7 @@ def payer_fiche(request, patient_id):
 
     # Pour l'affichage initial
     total_prestations_adm_cdf = sum((p.prix or Decimal('0')) for p in prestations_adm)
-    reste_a_payer_cdf = max(Decimal('0'), total_prestations_adm_cdf - total_deja_paye_cdf)
+    reste_a_payer_cdf = max(Decimal('0'), total_prestations_adm_cdf - total_deja_paye_cdf - total_deja_reduction_cdf)
     reste_a_payer_usd = reste_a_payer_cdf / taux
 
 
@@ -924,6 +935,8 @@ def payer_fiche(request, patient_id):
         'libelle_periode': libelle_periode,
         'total_prestations_adm_cdf': total_prestations_adm_cdf,
         'total_prestations_adm_usd': total_prestations_adm_cdf / taux,
+        'ResteDejaPayeCDF': total_deja_paye_cdf,
+        'ResteDejaPayeUSD': total_deja_paye_cdf / taux,
     })
 # 21
 # ==================================================================================================

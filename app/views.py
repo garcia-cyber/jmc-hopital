@@ -529,6 +529,48 @@ def enregistrement_patient(request):
     hopital_user = user_fonction.hopital if user_fonction else None
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
+    # Récupérer les paramètres de filtre
+    hopital_filter = request.GET.get('hopital', '')
+    date_filter = request.GET.get('date', '')
+    heure_filter = request.GET.get('heure', '')
+
+    # Base queryset - ordre décroissant par date_creation (les plus récents en premier)
+    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
+
+    # Filtre par hôpital
+    if hopital_filter:
+        if fonctionKey == 'admin':
+            # Admin peut choisir n'importe quel hôpital
+            patients = patients.filter(hopital_id=hopital_filter)
+        else:
+            # Autres utilisateurs : seulement si c'est leur hôpital
+            if hopital_user and str(hopital_user.id) == hopital_filter:
+                patients = patients.filter(hopital_id=hopital_filter)
+    elif hopital_user:
+        # Si aucun filtre sélectionné, afficher seulement l'hôpital de l'utilisateur
+        patients = patients.filter(hopital=hopital_user)
+
+    # Filtre par date
+    if date_filter:
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            patients = patients.filter(date_creation__date=date_obj)
+        except ValueError:
+            pass
+
+    # Filtre par heure (heure de début)
+    if heure_filter:
+        try:
+            from datetime import datetime
+            time_obj = datetime.strptime(heure_filter, '%H:%M').time()
+            patients = patients.filter(
+                date_creation__hour__gte=time_obj.hour,
+                date_creation__minute__gte=time_obj.minute
+            )
+        except ValueError:
+            pass
+
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
@@ -566,8 +608,13 @@ def enregistrement_patient(request):
     else:
         form = PatientForm()
 
-    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
+    # Entreprises pour le formulaire
     entreprises = Entreprise.objects.filter(hopital=hopital_user).order_by('nom') if hopital_user else Entreprise.objects.none()
+
+    # Liste des hôpitaux pour le filtre (admin seulement)
+    hopitaux = None
+    if fonctionKey == 'admin':
+        hopitaux = Hopital.objects.all().order_by('nom')
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
@@ -575,6 +622,10 @@ def enregistrement_patient(request):
         'fonctionKey': fonctionKey,
         'hopital_user': hopital_user,
         'entreprises': entreprises,
+        'hopitaux': hopitaux,
+        'hopital_filter': hopital_filter,
+        'date_filter': date_filter,
+        'heure_filter': heure_filter,
     })
 
 #

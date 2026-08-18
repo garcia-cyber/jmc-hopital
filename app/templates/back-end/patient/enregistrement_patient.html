@@ -14,13 +14,11 @@
             padding: 24px;
         }
 
-
         .section-title {
             font-weight: 700;
             color: #1f2937;
             margin-bottom: 0;
         }
-
 
         .soft-badge {
             padding: 6px 12px;
@@ -29,25 +27,21 @@
             font-weight: 600;
         }
 
-
         .search-wrap {
             width: 100%;
             display: block;
             margin-bottom: 16px;
         }
 
-
         .search-wrap form {
             width: 100%;
         }
-
 
         .search-input-group {
             width: 100%;
             display: flex;
             flex-wrap: nowrap;
         }
-
 
         .search-input-group .form-control {
             flex: 1 1 auto;
@@ -56,7 +50,6 @@
             border-radius: 30px 0 0 30px;
             padding-left: 18px;
         }
-
 
         .search-input-group .input-group-text {
             border-radius: 0 30px 30px 0;
@@ -67,24 +60,20 @@
             min-width: 48px;
         }
 
-
         .modal-header {
             background: linear-gradient(135deg, #2563eb, #3b82f6);
             color: #fff;
             border-bottom: none;
         }
 
-
         .modal-header .close {
             color: #fff;
             opacity: 1;
         }
 
-
         .form-grid .form-group {
             margin-bottom: 1rem;
         }
-
 
         .table thead th {
             border-top: none;
@@ -94,9 +83,29 @@
             color: #6b7280;
         }
 
+        .filter-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .filter-icon {
+            margin-right: 6px;
+            color: #2563eb;
+        }
 
         @media (max-width: 768px) {
             .page-card { padding: 16px; }
+            .filter-card { padding: 16px; }
             .page-header .row > div { width: 100%; }
             .search-wrap {
                 display: block !important;
@@ -122,7 +131,6 @@
     {% include 'back-end/includes/header.html' %}
     {% include 'back-end/includes/sidebar.html' %}
 
-
     <div class="page-wrapper">
         <div class="content container-fluid">
             <div class="page-header mb-4">
@@ -135,7 +143,6 @@
                         </ul>
                     </div>
 
-
                     <div class="col-md-6 col-12 mt-3 mt-md-0 text-md-right">
                         {% if fonctionKey == 'receptionniste' %}
                             <button class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
@@ -144,7 +151,6 @@
                         {% endif %}
                     </div>
                 </div>
-
 
                 <div class="search-wrap">
                     <form method="GET" action="">
@@ -160,13 +166,80 @@
                 </div>
             </div>
 
-
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }}">{{ message }}</div>
                 {% endfor %}
             {% endif %}
 
+            <!-- Section des filtres -->
+            <div class="filter-card">
+                <h5 class="mb-3">
+                    <i class="fa fa-filter filter-icon"></i> Filtres de recherche
+                </h5>
+                <form method="GET" action="" id="filterForm">
+                    <div class="row align-items-end">
+                        <div class="col-md-3 col-12 mb-3">
+                            <label class="filter-label">
+                                <i class="fa fa-hospital-o filter-icon"></i> Hôpital
+                            </label>
+                            {% if fonctionKey == 'admin' and hopitaux %}
+                            <select name="hopital" class="form-control form-select" onchange="submitFilterForm()">
+                                <option value="">Tous les hôpitaux</option>
+                                {% for hop in hopitaux %}
+                                <option value="{{ hop.id }}" {% if hopital_filter == hop.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ hop.nomH }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" class="form-control" value="{{ hopital_user.nomH }}" disabled>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-3 col-12 mb-3">
+                            <label class="filter-label">
+                                <i class="fa fa-calendar filter-icon"></i> Date d'enregistrement
+                            </label>
+                            <input type="date" name="date" class="form-control" 
+                                   value="{{ date_filter }}"
+                                   onchange="submitFilterForm()">
+                        </div>
+
+                        <div class="col-md-3 col-12 mb-3">
+                            <label class="filter-label">
+                                <i class="fa fa-clock-o filter-icon"></i> Heure (à partir de)
+                            </label>
+                            <input type="time" name="heure" class="form-control" 
+                                   value="{{ heure_filter }}"
+                                   onchange="submitFilterForm()">
+                        </div>
+
+                        <div class="col-md-3 col-12 mb-3">
+                            <a href="{% url 'enregistrement_patient' %}" class="btn btn-secondary btn-block" style="border-radius: 30px; min-height: 44px;">
+                                <i class="fa fa-refresh"></i> Réinitialiser
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Affichage des filtres actifs -->
+                {% if hopital_filter or date_filter or heure_filter %}
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fa fa-filter"></i> 
+                    <strong>Filtres actifs :</strong>
+                    {% if hopital_filter %}
+                        <span class="badge badge-primary ml-2">Hôpital: {{ hopital_filter }}</span>
+                    {% endif %}
+                    {% if date_filter %}
+                        <span class="badge badge-primary ml-2">Date: {{ date_filter }}</span>
+                    {% endif %}
+                    {% if heure_filter %}
+                        <span class="badge badge-primary ml-2">Heure: {{ heure_filter }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
 
             <div class="page-card">
                 <div class="table-responsive">
@@ -217,11 +290,9 @@
                                                 <span class="dropdown-item text-muted"><i class="fa fa-check-circle m-r-5"></i> Fiche réglée</span>
                                             {% endif %}
 
-
                                             {% if patient.fiche_payee %}
                                                 <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}"><i class="fa fa-stethoscope m-r-5"></i> Nouvelle Session Soins</a>
                                             {% endif %}
-
 
                                             {% if patient.fiche_payee %}
                                                 {% if not patient.a_carte_fidelite %}
@@ -233,12 +304,10 @@
                                                 <span class="dropdown-item text-muted"><i class="fa fa-lock m-r-5"></i> Payer Carte Fidélité (Bloqué)</span>
                                             {% endif %}
 
-
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history m-r-5"></i> Hist. Paiements</a>
                                             <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat m-r-5"></i> Hist. Triage</a>
                                             <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil m-r-5"></i> Modifier</a>
-
 
                                             {% if patient.fiche_payee %}
                                                 <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye m-r-5"></i> Dossier Médical</a>
@@ -247,7 +316,7 @@
                                             {% endif %}
 
                                             <!-- Bouton Supprimer -->
-                                             {% if fonctionKey == 'admin' %}
+                                            {% if fonctionKey == 'admin' %}
                                             <a class="dropdown-item text-danger" href="{% url 'supprimer_patient' patient.id %}" onclick="return confirm('Voulez-vous vraiment supprimer ce patient ?');">
                                                 <i class="fa fa-trash m-r-5"></i> Supprimer
                                             </a>
@@ -264,7 +333,6 @@
         </div>
     </div>
 </div>
-
 
 <div id="add_patient" class="modal fade" role="dialog">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-scrollable">
@@ -334,15 +402,18 @@
     </div>
 </div>
 
-
 {% include 'back-end/includes/js.html' %}
 <script>
+    function submitFilterForm() {
+        const form = document.getElementById('filterForm');
+        form.submit();
+    }
+
     $(document).ready(function() {
         var table = $('#myTable').DataTable({
             dom: 'rtip',
             responsive: true
         });
-
 
         $('#customSearch').on('keyup', function() {
             table.search(this.value).draw();

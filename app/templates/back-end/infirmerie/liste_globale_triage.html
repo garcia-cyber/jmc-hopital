@@ -8,6 +8,33 @@
         
         <!-- Favicon et CSS -->
         {% include 'back-end/includes/css.html' %}
+        <style>
+            .filter-row {
+                margin-bottom: 20px;
+            }
+            .form-focus {
+                position: relative;
+            }
+            .form-focus .form-control {
+                height: 45px;
+                border-radius: 8px;
+                padding-left: 15px;
+            }
+            .form-focus .focus-label {
+                position: absolute;
+                top: 15px;
+                left: 15px;
+                color: #999;
+                pointer-events: none;
+                transition: 0.3s ease all;
+            }
+            .form-focus .form-control:focus ~ .focus-label,
+            .form-focus .form-control:not(:placeholder-shown) ~ .focus-label {
+                top: -10px;
+                font-size: 12px;
+                color: #2563eb;
+            }
+        </style>
     </head>
     <body>
         <div class="main-wrapper">
@@ -31,19 +58,22 @@
                         </div>
                     </div>
 
+
                     <!-- Barre de Recherche et Filtres -->
                     <div class="row filter-row">
                         <div class="col-sm-6 col-md-9">  
                             <div class="form-group form-focus">
-                                <input type="text" id="myInput" class="form-control floating">
-                                <label class="focus-label">Rechercher un patient, une date ou un infirmier...</label>
+                                <input type="text" id="myInput" class="form-control" placeholder="Rechercher un patient, une date ou un infirmier...">
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-3">  
-                            <a href="#" class="btn btn-success btn-block"> <i class="fa fa-refresh"></i> Actualiser </a>  
+                            <a href="#" class="btn btn-success btn-block" onclick="location.reload(); return false;"> 
+                                <i class="fa fa-refresh"></i> Actualiser 
+                            </a>  
                         </div>
                     </div>
                     <!-- /Barre de Recherche -->
+
 
                     <div class="row">
                         <div class="col-md-12">
@@ -53,7 +83,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive" style="padding: 15px;">
-                                        <table class="table table-striped table-nowrap custom-table mb-0 datatable" id="triageTable">
+                                        <table class="table table-striped table-nowrap custom-table mb-0" id="triageTable">
                                             <thead>
                                                 <tr>
                                                     <th>Date & Heure</th>
@@ -112,15 +142,52 @@
             </div>
         </div>
 
+
         {% include 'back-end/includes/js.html' %}
 
-        <!-- Script pour lier la barre de recherche personnalisée à la DataTable -->
+
+        <!-- Script pour la barre de recherche -->
         <script>
             $(document).ready(function() {
-                if ($.fn.DataTable.isDataTable('.datatable')) {
-                    var table = $('.datatable').DataTable();
+                // Vérifier si DataTables est disponible
+                if (typeof $.fn.DataTable !== 'undefined') {
+                    // Initialiser la DataTable
+                    var table = $('#triageTable').DataTable({
+                        dom: 'rtip',
+                        responsive: true,
+                        order: [[0, 'desc']],
+                        language: {
+                            search: "_INPUT_",
+                            zeroRecords: "Aucun résultat trouvé"
+                        }
+                    });
+
+                    // Fonction de recherche
+                    function searchTable(query) {
+                        table.search(query).draw();
+                    }
+
+                    // Événement de recherche
                     $('#myInput').on('keyup', function() {
-                        table.search(this.value).draw();
+                        var searchTerm = $(this).val();
+                        searchTable(searchTerm);
+                        console.log('Recherche:', searchTerm);
+                    });
+
+                    // Bouton Actualiser
+                    $('.btn-success').on('click', function(e) {
+                        e.preventDefault();
+                        $('#myInput').val('');
+                        searchTable('');
+                        location.reload();
+                    });
+                } else {
+                    // Fallback si DataTables n'est pas disponible
+                    $('#myInput').on('keyup', function() {
+                        var value = $(this).val().toLowerCase();
+                        $('#triageTable tbody tr').filter(function() {
+                            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                        });
                     });
                 }
             });

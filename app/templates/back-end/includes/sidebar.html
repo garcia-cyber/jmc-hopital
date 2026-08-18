@@ -185,6 +185,23 @@
                     <li class="{% if request.resolver_match.url_name == 'enregistrer_patient_entreprise' %}active{% endif %}">
                         <a href="{% url 'enregistrer_patient_entreprise' %}"><i class="fa fa-briefcase"></i> <span>Patient d'Entreprise</span></a>
                     </li>
+                    {% comment %} 
+                        ==================================================================================================
+                        ==================================================================================================
+                        ==================================================================================================
+                    {% endcomment %}
+                    <li class="menu-title"> <span>SOINS INFIRMIERS</span> </li>
+                    <li><a href="{% url 'liste_attente_triage' %}"><i class="fa fa-notes-medical"></i> <span>Liste Triage</span></a></li>
+                    <li><a href="{% url 'liste_globale_triage' %}"><i class="fa fa-list-alt"></i> <span>Registre Global</span></a></li>
+                    <li>
+                        <a href="{% url 'liste_sessions_infirmier' %}"><i class="fa fa-stethoscope"></i> <span>Triage & Signes Vitaux</span></a>
+                    </li>
+
+                    {% comment %} 
+                        ==================================================================================================
+                        ==================================================================================================
+                        ==================================================================================================
+                    {% endcomment %}
                     <li>
                         <a href="{% url 'liste_patients_avec_carte' %}">
                             <i class="fa fa-star"></i> <span>Patients Fidèles</span>

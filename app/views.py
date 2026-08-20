@@ -2115,29 +2115,35 @@ def liste_ordonnances_urgence(request):
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     hopital_user = role.hopital if role else None
 
+    # Requête de base : toutes les ordonnances d'urgence
     ordonnances_list = Ordonnance.objects.filter(
         type_ordonnance='URGENCE'
     ).select_related(
         'consultation__triage__patient',
         'consultation__medecin'
     ).prefetch_related(
-        'lignes_medicaments'  # corrigé ici
+        'lignes_medicaments'
     ).order_by('-date_prescrite')
 
+    # Filtre par hôpital sauf pour ADMIN
     if fonctionKey != 'ADMIN':
         if hopital_user:
+            # Médecin, Gestionnaire, etc. : uniquement leur hôpital
             ordonnances_list = ordonnances_list.filter(
                 consultation__triage__patient__hopital=hopital_user
             )
         else:
+            # User sans hôpital → aucune ordonnance visible
             ordonnances_list = ordonnances_list.none()
 
+    # Recherche par patient (nom ou code)
     if query:
         ordonnances_list = ordonnances_list.filter(
             Q(consultation__triage__patient__noms__icontains=query) |
             Q(consultation__triage__patient__code_patient__icontains=query)
         )
 
+    # Pagination
     paginator = Paginator(ordonnances_list, 10)
     page = request.GET.get('page')
 
@@ -8587,25 +8593,37 @@ def modifier_ordonnance_urgence(request, pk):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                ordonnance.type_ordonnance = request.POST.get('type_ordonnance')
-                ordonnance.observation = request.POST.get('observation')
+                # Mise à jour des champs de l'ordonnance
+                type_val = request.POST.get('type_ordonnance')
+                if type_val:
+                    ordonnance.type_ordonnance = type_val
+
+                ordonnance.observation = request.POST.get('observation', '')
                 ordonnance.save()
 
-                ordonnance.medicaments.all().delete()
+                # Supprime les anciennes lignes de médicaments
+                ordonnance.lignes_medicaments.all().delete()
 
+                # Récupère les nouvelles lignes
                 noms = request.POST.getlist('nom_medicament[]')
                 posologies = request.POST.getlist('posologie[]')
                 durees = request.POST.getlist('duree[]')
+                # si tu n'as pas de champ quantite dans le formulaire, retire cette ligne
                 quantites = request.POST.getlist('quantite[]')
 
-                for nom, posologie, duree, quantite in zip(noms, posologies, durees, quantites):
+                for i, nom in enumerate(noms):
                     if nom and nom.strip():
-                        Medicament.objects.create(
+                        poso = posologies[i].strip() if i < len(posologies) and posologies[i] else ''
+                        dur = durees[i].strip() if i < len(durees) and durees[i] else ''
+
+                        # Si tu n'as pas de champ quantite dans LigneMedicament, ne le passe pas
+                        LigneMedicament.objects.create(
                             ordonnance=ordonnance,
-                            nom=nom.strip(),
-                            posologie=posologie.strip() if posologie else '',
-                            duree=duree.strip() if duree else '',
-                            quantite=int(quantite) if quantite and str(quantite).isdigit() else 1
+                            nom_medicament=nom.strip(),
+                            posologie=poso,
+                            duree=dur,
+                            statut='EN_COURS',
+                            hopital=ordonnance.hopital
                         )
 
             messages.success(request, "Ordonnance mise à jour avec succès.")

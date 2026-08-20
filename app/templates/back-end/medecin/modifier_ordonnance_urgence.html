@@ -155,25 +155,21 @@
                             <div class="col">Nom médicament</div>
                             <div class="col">Posologie</div>
                             <div class="col">Durée</div>
-                            <div class="col">Quantité</div>
                             <div class="col-auto"></div>
                         </div>
                     </div>
 
                     <div id="zone-medicaments">
-                        {% for med in ord.medicaments.all %}
+                        {% for ligne in ord.lignes_medicaments.all %}
                         <div class="row">
                             <div class="col">
-                                <input type="text" name="nom_medicament[]" value="{{ med.nom }}" placeholder="Nom médicament" required>
+                                <input type="text" name="nom_medicament[]" value="{{ ligne.nom_medicament }}" placeholder="Nom médicament" required>
                             </div>
                             <div class="col">
-                                <input type="text" name="posologie[]" value="{{ med.posologie }}" placeholder="Posologie" required>
+                                <input type="text" name="posologie[]" value="{{ ligne.posologie }}" placeholder="Posologie" required>
                             </div>
                             <div class="col">
-                                <input type="text" name="duree[]" value="{{ med.duree }}" placeholder="Durée" required>
-                            </div>
-                            <div class="col">
-                                <input type="number" name="quantite[]" value="{{ med.quantite|default:1 }}" min="1" required>
+                                <input type="text" name="duree[]" value="{{ ligne.duree }}" placeholder="Durée" required>
                             </div>
                             <div class="col-auto">
                                 <button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button>
@@ -189,9 +185,6 @@
                             </div>
                             <div class="col">
                                 <input type="text" name="duree[]" placeholder="Durée" required>
-                            </div>
-                            <div class="col">
-                                <input type="number" name="quantite[]" value="1" min="1" required>
                             </div>
                             <div class="col-auto">
                                 <button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button>
@@ -223,7 +216,6 @@
                 <div class="col"><input type="text" name="nom_medicament[]" placeholder="Nom médicament" required></div>
                 <div class="col"><input type="text" name="posologie[]" placeholder="Posologie" required></div>
                 <div class="col"><input type="text" name="duree[]" placeholder="Durée" required></div>
-                <div class="col"><input type="number" name="quantite[]" value="1" min="1" required></div>
                 <div class="col-auto"><button type="button" class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></div>
             `;
             zone.appendChild(div);

@@ -56,6 +56,7 @@
                     <!-- /Page Header -->
 
 
+
                     <!-- Alertes Flash -->
                     {% if messages %}
                         {% for message in messages %}
@@ -67,6 +68,7 @@
                             </div>
                         {% endfor %}
                     {% endif %}
+
 
 
                     <!-- Récapitulatif Triage & Constantes -->
@@ -105,6 +107,7 @@
                     </div>
 
 
+
                     <!-- Formulaire de Consultation Principal -->
                     <form method="POST" id="consultationForm">
                         {% csrf_token %}
@@ -135,6 +138,7 @@
                             </div>
 
 
+
                             <!-- Partie Droite : Examens complémentaires & Ordonnance d'urgence -->
                             <div class="col-lg-5 col-md-12">
                                 
@@ -156,6 +160,7 @@
                                         </div>
 
 
+
                                         <!-- ÉTAPE 2 : Sélectionner l'examen filtré -->
                                         <div class="form-group row">
                                             <div class="col-9">
@@ -173,6 +178,7 @@
                                                 <button type="button" id="btn_add_examen" class="btn btn-info btn-block" style="height: 44px;"><i class="fa fa-plus"></i></button>
                                             </div>
                                         </div>
+
 
 
                                         <table class="table table-sm table-bordered custom-table" id="table_examens_demandes">
@@ -208,6 +214,7 @@
                                         </table>
                                     </div>
                                 </div>
+
 
 
                                 <!-- Module B: Ordonnance d'Urgence Initiale (Facultative) -->
@@ -246,12 +253,8 @@
                                                                 </td>
                                                             </tr>
                                                         {% endfor %}
-                                                    {% else %}
-                                                        <!-- Aucune consultation précédente ou première consultation -->
-                                                        <tr class="placeholder-row">
-                                                            <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
-                                                        </tr>
                                                     {% endif %}
+                                                    <!-- Pas de ligne “placeholder” ici : le tbody peut rester vide -->
                                                 </tbody>
                                             </table>
                                         </div>
@@ -262,8 +265,10 @@
                                 </div>
 
 
+
                             </div>
                         </div>
+
 
 
                         <!-- Bouton de validation final globale -->
@@ -285,6 +290,7 @@
                         </div>
 
 
+
                     </form>
                 </div>
             </div>
@@ -296,6 +302,7 @@
         {% include 'back-end/includes/js.html' %}
 
 
+
         <!-- Script d'automatisation et de filtrage -->
         <script>
             $(document).ready(function() {
@@ -303,9 +310,11 @@
                 $('#consultationForm textarea, #consultationForm input[type="text"], #consultationForm select').addClass('form-control');
 
 
+
                 // --- OPTIMISATION 1 : FILTRAGE DYNAMIQUE DES EXAMENS ---
                 // Sauvegarde de toutes les options originales pour pouvoir filtrer proprement
                 var allExamenOptions = $('#select_examen option').clone();
+
 
 
                 $('#filter_categorie').on('change', function() {
@@ -328,6 +337,7 @@
                 });
 
 
+
                 // --- AJOUT DES EXAMENS DANS LE TABLEAU ---
                 $('#btn_add_examen').on('click', function() {
                     var select = $('#select_examen');
@@ -337,16 +347,19 @@
                     var exCat = selectedOption.data('cat');
 
 
+
                     if (!exId) {
                         alert("Veuillez sélectionner un examen d'abord.");
                         return;
                     }
 
 
+
                     if ($('#exam_row_' + exId).length > 0) {
                         alert("Cet examen a déjà été ajouté.");
                         return;
                     }
+
 
 
                     var htmlRow = `
@@ -369,16 +382,13 @@
 
 
 
+
                 // --- OPTIMISATION 2 : ORDONNANCE FACULTATIVE ---
                 // Ajouter un médicament
                 $('#btn_add_medoc').on('click', function() {
-                    // Supprimer la ligne "Aucun médicament" si elle existe
-                    $('.placeholder-row').remove();
-
-
                     var htmlMedocRow = `
                         <tr>
-                            <td><input type="text" name="nom_medicament" class="form-control form-control-sm" placeholder="Ex: Paracétamol ampoule" required></td>
+                            <td><input type="text" name="nom_medicament" class="form-control form-control-sm" placeholder="Ex: Paracétamol ampoule"></td>
                             <td><input type="text" name="posologie" class="form-control form-control-sm" placeholder="Ex: 1g toutes les 8h"></td>
                             <td><input type="text" name="duree" class="form-control form-control-sm" placeholder="Ex: 3 jours"></td>
                             <td class="text-center">
@@ -390,18 +400,10 @@
                 });
 
 
+
                 // Supprimer un médicament
                 $(document).on('click', '.btn-remove-medoc', function() {
                     $(this).closest('tr').remove();
-                    
-                    // Si plus aucun médicament, remettre le message informatif facultatif
-                    if ($('#wrapper_medicaments tr').length === 0) {
-                        $('#wrapper_medicaments').append(`
-                            <tr class="placeholder-row">
-                                <td colspan="4" class="text-center text-muted small py-3">Aucun médicament d'urgence ajouté pour le moment.</td>
-                            </tr>
-                        `);
-                    }
                 });
             });
         </script>

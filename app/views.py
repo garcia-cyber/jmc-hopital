@@ -1833,6 +1833,14 @@ def consultation_medicale(request, triage_id):
         posologies = request.POST.getlist('posologie')
         durees = request.POST.getlist('duree')
 
+        # --- DEBUG ---
+        print("=== DEBUG CONSULTATION ===")
+        print("nom_medicament:", noms_medocs)
+        print("posologie:", posologies)
+        print("duree:", durees)
+        print("any med?:", any(n.strip() for n in noms_medocs if n))
+        # ------------
+
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -1864,12 +1872,16 @@ def consultation_medicale(request, triage_id):
                         )
 
                     # Médicaments
+                    print("=== AVANT BLOC MEDICAMENTS ===")
                     if any(n.strip() for n in noms_medocs if n):
+                        print("ON ENTRE DANS LE BLOC MEDICAMENTS")
                         ordonnance, _ = Ordonnance.objects.get_or_create(
                             consultation=consultation_obj,
                             type_ordonnance='URGENCE',
                             defaults={'hopital': hopital_user}
                         )
+                        print("Ordonnance:", ordonnance.id, ordonnance.type_ordonnance)
+
                         if not ordonnance.hopital:
                             ordonnance.hopital = hopital_user
                             ordonnance.save()
@@ -1881,6 +1893,7 @@ def consultation_medicale(request, triage_id):
                                 poso = posologies[i] if i < len(posologies) else ""
                                 dur = durees[i] if i < len(durees) else ""
 
+                                print("Création ligne:", nom, poso, dur)
                                 LigneMedicament.objects.create(
                                     ordonnance=ordonnance,
                                     nom_medicament=nom,
@@ -1889,6 +1902,10 @@ def consultation_medicale(request, triage_id):
                                     statut='EN_COURS',
                                     hopital=hopital_user
                                 )
+
+                        print("=== FIN BLOC MEDICAMENTS ===")
+                    else:
+                        print("AUCUN MÉDICAMENT → on ne crée pas d'ordonnance")
 
                     triage.est_consulte = True
                     triage.save()
@@ -1900,6 +1917,8 @@ def consultation_medicale(request, triage_id):
                 return redirect('liste_consultation_medecin')
 
             except Exception as e:
+                print("=== EXCEPTION ===")
+                print(e)
                 messages.error(request, f"Une erreur technique est survenue : {str(e)}")
         else:
             messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
@@ -2102,7 +2121,7 @@ def liste_ordonnances_urgence(request):
         'consultation__triage__patient',
         'consultation__medecin'
     ).prefetch_related(
-        'medicaments'
+        'lignes_medicaments'  # corrigé ici
     ).order_by('-date_prescrite')
 
     if fonctionKey != 'ADMIN':

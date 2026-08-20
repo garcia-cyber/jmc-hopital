@@ -61,11 +61,14 @@
 <body>
     <div class="main-wrapper">
 
+
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
+
         <div class="page-wrapper">
             <div class="content container-fluid">
+
 
                 <div class="page-header">
                     <div class="row align-items-center">
@@ -78,6 +81,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <div class="row mb-3">
                     <div class="col-md-12">
@@ -96,6 +100,7 @@
                         </form>
                     </div>
                 </div>
+
 
                 <div class="row">
                     <div class="col-md-12">
@@ -132,25 +137,26 @@
                                         </td>
                                         <td>
                                             <ul class="med-list">
-                                                {% for med in ord.medicaments.all %}
+                                                {% for ligne in ord.lignes_medicaments.all %}
                                                 <li class="med-item">
                                                     <div>
-                                                        <strong class="text-dark">{{ med.nom }}</strong>
+                                                        <strong class="text-dark">{{ ligne.nom_medicament }}</strong>
                                                     </div>
                                                     <div class="med-meta">
-                                                        {% if med.posologie %}
-                                                            <span class="med-pill med-pill-primary">{{ med.posologie }}</span>
+                                                        {% if ligne.posologie %}
+                                                            <span class="med-pill med-pill-primary">{{ ligne.posologie }}</span>
                                                         {% endif %}
-                                                        {% if med.duree %}
-                                                            <span class="med-pill">Durée: {{ med.duree }}</span>
+                                                        {% if ligne.duree %}
+                                                            <span class="med-pill">Durée: {{ ligne.duree }}</span>
                                                         {% endif %}
-                                                        <span class="med-pill">Qté: {{ med.quantite }}</span>
+                                                        <span class="med-pill">Statut: {{ ligne.get_statut_display }}</span>
                                                     </div>
                                                 </li>
                                                 {% empty %}
                                                 <li class="text-muted">Aucun médicament listé</li>
                                                 {% endfor %}
                                             </ul>
+
 
                                             {% if ord.observation %}
                                             <div class="obs-box">
@@ -182,6 +188,7 @@
                             </table>
                         </div>
 
+
                         {% if ordonnances.has_other_pages %}
                         <div class="mt-4">
                             <ul class="pagination justify-content-center">
@@ -193,6 +200,7 @@
                                     <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
                                 {% endif %}
 
+
                                 {% for i in ordonnances.paginator.page_range %}
                                     {% if ordonnances.number == i %}
                                         <li class="page-item active"><span class="page-link">{{ i }}</span></li>
@@ -202,6 +210,7 @@
                                         </li>
                                     {% endif %}
                                 {% endfor %}
+
 
                                 {% if ordonnances.has_next %}
                                     <li class="page-item">
@@ -216,9 +225,11 @@
                     </div>
                 </div>
 
+
             </div>
         </div>
     </div>
+
 
     {% include 'back-end/includes/js.html' %}
 </body>

@@ -4153,6 +4153,13 @@ def admettre_patient(request):
 # ============================================================================================
 @login_required
 def liste_hospitalisations(request):
+    from decimal import Decimal
+    from django.db.models import DecimalField
+    from django.db.models.functions import Coalesce
+    from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+    from django.utils import timezone
+    from decimal import ROUND_HALF_UP
+
     # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
@@ -4218,23 +4225,48 @@ def liste_hospitalisations(request):
     now = timezone.now()
 
     for hosp in hospitalisations_qs:
-        date_entree = hosp.date_entree or now
+        date_entree = hosp.date_entree
+        if not date_entree:
+            # Sécurité : pas de date_entree → on saute ou on met 0 jour
+            nombre_jours = 0
+            prix_lit_cdf = Decimal('0')
+            cout_total_cdf = Decimal('0')
+            cout_total_usd = Decimal('0')
+            total_deja_paye_cdf = Decimal('0')
+            reste_a_payer_cdf = Decimal('0')
+            reste_a_payer_usd = Decimal('0')
+
+            hospitalisations.append({
+                'hosp': hosp,
+                'cout_total_usd': cout_total_usd,
+                'cout_total_cdf': cout_total_cdf,
+                'reste_a_payer_usd': reste_a_payer_usd,
+                'reste_a_payer_cdf': reste_a_payer_cdf,
+                'nombre_jours': nombre_jours,
+                'prix_lit_cdf': prix_lit_cdf,
+            })
+            continue
 
         # --- Nombre de jours ---
-        if hosp.statut == 'EN_COURS':
+        statut = (hosp.statut or '').upper()
+
+        if statut == 'EN_COURS':
             # Comptage en cours jusqu'à maintenant
-            nombre_jours = (now - date_entree).days + 1
+            delta = now - date_entree
+            nombre_jours = max(1, delta.days + 1)
         else:
-            # Hospitalisation terminée ou annulée : on utilise date_entree et date_sortie
+            # Hospitalisation terminée / annulée / autre : on utilise date_sortie
             date_sortie = hosp.date_sortie
-            if date_sortie:
-                nombre_jours = (date_sortie - date_entree).days + 1
-                # On s'assure qu'il y a au moins 1 jour
-                nombre_jours = max(1, nombre_jours)
+            if not date_sortie:
+                # Si pas de date_sortie mais statut != EN_COURS, on essaie d'utiliser la propriété du modèle
+                date_sortie = getattr(hosp, 'date_sortie', None)
+
+            if date_sortie and date_sortie >= date_entree:
+                delta = date_sortie - date_entree
+                nombre_jours = max(1, delta.days + 1)
             else:
-                # Cas de sécurité : pas de date_sortie mais statut != EN_COURS
-                # On utilise la propriété du modèle
-                nombre_jours = hosp.nombre_jours
+                # Cas de secours : on utilise hosp.nombre_jours si défini
+                nombre_jours = getattr(hosp, 'nombre_jours', 1)
                 if nombre_jours <= 0:
                     nombre_jours = 1
 

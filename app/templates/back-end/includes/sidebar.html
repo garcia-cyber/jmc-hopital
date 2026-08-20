@@ -56,6 +56,13 @@
                             {%endif%}
                         </ul>
                     </li>
+
+                    <li>
+                        <a href="{% url 'liste_ordonnances_urgence' %}">
+                            <i class="fa fa-notes-medical"></i> 
+                            <span>Ordonnances Urgentes</span>
+                        </a>
+                    </li>
                     <li class="submenu">
                         <a href="#"><i class="fa fa-building"></i> <span> Entreprises</span> <span class="menu-arrow"></span></a>
                         <ul style="display: none;">
@@ -399,12 +406,8 @@
                             <i class="fa fa-file-medical-alt"></i> <span>Ordonnances Sortie</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="{% url 'liste_ordonnances_urgence' %}">
-                            <i class="fa fa-notes-medical"></i> 
-                            <span>Ordonnances Urgentes</span>
-                        </a>
-                    </li>
+                    
+                    
                     <li class="{% if request.resolver_match.url_name == 'liste_attente_medecin' %}active{% endif %}">
                         <a href="{% url 'liste_attente_medecin' %}">
                             <i class="fa fa-clock"></i> 

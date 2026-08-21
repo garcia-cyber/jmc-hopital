@@ -2340,7 +2340,8 @@ def liste_attente_caisse(request):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
-    # Requête de base : consultations avec examens, pour l'hôpital de l'utilisateur
+    # Requête de base : consultations qui ont au moins un examen, pour l'hôpital de l'utilisateur
+    # On utilise .distinct() pour éviter les doublons liés à la jointure avec examens
     consultations_qs = (
         Consultation.objects
         .filter(
@@ -2349,7 +2350,8 @@ def liste_attente_caisse(request):
         )
         .select_related('triage__patient', 'medecin')
         .prefetch_related('examens__prestation', 'paiements')
-        .order_by('-id')  # Ordre décroissant par ID dans la base de données
+        .distinct()  # important pour éviter les doublons
+        .order_by('-id')
     )
 
     # Filtre recherche
@@ -2401,7 +2403,7 @@ def liste_attente_caisse(request):
 
         consultations.append(c)
 
-    # Force explicitement le tri décroissant sur la liste Python finale
+    # Tri explicite décroissant par id (déjà fait en DB, mais on garde pour sécurité)
     consultations.sort(key=lambda x: x.id, reverse=True)
 
     return render(request, 'back-end/caisse/liste_attente.html', {
@@ -2410,7 +2412,6 @@ def liste_attente_caisse(request):
         'query': query,
         'taux': taux,
     })
-
 
     
 # 36
@@ -4315,6 +4316,109 @@ def liste_hospitalisations(request):
         'hopitaux': hopitaux_qs if peut_voir_tous_hopitaux else [],
         'hopital_selectionne': hopital_selectionne,
     })
+
+# ******************************************************************************************************
+# ******************************************************************************************************
+@login_required
+def liste_dettes_examens_labo(request):
+    # Rôle et hôpital de l'utilisateur
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+    hopital_user = role.hopital if role else None
+    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    # Filtre de base : examens de type LABO, statut terminé (ou aussi EN_ATTENTE si tu veux)
+    examens_qs = DemandeExamen.objects.filter(
+        prestation__categorie='LABO',          # ou un autre critère selon ton modèle
+        hopital=hopital_user
+    ).select_related(
+        'consultation__triage__patient',
+        'prestation',
+        'hopital'
+    )
+
+    # Si tu veux ne prendre que les examens déjà réalisés (terminés)
+    # examens_qs = examens_qs.filter(statut='TERMINE')
+
+    # Pour chaque examen, on veut connaître le prix unitaire
+    # Supposons que Prestation a un champ 'prix' ou 'tarif' en CDF
+    # adapte le nom du champ selon ton modèle (prix, tarif, etc.)
+    # Ici on suppose : prestation.prix (en CDF)
+
+    # Agrégation par patient
+    dettes = (
+        examens_qs
+        .values(
+            'consultation__triage__patient',
+            'consultation__triage__patient__noms',
+            'consultation__triage__patient__code_patient',
+            'hopital__nomH',
+        )
+        .annotate(
+            patient_id=F('consultation__triage__patient'),
+            patient_noms=F('consultation__triage__patient__noms'),
+            patient_code=F('consultation__triage__patient__code_patient'),
+            hopital_nom=F('hopital__nomH'),
+            total_du=Sum(
+                F('prestation__prix') * F('quantite'),
+                output_field=DecimalField(max_digits=15, decimal_places=2)
+            ),
+        )
+        .order_by('patient_noms')
+    )
+
+    # Pour chaque patient, on calcule le total déjà payé via les paiements liés aux examens
+    # On suppose que tu as un related_name 'examens' sur consultation
+    # et que les paiements sont liés à la consultation ou directement à la demande d'examen.
+    # Deux cas possibles :
+
+    # CAS 1 : Paiement lié à la consultation (service='LABO' ou 'EXAMENS')
+    # et tu veux sommer tous les paiements LABO de cette consultation.
+    # CAS 2 : Tu as un lien direct DemandeExamen <-> Paiement (moins courant).
+
+    # Ici, on va faire simple : pour chaque ligne de dettes, on va chercher
+    # les paiements de la consultation avec service LABO/EXAMENS.
+
+    dettes_list = []
+    for row in dettes:
+        patient_id = row['patient_id']
+
+        # Total déjà payé pour les examens LABO de ce patient
+        # On passe par les consultations du patient
+        total_paye = (
+            Paiement.objects.filter(
+                Q(service='LABO') | Q(service='EXAMENS'),
+                consultation__triage__patient_id=patient_id,
+                hopital=hopital_user
+            )
+            .aggregate(
+                total=Coalesce(Sum('montant_verse'), Decimal('0'), output_field=DecimalField(max_digits=15, decimal_places=2))
+            )['total']
+        )
+
+        total_du = row['total_du'] or Decimal('0')
+        reste = max(Decimal('0'), total_du - total_paye)
+
+        if reste > 0:
+            dettes_list.append({
+                'patient_id': patient_id,
+                'patient_noms': row['patient_noms'],
+                'patient_code': row['patient_code'],
+                'hopital_nom': row['hopital_nom'],
+                'total_du': total_du,
+                'total_paye': total_paye,
+                'reste_a_payer': reste,
+            })
+
+    context = {
+        'dettes': dettes_list,
+        'fonctionKey': fonctionKey,
+    }
+    return render(request, 'back-end/labo/liste_dettes_examens_labo.html', context)
 #
 # =====================================================================================================
 # PAIEMENT DE L'HOSPITALISATION

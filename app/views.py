@@ -5263,14 +5263,36 @@ def finir_hospitalisation(request, hosp_id):
 # ============================================================================================
 @login_required
 def imprimer_ordonnance(request, ordonnance_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     hopital_user = role.hopital if role else None
 
+    # Filtrer par hôpital (sauf ADMIN) mais accepter URGENCE et DEFINITIVE
+    queryset = Ordonnance.objects.filter(
+        id=ordonnance_id
+    ).select_related(
+        'consultation__triage__patient',
+        'consultation__medecin'
+    ).prefetch_related(
+        'lignes_medicaments'
+    )
+
+    if hopital_user:
+        queryset = queryset.filter(
+            consultation__triage__patient__hopital=hopital_user
+        )
+    else:
+        # Si pas d'hôpital, on ne restreint pas (ou tu peux bloquer selon ta logique)
+        pass
+
+    # Accepter URGENCE et DEFINITIVE
     ordonnance = get_object_or_404(
-        Ordonnance,
-        id=ordonnance_id,
-        type_ordonnance='DEFINITIVE',
-        consultation__triage__patient__hopital=hopital_user
+        queryset,
+        type_ordonnance__in=['URGENCE', 'DEFINITIVE']
     )
 
     return render(request, 'back-end/medecin/imprimer_ordonnance.html', {
@@ -8757,7 +8779,6 @@ def modifier_ordonnance_urgence(request, pk):
                 noms = request.POST.getlist('nom_medicament[]')
                 posologies = request.POST.getlist('posologie[]')
                 durees = request.POST.getlist('duree[]')
-                # si tu n'as pas de champ quantite dans le formulaire, retire cette ligne
                 quantites = request.POST.getlist('quantite[]')
 
                 for i, nom in enumerate(noms):
@@ -8765,12 +8786,22 @@ def modifier_ordonnance_urgence(request, pk):
                         poso = posologies[i].strip() if i < len(posologies) and posologies[i] else ''
                         dur = durees[i].strip() if i < len(durees) and durees[i] else ''
 
-                        # Si tu n'as pas de champ quantite dans LigneMedicament, ne le passe pas
+                        # Gestion de la quantité (peut être vide)
+                        qte = None
+                        if i < len(quantites) and quantites[i]:
+                            qte_val = quantites[i].strip()
+                            if qte_val:
+                                try:
+                                    qte = int(qte_val)
+                                except ValueError:
+                                    qte = None
+
                         LigneMedicament.objects.create(
                             ordonnance=ordonnance,
                             nom_medicament=nom.strip(),
                             posologie=poso,
                             duree=dur,
+                            quantite=qte,  # ← quantité ajoutée
                             statut='EN_COURS',
                             hopital=ordonnance.hopital
                         )

@@ -1945,7 +1945,6 @@ def consultation_medicale(request, triage_id):
 # MEDECIN  LISTE DES EXAMENS CONSULTER
 # ==================================================================================================
 @login_required
-@login_required
 def liste_consultations_terminees(request):
     # Rôle / hôpital
     role = (

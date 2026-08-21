@@ -1693,6 +1693,7 @@ def reconsulter(request, sv_id):
         noms_medocs = request.POST.getlist('nom_medicament')
         posologies = request.POST.getlist('posologie')
         durees = request.POST.getlist('duree')
+        quantites = request.POST.getlist('quantite')  # ← nouveau
 
         if form.is_valid():
             try:
@@ -1738,6 +1739,13 @@ def reconsulter(request, sv_id):
                             if nom and nom.strip():
                                 poso = posologies[i] if i < len(posologies) else ""
                                 dur = durees[i] if i < len(durees) else ""
+                                qty = quantites[i] if i < len(quantites) and quantites[i] else 1
+
+                                # Nettoyer et convertir quantite
+                                try:
+                                    qty_int = int(qty)
+                                except (ValueError, TypeError):
+                                    qty_int = 1
 
                                 LigneMedicament.objects.create(
                                     ordonnance=ordonnance_obj,
@@ -1745,7 +1753,8 @@ def reconsulter(request, sv_id):
                                     posologie=poso,
                                     duree=dur,
                                     statut='EN_COURS',
-                                    hopital=hopital_user
+                                    hopital=hopital_user,
+                                    quantite=qty_int
                                 )
 
                     triage.est_consulte = True
@@ -2110,29 +2119,34 @@ def detail_consultation_view(request, pk):
 def liste_ordonnances_urgence(request):
     query = request.GET.get('q')
 
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
     hopital_user = role.hopital if role else None
 
-    # Requête de base : toutes les ordonnances d'urgence
-    ordonnances_list = Ordonnance.objects.filter(
-        type_ordonnance='URGENCE'
-    ).select_related(
-        'consultation__triage__patient',
-        'consultation__medecin'
-    ).prefetch_related(
-        'lignes_medicaments'
-    ).order_by('-date_prescrite')
+    # Requête de base : toutes les ordonnances d'urgence, triées par date décroissante
+    ordonnances_list = (
+        Ordonnance.objects
+        .filter(type_ordonnance='URGENCE')
+        .select_related(
+            'consultation__triage__patient',
+            'consultation__medecin'
+        )
+        .prefetch_related('lignes_medicaments')
+        .order_by('-date_prescrite')  # les plus récentes en premier
+    )
 
     # Filtre par hôpital sauf pour ADMIN
     if fonctionKey != 'ADMIN':
         if hopital_user:
-            # Médecin, Gestionnaire, etc. : uniquement leur hôpital
             ordonnances_list = ordonnances_list.filter(
                 consultation__triage__patient__hopital=hopital_user
             )
         else:
-            # User sans hôpital → aucune ordonnance visible
             ordonnances_list = ordonnances_list.none()
 
     # Recherche par patient (nom ou code)
@@ -2158,7 +2172,7 @@ def liste_ordonnances_urgence(request):
         'fonctionKey': fonctionKey,
         'query': query,
     }
-    return render(request, 'back-end/medecin/liste_ordonnances_urgence.html', context)
+    return render(request, 'back-end/medecin/liste_ordonnances_urgence.html', context) 
 
 # 33
 # ==================================================================================================

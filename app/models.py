@@ -610,6 +610,8 @@ class LigneMedicament(models.Model):
     motif_arret = models.TextField(blank=True, null=True, help_text="Pourquoi le médecin a changé ce médicament")
     date_modification = models.DateTimeField(default=timezone.now)
     hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    ## mise en jour
+    quantite = models.IntegerField(default= '1', null = True) 
 
     def __str__(self):
         return f"{self.nom_medicament} - {self.statut}"

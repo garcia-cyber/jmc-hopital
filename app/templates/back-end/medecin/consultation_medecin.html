@@ -8,6 +8,10 @@
         
         <!-- Favicon & CSS -->
         {% include 'back-end/includes/css.html' %}
+        
+        <!-- Select2 CSS (pour la recherche dans le select) -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        
         <style>
             .constant-val { font-size: 16px; font-weight: bold; color: #1f2937; }
             .section-title { border-left: 4px solid #dc3545; padding-left: 10px; font-weight: bold; color: #b21f2d; margin-bottom: 20px; }
@@ -163,9 +167,9 @@
 
                                         <!-- ÉTAPE 2 : Sélectionner l'examen filtré -->
                                         <div class="form-group row">
-                                            <div class="col-9">
+                                            <div class="col-12">
                                                 <label class="small font-weight-bold text-muted">2. Sélectionner l'examen :</label>
-                                                <select id="select_examen" class="form-control select">
+                                                <select id="select_examen" class="form-control select-examen">
                                                     <option value="">-- Choisir un examen --</option>
                                                     {% for ex in examens_disponibles %}
                                                         <option value="{{ ex.id }}" data-cat="{{ ex.categorie }}" data-libelle="{{ ex.libelle }}">
@@ -174,8 +178,8 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                            <div class="col-3 d-flex align-items-end">
-                                                <button type="button" id="btn_add_examen" class="btn btn-info btn-block" style="height: 44px;"><i class="fa fa-plus"></i></button>
+                                            <div class="col-12 mt-2">
+                                                <button type="button" id="btn_add_examen" class="btn btn-info btn-block"><i class="fa fa-plus"></i> Ajouter l'examen</button>
                                             </div>
                                         </div>
 
@@ -229,6 +233,7 @@
                                                         <th>Médicament</th>
                                                         <th>Posologie</th>
                                                         <th>Durée</th>
+                                                        <th>Quantité</th>
                                                         <th style="width: 40px;"></th>
                                                     </tr>
                                                 </thead>
@@ -245,6 +250,9 @@
                                                                 </td>
                                                                 <td>
                                                                     <input type="text" name="duree" class="form-control form-control-sm" value="{{ med.duree }}" placeholder="Durée">
+                                                                </td>
+                                                                <td>
+                                                                    <input type="number" name="quantite" class="form-control form-control-sm" value="{{ med.quantite|default:1 }}" min="1">
                                                                 </td>
                                                                 <td class="text-center">
                                                                     <button type="button" class="btn btn-sm btn-outline-danger btn-remove-medoc">
@@ -300,6 +308,9 @@
         
         <!-- jQuery & JS -->
         {% include 'back-end/includes/js.html' %}
+        
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 
 
@@ -308,6 +319,18 @@
             $(document).ready(function() {
                 // Style des inputs Django
                 $('#consultationForm textarea, #consultationForm input[type="text"], #consultationForm select').addClass('form-control');
+                
+                // Initialiser Select2 avec recherche pour le select des examens
+                $('.select-examen').select2({
+                    placeholder: 'Rechercher un examen...',
+                    allowClear: true,
+                    width: '100%',
+                    language: {
+                        noResults: function() {
+                            return "Aucun examen trouvé";
+                        }
+                    }
+                });
 
 
 
@@ -332,8 +355,8 @@
                         }
                     });
                     
-                    // Forcer Select2 ou le select de base à se mettre à jour
-                    $('#select_examen').val('').trigger('change');
+                    // Déclencher le changement pour Select2
+                    $('#select_examen').trigger('change');
                 });
 
 
@@ -391,6 +414,7 @@
                             <td><input type="text" name="nom_medicament" class="form-control form-control-sm" placeholder="Ex: Paracétamol ampoule"></td>
                             <td><input type="text" name="posologie" class="form-control form-control-sm" placeholder="Ex: 1g toutes les 8h"></td>
                             <td><input type="text" name="duree" class="form-control form-control-sm" placeholder="Ex: 3 jours"></td>
+                            <td><input type="number" name="quantite" class="form-control form-control-sm" value="1" min="1"></td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-remove-medoc"><i class="fa fa-trash"></i></button>
                             </td>

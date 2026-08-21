@@ -61,14 +61,11 @@
 <body>
     <div class="main-wrapper">
 
-
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
-
         <div class="page-wrapper">
             <div class="content container-fluid">
-
 
                 <div class="page-header">
                     <div class="row align-items-center">
@@ -81,7 +78,6 @@
                         </div>
                     </div>
                 </div>
-
 
                 <div class="row mb-3">
                     <div class="col-md-12">
@@ -100,7 +96,6 @@
                         </form>
                     </div>
                 </div>
-
 
                 <div class="row">
                     <div class="col-md-12">
@@ -149,6 +144,9 @@
                                                         {% if ligne.duree %}
                                                             <span class="med-pill">Durée: {{ ligne.duree }}</span>
                                                         {% endif %}
+                                                        {% if ligne.quantite %}
+                                                            <span class="med-pill">Qté: {{ ligne.quantite }}</span>
+                                                        {% endif %}
                                                         <span class="med-pill">Statut: {{ ligne.get_statut_display }}</span>
                                                     </div>
                                                 </li>
@@ -156,7 +154,6 @@
                                                 <li class="text-muted">Aucun médicament listé</li>
                                                 {% endfor %}
                                             </ul>
-
 
                                             {% if ord.observation %}
                                             <div class="obs-box">
@@ -188,7 +185,6 @@
                             </table>
                         </div>
 
-
                         {% if ordonnances.has_other_pages %}
                         <div class="mt-4">
                             <ul class="pagination justify-content-center">
@@ -200,7 +196,6 @@
                                     <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
                                 {% endif %}
 
-
                                 {% for i in ordonnances.paginator.page_range %}
                                     {% if ordonnances.number == i %}
                                         <li class="page-item active"><span class="page-link">{{ i }}</span></li>
@@ -210,7 +205,6 @@
                                         </li>
                                     {% endif %}
                                 {% endfor %}
-
 
                                 {% if ordonnances.has_next %}
                                     <li class="page-item">
@@ -225,12 +219,27 @@
                     </div>
                 </div>
 
-
             </div>
         </div>
     </div>
 
-
     {% include 'back-end/includes/js.html' %}
+
+    <script>
+        $(document).ready(function() {
+            // Détruire l'instance existante et réinitialiser avec le bon tri
+            if ($.fn.DataTable.isDataTable('.datatable')) {
+                $('.datatable').DataTable().destroy();
+            }
+
+            $('.datatable').DataTable({
+                "order": [],  // Aucun tri par défaut
+                "pageLength": 25,
+                "columnDefs": [
+                    { "orderable": false, "targets": [5] }  // optionnel : désactiver tri sur la colonne Actions
+                ]
+            });
+        });
+    </script>
 </body>
 </html>

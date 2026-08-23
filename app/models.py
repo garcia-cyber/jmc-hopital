@@ -372,17 +372,16 @@ class Paiement(models.Model):
                 self.dossier_maternite.est_paye = True
                 self.dossier_maternite.save()
 
-        # --- LOGIQUE ENTREPRISE ---
+                # --- LOGIQUE ENTREPRISE ---
         if self.service == 'ENTREPRISE' and self.entreprise:
-            montant_usd = self.montant_verse
-            if self.devise == 'CDF':
-                from .models import ConfigurationHopital
-                taux = ConfigurationHopital.get_taux()
-                montant_usd = self.montant_verse / taux
-            total_a_deduire = montant_usd + self.montant_reduction
+            # Tout en CDF
+            montant_cdf = self.montant_verse or Decimal('0')
+            reduction_cdf = self.montant_reduction or Decimal('0')
+            total_a_deduire_cdf = montant_cdf + reduction_cdf
+
             self.entreprise.dette_mensuelle = max(
                 Decimal('0.00'),
-                self.entreprise.dette_mensuelle - total_a_deduire
+                (self.entreprise.dette_mensuelle or Decimal('0')) - total_a_deduire_cdf
             )
             self.entreprise.save()
 

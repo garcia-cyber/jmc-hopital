@@ -2354,12 +2354,15 @@ def liste_attente_caisse(request):
         return redirect('enregistrement_patient')
 
     # Requête de base : consultations qui ont au moins un examen, pour l'hôpital de l'utilisateur
-    # On utilise .distinct() pour éviter les doublons liés à la jointure avec examens
+    # On exclut les patients CONVENTIONNE et FIDELE
     consultations_qs = (
         Consultation.objects
         .filter(
             examens__isnull=False,
-            triage__patient__hopital=hopital_user
+            triage__patient__hopital=hopital_user,
+        )
+        .exclude(
+            triage__patient__type_patient__in=['CONVENTIONNE', 'FIDELE']
         )
         .select_related('triage__patient', 'medecin')
         .prefetch_related('examens__prestation', 'paiements')
@@ -8873,11 +8876,8 @@ def payer_dette_entreprise(request, entreprise_id):
 
     entreprise = get_object_or_404(Entreprise, id=entreprise_id, hopital=hopital_user)
 
-    # 2. Taux de change depuis la configuration de l’hôpital
-    config = ConfigurationHopital.objects.first()
-    taux = config.taux_usd_en_cdf if config else Decimal('2300.00')  # 1 USD = taux CDF
-    if not taux or taux == 0:
-        taux = Decimal('2300.00')
+    # 2. Taux de change
+    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
@@ -8886,7 +8886,7 @@ def payer_dette_entreprise(request, entreprise_id):
         entreprise=entreprise,
         service='ENTREPRISE',
         hopital=hopital_user
-    )
+    ).order_by('-date_paiement')
 
     total_deja_paye_cdf = Decimal('0')
     for p in paiements_existants:
@@ -8895,14 +8895,30 @@ def payer_dette_entreprise(request, entreprise_id):
         else:  # USD
             total_deja_paye_cdf += (p.montant_verse or Decimal('0')) * taux
 
-    # 4. Dette totale de l’entreprise (en CDF)
-    # Si dette_mensuelle est en USD :
-    dette_usd = entreprise.dette_mensuelle or Decimal('0')
-    dette_cdf = (dette_usd * taux).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    # 4. Calcul de la dette totale de l’entreprise (en CDF)
+    # Tous les patients conventionnés de cette entreprise, dans cet hôpital
+    patients_conventionnes = Patient.objects.filter(
+        entreprise=entreprise,
+        type_patient='CONVENTIONNE',
+        hopital=hopital_user
+    )
 
-    # Si dette_mensuelle est déjà en CDF, utilise directement :
-    # dette_cdf = entreprise.dette_mensuelle or Decimal('0')
-    # dette_usd = dette_cdf / taux
+    # Toutes les consultations de ces patients
+    consultations_qs = Consultation.objects.filter(
+        triage__patient__in=patients_conventionnes
+    ).select_related('triage__patient').prefetch_related('examens__prestation')
+
+    dette_cdf = Decimal('0')
+    for c in consultations_qs:
+        total_examens_cdf = c.examens.aggregate(
+            total=Coalesce(
+                Sum(F('prestation__prix') * F('quantite')),
+                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+            )
+        )['total'] or Decimal('0')
+        dette_cdf += total_examens_cdf
+
+    dette_usd = (dette_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     # 5. Reste à payer
     reste_a_payer_cdf = max(Decimal('0'), dette_cdf - total_deja_paye_cdf)
@@ -8921,7 +8937,7 @@ def payer_dette_entreprise(request, entreprise_id):
             montant_saisi_cdf = montant_saisi * taux
 
         # Vérifier si le montant dépasse le reste à payer (avec tolérance)
-        tolerance_cdf = Decimal('1')  # 1 CDF de tolérance
+        tolerance_cdf = Decimal('1')
         if montant_saisi_cdf > (reste_a_payer_cdf + tolerance_cdf):
             messages.error(
                 request,
@@ -8970,6 +8986,7 @@ def payer_dette_entreprise(request, entreprise_id):
         'total_deja_paye_cdf': total_deja_paye_cdf,
         'taux': taux,
         'fonctionKey': fonctionKey,
+        'paiements': paiements_existants,
     })
 #
 # ======================================================================================

@@ -22,6 +22,24 @@
         .info-financiere.fidele { color: #28a745; }
         .info-financiere.conventionne { color: #17a2b8; }
 
+        /* Style pour le bloc financier technique */
+        .info-financiere-technique {
+            font-size: 10px;
+            font-weight: 600;
+            display: block;
+            margin-top: 4px;
+            line-height: 1.35;
+        }
+        .info-financiere-technique .label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .info-financiere-technique .valeur {
+            font-weight: 700;
+        }
+        .info-financiere-technique .paye { color: #28a745; }
+        .info-financiere-technique .reste { color: #dc3545; }
+
         @media (max-width: 768px) {
             .table thead { display: none; }
             .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
@@ -88,6 +106,24 @@
                                                                     <i class="fa fa-info-circle"></i> {{ item.patient.info_financiere }}
                                                                 </span>
                                                                 {% endif %}
+
+                                                                {% if item.total_prescrit_cdf is not None %}
+                                                                <span class="info-financiere-technique">
+                                                                    <span class="label">Total examens :</span>
+                                                                    <span class="valeur">{{ item.total_prescrit_cdf|floatformat:0 }} CDF</span>
+                                                                    <span class="text-muted">(~ {{ item.total_prescrit_usd|floatformat:2 }} USD)</span>
+                                                                </span>
+                                                                <span class="info-financiere-technique">
+                                                                    <span class="label">Déjà payé :</span>
+                                                                    <span class="valeur paye">{{ item.total_paye_cdf|floatformat:0 }} CDF</span>
+                                                                </span>
+                                                                <span class="info-financiere-technique">
+                                                                    <span class="label">Reste à payer :</span>
+                                                                    <span class="valeur reste">{{ item.reste_a_payer_cdf|floatformat:0 }} CDF</span>
+                                                                    <span class="text-muted">(~ {{ item.reste_a_payer_usd|floatformat:2 }} USD)</span>
+                                                                </span>
+                                                                {% endif %}
+
                                                             </div>
                                                         </div>
                                                     </div>

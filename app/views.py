@@ -2444,9 +2444,13 @@ def liste_examens_techniques(request):
     nom_role = (role_user.fonctionKey.roleName or "").lower()
     fonctionKey = role_user.fonctionKey.roleName
 
+    # Récupérer le taux
+    config = ConfigurationHopital.objects.first()
+    taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
+
     consultations = (
         Consultation.objects.select_related('triage__patient', 'medecin')
-        .prefetch_related('examens__prestation')
+        .prefetch_related('examens__prestation', 'paiements')
         .filter(examens__isnull=False)
         .distinct()
         .order_by('-date_creation')
@@ -2457,6 +2461,41 @@ def liste_examens_techniques(request):
     for cons in consultations:
         patient = cons.triage.patient
         examens_filtrés = []
+
+        # ---- Calcul financier pour cette consultation ----
+        # Total des examens prescrits (en CDF)
+        total_prescrit_cdf = cons.examens.aggregate(
+            total=Coalesce(
+                Sum(F('prestation__prix') * F('quantite')),
+                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
+            )
+        )['total'] or Decimal('0.00')
+
+        # Paiements déjà faits pour les examens (service EXAMENS ou autres selon ta logique)
+        paiements_examens = cons.paiements.filter(
+            patient=patient,
+            consultation=cons,
+            service__in=['LABO', 'ECHO', 'RADIO', 'EXAMENS']
+        )
+
+        total_verse_cdf = Decimal('0.00')
+        total_reduction_cdf = Decimal('0.00')
+
+        for p in paiements_examens:
+            if p.devise == 'CDF':
+                total_verse_cdf += p.montant_verse or Decimal('0')
+                total_reduction_cdf += p.montant_reduction or Decimal('0')
+            else:  # USD
+                total_verse_cdf += (p.montant_verse or Decimal('0')) * taux
+                total_reduction_cdf += (p.montant_reduction or Decimal('0')) * taux
+
+        reste_a_payer_cdf = total_prescrit_cdf - (total_verse_cdf + total_reduction_cdf)
+        if reste_a_payer_cdf < 0:
+            reste_a_payer_cdf = Decimal('0.00')
+
+        reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_prescrit_usd = (total_prescrit_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        # --------------------------------------------------
 
         for exam in cons.examens.all():
             if exam.hopital_id and exam.hopital_id != hopital_user.id:
@@ -2507,14 +2546,22 @@ def liste_examens_techniques(request):
                 },
                 'examens': examens_filtrés,
                 'medecin': cons.medecin.username if cons.medecin else "Généraliste",
-                'tout_traite': not any(not ex['est_deja_fait'] for ex in examens_filtrés)
+                'tout_traite': not any(not ex['est_deja_fait'] for ex in examens_filtrés),
+
+                # Nouvelles infos financières pour le technicien
+                'total_prescrit_cdf': total_prescrit_cdf,
+                'total_prescrit_usd': total_prescrit_usd,
+                'total_paye_cdf': total_verse_cdf + total_reduction_cdf,
+                'reste_a_payer_cdf': reste_a_payer_cdf,
+                'reste_a_payer_usd': reste_a_payer_usd,
             })
 
     return render(request, 'back-end/technique/liste_examens_payes.html', {
         'historique_technique': historique_technique,
         'examens_presents': len(historique_technique) > 0,
         'titre_page': "Examens à réaliser",
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'taux': taux,
     })
 
 

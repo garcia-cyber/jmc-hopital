@@ -8,44 +8,176 @@
         {% include 'back-end/includes/css.html'%}
 
         <style>
-            .page-wrapper { background-color: #f4f7fe; }
-            .table-avatar {
-                width: 38px;
-                height: 38px;
-                border-radius: 10px;
-                margin-right: 10px;
-            }
-            .btn-action {
-                width: 32px;
-                height: 32px;
-                line-height: 32px;
-                padding: 0;
-                border-radius: 8px;
-                margin: 0 2px;
-            }
-            .card-table {
-                border: none;
-                border-radius: 15px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            :root {
+                --hospital-primary: #0284c7;
+                --hospital-secondary: #0f766e;
+                --hospital-bg: #f8fafc;
+                --hospital-card: #ffffff;
+                --hospital-text: #1e293b;
             }
 
-            /* Style pour la barre de recherche personnalisée */
+            .page-wrapper { 
+                background-color: var(--hospital-bg); 
+            }
+
+            /* En-tête de page médical */
+            .page-header {
+                background: #ffffff;
+                padding: 20px 24px;
+                border-bottom: 1px solid #e2e8f0;
+                margin-bottom: 24px;
+                border-radius: 0 0 16px 16px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            }
+
+            .page-title {
+                color: var(--hospital-text);
+                font-weight: 700;
+                font-size: 1.25rem;
+            }
+
+            /* Tableaux et cartes */
+            .card-table {
+                border: none;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(2, 132, 199, 0.05);
+                background-color: var(--hospital-card);
+                overflow: hidden;
+            }
+
+            .card-table .card-header {
+                background-color: transparent;
+                border-bottom: 1px solid #f1f5f9;
+                padding: 20px 24px;
+            }
+
+            /* Style des avatars de soignants */
+            .table-avatar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .table-avatar img {
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                object-fit: cover;
+                border: 2px solid #e0f2fe;
+            }
+            .table-avatar a:not(.avatar) {
+                font-weight: 600;
+                color: #0f172a;
+                text-decoration: none;
+            }
+            .table-avatar a:not(.avatar):hover {
+                color: var(--hospital-primary);
+            }
+            .table-avatar span {
+                display: block;
+                font-size: 0.75rem;
+                color: #64748b;
+                font-weight: 500;
+            }
+
+            /* Boutons d'action raffinés */
+            .btn-action {
+                width: 36px;
+                height: 36px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 10px;
+                margin: 0 2px;
+                transition: all 0.2s ease;
+                background-color: #f1f5f9;
+                border: none;
+                color: #475569;
+            }
+            .btn-action:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            }
+            .btn-action.btn-info { background-color: #e0f2fe; color: #0284c7; }
+            .btn-action.btn-info:hover { background-color: #bae6fd; color: #0369a1; }
+            
+            .btn-action.btn-primary { background-color: #f0fdf4; color: #16a34a; }
+            .btn-action.btn-primary:hover { background-color: #dcfce7; color: #15803d; }
+
+            .btn-action.btn-warning { background-color: #fff7ed; color: #c2410c; }
+            .btn-action.btn-warning:hover { background-color: #ffedd5; color: #9a3412; }
+
+            /* Barre de recherche clinique */
             .search-box {
                 position: relative;
-                max-width: 300px;
+                max-width: 280px;
             }
             .search-box input {
-                border-radius: 20px;
-                padding-left: 35px;
-                border: 1px solid #e3e3e3;
-                background-color: #fbfbfb;
+                border-radius: 12px;
+                padding: 10px 15px 10px 42px;
+                border: 1px solid #cbd5e1;
+                background-color: #f8fafc;
+                font-size: 0.875rem;
+                transition: all 0.3s;
+            }
+            .search-box input:focus {
+                border-color: var(--hospital-primary);
+                box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+                outline: none;
+                background-color: white;
             }
             .search-box i {
                 position: absolute;
-                left: 12px;
+                left: 14px;
                 top: 50%;
                 transform: translateY(-50%);
-                color: #999;
+                color: #64748b;
+                font-size: 1.1rem;
+            }
+
+            /* Bouton principal "Inscrire un agent" */
+            .btn-rounded {
+                border-radius: 12px;
+                padding: 10px 20px;
+                font-weight: 600;
+                background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+                border: none;
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+            }
+            .btn-rounded:hover {
+                background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            }
+
+            /* Badges et table text */
+            .custom-table th {
+                background-color: #f8fafc;
+                color: #475569;
+                font-weight: 600;
+                border-bottom: 2px solid #e2e8f0 !important;
+                padding: 14px 16px !important;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                letter-spacing: 0.05em;
+            }
+            .custom-table td {
+                padding: 14px 16px !important;
+                vertical-align: middle !important;
+                color: #334155;
+                border-bottom: 1px solid #f1f5f9 !important;
+            }
+            .badge-light {
+                background-color: #f1f5f9;
+                color: #475569;
+                font-weight: 500;
+                padding: 6px 10px;
+                border-radius: 8px;
+            }
+
+            /* Animation filtrage */
+            .table-row-hidden { display: none !important; }
+            .table-row-visible { animation: fadeIn 0.3s ease; }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(4px); }
+                to { opacity: 1; transform: translateY(0); }
             }
         </style>
     </head>
@@ -56,107 +188,106 @@
             {% include 'back-end/includes/sidebar.html'%}
             
             <div class="page-wrapper">
-                <div class="content container-fluid">
                 
-                    <!-- Page Header -->
-                    <div class="page-header">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h3 class="page-title"><i class="la la-users-cog text-primary mr-2"></i>Annuaire du Personnel</h3>
-                                <ul class="breadcrumb">
-                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                                    <li class="breadcrumb-item active">Liste des Employés</li>
-                                </ul>
-                            </div>
-                            <div class="col-auto float-right ml-auto">
-                                <a href="{% url 'employeAdd' %}" class="btn btn-primary btn-rounded"><i class="fa fa-plus"></i> Inscrire un Agent</a>
-                            </div>
+                <!-- Page Header Médical -->
+                <div class="page-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="page-title mb-1"><i class="la la-user-md text-primary mr-2"></i>Annuaire du Personnel Médical</h3>
+                            <ul class="breadcrumb bg-transparent p-0 mb-0 font-14">
+                                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-muted">Tableau de bord</a></li>
+                                <li class="breadcrumb-item active text-primary font-weight-500">Liste des Soignants & Agents</li>
+                            </ul>
+                        </div>
+                        <div class="col-auto float-right ml-auto">
+                            <a href="{% url 'employeAdd' %}" class="btn btn-primary btn-rounded text-white"><i class="fa fa-plus mr-1"></i> Inscrire un Agent</a>
                         </div>
                     </div>
-                    <!-- /Page Header -->
+                </div>
 
+                <div class="content container-fluid">
                     <div class="row">
                         <div class="col-md-12">
                             <div class="card card-table">
-                                <div class="card-header bg-white border-0 pt-4">
+                                <div class="card-header">
                                     <div class="row align-items-center">
                                         <div class="col">
-                                            <h4 class="card-title mb-0">Effectif Actif</h4>
+                                            <h4 class="card-title mb-0 font-weight-bold text-dark"><i class="la la-hospital text-info mr-2"></i>Effectif Actif Hospitalier</h4>
                                         </div>
                                         <div class="col-auto">
                                             <!-- Barre de Recherche -->
                                             <div class="search-box">
                                                 <i class="la la-search"></i>
-                                                <input type="text" class="form-control" id="myInput" placeholder="Rechercher un agent...">
+                                                <input type="text" class="form-control" id="searchInput" placeholder="Rechercher par nom, email...">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body p-0">
                                     <div class="table-responsive">
-                                        <table class="table table-striped custom-table datatable mb-0">
+                                        <table class="table custom-table mb-0" id="employeeTable">
                                             <thead>
                                                 <tr>
-                                                    <th>Identité</th>
-                                                    <th>Email</th>
-                                                    <th>Nom d'utilisateur</th>
-                                                    <th>Date d'adhésion</th>
-                                                    <th class="text-right">Actions</th>
+                                                    <th>Identité & Spécialité</th>
+                                                    <th>Contact Email</th>
+                                                    <th>Identifiant</th>
+                                                    <th>Date d'affectation</th>
+                                                    <th class="text-right">Actions Cliniques</th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="myTable">
+                                            <tbody id="tableBody">
                                                 {% for user in lst_user %}
-                                                <tr>
+                                                <tr class="table-row-visible" data-search="{{ user.first_name|lower }} {{ user.last_name|lower }} {{ user.email|lower }} {{ user.username|lower }}">
                                                     <td>
-                                                        <h2 class="table-avatar">
-                                                            <a href="#" class="avatar"><img src="/static/back-end/assets/img/profiles/avatar-01.jpg" alt=""></a>
-                                                            <a href="#">{{ user.first_name }} {{ user.last_name }} <span>{{ user.fonction_set.first.fonctionKey.roleName|default:"Agent" }}</span></a>
-                                                        </h2>
+                                                        <div class="table-avatar">
+                                                            <a href="#" class="avatar"><img src="/static/back-end/assets/img/profiles/avatar-01.jpg" alt="Avatar"></a>
+                                                            <div>
+                                                                <a href="#">{{ user.first_name }} {{ user.last_name }}</a>
+                                                                <span>{{ user.fonction_set.first.fonctionKey.roleName|default:"Personnel Médical" }}</span>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                    <td>{{ user.email }}</td>
+                                                    <td><span class="text-muted">{{ user.email }}</span></td>
                                                     <td><span class="badge badge-light">@{{ user.username }}</span></td>
-                                                    <td>{{ user.date_joined|date:"d M Y" }}</td>
+                                                    <td><span class="text-muted">{{ user.date_joined|date:"d M Y" }}</span></td>
                                                     <td class="text-right">
                                                         {% if fonctionKey == 'admin'%}
-                                                        <a href="{% url 'ajouter_fonction' user.id %}" class="btn btn-info btn-action" title="Attribuer Fonction/Profil">
+                                                        <a href="{% url 'ajouter_fonction' user.id %}" class="btn btn-info btn-action" title="Attribuer un Rôle/Service">
                                                             <i class="la la-user-tag"></i>
                                                         </a>
-                                                        {%endif%}
-                                                        <a href="{% url 'modifier_user' user.id %}" class="btn btn-primary btn-action" title="Modifier">
+                                                        {% endif %}
+                                                        <a href="{% url 'modifier_user' user.id %}" class="btn btn-primary btn-action" title="Modifier le profil">
                                                             <i class="la la-edit"></i>
                                                         </a>
-                                                         {% if fonctionKey == 'admin'%}
-                                                        <a href="{% url 'force_pass' user.id %}" class="btn btn-warning btn-action text-white" title="Réinitialiser MDP" onclick="return confirm('Forcer la réinitialisation du mot de passe ?')">
+                                                        {% if fonctionKey == 'admin'%}
+                                                        <a href="{% url 'force_pass' user.id %}" class="btn btn-warning btn-action" title="Réinitialiser le mot de passe" onclick="return confirm('Forcer la réinitialisation du mot de passe de cet agent ?')">
                                                             <i class="la la-key"></i>
                                                         </a>
-                                                        {%endif%}  
+                                                        {% endif %}  
                                                     </td>
                                                 </tr>
                                                 {% empty %}
                                                 <tr>
-                                                    <td colspan="5" class="text-center text-muted">Aucun employé enregistré.</td>
+                                                    <td colspan="5" class="text-center py-5 text-muted">
+                                                        <i class="la la-user-slash font-30 d-mb-2"></i>
+                                                        <p class="mb-0">Aucun agent ou personnel médical enregistré pour le moment.</p>
+                                                    </td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
+                                
                                 <!-- Pagination Footer -->
-                                <div class="card-footer bg-white border-0 pb-4">
+                                <div class="card-footer bg-white border-0 py-3 px-4">
                                     <div class="row align-items-center">
                                         <div class="col">
-                                            <span class="text-muted small">Affichage de {{ lst_user|length }} membre(s) au total</span>
+                                            <span class="text-muted small">Affichage de <strong id="visibleCount" class="text-dark">0</strong> sur <strong class="text-dark">{{ lst_user|length }}</strong> membre(s) actif(s)</span>
                                         </div>
                                         <div class="col-auto">
                                             <ul class="pagination mb-0">
-                                                <li class="page-item disabled">
-                                                    <a class="page-link" href="#" tabindex="-1"><i class="la la-angle-left"></i></a>
-                                                </li>
-                                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="#"><i class="la la-angle-right"></i></a>
-                                                </li>
+                                                <!-- Généré dynamiquement par JS -->
                                             </ul>
                                         </div>
                                     </div>
@@ -170,15 +301,105 @@
         
         {% include 'back-end/includes/js.html'%}
 
-        <!-- Script de filtrage en temps réel -->
+        <!-- Script de filtrage et pagination par 10 -->
         <script>
             $(document).ready(function(){
-              $("#myInput").on("keyup", function() {
-                var value = $(this).val().toLowerCase();
-                $("#myTable tr").filter(function() {
-                  $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                var itemsPerPage = 10;
+                var currentPage = 1;
+                var filteredRows = [];
+
+                function updatePagination() {
+                    var totalRows = filteredRows.length;
+                    var totalPages = Math.ceil(totalRows / itemsPerPage) || 1;
+                    
+                    if (currentPage > totalPages) {
+                        currentPage = totalPages;
+                    }
+
+                    // Masquer toutes les lignes puis afficher uniquement celles de la page active
+                    $("#tableBody tr[data-search]").removeClass("table-row-visible table-row-hidden").hide();
+
+                    var startIndex = (currentPage - 1) * itemsPerPage;
+                    var endIndex = startIndex + itemsPerPage;
+                    
+                    for (var i = startIndex; i < endIndex && i < totalRows; i++) {
+                        $(filteredRows[i]).show().addClass("table-row-visible");
+                    }
+
+                    // Mettre à jour le compteur d'affichage
+                    var displayedCount = Math.min(endIndex, totalRows);
+                    if (totalRows === 0) displayedCount = 0;
+                    $("#visibleCount").text(displayedCount);
+
+                    // Reconstruire les boutons de pagination
+                    renderPaginationControls(totalPages);
+                }
+
+                function renderPaginationControls(totalPages) {
+                    var paginationContainer = $(".pagination");
+                    paginationContainer.empty();
+
+                    // Bouton Précédent
+                    var prevDisabled = currentPage === 1 ? "disabled" : "";
+                    paginationContainer.append(`
+                        <li class="page-item ${prevDisabled}">
+                            <a class="page-link" href="#" data-page="${currentPage - 1}" tabindex="-1"><i class="la la-angle-left"></i></a>
+                        </li>
+                    `);
+
+                    // Pages numérotées
+                    for (var p = 1; p <= totalPages; p++) {
+                        var activeClass = p === currentPage ? "active" : "";
+                        paginationContainer.append(`
+                            <li class="page-item ${activeClass}">
+                                <a class="page-link" href="#" data-page="${p}">${p}</a>
+                            </li>
+                        `);
+                    }
+
+                    // Bouton Suivant
+                    var nextDisabled = currentPage === totalPages || totalPages === 0 ? "disabled" : "";
+                    paginationContainer.append(`
+                        <li class="page-item ${nextDisabled}">
+                            <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="la la-angle-right"></i></a>
+                        </li>
+                    `);
+                }
+
+                function filterTable() {
+                    var searchTerm = $("#searchInput").val().toLowerCase().trim();
+                    filteredRows = [];
+
+                    $("#tableBody tr[data-search]").each(function() {
+                        var searchData = $(this).data("search").toLowerCase();
+                        if (searchTerm === "" || searchData.indexOf(searchTerm) > -1) {
+                            filteredRows.push(this);
+                        }
+                    });
+
+                    currentPage = 1; // Retour à la première page lors d'une recherche
+                    updatePagination();
+                }
+
+                // Écouteur sur les clics de pagination
+                $(document).on("click", ".pagination .page-link", function(e) {
+                    e.preventDefault();
+                    var parentLi = $(this).parent();
+                    if (parentLi.hasClass("disabled") || parentLi.hasClass("active")) return;
+
+                    var targetPage = parseInt($(this).data("page"));
+                    if (targetPage) {
+                        currentPage = targetPage;
+                        updatePagination();
+                    }
                 });
-              });
+
+                $("#searchInput").on("keyup", function() {
+                    filterTable();
+                });
+
+                // Initialisation au chargement
+                filterTable();
             });
         </script>
     </body>

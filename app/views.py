@@ -4259,6 +4259,7 @@ def liste_hospitalisations(request):
     from django.utils import timezone
     from decimal import ROUND_HALF_UP
 
+
     # 1. Rôle et hôpital de l'utilisateur
     role = (
         Fonction.objects
@@ -4269,22 +4270,27 @@ def liste_hospitalisations(request):
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
+
     # Vérifier si l'utilisateur peut voir tous les hôpitaux
     peut_voir_tous_hopitaux = (
         request.user.is_superuser
-        or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur'])
+        or (role and role.fonctionKey and role.fonctionKey.roleName in ['Admin', 'Directeur', 'Gestionnaire'])
     )
+
 
     # Paramètre URL : ?tous_hopitaux=1
     afficher_tous = request.GET.get('tous_hopitaux') == '1'
+
 
     if not hopital_user and not afficher_tous:
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
+
     if afficher_tous and not peut_voir_tous_hopitaux:
         afficher_tous = False
         messages.warning(request, "Vous n'avez pas l'autorisation de voir toutes les hospitalisations.")
+
 
     # 2. Taux de change
     config = ConfigurationHopital.objects.first()
@@ -4292,8 +4298,10 @@ def liste_hospitalisations(request):
     if not taux or taux == 0:
         taux = Decimal('2500.00')
 
+
     # 3. Récupérer les hôpitaux pour le filtre (admin / tous hopitaux)
     hopitaux_qs = Hopital.objects.all().order_by('nomH')
+
 
     # 4. Récupérer les hospitalisations
     hospitalisations_qs = Hospitalisation.objects.select_related(
@@ -4304,13 +4312,16 @@ def liste_hospitalisations(request):
         'paiements'
     ).order_by('-date_entree')
 
+
     # Filtre par hôpital "par défaut" si on n'affiche pas tous
     if not afficher_tous:
         hospitalisations_qs = hospitalisations_qs.filter(hopital=hopital_user)
 
+
     # Filtre par hôpital via ?hopital=ID (uniquement si l'utilisateur peut voir tous)
     hopital_selectionne_id = request.GET.get('hopital')
     hopital_selectionne = None
+
 
     if peut_voir_tous_hopitaux and afficher_tous and hopital_selectionne_id:
         try:
@@ -4319,22 +4330,25 @@ def liste_hospitalisations(request):
         except (ValueError, Hopital.DoesNotExist):
             hopital_selectionne = None
 
+
     # 5. Calcul pour chaque hospitalisation
     hospitalisations = []
     now = timezone.now()
 
+
     for hosp in hospitalisations_qs:
         date_entree = hosp.date_entree
+        statut = (hosp.statut or '').upper()
+        
+        nombre_jours = 0
+        prix_lit_cdf = Decimal('0')
+        cout_total_cdf = Decimal('0')
+        cout_total_usd = Decimal('0')
+        total_deja_paye_cdf = Decimal('0')
+        reste_a_payer_cdf = Decimal('0')
+        reste_a_payer_usd = Decimal('0')
+        
         if not date_entree:
-            # Sécurité : pas de date_entree → on saute ou on met 0 jour
-            nombre_jours = 0
-            prix_lit_cdf = Decimal('0')
-            cout_total_cdf = Decimal('0')
-            cout_total_usd = Decimal('0')
-            total_deja_paye_cdf = Decimal('0')
-            reste_a_payer_cdf = Decimal('0')
-            reste_a_payer_usd = Decimal('0')
-
             hospitalisations.append({
                 'hosp': hosp,
                 'cout_total_usd': cout_total_usd,
@@ -4346,44 +4360,34 @@ def liste_hospitalisations(request):
             })
             continue
 
-        # --- Nombre de jours ---
-        statut = (hosp.statut or '').upper()
-
-        if statut == 'EN_COURS':
-            # Comptage en cours jusqu'à maintenant
-            delta = now - date_entree
-            nombre_jours = max(1, delta.days + 1)
-        else:
-            # Hospitalisation terminée / annulée / autre : on utilise date_sortie
-            date_sortie = hosp.date_sortie
-            if not date_sortie:
-                # Si pas de date_sortie mais statut != EN_COURS, on essaie d'utiliser la propriété du modèle
-                date_sortie = getattr(hosp, 'date_sortie', None)
-
-            if date_sortie and date_sortie >= date_entree:
-                delta = date_sortie - date_entree
-                nombre_jours = max(1, delta.days + 1)
-            else:
-                # Cas de secours : on utilise hosp.nombre_jours si défini
-                nombre_jours = getattr(hosp, 'nombre_jours', 1)
-                if nombre_jours <= 0:
-                    nombre_jours = 1
 
         # --- Prix du lit par nuit (en CDF) ---
-        prix_lit_cdf = Decimal('0')
-
         if hasattr(hosp.lit.chambre, 'type_chambre') and hosp.lit.chambre.type_chambre:
             prix_lit_cdf = hosp.lit.chambre.type_chambre.prix_nuitée or Decimal('0')
 
         if prix_lit_cdf <= 0:
             prix_lit_cdf = Decimal('50000')
 
+
+        # --- Nombre de jours ---
+        if statut == 'EN_COURS':
+            # Comptage en cours jusqu'à maintenant
+            delta = now - date_entree
+            nombre_jours = max(1, delta.days + 1)
+        elif statut == 'TERMINE':
+            # Hospitalisation TERMINÉE → on utilise le nombre_jours du modèle (figé)
+            nombre_jours = hosp.nombre_jours
+        else:
+            # Autres statuts (ANNULE, etc.)
+            nombre_jours = 0
+
+
         # --- Coût total en CDF ---
         cout_total_cdf = (prix_lit_cdf * nombre_jours).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
         cout_total_usd = (cout_total_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-        # --- Total déjà payé en CDF ---
-        total_deja_paye_cdf = Decimal('0')
+
+        # --- Total déjà payé en CDF (TOUJOURS calculé) ---
         for p in hosp.paiements.all():
             montant = p.montant_verse or Decimal('0')
             if p.devise == 'CDF':
@@ -4391,9 +4395,12 @@ def liste_hospitalisations(request):
             else:  # USD
                 total_deja_paye_cdf += montant * taux
 
+
         # --- Reste à payer (en CDF + USD) ---
+        # Si le patient doit encore 2000 CDF, on l'affiche
         reste_a_payer_cdf = max(Decimal('0'), cout_total_cdf - total_deja_paye_cdf)
         reste_a_payer_usd = (reste_a_payer_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
 
         hospitalisations.append({
             'hosp': hosp,
@@ -4403,7 +4410,9 @@ def liste_hospitalisations(request):
             'reste_a_payer_cdf': reste_a_payer_cdf,
             'nombre_jours': nombre_jours,
             'prix_lit_cdf': prix_lit_cdf,
+            'total_deja_paye_cdf': total_deja_paye_cdf,
         })
+
 
     return render(request, 'back-end/hospitalisation/liste_hospitalisations.html', {
         'hospitalisations': hospitalisations,
@@ -8479,8 +8488,10 @@ def historique_examen_externe_technicien(request):
         historique_technique = []
 
         for dem in demandes:
-            # Récupère les prestations
-            tous_les_examens = dem.prestations.filter(hopital=user_hopital)
+            # Récupère les prestations filtrées par hôpital
+            tous_les_examens = dem.prestations.filter(
+                hopital=user_hopital  # ← Filtrage par hôpital
+            )
 
             # Récupère les résultats
             resultats = dem.resultats_examens.all()

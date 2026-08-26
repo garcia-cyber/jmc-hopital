@@ -2436,6 +2436,8 @@ def liste_attente_caisse(request):
 @login_required
 def liste_examens_techniques(request):
     role_user = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    
+    # Vérification de base
     if not role_user or not role_user.fonctionKey or not role_user.hopital:
         return redirect('dashboard')
 
@@ -2447,10 +2449,15 @@ def liste_examens_techniques(request):
     config = ConfigurationHopital.objects.first()
     taux = config.taux_usd_en_cdf if config and config.taux_usd_en_cdf else Decimal('2500.00')
 
+    # Filtrer les consultations par hôpital du user connecté
+    # Le gestionnaire et le technicien voient les mêmes consultations de leur hôpital
     consultations = (
         Consultation.objects.select_related('triage__patient', 'medecin')
         .prefetch_related('examens__prestation', 'paiements')
-        .filter(examens__isnull=False)
+        .filter(
+            hopital=hopital_user,  # Filtrer directement par hopital de la consultation
+            examens__isnull=False
+        )
         .distinct()
         .order_by('-date_creation')
     )
@@ -2459,18 +2466,20 @@ def liste_examens_techniques(request):
 
     for cons in consultations:
         patient = cons.triage.patient
-        examens_filtrés = []
+        examens_filtres = []
 
         # ---- Calcul financier pour cette consultation ----
-        # Total des examens prescrits (en CDF)
-        total_prescrit_cdf = cons.examens.aggregate(
+        # Total des examens prescrits (en CDF) - filtrés par hôpital
+        total_prescrit_cdf = cons.examens.filter(
+            hopital=hopital_user
+        ).aggregate(
             total=Coalesce(
                 Sum(F('prestation__prix') * F('quantite')),
                 Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
             )
         )['total'] or Decimal('0.00')
 
-        # Paiements déjà faits pour les examens (service EXAMENS ou autres selon ta logique)
+        # Paiements déjà faits pour les examens
         paiements_examens = cons.paiements.filter(
             patient=patient,
             consultation=cons,
@@ -2496,7 +2505,8 @@ def liste_examens_techniques(request):
         total_prescrit_usd = (total_prescrit_cdf / taux).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         # --------------------------------------------------
 
-        for exam in cons.examens.all():
+        for exam in cons.examens.filter(hopital=hopital_user).all():
+            # Vérification supplémentaire de l'hôpital
             if exam.hopital_id and exam.hopital_id != hopital_user.id:
                 continue
 
@@ -2505,6 +2515,7 @@ def liste_examens_techniques(request):
 
             cat = str(exam.prestation.categorie).upper() if exam.prestation else ""
 
+            # Filtrer par type de patient (pour les patients SIMPLE uniquement)
             if patient.type_patient == 'SIMPLE':
                 paiement_examen = Paiement.objects.filter(
                     patient=patient,
@@ -2515,19 +2526,24 @@ def liste_examens_techniques(request):
                 if not paiement_examen:
                     continue
 
-            if ('labo' in nom_role and cat == 'LABO') or \
+            # Filtrer par rôle du technicien OU gestionnaire (admin)
+            # Le gestionnaire (admin) voit tout, le technicien voit selon sa spécialité
+            est_gestionnaire = 'gestionnaire' in nom_role or 'admin' in nom_role
+            
+            if est_gestionnaire or \
+               ('labo' in nom_role and cat == 'LABO') or \
                (('echo' in nom_role or 'echographiste' in nom_role) and cat == 'ECHO') or \
                (('radio' in nom_role or 'radiologue' in nom_role) and cat == 'RADIO') or \
                ('technicien' in nom_role):
 
-                examens_filtrés.append({
+                examens_filtres.append({
                     'id_examen': exam.id,
                     'libelle': exam.prestation.libelle if exam.prestation else 'Examen',
                     'est_deja_fait': exam.statut == 'TERMINE'
                 })
 
-        if examens_filtrés:
-            examens_filtrés.sort(key=lambda x: x['est_deja_fait'])
+        if examens_filtres:
+            examens_filtres.sort(key=lambda x: x['est_deja_fait'])
 
             historique_technique.append({
                 'consultation_id': cons.id,
@@ -2543,11 +2559,11 @@ def liste_examens_techniques(request):
                         "Patient conventionné"
                     ),
                 },
-                'examens': examens_filtrés,
+                'examens': examens_filtres,
                 'medecin': cons.medecin.username if cons.medecin else "Généraliste",
-                'tout_traite': not any(not ex['est_deja_fait'] for ex in examens_filtrés),
+                'tout_traite': not any(not ex['est_deja_fait'] for ex in examens_filtres),
 
-                # Nouvelles infos financières pour le technicien
+                # Infos financières pour le technicien/gestionnaire
                 'total_prescrit_cdf': total_prescrit_cdf,
                 'total_prescrit_usd': total_prescrit_usd,
                 'total_paye_cdf': total_verse_cdf + total_reduction_cdf,
@@ -2555,12 +2571,16 @@ def liste_examens_techniques(request):
                 'reste_a_payer_usd': reste_a_payer_usd,
             })
 
+    # Trier pour afficher d'abord les patients avec examens non traités
+    historique_technique.sort(key=lambda x: (x['tout_traite'], -x['consultation_id']))
+
     return render(request, 'back-end/technique/liste_examens_payes.html', {
         'historique_technique': historique_technique,
         'examens_presents': len(historique_technique) > 0,
         'titre_page': "Examens à réaliser",
         'fonctionKey': fonctionKey,
         'taux': taux,
+        'hopital_user': hopital_user,
     })
 
 
@@ -2570,26 +2590,41 @@ def liste_examens_techniques(request):
 # ==================================================================================================
 @login_required
 def saisir_resultats_examens(request, consultation_id):
-    # 1. Vérification du rôle du technicien
-    role_user = Fonction.objects.filter(userKey=request.user).first()
-    if not role_user or not role_user.fonctionKey:
+    # 1. Vérification du rôle du technicien/gestionnaire
+    role_user = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    if not role_user or not role_user.fonctionKey or not role_user.hopital:
         messages.error(request, "Accès refusé.")
         return redirect('dashboard')
 
+    hopital_user = role_user.hopital
     nom_role = role_user.fonctionKey.roleName.lower()
     fonctionKey = role_user.fonctionKey.roleName
 
-    # 2. Récupération de la consultation
-    consultation = get_object_or_404(Consultation, id=consultation_id)
+    # 2. Récupération de la consultation avec vérification de l'hôpital
+    consultation = get_object_or_404(
+        Consultation.objects.filter(hopital=hopital_user),  # Filtrer par hôpital
+        id=consultation_id
+    )
     
     # 3. Extraction et filtrage des examens 'EN_ATTENTE' pour ce rôle précis
-    examens_en_attente = consultation.examens.filter(statut='EN_ATTENTE').select_related('prestation')
+    examens_en_attente = consultation.examens.filter(
+        statut='EN_ATTENTE',
+        hopital=hopital_user  # Filtrer par hôpital
+    ).select_related('prestation')
     
     examens_a_saisir = []
+    
+    # Vérifier si c'est un gestionnaire ou admin (peut tout voir)
+    est_gestionnaire = 'gestionnaire' in nom_role or 'admin' in nom_role
+    
     for exam in examens_en_attente:
-        cat = exam.prestation.categorie
-        # Logique de spécialisation retrouvée
-        if ('labo' in nom_role or 'laborantin' in nom_role) and cat == 'LABO':
+        cat = exam.prestation.categorie if exam.prestation else ""
+        
+        # Le gestionnaire/admin voit TOUS les examens
+        if est_gestionnaire:
+            examens_a_saisir.append(exam)
+        # Le technicien voit selon sa spécialité
+        elif ('labo' in nom_role or 'laborantin' in nom_role) and cat == 'LABO':
             examens_a_saisir.append(exam)
         elif ('echo' in nom_role or 'echographiste' in nom_role) and cat == 'ECHO':
             examens_a_saisir.append(exam)
@@ -2628,7 +2663,8 @@ def saisir_resultats_examens(request, consultation_id):
         'consultation': consultation,
         'patient': consultation.triage.patient,
         'examens_a_saisir': examens_a_saisir,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,  # Ajout pour le template
     }
     return render(request, 'back-end/technique/saisir_resultats.html', context)
 
@@ -8301,11 +8337,16 @@ def liste_demandes_externes(request):
 @login_required
 def liste_examens_technicien(request):
     role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
-    if not role_obj or not role_obj.fonctionKey:
-        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    if not role_obj or not role_obj.fonctionKey or not role_obj.hopital:
+        messages.error(request, "Accès refusé.")
+        return redirect('dashboard')
 
     role_name = role_obj.fonctionKey.roleName.upper()
     user_hopital = role_obj.hopital
+    nom_role = role_obj.fonctionKey.roleName.lower()
+
+    # Vérifier si c'est un gestionnaire ou admin (peut tout voir)
+    est_gestionnaire = 'gestionnaire' in nom_role or 'admin' in nom_role
 
     cat_cible = None
     if 'LABO' in role_name:
@@ -8315,18 +8356,27 @@ def liste_examens_technicien(request):
     elif 'ECHO' in role_name:
         cat_cible = 'ECHO'
 
-    if not cat_cible:
-        return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+    # Le gestionnaire/admin n'a pas de catégorie spécifique, il voit tout
+    if not cat_cible and not est_gestionnaire:
+        messages.error(request, "Accès refusé.")
+        return redirect('dashboard')
 
+    # Filtrer par hôpital
     demandes = DemandeExamenExterne.objects.filter(
-        hopital=user_hopital,
-        prestations__categorie=cat_cible
+        hopital=user_hopital
     ).distinct().order_by('-date_demande')
 
     historique_technique = []
 
     for dem in demandes:
-        examens_filtres = dem.prestations.filter(categorie=cat_cible)
+        # Le gestionnaire voit toutes les catégories, le technicien voit sa catégorie
+        if est_gestionnaire:
+            examens_filtres = dem.prestations.filter(hopital=user_hopital)
+        else:
+            examens_filtres = dem.prestations.filter(
+                hopital=user_hopital,
+                categorie=cat_cible
+            )
 
         if examens_filtres.exists():
             historique_technique.append({
@@ -8334,15 +8384,17 @@ def liste_examens_technicien(request):
                 'patient': dem.client.noms,
                 'date': dem.date_demande,
                 'examens': examens_filtres,
-                'statut': dem.statut
+                'statut': dem.statut,
+                'hopital': dem.hopital.nomH if dem.hopital else 'N/A'
             })
 
     return render(request, 'back-end/client/liste_examens_technicien.html', {
         'historique_technique': historique_technique,
         'fonctionKey': role_obj.fonctionKey.roleName,
-        'cat_cible': cat_cible
+        'cat_cible': cat_cible,
+        'est_gestionnaire': est_gestionnaire,
+        'hopital_user': user_hopital,
     })
-
 #
 # =========================================================================================================
 # RESULTAT EXAMEN 
@@ -8388,11 +8440,16 @@ def historique_examen_externe_technicien(request):
         # Récupère le rôle de l'utilisateur
         role_obj = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
         
-        if not role_obj or not role_obj.fonctionKey:
-            return render(request, 'back-end/error.html', {'message': "Accès refusé."})
+        if not role_obj or not role_obj.fonctionKey or not role_obj.hopital:
+            messages.error(request, "Accès refusé.")
+            return redirect('dashboard')
 
         role_name = role_obj.fonctionKey.roleName.upper()
         user_hopital = role_obj.hopital  # ← Hôpital du user connecté
+        nom_role = role_obj.fonctionKey.roleName.lower()
+
+        # Vérifier si c'est un gestionnaire ou admin (peut tout voir)
+        est_gestionnaire = 'gestionnaire' in nom_role or 'admin' in nom_role
 
         is_medecin = 'MEDECIN' in role_name or 'DOCTEUR' in role_name
 
@@ -8405,7 +8462,8 @@ def historique_examen_externe_technicien(request):
             cat_cible = 'ECHO'
 
         # Requête filtrée par l'hôpital du user connecté
-        if is_medecin:
+        if is_medecin or est_gestionnaire:
+            # Le médecin et le gestionnaire voient tout de leur hôpital
             demandes = DemandeExamenExterne.objects.filter(
                 hopital=user_hopital  # ← Seulement l'hôpital du user
             ).select_related('client').order_by('-date_demande')
@@ -8415,13 +8473,14 @@ def historique_examen_externe_technicien(request):
                 prestations__categorie=cat_cible
             ).select_related('client').distinct().order_by('-date_demande')
         else:
-            return render(request, 'back-end/error.html', {'message': "Accès non autorisé pour ce profil."})
+            messages.error(request, "Accès non autorisé pour ce profil.")
+            return redirect('dashboard')
 
         historique_technique = []
 
         for dem in demandes:
             # Récupère les prestations
-            tous_les_examens = dem.prestations.all()
+            tous_les_examens = dem.prestations.filter(hopital=user_hopital)
 
             # Récupère les résultats
             resultats = dem.resultats_examens.all()
@@ -8431,12 +8490,15 @@ def historique_examen_externe_technicien(request):
             for p in tous_les_examens:
                 res = resultats_dict.get(p.id)
 
+                # Le gestionnaire voit tout, le technicien voit sa catégorie
+                est_ma_categorie = est_gestionnaire or is_medecin or (p.categorie == cat_cible)
+
                 details_examens.append({
                     'prestation': p,
                     'statut': res.statut if res else 'EN_ATTENTE',
                     'id_resultat': res.id if res else None,
                     'rapport': res.rapport if res else None,
-                    'est_ma_categorie': is_medecin or (p.categorie == cat_cible)
+                    'est_ma_categorie': est_ma_categorie
                 })
 
             historique_technique.append({
@@ -8446,7 +8508,8 @@ def historique_examen_externe_technicien(request):
                 'date': dem.date_demande,
                 'details': details_examens,
                 'medecin_demandeur': dem.medecin_demandeur or "Non spécifié",
-                'type_urgence': getattr(dem, 'urgence', 'Standard')
+                'type_urgence': getattr(dem, 'urgence', 'Standard'),
+                'hopital': dem.hopital.nomH if dem.hopital else 'N/A'
             })
 
         return render(request, 'back-end/client/historique_examen_externe_technicien.html', {
@@ -8455,11 +8518,13 @@ def historique_examen_externe_technicien(request):
             'is_medecin': is_medecin,
             'cat_cible': cat_cible,
             'hopital_user': user_hopital,  # ← Ajoute ça pour afficher dans le template
+            'est_gestionnaire': est_gestionnaire,
         })
         
     except Exception as e:
         # En cas d'erreur, affiche un message
-        return render(request, 'back-end/error.html', {'message': f"Erreur: {str(e)}"})
+        messages.error(request, f"Erreur: {str(e)}")
+        return redirect('dashboard')
 # 
 # ==================================================================================
 # PAIEMENT DES L'EXAMEN EXTERNE

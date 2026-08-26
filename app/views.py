@@ -252,9 +252,8 @@ def liste_employe_poste(request):
     role_user = Fonction.objects.filter(userKey=request.user).first()
     fonctionKey = role_user.fonctionKey.roleName if role_user else None
 
-    # On récupère la liste de tous les employés ayant une fonction
-    # select_related permet d'éviter les requêtes répétitives en base de données
-    liste_postes = Fonction.objects.all().select_related('userKey', 'fonctionKey')
+    # On récupère la liste de tous les employés ayant une fonction avec l'hôpital
+    liste_postes = Fonction.objects.all().select_related('userKey', 'fonctionKey', 'hopital')
 
     context = {
         'liste_postes': liste_postes,

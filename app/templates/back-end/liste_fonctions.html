@@ -4,7 +4,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-        <title>Affectations des Postes - JMC ERP</title>
+        <title>Affectations des Hôpitaux - JMC ERP</title>
         
         {% include 'back-end/includes/css.html'%}
 
@@ -14,12 +14,6 @@
                 border: none;
                 border-radius: 15px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            }
-            .badge-role {
-                padding: 8px 12px;
-                border-radius: 20px;
-                font-weight: 500;
-                font-size: 12px;
             }
             .table-avatar img {
                 width: 30px;
@@ -34,7 +28,6 @@
                 background-color: #f8f9fa;
                 border: 1px solid #e3e3e3;
             }
-            /* Style pour le bouton supprimer */
             .btn-delete {
                 color: #e63c3c;
                 background: #fff1f1;
@@ -61,10 +54,10 @@
                     <div class="page-header">
                         <div class="row align-items-center">
                             <div class="col">
-                                <h3 class="page-title">Rapports d'Affectation</h3>
+                                <h3 class="page-title">Rapports d'Affectation par Hôpital</h3>
                                 <ul class="breadcrumb">
                                     <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                                    <li class="breadcrumb-item active">Liste des Fonctions</li>
+                                    <li class="breadcrumb-item active">Liste des Hôpitaux</li>
                                 </ul>
                             </div>
                         </div>
@@ -76,7 +69,7 @@
                                 <div class="card-header bg-white border-0 pt-4">
                                     <div class="row align-items-center">
                                         <div class="col">
-                                            <h4 class="card-title mb-0">Répartition du Personnel par Poste</h4>
+                                            <h4 class="card-title mb-0">Personnel et Hôpitaux Assignés</h4>
                                         </div>
                                         <div class="col-auto">
                                             <div class="search-box-container">
@@ -91,13 +84,13 @@
                                             <thead>
                                                 <tr>
                                                     <th>Employé</th>
-                                                    <th>Poste / Fonction</th>
+                                                    <th>Nom de l'hôpital (nomH)</th>
                                                     <th>Nom d'utilisateur</th>
                                                     <th>Date d'affectation</th>
                                                     <th>Statut</th>
                                                     {% if fonctionKey == 'admin'%}
                                                     <th class="text-right">Action</th>
-                                                    {%endif%}
+                                                    {% endif %}
                                                 </tr>
                                             </thead>
                                             <tbody id="tableBody">
@@ -110,9 +103,13 @@
                                                         </h2>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-inverse-primary badge-role">
-                                                            <i class="la la-briefcase mr-1"></i> {{ poste.fonctionKey.roleName }}
-                                                        </span>
+                                                        {% if poste.hopital %}
+                                                            <span class="font-weight-bold text-primary">
+                                                                <i class="la la-hospital mr-1"></i> {{ poste.hopital.nomH }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted font-italic">Aucun hôpital assigné</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td>@{{ poste.userKey.username }}</td>
                                                     <td>{{ poste.userKey.date_joined|date:"d M Y" }}</td>
@@ -125,17 +122,14 @@
                                                     </td>
                                                     {% if fonctionKey == 'admin'%}
                                                     <td class="text-right">
-                                                        <!-- BOUTON SUPPRIMER -->
                                                         <a href="{% url 'supprimer_poste' poste.id %}" 
                                                            class="btn-delete" 
                                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette affectation ?');"
                                                            title="Supprimer l'affectation">
                                                             <i class="la la-trash-alt"></i>
                                                         </a>
-                                                       
                                                     </td>
-                                                    
-                                                    {%endif%}
+                                                    {% endif %}
                                                 </tr>
                                                 {% empty %}
                                                 <tr>

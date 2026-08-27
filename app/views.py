@@ -5282,25 +5282,48 @@ def creer_rendez_vous(request, hosp_id):
 # ===============================================================================================
 @login_required
 def creer_ordonnance_sortie(request, hosp_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = role.hopital if role else None
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
     hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
 
+    # On récupère une consultation récente pour ce patient dans cet hôpital
+    consultation = (
+        Consultation.objects
+        .filter(triage__patient=hosp.patient, hopital=hopital_user)
+        .order_by('-date_creation')
+        .first()
+    )
+
     if request.method == 'POST':
+        if not consultation:
+            messages.error(request, "Aucune consultation trouvée pour ce patient.")
+            return redirect('dossier_patient', hosp_id=hosp.id)
+
+        contenu_text = request.POST.get('contenu', '')  # texte libre si tu veux le garder
+
+        # Option 1 : utiliser le champ 'observation' pour stocker le contenu
         ordonnance = Ordonnance.objects.create(
-            hospitalisation=hosp,
-            type_ordonnance='SORTIE',
-            contenu=request.POST.get('contenu'),
-            hopital=hopital_user
+            consultation=consultation,
+            type_ordonnance='DEFINITIVE',  # ou 'URGENCE' selon ta logique
+            diagnostic='',                 # à remplir si besoin
+            observation=contenu_text,      # on met le "contenu" ici
+            hopital=hopital_user,
         )
-        return redirect('dossier_patient', hosp_id=hosp.id)
+
+        messages.success(request, "Ordonnance de sortie enregistrée avec succès.")
+        return redirect('liste_rendez_vous')
 
     return render(request, 'back-end/hospitalisation/creer_ordonnance.html', {
         'hosp': hosp,
-        'fonctionKey': fonctionKey
+        'fonctionKey': fonctionKey,
+        'consultation': consultation,
     })
+
+
 
 #
 # ===========================================================================================

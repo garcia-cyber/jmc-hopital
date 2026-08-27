@@ -725,24 +725,33 @@ def liste_patients(request):
 @login_required
 def modifier_patient(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    
+
+    # verification de la fonction
+    role = Fonction.objects.filter(userKey=request.user).first()
+    fonctionKey = role.fonctionKey.roleName if role else None
+
     if request.method == 'POST':
         form = PatientForm(request.POST, instance=patient)
         if form.is_valid():
-            form.save()
-            messages.success(request, f"La fiche de {patient.noms} a été mise à jour.")
+            patient_mod = form.save(commit=False)
+
+            # Même logique que dans enregistrement_patient
+            if patient_mod.entreprise:
+                patient_mod.type_patient = 'CONVENTIONNE'
+            # Optionnel : si on retire l'entreprise
+            # else:
+            #     patient_mod.type_patient = 'SIMPLE'
+
+            patient_mod.save()
+            messages.success(request, f"La fiche de {patient_mod.noms} a été mise à jour.")
             return redirect('enregistrement_patient')
     else:
         form = PatientForm(instance=patient)
-    
-    # verification de la fonction
-    role = Fonction.objects.filter(userKey = request.user).first()
-    fonctionKey = role.fonctionKey.roleName if role else None
 
     return render(request, 'back-end/patient/modifier_patient.html', {
         'form': form,
-        'patient': patient ,
-        'fonctionKey' : fonctionKey
+        'patient': patient,
+        'fonctionKey': fonctionKey,
     })
 
 # 20

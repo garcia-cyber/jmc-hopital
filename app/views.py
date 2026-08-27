@@ -653,7 +653,7 @@ def supprimer_patient(request, patient_id):
     hopital_user = user_fonction.hopital if user_fonction else None
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
-    if not hopital_user and fonctionKey != 'admin':
+    if not hopital_user and fonctionKey != 'admin' or fonctionKey != 'gestionnaire': 
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
@@ -678,7 +678,7 @@ def supprimer_patient(request, patient_id):
 
     # 3. Permissions (ici on autorise admin + éventuellement d'autres rôles)
     # Adapte selon tes règles exactes
-    if fonctionKey not in ['admin']:
+    if fonctionKey not in ['admin','gestionnaire']:
         messages.error(request, "Vous n'avez pas la permission de supprimer un patient.")
         return redirect('enregistrement_patient')
 

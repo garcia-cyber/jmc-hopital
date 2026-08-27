@@ -316,7 +316,7 @@
                                             {% endif %}
 
                                             <!-- Bouton Supprimer -->
-                                            {% if fonctionKey == 'admin' %}
+                                            {% if fonctionKey == 'admin' or fonctionKey == 'gestionnaire' %}
                                             <a class="dropdown-item text-danger" href="{% url 'supprimer_patient' patient.id %}" onclick="return confirm('Voulez-vous vraiment supprimer ce patient ?');">
                                                 <i class="fa fa-trash m-r-5"></i> Supprimer
                                             </a>

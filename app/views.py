@@ -5371,15 +5371,25 @@ def update_kardex(request, kardex_id):
 # ============================================================================================
 @login_required
 def finir_hospitalisation(request, hosp_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = role.hopital if role else None
 
     if request.method == 'POST':
-        hosp = get_object_or_404(Hospitalisation, id=hosp_id, hopital=hopital_user)
+        hosp = get_object_or_404(
+            Hospitalisation,
+            id=hosp_id,
+            hopital=hopital_user
+        )
 
+        # Passer l'hospitalisation à "Terminé"
+        hosp.statut = 'TERMINE'
         hosp.est_actif = False
-        hosp.date_fin = timezone.now()
-        hosp.save()
+        hosp.date_sortie = timezone.now()  # ou date_fin si tu utilises ce champ
+        hosp.save()  # ton save() mettra à jour lit.est_occupe = False
+
+        messages.success(request, "L'hospitalisation a été terminée avec succès.")
 
     return redirect('detail_hospitalisation', pk=hosp_id)
 

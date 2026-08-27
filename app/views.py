@@ -4206,7 +4206,12 @@ def admettre_patient(request):
     hopital_user = None
 
     if request.user.is_authenticated:
-        role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+        role = (
+            Fonction.objects
+            .select_related('hopital', 'fonctionKey')
+            .filter(userKey=request.user)
+            .first()
+        )
         if role and role.fonctionKey:
             fonctionKey = role.fonctionKey.roleName
         if role:
@@ -4215,13 +4220,22 @@ def admettre_patient(request):
     if request.method == 'POST':
         form = HospitalisationForm(request.POST)
         form.fields['patient'].queryset = Patient.objects.filter(hopital=hopital_user)
-        form.fields['lit'].queryset = Lit.objects.filter(hopital=hopital_user, est_occupe=False)
+        form.fields['lit'].queryset = Lit.objects.filter(
+            hopital=hopital_user,
+            est_occupe=False
+        )
 
         if form.is_valid():
             patient = form.cleaned_data.get('patient')
 
-            if not patient.fiche_payee:
-                messages.error(request, "Impossible d'admettre ce patient : fiche non payée.")
+            # On ne bloque que les patients SIMPLE non payés.
+            # CONVENTIONNE et FIDELE peuvent passer même si fiche_payee = False.
+            type_patient = getattr(patient, 'type', None)
+            if type_patient == 'SIMPLE' and not patient.fiche_payee:
+                messages.error(
+                    request,
+                    "Impossible d'admettre ce patient : fiche non payée."
+                )
                 return render(request, 'back-end/hospitalisation/admettre.html', {
                     'form': form,
                     'fonctionKey': fonctionKey
@@ -4234,13 +4248,22 @@ def admettre_patient(request):
                 messages.success(request, "Admission réussie et lit réservé.")
                 return redirect('liste_hospitalisations')
             except Exception as e:
-                messages.error(request, f"Une erreur est survenue lors de l'enregistrement : {str(e)}")
+                messages.error(
+                    request,
+                    f"Une erreur est survenue lors de l'enregistrement : {str(e)}"
+                )
         else:
-            messages.error(request, "Erreur lors de l'admission. Veuillez vérifier les champs du formulaire.")
+            messages.error(
+                request,
+                "Erreur lors de l'admission. Veuillez vérifier les champs du formulaire."
+            )
     else:
         form = HospitalisationForm()
         form.fields['patient'].queryset = Patient.objects.filter(hopital=hopital_user)
-        form.fields['lit'].queryset = Lit.objects.filter(hopital=hopital_user, est_occupe=False)
+        form.fields['lit'].queryset = Lit.objects.filter(
+            hopital=hopital_user,
+            est_occupe=False
+        )
 
     return render(request, 'back-end/hospitalisation/admettre.html', {
         'form': form,

@@ -524,49 +524,43 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
-    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = user_fonction.hopital if user_fonction else None
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
-
 
     # Récupérer les paramètres de filtre
     hopital_filter = request.GET.get('hopital', '')
     date_filter = request.GET.get('date', '')
     heure_filter = request.GET.get('heure', '')
 
-
-    # Base queryset - ordre décroissant par date_creation (les plus récents en premier)
+    # Base queryset
     patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
 
-
-    # Filtre par hôpital
+    # Gestion des filtres selon le rôle
     if hopital_filter:
-        # Si un filtre est spécifié, l'appliquer
-        if fonctionKey == 'admin':
-            # Admin peut choisir n'importe quel hôpital
-            patients = patients.filter(hopital_id=hopital_filter)
-        else:
-            # Autres utilisateurs : peuvent voir leur hôpital OU les hôpitaux sans restriction
-            patients = patients.filter(hopital_id=hopital_filter)
-    elif hopital_user:
-        # Si aucun filtre sélectionné, afficher par défaut l'hôpital de l'utilisateur
-        patients = patients.filter(hopital=hopital_user)
-
+        # Un filtre hôpital est explicitement choisi : on l'applique pour tout le monde
+        patients = patients.filter(hopital_id=hopital_filter)
+    else:
+        # Aucun filtre hôpital choisi
+        if fonctionKey != 'admin':
+            # Si pas admin, on restreint par défaut à son hôpital
+            if hopital_user:
+                patients = patients.filter(hopital=hopital_user)
+        # Si admin et pas de filtre → on ne filtre pas par hôpital (il voit tout)
 
     # Filtre par date
     if date_filter:
         try:
-            from datetime import datetime
             date_obj = datetime.strptime(date_filter, '%Y-%m-%d').date()
             patients = patients.filter(date_creation__date=date_obj)
         except ValueError:
             pass
 
-
-    # Filtre par heure (heure de début)
+    # Filtre par heure
     if heure_filter:
         try:
-            from datetime import datetime
             time_obj = datetime.strptime(heure_filter, '%H:%M').time()
             patients = patients.filter(
                 date_creation__hour__gte=time_obj.hour,
@@ -575,7 +569,6 @@ def enregistrement_patient(request):
         except ValueError:
             pass
 
-
     if request.method == 'POST':
         form = PatientForm(request.POST)
         if form.is_valid():
@@ -583,34 +576,37 @@ def enregistrement_patient(request):
                 patient = form.save(commit=False)
                 patient.created_by = request.user
 
-
-                if not hopital_user:
+                if not hopital_user and fonctionKey != 'admin':
                     messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
                     return redirect('enregistrement_patient')
 
-
-                patient.hopital = hopital_user
-
+                # Si l'utilisateur n'est pas admin, on impose son hôpital
+                if fonctionKey != 'admin':
+                    if not hopital_user:
+                        messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                        return redirect('enregistrement_patient')
+                    patient.hopital = hopital_user
+                else:
+                    # Admin : s'il n'y a pas d'hôpital utilisateur, on peut soit bloquer, soit imposer un hôpital par défaut
+                    if not hopital_user:
+                        messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                        return redirect('enregistrement_patient')
+                    patient.hopital = hopital_user
 
                 if patient.entreprise and patient.entreprise.hopital_id != hopital_user.id:
                     messages.error(request, "Cette entreprise n'appartient pas à votre hôpital.")
                     return redirect('enregistrement_patient')
 
-
                 if patient.entreprise:
                     patient.type_patient = 'CONVENTIONNE'
-
 
                 patient.save()
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
 
-
                 if patient.entreprise:
                     return redirect('liste_attente_triage')
 
-
                 return redirect('payer_fiche', patient_id=patient.id)
-
 
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
@@ -621,14 +617,15 @@ def enregistrement_patient(request):
     else:
         form = PatientForm()
 
-
     # Entreprises pour le formulaire
-    entreprises = Entreprise.objects.filter(hopital=hopital_user).order_by('nom') if hopital_user else Entreprise.objects.none()
+    entreprises = (
+        Entreprise.objects.filter(hopital=hopital_user).order_by('nom')
+        if hopital_user
+        else Entreprise.objects.none()
+    )
 
-
-    # Liste des hôpitaux pour le filtre (TOUS les utilisateurs peuvent voir tous les hôpitaux)
-    hopitaux = Hopital.objects.all().order_by('nomH')  # ← CORRIGÉ ICI
-
+    # Liste des hôpitaux pour le filtre (tous les utilisateurs peuvent voir tous les hôpitaux)
+    hopitaux = Hopital.objects.all().order_by('nomH')
 
     return render(request, 'back-end/patient/enregistrement_patient.html', {
         'patients': patients,
@@ -649,17 +646,18 @@ def enregistrement_patient(request):
 @login_required
 def supprimer_patient(request, patient_id):
     # 1. Rôle et hôpital de l’utilisateur
-    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
+        userKey=request.user
+    ).first()
     hopital_user = user_fonction.hopital if user_fonction else None
     fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
-    if not hopital_user and fonctionKey != 'admin' or fonctionKey != 'gestionnaire': 
+    # Bloquer seulement si pas d'hôpital ET pas admin/gestionnaire
+    if not hopital_user and fonctionKey not in ('admin', 'gestionnaire'):
         messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
         return redirect('enregistrement_patient')
 
     # 2. Récupération du patient
-    # - admin : peut supprimer n'importe quel patient
-    # - autres : seulement les patients de leur hôpital
     if fonctionKey == 'admin':
         try:
             patient = Patient.objects.get(id=patient_id)
@@ -676,9 +674,8 @@ def supprimer_patient(request, patient_id):
             )
             return redirect('enregistrement_patient')
 
-    # 3. Permissions (ici on autorise admin + éventuellement d'autres rôles)
-    # Adapte selon tes règles exactes
-    if fonctionKey not in ['admin','gestionnaire']:
+    # 3. Permissions
+    if fonctionKey not in ('admin', 'gestionnaire'):
         messages.error(request, "Vous n'avez pas la permission de supprimer un patient.")
         return redirect('enregistrement_patient')
 

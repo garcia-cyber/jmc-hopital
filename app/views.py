@@ -524,138 +524,318 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
-    # Rôle et hôpital de l'utilisateur
-    user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
-        userKey=request.user
-    ).first()
+    """
+    Enregistrement d'un patient et affichage de la liste des patients.
+
+    Règles :
+    - Un ancien patient n'est jamais bloqué.
+    - Si un patient existe déjà, on le retrouve et on l'envoie vers
+      une nouvelle prise en charge (signes vitaux).
+    - Un nouveau patient est créé puis orienté vers paiement fiche
+      ou triage selon son entreprise.
+    """
+
+    # ============================================================
+    # 1. Rôle et hôpital de l'utilisateur connecté
+    # ============================================================
+    user_fonction = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+
     hopital_user = user_fonction.hopital if user_fonction else None
-    fonctionKey = user_fonction.fonctionKey.roleName if (user_fonction and user_fonction.fonctionKey) else "Invité"
 
-    # Récupérer les paramètres de filtre
-    hopital_filter = request.GET.get('hopital', '')
-    date_filter = request.GET.get('date', '')
-    heure_filter = request.GET.get('heure', '')
+    fonctionKey = (
+        user_fonction.fonctionKey.roleName
+        if user_fonction and user_fonction.fonctionKey
+        else "Invité"
+    )
 
-    # Base queryset
-    patients = Patient.objects.select_related('entreprise', 'created_by', 'hopital').order_by('-date_creation')
+    est_admin = fonctionKey.lower() == 'admin'
 
-    # Gestion des filtres selon le rôle
-    if hopital_filter:
-        # Un filtre hôpital est explicitement choisi : on l'applique pour tout le monde
-        patients = patients.filter(hopital_id=hopital_filter)
+    # ============================================================
+    # 2. Paramètres des filtres GET
+    # ============================================================
+    hopital_filter = request.GET.get('hopital', '').strip()
+    date_filter = request.GET.get('date', '').strip()
+    heure_filter = request.GET.get('heure', '').strip()
+
+    # ============================================================
+    # 3. Liste de patients visible par l'utilisateur
+    # ============================================================
+    patients = (
+        Patient.objects
+        .select_related('entreprise', 'created_by', 'hopital')
+        .order_by('-date_creation')
+    )
+
+    # Un utilisateur non admin ne doit jamais pouvoir choisir
+    # un autre hôpital via l'URL ?hopital=...
+    if est_admin:
+        if hopital_filter:
+            patients = patients.filter(hopital_id=hopital_filter)
     else:
-        # Aucun filtre hôpital choisi
-        if fonctionKey != 'admin':
-            # Si pas admin, on restreint par défaut à son hôpital
-            if hopital_user:
-                patients = patients.filter(hopital=hopital_user)
-        # Si admin et pas de filtre → on ne filtre pas par hôpital (il voit tout)
+        if not hopital_user:
+            patients = Patient.objects.none()
+            messages.warning(
+                request,
+                "Votre compte n'est rattaché à aucun hôpital. "
+                "Vous ne pouvez pas afficher les patients."
+            )
+        else:
+            patients = patients.filter(hopital=hopital_user)
 
-    # Filtre par date
+    # ============================================================
+    # 4. Filtre de date
+    # ============================================================
     if date_filter:
         try:
-            date_obj = datetime.strptime(date_filter, '%Y-%m-%d').date()
-            patients = patients.filter(date_creation__date=date_obj)
-        except ValueError:
-            pass
+            date_obj = datetime.strptime(
+                date_filter,
+                '%Y-%m-%d'
+            ).date()
 
-    # Filtre par heure
+            patients = patients.filter(
+                date_creation__date=date_obj
+            )
+
+        except ValueError:
+            messages.warning(
+                request,
+                "La date de filtre est invalide."
+            )
+
+    # ============================================================
+    # 5. Filtre par heure
+    # ============================================================
+    # Exemple : 10:30 signifie patients créés à partir de 10h30.
+    #
+    # L'ancien code :
+    # date_creation__hour__gte=time_obj.hour,
+    # date_creation__minute__gte=time_obj.minute
+    #
+    # était incorrect : un patient créé à 11h05 ne passe pas
+    # lorsque l'heure demandée est 10h30, car 05 < 30.
+    #
+    # Ce filtre ci-dessous garde les heures supérieures,
+    # ou la même heure avec minute supérieure ou égale.
     if heure_filter:
         try:
-            time_obj = datetime.strptime(heure_filter, '%H:%M').time()
-            patients = patients.filter(
-                date_creation__hour__gte=time_obj.hour,
-                date_creation__minute__gte=time_obj.minute
-            )
-        except ValueError:
-            pass
+            time_obj = datetime.strptime(
+                heure_filter,
+                '%H:%M'
+            ).time()
 
+            patients = patients.filter(
+                Q(date_creation__hour__gt=time_obj.hour) |
+                Q(
+                    date_creation__hour=time_obj.hour,
+                    date_creation__minute__gte=time_obj.minute
+                )
+            )
+
+        except ValueError:
+            messages.warning(
+                request,
+                "L'heure de filtre est invalide. "
+                "Utilisez le format HH:MM."
+            )
+
+    # ============================================================
+    # 6. Formulaire POST : création ou réutilisation du patient
+    # ============================================================
     if request.method == 'POST':
+        # Sécurité : même l'administrateur doit être attaché
+        # à un hôpital pour enregistrer un patient.
+        if not hopital_user:
+            messages.error(
+                request,
+                "Impossible d'enregistrer un patient : "
+                "votre compte n'est rattaché à aucun hôpital."
+            )
+            return redirect('enregistrement_patient')
+
         form = PatientForm(request.POST)
+
         if form.is_valid():
             try:
-                patient = form.save(commit=False)
-                patient.created_by = request.user
+                # ------------------------------------------------
+                # Données nettoyées venant du formulaire
+                # ------------------------------------------------
+                noms = form.cleaned_data.get('noms', '').strip()
+                postnom = form.cleaned_data.get('postnom', '').strip()
+                prenom = form.cleaned_data.get('prenom', '').strip()
+                sexe = form.cleaned_data.get('sexe')
+                date_naissance = form.cleaned_data.get('date_naissance')
 
-                # Vérification hôpital
-                if not hopital_user and fonctionKey != 'admin':
-                    messages.error(
-                        request,
-                        "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
+                # ------------------------------------------------
+                # Recherche d'un ancien patient
+                # ------------------------------------------------
+                # Adaptez ces critères à vos champs réels.
+                #
+                # Idéalement, utilisez un champ unique comme :
+                # - numero_dossier
+                # - code_patient
+                # - telephone
+                # - numero_carte
+                #
+                # Ici, on recherche avec noms + postnom + prénom
+                # + date de naissance + hôpital.
+                patient_existant = (
+                    Patient.objects
+                    .filter(
+                        hopital=hopital_user,
+                        noms__iexact=noms,
+                        postnom__iexact=postnom,
+                        prenom__iexact=prenom,
+                        date_naissance=date_naissance,
                     )
-                    return redirect('enregistrement_patient')
+                    .first()
+                )
 
-                # Si l'utilisateur n'est pas admin, on impose son hôpital
-                if fonctionKey != 'admin':
-                    if not hopital_user:
-                        messages.error(
-                            request,
-                            "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
-                        )
-                        return redirect('enregistrement_patient')
-                    patient.hopital = hopital_user
-                else:
-                    # Admin : s'il n'y a pas d'hôpital utilisateur, on bloque aussi
-                    if not hopital_user:
-                        messages.error(
-                            request,
-                            "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
-                        )
-                        return redirect('enregistrement_patient')
-                    patient.hopital = hopital_user
+                # ------------------------------------------------
+                # Cas 1 : ancien patient trouvé
+                # ------------------------------------------------
+                if patient_existant:
+                    messages.success(
+                        request,
+                        f"Ancien patient détecté : "
+                        f"{patient_existant.noms} "
+                        f"{patient_existant.postnom or ''}. "
+                        f"Une nouvelle prise en charge peut commencer."
+                    )
 
-                # Vérifier entreprise
-                if patient.entreprise and patient.entreprise.hopital_id != hopital_user.id:
-                    messages.error(request, "Cette entreprise n'appartient pas à votre hôpital.")
-                    return redirect('enregistrement_patient')
+                    # Le patient ancien ne paie plus la fiche ;
+                    # il va directement aux signes vitaux.
+                    return redirect(
+                        'saisir_signes',
+                        patient_id=patient_existant.id
+                    )
 
-                # Type patient
+                # ------------------------------------------------
+                # Cas 2 : nouveau patient
+                # ------------------------------------------------
+                patient = form.save(commit=False)
+
+                patient.created_by = request.user
+                patient.hopital = hopital_user
+
+                # Validation de l'entreprise :
+                # elle doit appartenir au même hôpital.
                 if patient.entreprise:
+                    if patient.entreprise.hopital_id != hopital_user.id:
+                        messages.error(
+                            request,
+                            "Cette entreprise n'appartient pas "
+                            "à votre hôpital."
+                        )
+                        return redirect('enregistrement_patient')
+
                     patient.type_patient = 'CONVENTIONNE'
 
-                patient.save()
-                messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
+                # Si vous avez une valeur dédiée pour les nouveaux patients,
+                # gardez uniquement cette ligne si elle correspond réellement
+                # à vos choix dans Patient.statut_p.
+                #
+                # Exemple possible :
+                # patient.statut_p = 'N'
+                #
+                # Ne décommentez pas cette ligne si votre modèle n'utilise pas
+                # la valeur N.
+                # patient.statut_p = 'N'
 
-                # --- NOUVELLE LOGIQUE DE REDIRECTION ---
+                patient.save()
+
+                messages.success(
+                    request,
+                    f"Patient {patient.noms} enregistré avec succès."
+                )
+
+                # ------------------------------------------------
+                # Orientation après l'enregistrement
+                # ------------------------------------------------
+                # Si le formulaire a enregistré un patient identifié
+                # comme ancien pour une raison métier, on ne le bloque pas.
                 if patient.statut_p == 'A':
-                    # Ancien patient : on saute le paiement fiche, on va directement aux signes vitaux
-                    return redirect('saisir_signes', patient_id=patient.id)
-                else:
-                    # Nouveau patient (ou autre) : parcours normal
-                    if patient.entreprise:
-                        return redirect('liste_attente_triage')
-                    return redirect('payer_fiche', patient_id=patient.id)
+                    messages.info(
+                        request,
+                        f"{patient.noms} est considéré comme ancien patient. "
+                        f"Accès direct aux signes vitaux."
+                    )
+
+                    return redirect(
+                        'saisir_signes',
+                        patient_id=patient.id
+                    )
+
+                # Patient conventionné : passage par le triage.
+                if patient.entreprise:
+                    return redirect('liste_attente_triage')
+
+                # Patient privé nouveau : paiement fiche.
+                return redirect(
+                    'payer_fiche',
+                    patient_id=patient.id
+                )
 
             except Exception as e:
-                messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
+                messages.error(
+                    request,
+                    f"Erreur lors de l'enregistrement : {str(e)}"
+                )
+
         else:
             for field, errors in form.errors.items():
+                field_label = (
+                    form.fields[field].label
+                    if field in form.fields
+                    else field
+                )
+
                 for error in errors:
-                    messages.error(request, f"{field.capitalize()}: {error}")
+                    messages.error(
+                        request,
+                        f"{field_label} : {error}"
+                    )
+
     else:
         form = PatientForm()
 
-    # Entreprises pour le formulaire
+    # ============================================================
+    # 7. Entreprises disponibles dans le formulaire
+    # ============================================================
     entreprises = (
-        Entreprise.objects.filter(hopital=hopital_user).order_by('nom')
+        Entreprise.objects
+        .filter(hopital=hopital_user)
+        .order_by('nom')
         if hopital_user
         else Entreprise.objects.none()
     )
 
-    # Liste des hôpitaux pour le filtre (tous les utilisateurs peuvent voir tous les hôpitaux)
+    # Pour le filtre des hôpitaux dans le template.
+    # Vous pouvez réserver cette liste aux administrateurs si nécessaire.
     hopitaux = Hopital.objects.all().order_by('nomH')
 
-    return render(request, 'back-end/patient/enregistrement_patient.html', {
-        'patients': patients,
-        'form': form,
-        'fonctionKey': fonctionKey,
-        'hopital_user': hopital_user,
-        'entreprises': entreprises,
-        'hopitaux': hopitaux,
-        'hopital_filter': hopital_filter,
-        'date_filter': date_filter,
-        'heure_filter': heure_filter,
-    })
+    # ============================================================
+    # 8. Rendu
+    # ============================================================
+    return render(
+        request,
+        'back-end/patient/enregistrement_patient.html',
+        {
+            'patients': patients,
+            'form': form,
+            'fonctionKey': fonctionKey,
+            'hopital_user': hopital_user,
+            'entreprises': entreprises,
+            'hopitaux': hopitaux,
+            'hopital_filter': hopital_filter,
+            'date_filter': date_filter,
+            'heure_filter': heure_filter,
+        }
+    )
 
 #
 # ==================================================================================================
@@ -7757,69 +7937,221 @@ def enregistrer_patient_entreprise(request):
 # =================================================================================================
 @login_required
 def creer_session_soins(request, patient_id):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    hopital_user = role.hopital if role else None
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    # Rôle et hôpital de l'utilisateur connecté
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
 
+    hopital_user = role.hopital if role else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
+
+    # Vérification des autorisations
     if fonctionKey not in ['receptionniste', 'caissier', 'admin']:
-        messages.error(request, "Accès refusé : droits insuffisants.")
+        messages.error(
+            request,
+            "Accès refusé : droits insuffisants."
+        )
         return redirect('liste_patients')
 
-    patient = get_object_or_404(Patient, id=patient_id, hopital=hopital_user)
-
-    if not getattr(patient, 'fiche_payee', False):
-        messages.error(request, "Le patient doit d'abord payer sa fiche d'ouverture.")
+    # Un utilisateur sans hôpital ne peut pas créer une session.
+    if not hopital_user:
+        messages.error(
+            request,
+            "Votre compte n'est rattaché à aucun hôpital."
+        )
         return redirect('enregistrement_patient')
 
+    # Patient obligatoirement rattaché au même hôpital.
+    patient = get_object_or_404(
+        Patient,
+        id=patient_id,
+        hopital=hopital_user
+    )
+
+    # ==========================================================
+    # RÈGLE D'ACCÈS À LA SESSION DE SOINS
+    #
+    # Autorisé si :
+    # - fiche déjà payée ;
+    # - ancien/fidèle : statut_p == 'A' ;
+    # - conventionné : type_patient == 'CONVENTIONNE'.
+    #
+    # Bloqué seulement si :
+    # - nouveau patient privé ;
+    # - fiche d'ouverture impayée.
+    # ==========================================================
+    autorise_session = (
+        getattr(patient, 'fiche_payee', False)
+        or patient.statut_p == 'A'
+        or patient.type_patient == 'CONVENTIONNE'
+    )
+
+    if not autorise_session:
+        messages.error(
+            request,
+            "Le patient doit d'abord payer sa fiche d'ouverture."
+        )
+        return redirect('payer_fiche', patient_id=patient.id)
+
+    # ==========================================================
+    # POST : création de la session et de ses lignes de facture
+    # ==========================================================
     if request.method == 'POST':
+        # Évite un double clic ou deux requêtes très rapprochées.
         seuil = timezone.now() - timedelta(seconds=10)
-        doublon = SessionSoins.objects.filter(patient=patient, date_creation__gte=seuil).exists()
+
+        doublon = (
+            SessionSoins.objects
+            .filter(
+                patient=patient,
+                hopital=hopital_user,
+                date_creation__gte=seuil
+            )
+            .exists()
+        )
+
         if doublon:
-            messages.warning(request, "Une session a déjà été créée très récemment pour ce patient.")
+            messages.warning(
+                request,
+                "Une session a déjà été créée très récemment pour ce patient."
+            )
             return redirect('liste_sessions')
 
         prestation_ids = request.POST.getlist('prestations')
+
         if not prestation_ids:
-            messages.error(request, "Veuillez sélectionner au moins une prestation.")
-            return redirect('creer_session_soins', patient_id=patient.id)
+            messages.error(
+                request,
+                "Veuillez sélectionner au moins une prestation."
+            )
+            return redirect(
+                'creer_session_soins',
+                patient_id=patient.id
+            )
 
-        autorisees_qs = Prestation.objects.filter(hopital=hopital_user, categorie='CONS')
+        # Prestations autorisées :
+        # - Homme : uniquement catégorie CONS
+        # - Femme : CONS et CONS_MAT
+        autorisees_qs = Prestation.objects.filter(
+            hopital=hopital_user,
+            categorie='CONS'
+        )
+
         if patient.sexe == 'F':
-            autorisees_qs = autorisees_qs | Prestation.objects.filter(hopital=hopital_user, categorie='CONS_MAT')
+            autorisees_qs = (
+                autorisees_qs
+                | Prestation.objects.filter(
+                    hopital=hopital_user,
+                    categorie='CONS_MAT'
+                )
+            )
 
-        autorisees_ids = set(autorisees_qs.values_list('id', flat=True))
+        autorisees_ids = set(
+            autorisees_qs.values_list('id', flat=True)
+        )
 
-        for p_id in prestation_ids:
-            if int(p_id) not in autorisees_ids:
-                messages.error(request, "Erreur : Une prestation sélectionnée est invalide.")
-                return redirect('creer_session_soins', patient_id=patient.id)
+        # Évite ValueError si une valeur non numérique est envoyée.
+        try:
+            prestation_ids_int = {
+                int(prestation_id)
+                for prestation_id in prestation_ids
+            }
+        except (TypeError, ValueError):
+            messages.error(
+                request,
+                "Erreur : identifiant de prestation invalide."
+            )
+            return redirect(
+                'creer_session_soins',
+                patient_id=patient.id
+            )
+
+        # Vérifie que toutes les prestations appartiennent bien
+        # aux catégories autorisées et au même hôpital.
+        if not prestation_ids_int.issubset(autorisees_ids):
+            messages.error(
+                request,
+                "Erreur : une ou plusieurs prestations sélectionnées "
+                "sont invalides."
+            )
+            return redirect(
+                'creer_session_soins',
+                patient_id=patient.id
+            )
 
         try:
+            # La session et toutes ses lignes de facture sont créées
+            # ensemble. En cas d'erreur, Django annule l'ensemble du bloc.
             with transaction.atomic():
-                session = SessionSoins.objects.create(patient=patient, hopital=hopital_user)
-                prestations = Prestation.objects.filter(id__in=prestation_ids, hopital=hopital_user)
+                session = SessionSoins.objects.create(
+                    patient=patient,
+                    hopital=hopital_user
+                )
+
+                prestations = Prestation.objects.filter(
+                    id__in=prestation_ids_int,
+                    hopital=hopital_user
+                )
 
                 lignes = [
-                    LigneFacture(session=session, prestation=p, prix_facture=p.prix, hopital=hopital_user)
-                    for p in prestations
+                    LigneFacture(
+                        session=session,
+                        prestation=prestation,
+                        prix_facture=prestation.prix,
+                        hopital=hopital_user
+                    )
+                    for prestation in prestations
                 ]
+
                 LigneFacture.objects.bulk_create(lignes)
 
-                messages.success(request, "Session créée avec succès.")
-                return redirect('paiement_session', session_id=session.id)
+            messages.success(
+                request,
+                "Session de soins créée avec succès."
+            )
+
+            return redirect(
+                'paiement_session',
+                session_id=session.id
+            )
+
         except Exception as e:
-            messages.error(request, f"Erreur critique lors de la création : {str(e)}")
+            messages.error(
+                request,
+                f"Erreur critique lors de la création : {str(e)}"
+            )
 
+    # ==========================================================
+    # GET : prestations à afficher selon le sexe du patient
+    # ==========================================================
     if patient.sexe == 'M':
-        prestations = Prestation.objects.filter(hopital=hopital_user, categorie='CONS')
+        prestations = Prestation.objects.filter(
+            hopital=hopital_user,
+            categorie='CONS'
+        )
     else:
-        prestations = Prestation.objects.filter(hopital=hopital_user, categorie__in=['CONS', 'CONS_MAT'])
+        prestations = Prestation.objects.filter(
+            hopital=hopital_user,
+            categorie__in=['CONS', 'CONS_MAT']
+        )
 
-    return render(request, 'back-end/consultation/creer_session.html', {
-        'patient': patient,
-        'prestations': prestations,
-        'fonctionKey': fonctionKey,
-    })
+    return render(
+        request,
+        'back-end/consultation/creer_session.html',
+        {
+            'patient': patient,
+            'prestations': prestations,
+            'fonctionKey': fonctionKey,
+        }
+    )
 #
 # ===================================================================================================================
 # LISTE DES SESSIONS

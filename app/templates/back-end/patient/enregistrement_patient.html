@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Patients - JMC Médicale</title>
     {% include 'back-end/includes/css.html' %}
+
     <style>
         .page-card {
             background: #fff;
@@ -103,7 +104,6 @@
             color: #2563eb;
         }
 
-        /* Design amélioré pour le modal d'enregistrement */
         .modal-body .form-section-title {
             font-size: 15px;
             font-weight: 700;
@@ -125,6 +125,7 @@
             .page-card { padding: 16px; }
             .filter-card { padding: 16px; }
             .page-header .row > div { width: 100%; }
+
             .search-wrap {
                 display: block !important;
                 width: 100% !important;
@@ -134,27 +135,33 @@
                 opacity: 1 !important;
                 height: auto !important;
             }
+
             .search-input-group {
                 width: 100% !important;
                 display: flex !important;
             }
+
             .search-input-group .form-control {
                 width: 100% !important;
             }
         }
     </style>
 </head>
+
 <body>
 <div class="main-wrapper">
+
     {% include 'back-end/includes/header.html' %}
     {% include 'back-end/includes/sidebar.html' %}
 
     <div class="page-wrapper">
         <div class="content container-fluid">
+
             <div class="page-header mb-4">
                 <div class="row align-items-center">
                     <div class="col-md-6 col-12">
                         <h3 class="page-title section-title">Gestion des Patients</h3>
+
                         <ul class="breadcrumb mb-0">
                             <li class="breadcrumb-item"><a href="#">Accueil</a></li>
                             <li class="breadcrumb-item active">Liste</li>
@@ -163,7 +170,12 @@
 
                     <div class="col-md-6 col-12 mt-3 mt-md-0 text-md-right">
                         {% if fonctionKey == 'receptionniste' %}
-                            <button class="btn btn-primary" data-toggle="modal" data-target="#add_patient" style="border-radius: 30px; min-height: 44px;">
+                            <button
+                                class="btn btn-primary"
+                                data-toggle="modal"
+                                data-target="#add_patient"
+                                style="border-radius: 30px; min-height: 44px;"
+                            >
                                 <i class="fa fa-plus"></i> Nouveau
                             </button>
                         {% endif %}
@@ -173,7 +185,15 @@
                 <div class="search-wrap">
                     <form method="GET" action="">
                         <div class="input-group search-input-group">
-                            <input type="text" id="customSearch" name="q" class="form-control" placeholder="Rechercher..." value="{{ request.GET.q }}">
+                            <input
+                                type="text"
+                                id="customSearch"
+                                name="q"
+                                class="form-control"
+                                placeholder="Rechercher..."
+                                value="{{ request.GET.q }}"
+                            >
+
                             <div class="input-group-append">
                                 <span class="input-group-text">
                                     <i class="fa fa-search"></i>
@@ -186,76 +206,123 @@
 
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
                 {% endfor %}
             {% endif %}
 
             <!-- Section des filtres -->
             <div class="filter-card">
                 <h5 class="mb-3">
-                    <i class="fa fa-filter filter-icon"></i> Filtres de recherche
+                    <i class="fa fa-filter filter-icon"></i>
+                    Filtres de recherche
                 </h5>
+
                 <form method="GET" action="" id="filterForm">
                     <div class="row align-items-end">
+
                         <div class="col-md-3 col-12 mb-3">
                             <label class="filter-label">
-                                <i class="fa fa-hospital-o filter-icon"></i> Hôpital
+                                <i class="fa fa-hospital-o filter-icon"></i>
+                                Hôpital
                             </label>
+
                             {% if hopitaux %}
-                            <select name="hopital" class="form-control form-select" onchange="submitFilterForm()">
-                                <option value="">Tous les hôpitaux</option>
-                                {% for hop in hopitaux %}
-                                <option value="{{ hop.id }}" {% if hopital_filter == hop.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ hop.nomH }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                                <select
+                                    name="hopital"
+                                    class="form-control form-select"
+                                    onchange="submitFilterForm()"
+                                >
+                                    <option value="">Tous les hôpitaux</option>
+
+                                    {% for hop in hopitaux %}
+                                        <option
+                                            value="{{ hop.id }}"
+                                            {% if hopital_filter == hop.id|stringformat:"s" %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ hop.nomH }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
                             {% else %}
-                            <input type="text" class="form-control" value="{{ hopital_user.nomH }}" disabled>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    value="{{ hopital_user.nomH }}"
+                                    disabled
+                                >
                             {% endif %}
                         </div>
 
                         <div class="col-md-3 col-12 mb-3">
                             <label class="filter-label">
-                                <i class="fa fa-calendar filter-icon"></i> Date d'enregistrement
+                                <i class="fa fa-calendar filter-icon"></i>
+                                Date d'enregistrement
                             </label>
-                            <input type="date" name="date" class="form-control" 
-                                   value="{{ date_filter }}"
-                                   onchange="submitFilterForm()">
+
+                            <input
+                                type="date"
+                                name="date"
+                                class="form-control"
+                                value="{{ date_filter }}"
+                                onchange="submitFilterForm()"
+                            >
                         </div>
 
                         <div class="col-md-3 col-12 mb-3">
                             <label class="filter-label">
-                                <i class="fa fa-clock-o filter-icon"></i> Heure (à partir de)
+                                <i class="fa fa-clock-o filter-icon"></i>
+                                Heure (à partir de)
                             </label>
-                            <input type="time" name="heure" class="form-control" 
-                                   value="{{ heure_filter }}"
-                                   onchange="submitFilterForm()">
+
+                            <input
+                                type="time"
+                                name="heure"
+                                class="form-control"
+                                value="{{ heure_filter }}"
+                                onchange="submitFilterForm()"
+                            >
                         </div>
 
                         <div class="col-md-3 col-12 mb-3">
-                            <a href="{% url 'enregistrement_patient' %}" class="btn btn-secondary btn-block" style="border-radius: 30px; min-height: 44px;">
-                                <i class="fa fa-refresh"></i> Réinitialiser
+                            <a
+                                href="{% url 'enregistrement_patient' %}"
+                                class="btn btn-secondary btn-block"
+                                style="border-radius: 30px; min-height: 44px;"
+                            >
+                                <i class="fa fa-refresh"></i>
+                                Réinitialiser
                             </a>
                         </div>
                     </div>
                 </form>
 
-                <!-- Affichage des filtres actifs -->
                 {% if hopital_filter or date_filter or heure_filter %}
-                <div class="alert alert-info mt-3 mb-0">
-                    <i class="fa fa-filter"></i> 
-                    <strong>Filtres actifs :</strong>
-                    {% if hopital_filter %}
-                        <span class="badge badge-primary ml-2">Hôpital: {{ hopital_filter }}</span>
-                    {% endif %}
-                    {% if date_filter %}
-                        <span class="badge badge-primary ml-2">Date: {{ date_filter }}</span>
-                    {% endif %}
-                    {% if heure_filter %}
-                        <span class="badge badge-primary ml-2">Heure: {{ heure_filter }}</span>
-                    {% endif %}
-                </div>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fa fa-filter"></i>
+                        <strong>Filtres actifs :</strong>
+
+                        {% if hopital_filter %}
+                            <span class="badge badge-primary ml-2">
+                                Hôpital: {{ hopital_filter }}
+                            </span>
+                        {% endif %}
+
+                        {% if date_filter %}
+                            <span class="badge badge-primary ml-2">
+                                Date: {{ date_filter }}
+                            </span>
+                        {% endif %}
+
+                        {% if heure_filter %}
+                            <span class="badge badge-primary ml-2">
+                                Heure: {{ heure_filter }}
+                            </span>
+                        {% endif %}
+                    </div>
                 {% endif %}
             </div>
 
@@ -275,79 +342,202 @@
                                 <th class="text-right">Actions</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             {% for patient in patients %}
-                            <tr>
-                                <td><span class="soft-badge badge-light">{{ patient.code_patient }}</span></td>
-                                <td>
-                                    <div class="font-weight-bold">{{ patient.noms }}</div>
-                                    <small class="text-muted">{{ patient.date_creation|date:"d/m/Y" }}</small>
-                                </td>
-                                <td>{{ patient.telephone }}</td>
-                                <td>{{ patient.age }}</td>
-                                <td><span class="soft-badge badge-info">{{ patient.service }}</span></td>
-                                <td>
-                                    <span class="soft-badge badge-secondary">{{ patient.get_type_patient_display }}</span>
-                                    {% if patient.type_patient == 'CONVENTIONNE' and patient.entreprise %}
-                                        <div class="mt-1 small text-muted">
-                                            <i class="fa fa-building"></i> {{ patient.entreprise.nom }}
+                                <tr>
+                                    <td>
+                                        <span class="soft-badge badge-light">
+                                            {{ patient.code_patient }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <div class="font-weight-bold">
+                                            {{ patient.noms }}
                                         </div>
-                                    {% endif %}
-                                </td>
-                                <td>{{ patient.created_by.username }}</td>
-                                <td>{{ patient.hopital }}</td>
-                                <td class="text-right">
-                                    <div class="dropdown dropdown-action">
-                                        <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown">
-                                            <i class="fa fa-ellipsis-v"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right">
-                                            {% if not patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'payer_fiche' patient.id %}"><i class="fa fa-money m-r-5"></i> Payer Fiche</a>
-                                            {% else %}
-                                                <span class="dropdown-item text-muted"><i class="fa fa-check-circle m-r-5"></i> Fiche réglée</span>
-                                            {% endif %}
 
-                                            {% if patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'creer_session_soins' patient.id %}"><i class="fa fa-stethoscope m-r-5"></i> Nouvelle Session Soins</a>
-                                            {% endif %}
+                                        <small class="text-muted">
+                                            {{ patient.date_creation|date:"d/m/Y" }}
+                                        </small>
+                                    </td>
 
-                                            {% if patient.fiche_payee %}
-                                                {% if not patient.a_carte_fidelite %}
-                                                    <a class="dropdown-item" href="{% url 'paiement_prestation' patient.id %}"><i class="fa fa-credit-card m-r-5"></i> Payer Carte Fidélité</a>
-                                                {% else %}
-                                                    <span class="dropdown-item text-muted"><i class="fa fa-star m-r-5"></i> Carte Fidélité Active</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="dropdown-item text-muted"><i class="fa fa-lock m-r-5"></i> Payer Carte Fidélité (Bloqué)</span>
-                                            {% endif %}
+                                    <td>{{ patient.telephone }}</td>
+                                    <td>{{ patient.age }}</td>
 
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="{% url 'historique_paiements' patient.id %}"><i class="fa fa-history m-r-5"></i> Hist. Paiements</a>
-                                            <a class="dropdown-item" href="{% url 'historique_signes_vitaux' patient.id %}"><i class="fa fa-heartbeat m-r-5"></i> Hist. Triage</a>
-                                            <a class="dropdown-item" href="{% url 'modifier_patient' patient.id %}"><i class="fa fa-pencil m-r-5"></i> Modifier</a>
+                                    <td>
+                                        <span class="soft-badge badge-info">
+                                            {{ patient.service }}
+                                        </span>
+                                    </td>
 
-                                            {% if patient.fiche_payee %}
-                                                <a class="dropdown-item" href="{% url 'dossier_medical_complet' patient.id %}"><i class="fa fa-eye m-r-5"></i> Dossier Médical</a>
-                                            {% else %}
-                                                <span class="dropdown-item text-muted"><i class="fa fa-lock m-r-5"></i> Dossier bloqué</span>
-                                            {% endif %}
+                                    <td>
+                                        <span class="soft-badge badge-secondary">
+                                            {{ patient.get_type_patient_display }}
+                                        </span>
 
-                                            <!-- Bouton Supprimer -->
-                                            {% if fonctionKey == 'admin' or fonctionKey == 'gestionnaire' %}
-                                            <a class="dropdown-item text-danger" href="{% url 'supprimer_patient' patient.id %}" onclick="return confirm('Voulez-vous vraiment supprimer ce patient ?');">
-                                                <i class="fa fa-trash m-r-5"></i> Supprimer
+                                        {% if patient.type_patient == 'CONVENTIONNE' and patient.entreprise %}
+                                            <div class="mt-1 small text-muted">
+                                                <i class="fa fa-building"></i>
+                                                {{ patient.entreprise.nom }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ patient.created_by.username }}</td>
+                                    <td>{{ patient.hopital }}</td>
+
+                                    <td class="text-right">
+                                        <div class="dropdown dropdown-action">
+                                            <a
+                                                href="#"
+                                                class="action-icon dropdown-toggle"
+                                                data-toggle="dropdown"
+                                            >
+                                                <i class="fa fa-ellipsis-v"></i>
                                             </a>
-                                            {%endif%}
+
+                                            <div class="dropdown-menu dropdown-menu-right">
+
+                                                <!--
+                                                    Nouveau patient privé + fiche impayée :
+                                                    paiement obligatoire.
+
+                                                    Ancien patient (statut_p == A) :
+                                                    pas de paiement exigé.
+
+                                                    Conventionné :
+                                                    pas de paiement individuel exigé.
+                                                -->
+                                                {% if not patient.fiche_payee and patient.statut_p != 'A' and patient.type_patient != 'CONVENTIONNE' %}
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{% url 'payer_fiche' patient.id %}"
+                                                    >
+                                                        <i class="fa fa-money m-r-5"></i>
+                                                        Payer Fiche
+                                                    </a>
+                                                {% else %}
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="fa fa-check-circle m-r-5"></i>
+
+                                                        {% if patient.statut_p == 'A' %}
+                                                            Patient fidèle / ancien
+                                                        {% elif patient.type_patient == 'CONVENTIONNE' %}
+                                                            Patient conventionné
+                                                        {% else %}
+                                                            Fiche réglée
+                                                        {% endif %}
+                                                    </span>
+                                                {% endif %}
+
+                                                <!--
+                                                    Autorisation de session :
+                                                    - fiche déjà payée
+                                                    - ancien patient
+                                                    - patient conventionné
+                                                -->
+                                                {% if patient.fiche_payee or patient.statut_p == 'A' or patient.type_patient == 'CONVENTIONNE' %}
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{% url 'creer_session_soins' patient.id %}"
+                                                    >
+                                                        <i class="fa fa-stethoscope m-r-5"></i>
+                                                        Nouvelle Session Soins
+                                                    </a>
+                                                {% else %}
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="fa fa-lock m-r-5"></i>
+                                                        Nouvelle Session Soins (bloquée)
+                                                    </span>
+                                                {% endif %}
+
+                                                <!-- Carte fidélité -->
+                                                {% if patient.fiche_payee or patient.statut_p == 'A' or patient.type_patient == 'CONVENTIONNE' %}
+                                                    {% if not patient.a_carte_fidelite %}
+                                                        <a
+                                                            class="dropdown-item"
+                                                            href="{% url 'paiement_prestation' patient.id %}"
+                                                        >
+                                                            <i class="fa fa-credit-card m-r-5"></i>
+                                                            Payer Carte Fidélité
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="dropdown-item text-muted">
+                                                            <i class="fa fa-star m-r-5"></i>
+                                                            Carte Fidélité Active
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="fa fa-lock m-r-5"></i>
+                                                        Payer Carte Fidélité (Bloqué)
+                                                    </span>
+                                                {% endif %}
+
+                                                <div class="dropdown-divider"></div>
+
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="{% url 'historique_paiements' patient.id %}"
+                                                >
+                                                    <i class="fa fa-history m-r-5"></i>
+                                                    Hist. Paiements
+                                                </a>
+
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="{% url 'historique_signes_vitaux' patient.id %}"
+                                                >
+                                                    <i class="fa fa-heartbeat m-r-5"></i>
+                                                    Hist. Triage
+                                                </a>
+
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="{% url 'modifier_patient' patient.id %}"
+                                                >
+                                                    <i class="fa fa-pencil m-r-5"></i>
+                                                    Modifier
+                                                </a>
+
+                                                <!-- Dossier médical -->
+                                                {% if patient.fiche_payee or patient.statut_p == 'A' or patient.type_patient == 'CONVENTIONNE' %}
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{% url 'dossier_medical_complet' patient.id %}"
+                                                    >
+                                                        <i class="fa fa-eye m-r-5"></i>
+                                                        Dossier Médical
+                                                    </a>
+                                                {% else %}
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="fa fa-lock m-r-5"></i>
+                                                        Dossier bloqué
+                                                    </span>
+                                                {% endif %}
+
+                                                <!-- Suppression -->
+                                                {% if fonctionKey == 'admin' or fonctionKey == 'gestionnaire' %}
+                                                    <a
+                                                        class="dropdown-item text-danger"
+                                                        href="{% url 'supprimer_patient' patient.id %}"
+                                                        onclick="return confirm('Voulez-vous vraiment supprimer ce patient ?');"
+                                                    >
+                                                        <i class="fa fa-trash m-r-5"></i>
+                                                        Supprimer
+                                                    </a>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -356,16 +546,30 @@
 <div id="add_patient" class="modal fade" role="dialog">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-scrollable">
         <div class="modal-content">
+
             <div class="modal-header">
-                <h5 class="modal-title">Enregistrer un nouveau patient</h5>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h5 class="modal-title">
+                    Enregistrer un nouveau patient
+                </h5>
+
+                <button
+                    type="button"
+                    class="close"
+                    data-dismiss="modal"
+                >
+                    &times;
+                </button>
             </div>
+
             <div class="modal-body">
                 <form action="{% url 'enregistrement_patient' %}" method="POST">
                     {% csrf_token %}
 
                     <!-- Informations principales -->
-                    <div class="form-section-title">Informations principales</div>
+                    <div class="form-section-title">
+                        Informations principales
+                    </div>
+
                     <div class="row form-grid">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -373,24 +577,28 @@
                                 {{ form.noms }}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label>Sexe</label>
                                 {{ form.sexe }}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label>Âge</label>
                                 {{ form.age }}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Téléphone</label>
                                 {{ form.telephone }}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Service</label>
@@ -400,7 +608,10 @@
                     </div>
 
                     <!-- Coordonnées & statut -->
-                    <div class="form-section-title">Coordonnées et statut</div>
+                    <div class="form-section-title">
+                        Coordonnées et statut
+                    </div>
+
                     <div class="row form-grid">
                         <div class="col-md-12">
                             <div class="form-group">
@@ -408,17 +619,32 @@
                                 {{ form.adresse }}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Entreprise (si conventionné)</label>
-                                <select name="entreprise" id="id_entreprise" class="form-control form-select">
+
+                                <select
+                                    name="entreprise"
+                                    id="id_entreprise"
+                                    class="form-control form-select"
+                                >
                                     <option value="">---------</option>
+
                                     {% for entreprise in entreprises %}
-                                        <option value="{{ entreprise.id }}" {% if request.POST.entreprise == entreprise.id|stringformat:"s" %}selected{% endif %}>{{ entreprise.nom }}</option>
+                                        <option
+                                            value="{{ entreprise.id }}"
+                                            {% if request.POST.entreprise == entreprise.id|stringformat:"s" %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ entreprise.nom }}
+                                        </option>
                                     {% endfor %}
                                 </select>
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Statut du patient</label>
@@ -428,7 +654,11 @@
                     </div>
 
                     <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">
+                        <button
+                            type="submit"
+                            class="btn btn-primary px-5"
+                            style="border-radius: 30px; min-height: 44px;"
+                        >
                             Enregistrer
                         </button>
                     </div>
@@ -439,6 +669,7 @@
 </div>
 
 {% include 'back-end/includes/js.html' %}
+
 <script>
     function submitFilterForm() {
         const form = document.getElementById('filterForm');
@@ -456,5 +687,6 @@
         });
     });
 </script>
+
 </body>
 </html>

@@ -5169,14 +5169,34 @@ def dossier_medical_complet(request, patient_id):
 # ============================================================================================
 @login_required
 def detail_hospitalisation(request, pk):
-    # Rôle de l'utilisateur
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
-        userKey=request.user
-    ).first()
-    hopital_user = role.hopital if role else None
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+    # ==========================================================
+    # Rôle et hôpital de l'utilisateur
+    # ==========================================================
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
 
+    hopital_user = role.hopital if role else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
+
+    if not hopital_user:
+        messages.error(
+            request,
+            "Votre compte n'est rattaché à aucun hôpital."
+        )
+        return redirect('liste_hospitalisations')
+
+    # ==========================================================
     # Hospitalisation concernée
+    # ==========================================================
     hosp = get_object_or_404(
         Hospitalisation.objects.select_related(
             'patient',
@@ -5186,18 +5206,31 @@ def detail_hospitalisation(request, pk):
         hopital=hopital_user
     )
 
-    # ------------------------------
-    # 1) GESTION DU FORMULAIRE (POST)
-    # ------------------------------
+    # ==========================================================
+    # Gestion des formulaires POST
+    # ==========================================================
     if request.method == 'POST':
         action = request.POST.get('action')
 
-        # --- Suivi médecin ---
+        # ------------------------------------------------------
+        # A. Suivi médecin
+        # ------------------------------------------------------
         if action == 'suivi_medecin':
             if fonctionKey in ('medecin', 'admin'):
-                diagnostic = request.POST.get('diagnostic_du_jour', '')
-                evolution = request.POST.get('evolution', '')
-                consignes = request.POST.get('consignes', '')
+                diagnostic = request.POST.get(
+                    'diagnostic_du_jour',
+                    ''
+                ).strip()
+
+                evolution = request.POST.get(
+                    'evolution',
+                    ''
+                ).strip()
+
+                consignes = request.POST.get(
+                    'consignes',
+                    ''
+                ).strip()
 
                 SuiviMedecin.objects.create(
                     hospitalisation=hosp,
@@ -5207,71 +5240,203 @@ def detail_hospitalisation(request, pk):
                     consignes=consignes,
                     hopital=hopital_user
                 )
-                messages.success(request, "Suivi médecin enregistré avec succès.")
+
+                messages.success(
+                    request,
+                    "Suivi médecin enregistré avec succès."
+                )
+            else:
+                messages.error(
+                    request,
+                    "Seuls le médecin et l'administrateur peuvent ajouter un suivi médecin."
+                )
 
             return redirect('detail_hospitalisation', pk=pk)
 
-        # Tu pourras ajouter d'autres actions ici (ex: action == 'suivi_infirmier', etc.)
+        # ------------------------------------------------------
+        # B. Ajout d'un médicament dans une ordonnance
+        # ------------------------------------------------------
+        elif action == 'ajouter_medicament':
+            if fonctionKey not in ('medecin', 'admin'):
+                messages.error(
+                    request,
+                    "Seuls le médecin et l'administrateur peuvent ajouter un médicament."
+                )
+                return redirect('detail_hospitalisation', pk=pk)
 
-    # ------------------------------
-    # 2) PRÉPARATION DES DONNÉES (GET ou après POST)
-    # ------------------------------
+            ordonnance_id = request.POST.get('ordonnance_id')
+
+            if not ordonnance_id:
+                messages.error(
+                    request,
+                    "Veuillez sélectionner une ordonnance."
+                )
+                return redirect('detail_hospitalisation', pk=pk)
+
+            # Vérification de sécurité :
+            # L'ordonnance doit appartenir :
+            # - au même hôpital
+            # - au patient hospitalisé
+            ordonnance = get_object_or_404(
+                Ordonnance.objects.select_related(
+                    'consultation__triage__patient'
+                ),
+                pk=ordonnance_id,
+                hopital=hopital_user,
+                consultation__triage__patient=hosp.patient
+            )
+
+            form_medicament = LigneMedicamentForm(request.POST)
+
+            if form_medicament.is_valid():
+                with transaction.atomic():
+                    ligne_medicament = form_medicament.save(commit=False)
+                    ligne_medicament.ordonnance = ordonnance
+                    ligne_medicament.hopital = hopital_user
+                    ligne_medicament.statut = 'EN_COURS'
+                    ligne_medicament.save()
+
+                messages.success(
+                    request,
+                    f"Le médicament « {ligne_medicament.nom_medicament} » "
+                    f"a été ajouté à l'ordonnance "
+                    f"{ordonnance.get_type_ordonnance_display()}."
+                )
+            else:
+                messages.error(
+                    request,
+                    "Impossible d'ajouter le médicament. Vérifiez les informations saisies."
+                )
+
+            return redirect('detail_hospitalisation', pk=pk)
+
+    # ==========================================================
+    # Préparation des jours du Kardex
+    # ==========================================================
     date_debut = hosp.date_entree.date()
     demain = timezone.now().date() + timedelta(days=1)
 
     jours = []
-    curr = date_debut
-    while curr <= demain:
-        jours.append(curr)
-        curr += timedelta(days=1)
 
-    ordonnances = Ordonnance.objects.filter(
-        consultation__triage__patient=hosp.patient,
-        hopital=hopital_user
-    ).prefetch_related('medicaments').order_by('-date_prescrite')
+    courant = date_debut
+    while courant <= demain:
+        jours.append(courant)
+        courant += timedelta(days=1)
 
-    kardex_items = Kardex.objects.filter(
-        hospitalisation=hosp,
-        hopital=hopital_user
-    ).prefetch_related('administrations').order_by('-id')
+    # ==========================================================
+    # Ordonnances normales / définitives
+    # ==========================================================
+    ordonnances = (
+        Ordonnance.objects
+        .filter(
+            consultation__triage__patient=hosp.patient,
+            hopital=hopital_user,
+            type_ordonnance='DEFINITIVE'
+        )
+        .select_related(
+            'consultation',
+            'consultation__triage',
+            'consultation__triage__patient',
+            'consultation__medecin'
+        )
+        .prefetch_related('lignes_medicaments')
+        .order_by('-date_prescrite')
+    )
+
+    # ==========================================================
+    # Ordonnances d'urgence
+    # ==========================================================
+    ordonnances_urgence = (
+        Ordonnance.objects
+        .filter(
+            type_ordonnance='URGENCE',
+            consultation__triage__patient=hosp.patient,
+            hopital=hopital_user
+        )
+        .select_related(
+            'consultation',
+            'consultation__triage',
+            'consultation__triage__patient',
+            'consultation__medecin'
+        )
+        .prefetch_related('lignes_medicaments')
+        .order_by('-date_prescrite')
+    )
+
+    # ==========================================================
+    # Liste combinée pour le champ <select> du formulaire
+    # ==========================================================
+    toutes_ordonnances = list(ordonnances_urgence) + list(ordonnances)
+
+    # ==========================================================
+    # Kardex
+    # ==========================================================
+    kardex_items = (
+        Kardex.objects
+        .filter(
+            hospitalisation=hosp,
+            hopital=hopital_user
+        )
+        .prefetch_related('administrations')
+        .order_by('-id')
+    )
 
     kardex_data = []
+
     for item in kardex_items:
-        admins = {a.date_admin: a for a in item.administrations.all()}
-        row = {
+        administrations_par_date = {
+            administration.date_admin: administration
+            for administration in item.administrations.all()
+        }
+
+        kardex_data.append({
             'id': item.id,
             'medicament': item.medicament,
             'posologie': item.posologie,
             'voie': item.voie_administration,
             'est_actif': item.est_actif,
             'cellules': [
-                {'date': jour, 'admin': admins.get(jour)}
+                {
+                    'date': jour,
+                    'admin': administrations_par_date.get(jour)
+                }
                 for jour in jours
             ]
-        }
-        kardex_data.append(row)
+        })
 
-    # Suivis infirmier
+    # ==========================================================
+    # Suivis infirmiers
+    # ==========================================================
     suivis_list = hosp.suivis_journaliers.all().order_by('-date_suivi')
+
     paginator = Paginator(suivis_list, 5)
     page_number = request.GET.get('page')
     suivis = paginator.get_page(page_number)
 
-    # Suivis médecin
+    # ==========================================================
+    # Suivis médecins
+    # ==========================================================
     suivis_medecin = hosp.suivis_medecin.all().order_by('-date_suivi')
 
-    # ------------------------------
-    # 3) RENDU DU TEMPLATE
-    # ------------------------------
-    return render(request, 'back-end/hospitalisation/detail.html', {
-        'hosp': hosp,
-        'ordonnances': ordonnances,
-        'kardex_data': kardex_data,
-        'suivis': suivis,
-        'suivis_medecin': suivis_medecin,
-        'fonctionKey': fonctionKey,
-        'jours': jours,
-    })
+    # ==========================================================
+    # Rendu du template
+    # ==========================================================
+    return render(
+        request,
+        'back-end/hospitalisation/detail.html',
+        {
+            'hosp': hosp,
+            'ordonnances': ordonnances,
+            'ordonnances_urgence': ordonnances_urgence,
+            'toutes_ordonnances': toutes_ordonnances,
+            'form_medicament': LigneMedicamentForm(),
+            'kardex_data': kardex_data,
+            'suivis': suivis,
+            'suivis_medecin': suivis_medecin,
+            'fonctionKey': fonctionKey,
+            'jours': jours,
+        }
+    )
 
 # ===========================================================================================
 @login_required

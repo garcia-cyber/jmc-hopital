@@ -748,3 +748,34 @@ class LitForm(forms.ModelForm):
   class Meta:
     model = Lit
     fields = ['chambre', 'nom_lit', 'est_occupe', 'est_actif', 'hopital']
+
+# -------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+class LigneMedicamentForm(forms.ModelForm):
+    class Meta:
+        model = LigneMedicament
+        fields = [
+            'nom_medicament',
+            'posologie',
+            'duree',
+            'quantite',
+        ]
+
+        widgets = {
+            'nom_medicament': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. Paracétamol 500 mg'
+            }),
+            'posologie': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. 1 comprimé, 3 fois par jour'
+            }),
+            'duree': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. 5 jours'
+            }),
+            'quantite': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            }),
+        }

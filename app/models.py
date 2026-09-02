@@ -548,7 +548,9 @@ class DemandeExamen(models.Model):
             nom_patient = "Patient inconnu"
         return f"{self.prestation.libelle} pour {nom_patient}"
     
-    
+# ======================================================================================================================
+# ======================================================================================================================
+
 class Ordonnance(models.Model):
     TYPE_CHOICES = [('URGENCE', 'Ordonnance d’Urgence'), ('DEFINITIVE', 'Ordonnance Définitive')]
     
@@ -568,7 +570,8 @@ class Ordonnance(models.Model):
             nom_patient = "Patient non identifié"
             
         return f"Ordonnance {self.get_type_ordonnance_display()} - {nom_patient}"
-
+# ===============================================================================================================
+# ===============================================================================================================
 class Medicament(models.Model):
     # Utilisation des guillemets pour éviter l'erreur de référence circulaire
     ordonnance = models.ForeignKey('Ordonnance', on_delete=models.CASCADE, related_name='medicaments')
@@ -594,26 +597,47 @@ class LigneMedicament(models.Model):
         ('EN_COURS', 'En cours'),
         ('STOPPE', 'Stoppé / Changé'),
     ]
-    
-    # Utilisez un related_name unique pour éviter les conflits
+
     ordonnance = models.ForeignKey(
-        'Ordonnance', 
-        related_name='lignes_medicaments', 
+        'Ordonnance',
+        related_name='lignes_medicaments',
         on_delete=models.CASCADE
     )
-    
+
     nom_medicament = models.CharField(max_length=200)
-    posologie = models.CharField(max_length=200, help_text="ex: 1 tab 3 fois par jour")
-    duree = models.CharField(max_length=100, help_text="ex: 5 jours")
-    statut = models.CharField(max_length=20, choices=STATUT_MEDOC, default='EN_COURS')
-    motif_arret = models.TextField(blank=True, null=True, help_text="Pourquoi le médecin a changé ce médicament")
+    posologie = models.CharField(
+        max_length=200,
+        help_text="Exemple : 1 comprimé, 3 fois par jour"
+    )
+    duree = models.CharField(
+        max_length=100,
+        help_text="Exemple : 5 jours"
+    )
+
+    quantite = models.PositiveIntegerField(default=1)
+
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_MEDOC,
+        default='EN_COURS'
+    )
+
+    motif_arret = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Pourquoi le médecin a changé ou arrêté ce médicament"
+    )
+
     date_modification = models.DateTimeField(default=timezone.now)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
-    ## mise en jour
-    quantite = models.IntegerField(default= '1', null = True) 
+
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.SET_NULL,
+        null=True
+    )
 
     def __str__(self):
-        return f"{self.nom_medicament} - {self.statut}"
+        return f"{self.nom_medicament} - {self.get_statut_display()}"
 
 # 14. DEPENSE ======================================================
 class Depense(models.Model):

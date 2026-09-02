@@ -4,23 +4,28 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dossier Patient - {{ hosp.patient.noms }}</title>
+
+    <title>
+        Dossier Patient - {{ hosp.patient.noms }}
+    </title>
+
     {% include 'back-end/includes/css.html' %}
+
     <style>
-        /* Global & layout */
         body {
             background: #f4f7fa;
         }
+
         .page-wrapper {
             padding: 1.2rem 0;
         }
 
-        /* Cards */
         .card {
             border: none;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
         }
+
         .card-header {
             border-top-left-radius: 12px;
             border-top-right-radius: 12px;
@@ -28,134 +33,707 @@
             letter-spacing: 0.2px;
         }
 
-        /* Tables */
         .table thead {
             background-color: #f8f9fa;
             color: #333;
             font-size: 0.85rem;
         }
+
         .table th {
             font-weight: 600;
         }
+
         .table td {
             font-size: 0.9rem;
             vertical-align: middle;
         }
 
-        /* Buttons */
         .btn {
             border-radius: 8px;
         }
+
         .btn-xs {
-            padding: .15rem .4rem;
-            font-size: .75rem;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.75rem;
             border-radius: 6px;
         }
 
-        /* Cardex specific */
         .table-danger {
             opacity: 0.85;
         }
+
         .admin-form {
             display: flex;
             gap: 4px;
             align-items: center;
             justify-content: center;
         }
+
         .cell-date {
             font-size: 0.70rem;
             font-weight: 700;
         }
 
-        /* Forms */
         .form-control,
         .form-control-sm,
         textarea.form-control {
             border-radius: 8px;
         }
+
         .bg-light-custom {
             background-color: #f8f9fc;
         }
 
-        /* Responsive tweaks */
+        .ordonnance-item {
+            border-left: 4px solid #007bff;
+            background-color: #f7fbff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .ordonnance-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .ordonnance-title {
+            color: #007bff;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .urgence-ordonnance {
+            border-left: 4px solid #dc3545;
+            background-color: #fff8f8;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .urgence-ordonnance:last-child {
+            margin-bottom: 0;
+        }
+
+        .urgence-title {
+            color: #dc3545;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .medication-item {
+            border-bottom: 1px solid #d6e9fa;
+            padding: 8px 0;
+        }
+
+        .medication-item:last-child {
+            border-bottom: none;
+        }
+
+        .urgence-medication {
+            border-bottom: 1px solid #f1d1d4;
+            padding: 8px 0;
+        }
+
+        .urgence-medication:last-child {
+            border-bottom: none;
+        }
+
+        .add-medication-form {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #cfd8dc;
+        }
+
+        .medicament-stoppe {
+            opacity: 0.60;
+            text-decoration: line-through;
+        }
+
+        .badge-statut {
+            font-size: 0.70rem;
+        }
+
         @media (max-width: 768px) {
             .d-flex.justify-content-between.align-items-center {
                 flex-direction: column;
                 gap: 0.75rem;
                 align-items: flex-start;
             }
+
             .d-flex.justify-content-between.align-items-center > div {
                 width: 100%;
             }
+
             .btn {
                 width: 100%;
                 margin-bottom: 0.4rem;
             }
+
+            .add-medication-form .btn {
+                margin-top: 5px;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="main-wrapper">
+
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
-        
+
         <div class="page-wrapper">
             <div class="content container-fluid">
+
+                <!-- Messages Django -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div
+                            class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                            role="alert"
+                        >
+                            {{ message }}
+
+                            <button
+                                type="button"
+                                class="close"
+                                data-dismiss="alert"
+                                aria-label="Fermer"
+                            >
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- En-tête -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="mb-0">Dossier de suivi : {{ hosp.patient.noms }}</h3>
+                    <div>
+                        <h3 class="mb-1">
+                            Dossier de suivi : {{ hosp.patient.noms }}
+                        </h3>
+
+                        <small class="text-muted">
+                            Hospitalisation n°{{ hosp.id }}
+
+                            {% if hosp.date_entree %}
+                                | Entrée :
+                                {{ hosp.date_entree|date:"d/m/Y H:i" }}
+                            {% endif %}
+                        </small>
+                    </div>
+
                     <div>
                         {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
-                            <a href="{% url 'creer_rdv' hosp.id %}" class="btn btn-info text-white me-2">
-                                <i class="fa fa-calendar"></i> Prendre RDV
+                            <a
+                                href="{% url 'creer_rdv' hosp.id %}"
+                                class="btn btn-info text-white me-2"
+                            >
+                                <i class="fa fa-calendar"></i>
+                                Prendre RDV
                             </a>
-                            <form method="POST" action="{% url 'finir_hospitalisation' hosp.id %}" class="d-inline" onsubmit="return confirm('Confirmer la fin de l\'hospitalisation ?');">
+
+                            <form
+                                method="POST"
+                                action="{% url 'finir_hospitalisation' hosp.id %}"
+                                class="d-inline"
+                                onsubmit="return confirm('Confirmer la fin de l’hospitalisation ?');"
+                            >
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-danger me-2">Terminer l'Hospitalisation</button>
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger me-2"
+                                >
+                                    <i class="fa fa-sign-out-alt"></i>
+                                    Terminer l'hospitalisation
+                                </button>
                             </form>
                         {% endif %}
-                        <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">Retour</a>
+
+                        <a
+                            href="{% url 'liste_hospitalisations' %}"
+                            class="btn btn-secondary"
+                        >
+                            <i class="fa fa-arrow-left"></i>
+                            Retour
+                        </a>
                     </div>
                 </div>
-                
+
                 <div class="row">
+
+                    <!-- ================================================= -->
+                    <!-- COLONNE GAUCHE -->
+                    <!-- ================================================= -->
                     <div class="col-md-4">
-                        <!-- Ordonnances -->
+
+                        <!-- Ordonnances définitives -->
                         <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-primary text-white">Traitement (Ordonnances)</div>
+                            <div class="card-header bg-primary text-white">
+                                <i class="fa fa-prescription-bottle-alt"></i>
+                                Traitements — Ordonnances définitives
+                            </div>
+
                             <div class="card-body">
                                 {% for ordonnance in ordonnances %}
-                                    <div class="mb-4 pb-2 border-bottom">
-                                        <h6 class="text-primary">{{ ordonnance.get_type_ordonnance_display }}</h6>
-                                        <ul class="list-unstyled mt-2">
-                                            {% for med in ordonnance.medicaments.all %}
-                                                <li class="mb-2">
-                                                    <strong>{{ med.nom }}</strong> | <small>{{ med.posologie }}</small>
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
+                                    <div class="ordonnance-item">
+
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <div class="ordonnance-title">
+                                                    <i class="fa fa-file-medical"></i>
+                                                    {{ ordonnance.get_type_ordonnance_display }}
+                                                </div>
+
+                                                <small class="text-muted">
+                                                    Prescrite le :
+                                                    {{ ordonnance.date_prescrite|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </div>
+
+                                            <span class="badge badge-primary">
+                                                DÉFINITIVE
+                                            </span>
+                                        </div>
+
+                                        {% if ordonnance.consultation.medecin %}
+                                            <small class="d-block mb-2">
+                                                <strong>Médecin :</strong>
+
+                                                {{ ordonnance.consultation.medecin.get_full_name|default:ordonnance.consultation.medecin.username }}
+                                            </small>
+                                        {% endif %}
+
+                                        {% if ordonnance.diagnostic %}
+                                            <div class="mb-2">
+                                                <small>
+                                                    <strong>Diagnostic :</strong>
+                                                    {{ ordonnance.diagnostic }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if ordonnance.observation %}
+                                            <div class="mb-2">
+                                                <small>
+                                                    <strong>Observation :</strong>
+                                                    {{ ordonnance.observation }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+
+                                        <hr>
+
+                                        <h6 class="text-secondary mb-2">
+                                            <i class="fa fa-pills"></i>
+                                            Médicaments prescrits
+                                        </h6>
+
+                                        {% for ligne in ordonnance.lignes_medicaments.all %}
+                                            <div
+                                                class="medication-item {% if ligne.statut == 'STOPPE' %}medicament-stoppe{% endif %}"
+                                            >
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <strong>
+                                                        {{ ligne.nom_medicament }}
+                                                    </strong>
+
+                                                    {% if ligne.statut == 'EN_COURS' %}
+                                                        <span class="badge badge-success badge-statut">
+                                                            En cours
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge badge-secondary badge-statut">
+                                                            Stoppé / Changé
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if ligne.posologie %}
+                                                    <small class="d-block">
+                                                        <strong>Posologie :</strong>
+                                                        {{ ligne.posologie }}
+                                                    </small>
+                                                {% endif %}
+
+                                                {% if ligne.duree %}
+                                                    <small class="d-block">
+                                                        <strong>Durée :</strong>
+                                                        {{ ligne.duree }}
+                                                    </small>
+                                                {% endif %}
+
+                                                <small class="d-block">
+                                                    <strong>Quantité :</strong>
+                                                    {{ ligne.quantite }}
+                                                </small>
+
+                                                {% if ligne.motif_arret %}
+                                                    <small class="d-block text-danger mt-1">
+                                                        <strong>Motif d'arrêt :</strong>
+                                                        {{ ligne.motif_arret }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        {% empty %}
+                                            <p class="text-muted mb-0">
+                                                Aucun médicament dans cette ordonnance.
+                                            </p>
+                                        {% endfor %}
+
+                                        <!-- Formulaire ajout médicament ordonnance définitive -->
+                                        {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                            <form
+                                                method="POST"
+                                                action="{% url 'detail_hospitalisation' hosp.id %}"
+                                                class="add-medication-form"
+                                            >
+                                                {% csrf_token %}
+
+                                                <input
+                                                    type="hidden"
+                                                    name="action"
+                                                    value="ajouter_medicament"
+                                                >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="ordonnance_id"
+                                                    value="{{ ordonnance.id }}"
+                                                >
+
+                                                <h6 class="text-primary mb-2">
+                                                    <i class="fa fa-plus-circle"></i>
+                                                    Ajouter un médicament
+                                                </h6>
+
+                                                <div class="form-group mb-2">
+                                                    <input
+                                                        type="text"
+                                                        name="nom_medicament"
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Nom du médicament"
+                                                        required
+                                                    >
+                                                </div>
+
+                                                <div class="form-group mb-2">
+                                                    <input
+                                                        type="text"
+                                                        name="posologie"
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Ex. 1 comprimé, 3 fois par jour"
+                                                        required
+                                                    >
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-7">
+                                                        <div class="form-group mb-2">
+                                                            <input
+                                                                type="text"
+                                                                name="duree"
+                                                                class="form-control form-control-sm"
+                                                                placeholder="Durée : Ex. 7 jours"
+                                                                required
+                                                            >
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-5">
+                                                        <div class="form-group mb-2">
+                                                            <input
+                                                                type="number"
+                                                                name="quantite"
+                                                                class="form-control form-control-sm"
+                                                                placeholder="Qté"
+                                                                value="1"
+                                                                min="1"
+                                                                required
+                                                            >
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-primary w-100"
+                                                >
+                                                    <i class="fa fa-plus"></i>
+                                                    Ajouter à cette ordonnance
+                                                </button>
+                                            </form>
+                                        {% endif %}
                                     </div>
+                                {% empty %}
+                                    <p class="text-muted mb-0">
+                                        Aucune ordonnance définitive trouvée.
+                                    </p>
                                 {% endfor %}
                             </div>
                         </div>
 
-                        <!-- Cardex -->
+                        <!-- Ordonnances d'urgence -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-danger text-white">
+                                <i class="fa fa-ambulance"></i>
+                                Ordonnances d'urgence
+                            </div>
+
+                            <div class="card-body">
+                                {% for ordonnance in ordonnances_urgence %}
+                                    <div class="urgence-ordonnance">
+
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <div class="urgence-title">
+                                                    <i class="fa fa-exclamation-triangle"></i>
+                                                    {{ ordonnance.get_type_ordonnance_display }}
+                                                </div>
+
+                                                <small class="text-muted">
+                                                    Prescrite le :
+                                                    {{ ordonnance.date_prescrite|date:"d/m/Y H:i" }}
+                                                </small>
+                                            </div>
+
+                                            <span class="badge badge-danger">
+                                                URGENCE
+                                            </span>
+                                        </div>
+
+                                        {% if ordonnance.consultation.medecin %}
+                                            <small class="d-block mb-2">
+                                                <strong>Médecin :</strong>
+
+                                                {{ ordonnance.consultation.medecin.get_full_name|default:ordonnance.consultation.medecin.username }}
+                                            </small>
+                                        {% endif %}
+
+                                        {% if ordonnance.diagnostic %}
+                                            <div class="mb-2">
+                                                <small>
+                                                    <strong>Diagnostic :</strong>
+                                                    {{ ordonnance.diagnostic }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if ordonnance.observation %}
+                                            <div class="mb-2">
+                                                <small>
+                                                    <strong>Observation :</strong>
+                                                    {{ ordonnance.observation }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+
+                                        <hr>
+
+                                        <h6 class="text-danger mb-2">
+                                            <i class="fa fa-pills"></i>
+                                            Médicaments d'urgence
+                                        </h6>
+
+                                        {% for ligne in ordonnance.lignes_medicaments.all %}
+                                            <div
+                                                class="urgence-medication {% if ligne.statut == 'STOPPE' %}medicament-stoppe{% endif %}"
+                                            >
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <strong>
+                                                        {{ ligne.nom_medicament }}
+                                                    </strong>
+
+                                                    {% if ligne.statut == 'EN_COURS' %}
+                                                        <span class="badge badge-success badge-statut">
+                                                            En cours
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge badge-secondary badge-statut">
+                                                            Stoppé / Changé
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if ligne.posologie %}
+                                                    <small class="d-block">
+                                                        <strong>Posologie :</strong>
+                                                        {{ ligne.posologie }}
+                                                    </small>
+                                                {% endif %}
+
+                                                {% if ligne.duree %}
+                                                    <small class="d-block">
+                                                        <strong>Durée :</strong>
+                                                        {{ ligne.duree }}
+                                                    </small>
+                                                {% endif %}
+
+                                                <small class="d-block">
+                                                    <strong>Quantité :</strong>
+                                                    {{ ligne.quantite }}
+                                                </small>
+
+                                                {% if ligne.motif_arret %}
+                                                    <small class="d-block text-danger mt-1">
+                                                        <strong>Motif d'arrêt :</strong>
+                                                        {{ ligne.motif_arret }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        {% empty %}
+                                            <p class="text-muted mb-0">
+                                                Aucun médicament enregistré dans cette ordonnance d'urgence.
+                                            </p>
+                                        {% endfor %}
+
+                                        <!-- Formulaire ajout médicament ordonnance urgence -->
+                                        {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                            <form
+                                                method="POST"
+                                                action="{% url 'detail_hospitalisation' hosp.id %}"
+                                                class="add-medication-form"
+                                            >
+                                                {% csrf_token %}
+
+                                                <input
+                                                    type="hidden"
+                                                    name="action"
+                                                    value="ajouter_medicament"
+                                                >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="ordonnance_id"
+                                                    value="{{ ordonnance.id }}"
+                                                >
+
+                                                <h6 class="text-danger mb-2">
+                                                    <i class="fa fa-plus-circle"></i>
+                                                    Ajouter un médicament d'urgence
+                                                </h6>
+
+                                                <div class="form-group mb-2">
+                                                    <input
+                                                        type="text"
+                                                        name="nom_medicament"
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Nom du médicament"
+                                                        required
+                                                    >
+                                                </div>
+
+                                                <div class="form-group mb-2">
+                                                    <input
+                                                        type="text"
+                                                        name="posologie"
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Ex. 1 ampoule IV toutes les 8 heures"
+                                                        required
+                                                    >
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-7">
+                                                        <div class="form-group mb-2">
+                                                            <input
+                                                                type="text"
+                                                                name="duree"
+                                                                class="form-control form-control-sm"
+                                                                placeholder="Durée : Ex. 24 heures"
+                                                                required
+                                                            >
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-5">
+                                                        <div class="form-group mb-2">
+                                                            <input
+                                                                type="number"
+                                                                name="quantite"
+                                                                class="form-control form-control-sm"
+                                                                placeholder="Qté"
+                                                                value="1"
+                                                                min="1"
+                                                                required
+                                                            >
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-danger w-100"
+                                                >
+                                                    <i class="fa fa-plus"></i>
+                                                    Ajouter à l'urgence
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted mb-0">
+                                        Aucune ordonnance d'urgence pour ce patient.
+                                    </p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Kardex -->
                         <div class="card shadow-sm">
-                            <div class="card-header bg-dark text-white">Cardex (Suivi Chronologique)</div>
+                            <div class="card-header bg-dark text-white">
+                                <i class="fa fa-clipboard-list"></i>
+                                Kardex — Suivi chronologique
+                            </div>
+
                             <div class="card-body p-2">
-                                <!-- Formulaire d'ajout kardex : uniquement infirmier / admin -->
+
                                 {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
-                                    <form method="POST" action="{% url 'ajouter_kardex' hosp.id %}" class="mb-3 p-2 border rounded bg-light-custom">
+                                    <form
+                                        method="POST"
+                                        action="{% url 'ajouter_kardex' hosp.id %}"
+                                        class="mb-3 p-2 border rounded bg-light-custom"
+                                    >
                                         {% csrf_token %}
-                                        <input type="text" name="medicament" class="form-control form-control-sm mb-1" placeholder="Nom médicament" required>
+
+                                        <input
+                                            type="text"
+                                            name="medicament"
+                                            class="form-control form-control-sm mb-1"
+                                            placeholder="Nom médicament"
+                                            required
+                                        >
+
                                         <div class="row g-1">
                                             <div class="col-6">
-                                                <input type="text" name="posologie" class="form-control form-control-sm" placeholder="Dosage" required>
+                                                <input
+                                                    type="text"
+                                                    name="posologie"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="Dosage"
+                                                    required
+                                                >
                                             </div>
+
                                             <div class="col-6">
-                                                <input type="text" name="voie" class="form-control form-control-sm" placeholder="Voie" required>
+                                                <input
+                                                    type="text"
+                                                    name="voie"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="Voie"
+                                                    required
+                                                >
                                             </div>
                                         </div>
-                                        <button type="submit" class="btn btn-sm btn-success w-100 mt-2">Ajouter</button>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-success w-100 mt-2"
+                                        >
+                                            <i class="fa fa-plus"></i>
+                                            Ajouter au Kardex
+                                        </button>
                                     </form>
                                 {% endif %}
 
@@ -164,60 +742,131 @@
                                         <thead>
                                             <tr>
                                                 <th>Médicament / Dosage / Voie</th>
+
                                                 {% for jour in jours %}
-                                                    <th class="text-center cell-date">{{ jour|date:"d/m" }}</th>
+                                                    <th class="text-center cell-date">
+                                                        {{ jour|date:"d/m" }}
+                                                    </th>
                                                 {% endfor %}
                                             </tr>
                                         </thead>
+
                                         <tbody>
                                             {% for row in kardex_data %}
-                                            <tr class="{% if not row.est_actif %}table-danger{% endif %}">
-                                                <td style="font-size: 0.8rem;">
-                                                    <strong>{{ row.medicament }}</strong><br>
-                                                    <small class="text-muted">Dosage : {{ row.posologie }}</small><br>
-                                                    <small class="text-muted">Voie : {{ row.voie|default:"—" }}</small>
+                                                <tr class="{% if not row.est_actif %}table-danger{% endif %}">
+                                                    <td style="font-size: 0.8rem;">
+                                                        <strong>{{ row.medicament }}</strong>
 
-                                                    <!-- Bouton Arrêter / Réactiver : UNIQUEMENT pour le médecin -->
-                                                    {% if fonctionKey == 'medecin' %}
-                                                        <form method="POST" action="{% url 'changer_statut_kardex' row.id %}" class="mt-1">
-                                                            {% csrf_token %}
-                                                            <button type="submit" class="btn btn-xs {% if row.est_actif %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
-                                                                {% if row.est_actif %}Arrêter{% else %}Réactiver{% endif %}
-                                                            </button>
-                                                        </form>
-                                                    {% endif %}
-                                                </td>
-                                                {% for cell in row.cellules %}
-                                                <td class="text-center">
-                                                    <!-- Cases cochées uniquement pour infirmier / admin -->
-                                                    {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
-                                                        <form method="POST" action="{% url 'marquer_administration' row.id %}" class="admin-form">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="date_cible" value="{{ cell.date|date:'Y-m-d' }}">
-                                                            <input type="checkbox" name="matin"
-                                                                {% if cell.admin.matin %}checked{% endif %}
-                                                                {% if not row.est_actif %}disabled{% endif %}
-                                                                onchange="this.form.submit()">
-                                                            <input type="checkbox" name="midi"
-                                                                {% if cell.admin.midi %}checked{% endif %}
-                                                                {% if not row.est_actif %}disabled{% endif %}
-                                                                onchange="this.form.submit()">
-                                                            <input type="checkbox" name="soir"
-                                                                {% if cell.admin.soir %}checked{% endif %}
-                                                                {% if not row.est_actif %}disabled{% endif %}
-                                                                onchange="this.form.submit()">
-                                                        </form>
-                                                    {% else %}
-                                                        <!-- Affichage seul pour le médecin (et autres rôles) -->
-                                                        <div class="d-flex justify-content-center gap-1">
-                                                            <small class="{% if cell.admin.matin %}text-success fw-bold{% else %}text-muted{% endif %}">M</small>
-                                                            <small class="{% if cell.admin.midi %}text-success fw-bold{% else %}text-muted{% endif %}">I</small>
-                                                            <small class="{% if cell.admin.soir %}text-success fw-bold{% else %}text-muted{% endif %}">S</small>
-                                                        </div>
-                                                    {% endif %}
-                                                </td>
-                                                {% endfor %}
-                                            </tr>
+                                                        <br>
+
+                                                        <small class="text-muted">
+                                                            Dosage : {{ row.posologie }}
+                                                        </small>
+
+                                                        <br>
+
+                                                        <small class="text-muted">
+                                                            Voie : {{ row.voie|default:"—" }}
+                                                        </small>
+
+                                                        {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                                            <form
+                                                                method="POST"
+                                                                action="{% url 'changer_statut_kardex' row.id %}"
+                                                                class="mt-1"
+                                                            >
+                                                                {% csrf_token %}
+
+                                                                <button
+                                                                    type="submit"
+                                                                    class="btn btn-xs {% if row.est_actif %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                                                                >
+                                                                    {% if row.est_actif %}
+                                                                        Arrêter
+                                                                    {% else %}
+                                                                        Réactiver
+                                                                    {% endif %}
+                                                                </button>
+                                                            </form>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    {% for cell in row.cellules %}
+                                                        <td class="text-center">
+                                                            {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
+                                                                <form
+                                                                    method="POST"
+                                                                    action="{% url 'marquer_administration' row.id %}"
+                                                                    class="admin-form"
+                                                                >
+                                                                    {% csrf_token %}
+
+                                                                    <input
+                                                                        type="hidden"
+                                                                        name="date_cible"
+                                                                        value="{{ cell.date|date:'Y-m-d' }}"
+                                                                    >
+
+                                                                    <label class="mb-0">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            name="matin"
+                                                                            {% if cell.admin.matin %}checked{% endif %}
+                                                                            {% if not row.est_actif %}disabled{% endif %}
+                                                                            onchange="this.form.submit()"
+                                                                        >
+                                                                        <small>M</small>
+                                                                    </label>
+
+                                                                    <label class="mb-0">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            name="midi"
+                                                                            {% if cell.admin.midi %}checked{% endif %}
+                                                                            {% if not row.est_actif %}disabled{% endif %}
+                                                                            onchange="this.form.submit()"
+                                                                        >
+                                                                        <small>I</small>
+                                                                    </label>
+
+                                                                    <label class="mb-0">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            name="soir"
+                                                                            {% if cell.admin.soir %}checked{% endif %}
+                                                                            {% if not row.est_actif %}disabled{% endif %}
+                                                                            onchange="this.form.submit()"
+                                                                        >
+                                                                        <small>S</small>
+                                                                    </label>
+                                                                </form>
+                                                            {% else %}
+                                                                <div class="d-flex justify-content-center">
+                                                                    <small class="{% if cell.admin.matin %}text-success font-weight-bold{% else %}text-muted{% endif %}">
+                                                                        M
+                                                                    </small>
+
+                                                                    <small class="mx-1 {% if cell.admin.midi %}text-success font-weight-bold{% else %}text-muted{% endif %}">
+                                                                        I
+                                                                    </small>
+
+                                                                    <small class="{% if cell.admin.soir %}text-success font-weight-bold{% else %}text-muted{% endif %}">
+                                                                        S
+                                                                    </small>
+                                                                </div>
+                                                            {% endif %}
+                                                        </td>
+                                                    {% endfor %}
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td
+                                                        colspan="{{ jours|length|add:'1' }}"
+                                                        class="text-center text-muted py-3"
+                                                    >
+                                                        Aucun traitement ajouté au Kardex.
+                                                    </td>
+                                                </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -226,32 +875,83 @@
                         </div>
                     </div>
 
+                    <!-- ================================================= -->
+                    <!-- COLONNE DROITE -->
+                    <!-- ================================================= -->
                     <div class="col-md-8">
+
                         <!-- Suivi infirmier -->
-                        <div class="card shadow-sm mb-4"> 
+                        <div class="card shadow-sm mb-4">
                             <div class="card-body">
+
                                 {% if fonctionKey == 'infirmier' or fonctionKey == 'admin' %}
-                                    <form method="POST" action="{% url 'ajouter_suivi' hosp.id %}" class="mb-4 p-4 bg-light-custom rounded border">
+                                    <form
+                                        method="POST"
+                                        action="{% url 'ajouter_suivi' hosp.id %}"
+                                        class="mb-4 p-4 bg-light-custom rounded border"
+                                    >
                                         {% csrf_token %}
-                                        <h6 class="mb-3 text-uppercase text-secondary">Ajouter relevé (Signes Vitaux)</h6>
+
+                                        <h6 class="mb-3 text-uppercase text-secondary">
+                                            Ajouter relevé — Signes vitaux
+                                        </h6>
+
                                         <div class="row">
                                             <div class="col-md-4">
-                                                <input name="ta" class="form-control mb-2" placeholder="TA" required>
+                                                <input
+                                                    name="ta"
+                                                    class="form-control mb-2"
+                                                    placeholder="TA : Ex. 120/80"
+                                                    required
+                                                >
                                             </div>
+
                                             <div class="col-md-4">
-                                                <input name="pouls" class="form-control mb-2" placeholder="Pouls" required>
+                                                <input
+                                                    name="pouls"
+                                                    class="form-control mb-2"
+                                                    placeholder="Pouls : Ex. 80"
+                                                    required
+                                                >
                                             </div>
+
                                             <div class="col-md-4">
-                                                <input name="temp" class="form-control mb-2" placeholder="Temp (°C)" required>
+                                                <input
+                                                    name="temp"
+                                                    class="form-control mb-2"
+                                                    placeholder="Température : Ex. 37.2"
+                                                    required
+                                                >
                                             </div>
                                         </div>
-                                        <textarea name="etat_general" class="form-control mb-2" placeholder="État général" required></textarea>
-                                        <textarea name="soins_effectues" class="form-control mb-2" placeholder="Soins effectués"></textarea>
-                                        <button type="submit" class="btn btn-primary px-4">Valider le suivi</button>
+
+                                        <textarea
+                                            name="etat_general"
+                                            class="form-control mb-2"
+                                            placeholder="État général du patient"
+                                            required
+                                        ></textarea>
+
+                                        <textarea
+                                            name="soins_effectues"
+                                            class="form-control mb-2"
+                                            placeholder="Soins effectués"
+                                        ></textarea>
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary px-4"
+                                        >
+                                            <i class="fa fa-save"></i>
+                                            Valider le suivi
+                                        </button>
                                     </form>
                                 {% endif %}
-                                
-                                <h5 class="text-uppercase text-secondary mb-3">Historique des Signes Vitaux (Infirmier)</h5>
+
+                                <h5 class="text-uppercase text-secondary mb-3">
+                                    Historique des signes vitaux — Infirmier
+                                </h5>
+
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle">
                                         <thead>
@@ -259,70 +959,167 @@
                                                 <th>Date</th>
                                                 <th>TA</th>
                                                 <th>Pouls</th>
-                                                <th>Temp</th>
-                                                <th>État</th>
+                                                <th>Température</th>
+                                                <th>État général</th>
                                                 <th>Soins</th>
                                             </tr>
                                         </thead>
+
                                         <tbody>
                                             {% for s in suivis %}
-                                            <tr>
-                                                <td class="text-nowrap">{{ s.date_suivi|date:"d/m H:i" }}</td>
-                                                <td><span class="badge bg-info text-dark">{{ s.ta }}</span></td>
-                                                <td><span class="badge bg-warning text-dark">{{ s.pouls }}</span></td>
-                                                <td><span class="badge bg-danger text-white">{{ s.temp }}°C</span></td>
-                                                <td>{{ s.etat_general }}</td>
-                                                <td>{{ s.soins_effectues }}</td>
-                                            </tr>
+                                                <tr>
+                                                    <td class="text-nowrap">
+                                                        {{ s.date_suivi|date:"d/m/Y H:i" }}
+                                                    </td>
+
+                                                    <td>
+                                                        <span class="badge badge-info text-dark">
+                                                            {{ s.ta }}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        <span class="badge badge-warning text-dark">
+                                                            {{ s.pouls }}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        <span class="badge badge-danger text-white">
+                                                            {{ s.temp }} °C
+                                                        </span>
+                                                    </td>
+
+                                                    <td>{{ s.etat_general }}</td>
+                                                    <td>{{ s.soins_effectues|default:"—" }}</td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td
+                                                        colspan="6"
+                                                        class="text-muted text-center py-3"
+                                                    >
+                                                        Aucun suivi infirmier pour le moment.
+                                                    </td>
+                                                </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
-                                    <div class="pagination">
-                                        {% if suivis.has_previous %}
-                                            <a href="?page={{ suivis.previous_page_number }}" class="btn btn-outline-primary btn-sm">Précédent</a>
-                                        {% endif %}
-                                        <span class="mx-3">Page {{ suivis.number }} sur {{ suivis.paginator.num_pages }}</span>
-                                        {% if suivis.has_next %}
-                                            <a href="?page={{ suivis.next_page_number }}" class="btn btn-outline-primary btn-sm">Suivant</a>
-                                        {% endif %}
+
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            {% if suivis.has_previous %}
+                                                <a
+                                                    href="?page={{ suivis.previous_page_number }}"
+                                                    class="btn btn-outline-primary btn-sm"
+                                                >
+                                                    <i class="fa fa-chevron-left"></i>
+                                                    Précédent
+                                                </a>
+                                            {% endif %}
+                                        </div>
+
+                                        <span class="text-muted">
+                                            Page {{ suivis.number }}
+                                            sur {{ suivis.paginator.num_pages }}
+                                        </span>
+
+                                        <div>
+                                            {% if suivis.has_next %}
+                                                <a
+                                                    href="?page={{ suivis.next_page_number }}"
+                                                    class="btn btn-outline-primary btn-sm"
+                                                >
+                                                    Suivant
+                                                    <i class="fa fa-chevron-right"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Suivis médicaux (médecin) -->
+                        <!-- Suivis médicaux -->
                         <div class="card shadow-sm">
                             <div class="card-header bg-primary text-white">
-                                Suivis médicaux (Médecin)
+                                <i class="fa fa-user-md"></i>
+                                Suivis médicaux — Médecin
                             </div>
+
                             <div class="card-body">
+
                                 {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
-                                    <form method="POST" action="{% url 'detail_hospitalisation' hosp.id %}" class="mb-4 p-3 bg-light-custom rounded border">
+                                    <form
+                                        method="POST"
+                                        action="{% url 'detail_hospitalisation' hosp.id %}"
+                                        class="mb-4 p-3 bg-light-custom rounded border"
+                                    >
                                         {% csrf_token %}
-                                        <input type="hidden" name="action" value="suivi_medecin">
 
-                                        <h6 class="mb-3 text-uppercase text-secondary">Ajouter un suivi médecin</h6>
+                                        <input
+                                            type="hidden"
+                                            name="action"
+                                            value="suivi_medecin"
+                                        >
+
+                                        <h6 class="mb-3 text-uppercase text-secondary">
+                                            Ajouter un suivi médecin
+                                        </h6>
 
                                         <div class="form-group mb-2">
-                                            <label class="font-weight-bold">Diagnostic du jour</label>
-                                            <textarea name="diagnostic_du_jour" class="form-control" rows="2" placeholder="Diagnostic principal du jour"></textarea>
+                                            <label class="font-weight-bold">
+                                                Diagnostic du jour
+                                            </label>
+
+                                            <textarea
+                                                name="diagnostic_du_jour"
+                                                class="form-control"
+                                                rows="2"
+                                                placeholder="Diagnostic principal du jour"
+                                            ></textarea>
                                         </div>
 
                                         <div class="form-group mb-2">
-                                            <label class="font-weight-bold">Évolution clinique</label>
-                                            <textarea name="evolution" class="form-control" rows="2" placeholder="Amélioration, aggravation, remarques..."></textarea>
+                                            <label class="font-weight-bold">
+                                                Évolution clinique
+                                            </label>
+
+                                            <textarea
+                                                name="evolution"
+                                                class="form-control"
+                                                rows="2"
+                                                placeholder="Amélioration, aggravation, remarques..."
+                                            ></textarea>
                                         </div>
 
                                         <div class="form-group mb-2">
-                                            <label class="font-weight-bold">Consignes / Prescriptions particulières</label>
-                                            <textarea name="consignes" class="form-control" rows="2" placeholder="Consignes pour l'infirmier, examens à prévoir, etc."></textarea>
+                                            <label class="font-weight-bold">
+                                                Consignes / Prescriptions particulières
+                                            </label>
+
+                                            <textarea
+                                                name="consignes"
+                                                class="form-control"
+                                                rows="2"
+                                                placeholder="Consignes infirmières, examens à prévoir, surveillance..."
+                                            ></textarea>
                                         </div>
 
-                                        <button type="submit" class="btn btn-primary px-4">Enregistrer le suivi médecin</button>
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary px-4"
+                                        >
+                                            <i class="fa fa-save"></i>
+                                            Enregistrer le suivi médecin
+                                        </button>
                                     </form>
                                 {% endif %}
 
-                                <h5 class="text-uppercase text-secondary mb-3">Historique des suivis médecins</h5>
+                                <h5 class="text-uppercase text-secondary mb-3">
+                                    Historique des suivis médecins
+                                </h5>
+
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle">
                                         <thead>
@@ -334,31 +1131,51 @@
                                                 <th>Consignes</th>
                                             </tr>
                                         </thead>
+
                                         <tbody>
                                             {% for s in suivis_medecin %}
-                                            <tr>
-                                                <td class="text-nowrap">{{ s.date_suivi|date:"d/m H:i" }}</td>
-                                                <td>{{ s.medecin.get_full_name|default:s.medecin.username }}</td>
-                                                <td>{{ s.diagnostic_du_jour|default:"—" }}</td>
-                                                <td>{{ s.evolution|default:"—" }}</td>
-                                                <td>{{ s.consignes|default:"—" }}</td>
-                                            </tr>
+                                                <tr>
+                                                    <td class="text-nowrap">
+                                                        {{ s.date_suivi|date:"d/m/Y H:i" }}
+                                                    </td>
+
+                                                    <td>
+                                                        {{ s.medecin.get_full_name|default:s.medecin.username }}
+                                                    </td>
+
+                                                    <td>
+                                                        {{ s.diagnostic_du_jour|default:"—" }}
+                                                    </td>
+
+                                                    <td>
+                                                        {{ s.evolution|default:"—" }}
+                                                    </td>
+
+                                                    <td>
+                                                        {{ s.consignes|default:"—" }}
+                                                    </td>
+                                                </tr>
                                             {% empty %}
-                                            <tr>
-                                                <td colspan="5" class="text-muted text-center py-3">Aucun suivi médecin pour le moment.</td>
-                                            </tr>
+                                                <tr>
+                                                    <td
+                                                        colspan="5"
+                                                        class="text-muted text-center py-3"
+                                                    >
+                                                        Aucun suivi médecin pour le moment.
+                                                    </td>
+                                                </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     {% include 'back-end/includes/js.html' %}
 </body>
 </html>

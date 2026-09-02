@@ -5170,7 +5170,7 @@ def dossier_medical_complet(request, patient_id):
 @login_required
 def detail_hospitalisation(request, pk):
     # ==========================================================
-    # Rôle et hôpital de l'utilisateur
+    # 1. Rôle et hôpital de l'utilisateur connecté
     # ==========================================================
     role = (
         Fonction.objects
@@ -5195,7 +5195,7 @@ def detail_hospitalisation(request, pk):
         return redirect('liste_hospitalisations')
 
     # ==========================================================
-    # Hospitalisation concernée
+    # 2. Hospitalisation concernée
     # ==========================================================
     hosp = get_object_or_404(
         Hospitalisation.objects.select_related(
@@ -5207,54 +5207,61 @@ def detail_hospitalisation(request, pk):
     )
 
     # ==========================================================
-    # Gestion des formulaires POST
+    # 3. Gestion des formulaires POST
     # ==========================================================
     if request.method == 'POST':
         action = request.POST.get('action')
 
         # ------------------------------------------------------
-        # A. Suivi médecin
+        # A. Ajouter un suivi médecin
         # ------------------------------------------------------
         if action == 'suivi_medecin':
-            if fonctionKey in ('medecin', 'admin'):
-                diagnostic = request.POST.get(
-                    'diagnostic_du_jour',
-                    ''
-                ).strip()
-
-                evolution = request.POST.get(
-                    'evolution',
-                    ''
-                ).strip()
-
-                consignes = request.POST.get(
-                    'consignes',
-                    ''
-                ).strip()
-
-                SuiviMedecin.objects.create(
-                    hospitalisation=hosp,
-                    medecin=request.user,
-                    diagnostic_du_jour=diagnostic,
-                    evolution=evolution,
-                    consignes=consignes,
-                    hopital=hopital_user
-                )
-
-                messages.success(
-                    request,
-                    "Suivi médecin enregistré avec succès."
-                )
-            else:
+            if fonctionKey not in ('medecin', 'admin'):
                 messages.error(
                     request,
                     "Seuls le médecin et l'administrateur peuvent ajouter un suivi médecin."
                 )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
 
-            return redirect('detail_hospitalisation', pk=pk)
+            diagnostic = request.POST.get(
+                'diagnostic_du_jour',
+                ''
+            ).strip()
+
+            evolution = request.POST.get(
+                'evolution',
+                ''
+            ).strip()
+
+            consignes = request.POST.get(
+                'consignes',
+                ''
+            ).strip()
+
+            SuiviMedecin.objects.create(
+                hospitalisation=hosp,
+                medecin=request.user,
+                diagnostic_du_jour=diagnostic,
+                evolution=evolution,
+                consignes=consignes,
+                hopital=hopital_user
+            )
+
+            messages.success(
+                request,
+                "Suivi médecin enregistré avec succès."
+            )
+
+            return redirect(
+                'detail_hospitalisation',
+                pk=hosp.id
+            )
 
         # ------------------------------------------------------
-        # B. Ajout d'un médicament dans une ordonnance
+        # B. Ajouter un médicament à une ordonnance
         # ------------------------------------------------------
         elif action == 'ajouter_medicament':
             if fonctionKey not in ('medecin', 'admin'):
@@ -5262,7 +5269,10 @@ def detail_hospitalisation(request, pk):
                     request,
                     "Seuls le médecin et l'administrateur peuvent ajouter un médicament."
                 )
-                return redirect('detail_hospitalisation', pk=pk)
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
 
             ordonnance_id = request.POST.get('ordonnance_id')
 
@@ -5271,12 +5281,13 @@ def detail_hospitalisation(request, pk):
                     request,
                     "Veuillez sélectionner une ordonnance."
                 )
-                return redirect('detail_hospitalisation', pk=pk)
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
 
-            # Vérification de sécurité :
-            # L'ordonnance doit appartenir :
-            # - au même hôpital
-            # - au patient hospitalisé
+            # L'ordonnance doit appartenir au patient hospitalisé
+            # et à l'hôpital de l'utilisateur connecté.
             ordonnance = get_object_or_404(
                 Ordonnance.objects.select_related(
                     'consultation__triage__patient'
@@ -5290,7 +5301,10 @@ def detail_hospitalisation(request, pk):
 
             if form_medicament.is_valid():
                 with transaction.atomic():
-                    ligne_medicament = form_medicament.save(commit=False)
+                    ligne_medicament = form_medicament.save(
+                        commit=False
+                    )
+
                     ligne_medicament.ordonnance = ordonnance
                     ligne_medicament.hopital = hopital_user
                     ligne_medicament.statut = 'EN_COURS'
@@ -5308,23 +5322,190 @@ def detail_hospitalisation(request, pk):
                     "Impossible d'ajouter le médicament. Vérifiez les informations saisies."
                 )
 
-            return redirect('detail_hospitalisation', pk=pk)
+            return redirect(
+                'detail_hospitalisation',
+                pk=hosp.id
+            )
+
+        # ------------------------------------------------------
+        # C. Ajouter une ou plusieurs demandes d'examens
+        # Catégories autorisées : LABO, ECHO et RADIO
+        # ------------------------------------------------------
+        elif action == 'ajouter_examen':
+            if fonctionKey not in ('medecin', 'admin'):
+                messages.error(
+                    request,
+                    "Seuls le médecin et l'administrateur peuvent demander un examen."
+                )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
+
+            consultation_id = request.POST.get(
+                'consultation_id'
+            )
+
+            # Retourne une liste, ex. ['4', '8', '12'].
+            prestations_ids = request.POST.getlist(
+                'prestations'
+            )
+
+            indication = request.POST.get(
+                'indication',
+                ''
+            ).strip()
+
+            categories_autorisees = (
+                'LABO',
+                'ECHO',
+                'RADIO',
+            )
+
+            if not consultation_id:
+                messages.error(
+                    request,
+                    "Veuillez sélectionner une consultation."
+                )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
+
+            if not prestations_ids:
+                messages.error(
+                    request,
+                    "Veuillez sélectionner au moins un examen."
+                )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
+
+            # Vérification de sécurité de la consultation :
+            # même patient hospitalisé et même hôpital.
+            consultation = get_object_or_404(
+                Consultation.objects.select_related(
+                    'triage__patient',
+                    'medecin'
+                ),
+                pk=consultation_id,
+                triage__patient=hosp.patient,
+                hopital=hopital_user
+            )
+
+            # Récupère toutes les prestations sélectionnées.
+            # Ne retient que les prestations appartenant au même
+            # hôpital et appartenant aux catégories d'examens admises.
+            prestations_selectionnees = list(
+                Prestation.objects.filter(
+                    id__in=prestations_ids,
+                    hopital=hopital_user,
+                    categorie__in=categories_autorisees
+                ).order_by(
+                    'categorie',
+                    'libelle'
+                )
+            )
+
+            # Vérifie que tous les identifiants reçus correspondent
+            # réellement à des prestations autorisées.
+            if len(prestations_selectionnees) != len(
+                set(prestations_ids)
+            ):
+                messages.error(
+                    request,
+                    "Une ou plusieurs prestations sélectionnées sont invalides "
+                    "ou n'appartiennent pas à cet hôpital."
+                )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
+
+            demandes_creees = []
+
+            try:
+                with transaction.atomic():
+                    for prestation in prestations_selectionnees:
+                        # Le HTML doit envoyer :
+                        # quantite_1, quantite_2, quantite_3, etc.
+                        quantite = request.POST.get(
+                            f'quantite_{prestation.id}',
+                            '1'
+                        )
+
+                        quantite = int(quantite)
+
+                        if quantite < 1:
+                            raise ValueError
+
+                        demande = DemandeExamen.objects.create(
+                            consultation=consultation,
+                            prestation=prestation,
+                            indication=indication,
+                            quantite=quantite,
+                            statut='EN_ATTENTE',
+                            hopital=hopital_user
+                        )
+
+                        demandes_creees.append(demande)
+
+            except (ValueError, TypeError):
+                messages.error(
+                    request,
+                    "Chaque quantité doit être un nombre supérieur ou égal à 1."
+                )
+                return redirect(
+                    'detail_hospitalisation',
+                    pk=hosp.id
+                )
+
+            noms_examens = ", ".join(
+                demande.prestation.libelle
+                for demande in demandes_creees
+            )
+
+            messages.success(
+                request,
+                f"{len(demandes_creees)} demande(s) d'examen créée(s) : "
+                f"{noms_examens}."
+            )
+
+            return redirect(
+                'detail_hospitalisation',
+                pk=hosp.id
+            )
+
+        # ------------------------------------------------------
+        # D. Action POST inconnue
+        # ------------------------------------------------------
+        else:
+            messages.error(
+                request,
+                "Action non reconnue."
+            )
+            return redirect(
+                'detail_hospitalisation',
+                pk=hosp.id
+            )
 
     # ==========================================================
-    # Préparation des jours du Kardex
+    # 4. Période affichée dans le Kardex
     # ==========================================================
     date_debut = hosp.date_entree.date()
     demain = timezone.now().date() + timedelta(days=1)
 
     jours = []
 
-    courant = date_debut
-    while courant <= demain:
-        jours.append(courant)
-        courant += timedelta(days=1)
+    jour_courant = date_debut
+
+    while jour_courant <= demain:
+        jours.append(jour_courant)
+        jour_courant += timedelta(days=1)
 
     # ==========================================================
-    # Ordonnances normales / définitives
+    # 5. Ordonnances définitives
     # ==========================================================
     ordonnances = (
         Ordonnance.objects
@@ -5339,19 +5520,23 @@ def detail_hospitalisation(request, pk):
             'consultation__triage__patient',
             'consultation__medecin'
         )
-        .prefetch_related('lignes_medicaments')
-        .order_by('-date_prescrite')
+        .prefetch_related(
+            'lignes_medicaments'
+        )
+        .order_by(
+            '-date_prescrite'
+        )
     )
 
     # ==========================================================
-    # Ordonnances d'urgence
+    # 6. Ordonnances d'urgence
     # ==========================================================
     ordonnances_urgence = (
         Ordonnance.objects
         .filter(
-            type_ordonnance='URGENCE',
             consultation__triage__patient=hosp.patient,
-            hopital=hopital_user
+            hopital=hopital_user,
+            type_ordonnance='URGENCE'
         )
         .select_related(
             'consultation',
@@ -5359,17 +5544,21 @@ def detail_hospitalisation(request, pk):
             'consultation__triage__patient',
             'consultation__medecin'
         )
-        .prefetch_related('lignes_medicaments')
-        .order_by('-date_prescrite')
+        .prefetch_related(
+            'lignes_medicaments'
+        )
+        .order_by(
+            '-date_prescrite'
+        )
+    )
+
+    toutes_ordonnances = (
+        list(ordonnances_urgence)
+        + list(ordonnances)
     )
 
     # ==========================================================
-    # Liste combinée pour le champ <select> du formulaire
-    # ==========================================================
-    toutes_ordonnances = list(ordonnances_urgence) + list(ordonnances)
-
-    # ==========================================================
-    # Kardex
+    # 7. Kardex et administrations
     # ==========================================================
     kardex_items = (
         Kardex.objects
@@ -5377,8 +5566,12 @@ def detail_hospitalisation(request, pk):
             hospitalisation=hosp,
             hopital=hopital_user
         )
-        .prefetch_related('administrations')
-        .order_by('-id')
+        .prefetch_related(
+            'administrations'
+        )
+        .order_by(
+            '-id'
+        )
     )
 
     kardex_data = []
@@ -5405,36 +5598,118 @@ def detail_hospitalisation(request, pk):
         })
 
     # ==========================================================
-    # Suivis infirmiers
+    # 8. Suivis infirmiers avec pagination
     # ==========================================================
-    suivis_list = hosp.suivis_journaliers.all().order_by('-date_suivi')
+    suivis_list = (
+        hosp.suivis_journaliers
+        .all()
+        .order_by('-date_suivi')
+    )
 
     paginator = Paginator(suivis_list, 5)
+
     page_number = request.GET.get('page')
+
     suivis = paginator.get_page(page_number)
 
     # ==========================================================
-    # Suivis médecins
+    # 9. Suivis médecins
     # ==========================================================
-    suivis_medecin = hosp.suivis_medecin.all().order_by('-date_suivi')
+    suivis_medecin = (
+        hosp.suivis_medecin
+        .all()
+        .select_related('medecin')
+        .order_by('-date_suivi')
+    )
 
     # ==========================================================
-    # Rendu du template
+    # 10. Consultations du patient hospitalisé
+    # ==========================================================
+    consultations_patient = (
+        Consultation.objects
+        .filter(
+            triage__patient=hosp.patient,
+            hopital=hopital_user
+        )
+        .select_related(
+            'triage',
+            'triage__patient',
+            'medecin'
+        )
+        .order_by('-date_creation')
+    )
+
+    # ==========================================================
+    # 11. Prestations admises comme examens
+    # ==========================================================
+    prestations_examens = (
+        Prestation.objects
+        .filter(
+            hopital=hopital_user,
+            categorie__in=[
+                'LABO',
+                'ECHO',
+                'RADIO'
+            ]
+        )
+        .order_by(
+            'categorie',
+            'libelle'
+        )
+    )
+
+    # ==========================================================
+    # 12. Examens demandés depuis l'entrée en hospitalisation
+    # ==========================================================
+    examens_demandes = (
+        DemandeExamen.objects
+        .filter(
+            consultation__triage__patient=hosp.patient,
+            hopital=hopital_user,
+            prestation__categorie__in=[
+                'LABO',
+                'ECHO',
+                'RADIO'
+            ],
+            date_demande__gte=hosp.date_entree
+        )
+        .select_related(
+            'consultation',
+            'consultation__triage',
+            'consultation__medecin',
+            'prestation',
+            'technicien'
+        )
+        .order_by(
+            '-date_demande'
+        )
+    )
+
+    # ==========================================================
+    # 13. Rendu du template
     # ==========================================================
     return render(
         request,
         'back-end/hospitalisation/detail.html',
         {
             'hosp': hosp,
+
             'ordonnances': ordonnances,
             'ordonnances_urgence': ordonnances_urgence,
             'toutes_ordonnances': toutes_ordonnances,
             'form_medicament': LigneMedicamentForm(),
+
             'kardex_data': kardex_data,
+            'jours': jours,
+
             'suivis': suivis,
             'suivis_medecin': suivis_medecin,
+
+            'consultations_patient': consultations_patient,
+            'prestations_examens': prestations_examens,
+            'examens_demandes': examens_demandes,
+
             'fonctionKey': fonctionKey,
-            'jours': jours,
         }
     )
 
@@ -6717,7 +6992,7 @@ def modifier_type_patient(request, patient_id):
 #   SOIN RAPIDE HORS FICHE
 # ==================================================================================================
 @login_required
-@login_required
+
 def enregistrer_soin_rapide(request):
     role = Fonction.objects.filter(userKey=request.user).select_related('fonctionKey', 'hopital').first()
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None

@@ -779,3 +779,75 @@ class LigneMedicamentForm(forms.ModelForm):
                 'min': 1
             }),
         }
+
+
+# ----------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
+class DemandeExamenHospitalisationForm(forms.Form):
+    CATEGORIES_EXAMENS = [
+        ('', '--------- Choisir une catégorie ---------'),
+        ('LABO', 'Laboratoire'),
+        ('ECHO', 'Échographie'),
+        ('RADIO', 'Radiologie'),
+    ]
+
+    categorie = forms.ChoiceField(
+        choices=CATEGORIES_EXAMENS,
+        label="Catégorie d'examen",
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'id_categorie_examen',
+            'required': True,
+        })
+    )
+
+    prestation = forms.ModelChoiceField(
+        queryset=Prestation.objects.none(),
+        label="Examen demandé",
+        empty_label="--------- Choisir d'abord une catégorie ---------",
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'id_prestation_examen',
+            'required': True,
+        })
+    )
+
+    indication = forms.CharField(
+        label="Indication clinique",
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': (
+                'Exemple : Douleur abdominale persistante, '
+                'fièvre, suspicion de paludisme...'
+            ),
+        })
+    )
+
+    quantite = forms.IntegerField(
+        label="Quantité",
+        min_value=1,
+        initial=1,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': 1,
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        hopital = kwargs.pop('hopital', None)
+        super().__init__(*args, **kwargs)
+
+        categorie = None
+
+        if self.is_bound:
+            categorie = self.data.get('categorie')
+
+        if categorie in ('LABO', 'ECHO', 'RADIO'):
+            prestations = Prestation.objects.filter(
+                hopital=hopital,
+                categorie=categorie
+            ).order_by('libelle')
+
+            self.fields['prestation'].queryset = prestations

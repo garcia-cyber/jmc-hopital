@@ -5,9 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>
-        Dossier Patient - {{ hosp.patient.noms }}
-    </title>
+    <title>Dossier Patient - {{ hosp.patient.noms }}</title>
 
     {% include 'back-end/includes/css.html' %}
 
@@ -153,6 +151,45 @@
             font-size: 0.70rem;
         }
 
+        .examen-selection-item {
+            background: #ffffff;
+            border: 1px solid #e2e6ea;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            padding: 10px;
+        }
+
+        .examen-selection-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .examen-selection-empty {
+            border: 1px dashed #cfd8dc;
+            border-radius: 8px;
+            color: #6c757d;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .examen-quantite {
+            max-width: 85px;
+        }
+
+        .badge-categorie-examen {
+            font-size: 0.70rem;
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+        }
+
+        .modal-header {
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
         @media (max-width: 768px) {
             .d-flex.justify-content-between.align-items-center {
                 flex-direction: column;
@@ -171,6 +208,15 @@
 
             .add-medication-form .btn {
                 margin-top: 5px;
+            }
+
+            .examen-selection-item .d-flex {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .examen-selection-item .btn {
+                margin-top: 8px;
             }
         }
     </style>
@@ -206,7 +252,7 @@
                     {% endfor %}
                 {% endif %}
 
-                <!-- En-tête -->
+                <!-- En-tête de la page -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h3 class="mb-1">
@@ -217,8 +263,7 @@
                             Hospitalisation n°{{ hosp.id }}
 
                             {% if hosp.date_entree %}
-                                | Entrée :
-                                {{ hosp.date_entree|date:"d/m/Y H:i" }}
+                                | Entrée : {{ hosp.date_entree|date:"d/m/Y H:i" }}
                             {% endif %}
                         </small>
                     </div>
@@ -263,9 +308,9 @@
 
                 <div class="row">
 
-                    <!-- ================================================= -->
+                    <!-- ========================================= -->
                     <!-- COLONNE GAUCHE -->
-                    <!-- ================================================= -->
+                    <!-- ========================================= -->
                     <div class="col-md-4">
 
                         <!-- Ordonnances définitives -->
@@ -300,7 +345,6 @@
                                         {% if ordonnance.consultation.medecin %}
                                             <small class="d-block mb-2">
                                                 <strong>Médecin :</strong>
-
                                                 {{ ordonnance.consultation.medecin.get_full_name|default:ordonnance.consultation.medecin.username }}
                                             </small>
                                         {% endif %}
@@ -350,19 +394,15 @@
                                                     {% endif %}
                                                 </div>
 
-                                                {% if ligne.posologie %}
-                                                    <small class="d-block">
-                                                        <strong>Posologie :</strong>
-                                                        {{ ligne.posologie }}
-                                                    </small>
-                                                {% endif %}
+                                                <small class="d-block">
+                                                    <strong>Posologie :</strong>
+                                                    {{ ligne.posologie }}
+                                                </small>
 
-                                                {% if ligne.duree %}
-                                                    <small class="d-block">
-                                                        <strong>Durée :</strong>
-                                                        {{ ligne.duree }}
-                                                    </small>
-                                                {% endif %}
+                                                <small class="d-block">
+                                                    <strong>Durée :</strong>
+                                                    {{ ligne.duree }}
+                                                </small>
 
                                                 <small class="d-block">
                                                     <strong>Quantité :</strong>
@@ -382,7 +422,6 @@
                                             </p>
                                         {% endfor %}
 
-                                        <!-- Formulaire ajout médicament ordonnance définitive -->
                                         {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
                                             <form
                                                 method="POST"
@@ -430,29 +469,24 @@
 
                                                 <div class="row">
                                                     <div class="col-7">
-                                                        <div class="form-group mb-2">
-                                                            <input
-                                                                type="text"
-                                                                name="duree"
-                                                                class="form-control form-control-sm"
-                                                                placeholder="Durée : Ex. 7 jours"
-                                                                required
-                                                            >
-                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            name="duree"
+                                                            class="form-control form-control-sm mb-2"
+                                                            placeholder="Durée : Ex. 7 jours"
+                                                            required
+                                                        >
                                                     </div>
 
                                                     <div class="col-5">
-                                                        <div class="form-group mb-2">
-                                                            <input
-                                                                type="number"
-                                                                name="quantite"
-                                                                class="form-control form-control-sm"
-                                                                placeholder="Qté"
-                                                                value="1"
-                                                                min="1"
-                                                                required
-                                                            >
-                                                        </div>
+                                                        <input
+                                                            type="number"
+                                                            name="quantite"
+                                                            class="form-control form-control-sm mb-2"
+                                                            value="1"
+                                                            min="1"
+                                                            required
+                                                        >
                                                     </div>
                                                 </div>
 
@@ -474,7 +508,7 @@
                             </div>
                         </div>
 
-                        <!-- Ordonnances d'urgence -->
+                        <!-- Ordonnances urgence -->
                         <div class="card shadow-sm mb-4">
                             <div class="card-header bg-danger text-white">
                                 <i class="fa fa-ambulance"></i>
@@ -506,7 +540,6 @@
                                         {% if ordonnance.consultation.medecin %}
                                             <small class="d-block mb-2">
                                                 <strong>Médecin :</strong>
-
                                                 {{ ordonnance.consultation.medecin.get_full_name|default:ordonnance.consultation.medecin.username }}
                                             </small>
                                         {% endif %}
@@ -556,19 +589,15 @@
                                                     {% endif %}
                                                 </div>
 
-                                                {% if ligne.posologie %}
-                                                    <small class="d-block">
-                                                        <strong>Posologie :</strong>
-                                                        {{ ligne.posologie }}
-                                                    </small>
-                                                {% endif %}
+                                                <small class="d-block">
+                                                    <strong>Posologie :</strong>
+                                                    {{ ligne.posologie }}
+                                                </small>
 
-                                                {% if ligne.duree %}
-                                                    <small class="d-block">
-                                                        <strong>Durée :</strong>
-                                                        {{ ligne.duree }}
-                                                    </small>
-                                                {% endif %}
+                                                <small class="d-block">
+                                                    <strong>Durée :</strong>
+                                                    {{ ligne.duree }}
+                                                </small>
 
                                                 <small class="d-block">
                                                     <strong>Quantité :</strong>
@@ -588,7 +617,6 @@
                                             </p>
                                         {% endfor %}
 
-                                        <!-- Formulaire ajout médicament ordonnance urgence -->
                                         {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
                                             <form
                                                 method="POST"
@@ -636,29 +664,24 @@
 
                                                 <div class="row">
                                                     <div class="col-7">
-                                                        <div class="form-group mb-2">
-                                                            <input
-                                                                type="text"
-                                                                name="duree"
-                                                                class="form-control form-control-sm"
-                                                                placeholder="Durée : Ex. 24 heures"
-                                                                required
-                                                            >
-                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            name="duree"
+                                                            class="form-control form-control-sm mb-2"
+                                                            placeholder="Durée : Ex. 24 heures"
+                                                            required
+                                                        >
                                                     </div>
 
                                                     <div class="col-5">
-                                                        <div class="form-group mb-2">
-                                                            <input
-                                                                type="number"
-                                                                name="quantite"
-                                                                class="form-control form-control-sm"
-                                                                placeholder="Qté"
-                                                                value="1"
-                                                                min="1"
-                                                                required
-                                                            >
-                                                        </div>
+                                                        <input
+                                                            type="number"
+                                                            name="quantite"
+                                                            class="form-control form-control-sm mb-2"
+                                                            value="1"
+                                                            min="1"
+                                                            required
+                                                        >
                                                     </div>
                                                 </div>
 
@@ -681,7 +704,7 @@
                         </div>
 
                         <!-- Kardex -->
-                        <div class="card shadow-sm">
+                        <div class="card shadow-sm mb-4">
                             <div class="card-header bg-dark text-white">
                                 <i class="fa fa-clipboard-list"></i>
                                 Kardex — Suivi chronologique
@@ -705,7 +728,7 @@
                                             required
                                         >
 
-                                        <div class="row g-1">
+                                        <div class="row">
                                             <div class="col-6">
                                                 <input
                                                     type="text"
@@ -875,9 +898,9 @@
                         </div>
                     </div>
 
-                    <!-- ================================================= -->
+                    <!-- ========================================= -->
                     <!-- COLONNE DROITE -->
-                    <!-- ================================================= -->
+                    <!-- ========================================= -->
                     <div class="col-md-8">
 
                         <!-- Suivi infirmier -->
@@ -1040,6 +1063,420 @@
                             </div>
                         </div>
 
+                        <!-- ========================================= -->
+                        <!-- EXAMENS COMPLÉMENTAIRES -->
+                        <!-- ========================================= -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fa fa-flask"></i>
+                                    Examens complémentaires
+                                </div>
+
+                                <span class="badge badge-dark">
+                                    {{ examens_demandes|length }}
+                                </span>
+                            </div>
+
+                            <div class="card-body">
+
+                                {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                                    <form
+                                        method="POST"
+                                        action="{% url 'detail_hospitalisation' hosp.id %}"
+                                        class="mb-4 p-3 bg-light-custom rounded border"
+                                        id="form-demande-examens"
+                                    >
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="action"
+                                            value="ajouter_examen"
+                                        >
+
+                                        <h6 class="mb-3 text-uppercase text-secondary">
+                                            <i class="fa fa-plus-circle"></i>
+                                            Ajouter un ou plusieurs examens
+                                        </h6>
+
+                                        <!-- Consultation -->
+                                        <div class="form-group">
+                                            <label
+                                                for="consultation_id"
+                                                class="font-weight-bold"
+                                            >
+                                                Consultation concernée
+                                            </label>
+
+                                            <select
+                                                name="consultation_id"
+                                                id="consultation_id"
+                                                class="form-control"
+                                                required
+                                            >
+                                                <option value="">
+                                                    -------- Choisir une consultation --------
+                                                </option>
+
+                                                {% for consultation in consultations_patient %}
+                                                    <option value="{{ consultation.id }}">
+                                                        Consultation n°{{ consultation.id }}
+                                                        — {{ consultation.date_creation|date:"d/m/Y H:i" }}
+
+                                                        {% if consultation.medecin %}
+                                                            — Dr.
+                                                            {{ consultation.medecin.get_full_name|default:consultation.medecin.username }}
+                                                        {% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+
+                                            {% if not consultations_patient %}
+                                                <small class="text-danger d-block mt-1">
+                                                    Aucune consultation disponible pour ce patient.
+                                                </small>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Choix compact de catégorie et de prestation -->
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="categorie-examen"
+                                                        class="font-weight-bold"
+                                                    >
+                                                        Catégorie
+                                                    </label>
+
+                                                    <select
+                                                        id="categorie-examen"
+                                                        class="form-control"
+                                                    >
+                                                        <option value="TOUT">
+                                                            Toutes
+                                                        </option>
+
+                                                        <option value="LABO">
+                                                            Laboratoire
+                                                        </option>
+
+                                                        <option value="ECHO">
+                                                            Échographie
+                                                        </option>
+
+                                                        <option value="RADIO">
+                                                            Radiologie
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-8">
+                                                <div class="form-group">
+                                                    <label
+                                                        for="prestation-examen"
+                                                        class="font-weight-bold"
+                                                    >
+                                                        Examen à ajouter
+                                                    </label>
+
+                                                    <select
+                                                        id="prestation-examen"
+                                                        class="form-control"
+                                                    >
+                                                        <option value="">
+                                                            -------- Choisir un examen --------
+                                                        </option>
+
+                                                        {% for prestation in prestations_examens %}
+                                                            <option
+                                                                value="{{ prestation.id }}"
+                                                                data-categorie="{{ prestation.categorie }}"
+                                                                data-libelle="{{ prestation.libelle }}"
+                                                                data-prix="{{ prestation.prix }}"
+                                                            >
+                                                                {{ prestation.libelle }}
+                                                                — {{ prestation.get_categorie_display }}
+                                                                — {{ prestation.prix }} CDF
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            id="btn-ajouter-examen-selection"
+                                            class="btn btn-outline-warning text-dark mb-3"
+                                            {% if not prestations_examens %}disabled{% endif %}
+                                        >
+                                            <i class="fa fa-plus"></i>
+                                            Ajouter à la sélection
+                                        </button>
+
+                                        <!-- Liste dynamique courte des examens choisis -->
+                                        <div class="form-group">
+                                            <label class="font-weight-bold d-block">
+                                                Examens sélectionnés
+                                            </label>
+
+                                            <div id="liste-examens-selectionnes">
+                                                <div
+                                                    id="aucun-examen-selectionne"
+                                                    class="examen-selection-empty"
+                                                >
+                                                    Aucun examen sélectionné.
+                                                    Choisissez une catégorie, sélectionnez une prestation,
+                                                    puis cliquez sur « Ajouter à la sélection ».
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Indication commune -->
+                                        <div class="form-group">
+                                            <label
+                                                for="indication_examen"
+                                                class="font-weight-bold"
+                                            >
+                                                Indication clinique / note au technicien
+                                            </label>
+
+                                            <textarea
+                                                name="indication"
+                                                id="indication_examen"
+                                                class="form-control"
+                                                rows="3"
+                                                placeholder="Ex. Fièvre persistante, douleur abdominale aiguë, suspicion de paludisme, contrôle biologique..."
+                                            ></textarea>
+
+                                            <small class="text-muted">
+                                                Cette indication sera enregistrée pour tous les examens sélectionnés.
+                                            </small>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            id="btn-envoyer-examens"
+                                            class="btn btn-warning text-dark"
+                                            {% if not consultations_patient or not prestations_examens %}disabled{% endif %}
+                                        >
+                                            <i class="fa fa-paper-plane"></i>
+                                            Envoyer les demandes sélectionnées
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <!-- Historique examens -->
+                                <h6 class="text-uppercase text-secondary mb-3">
+                                    Historique des examens demandés
+                                </h6>
+
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-sm align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Catégorie</th>
+                                                <th>Examen</th>
+                                                <th>Qté</th>
+                                                <th>Indication</th>
+                                                <th>Statut</th>
+                                                <th>Résultat</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {% for examen in examens_demandes %}
+                                                <tr>
+                                                    <td class="text-nowrap">
+                                                        {{ examen.date_demande|date:"d/m/Y H:i" }}
+                                                    </td>
+
+                                                    <td>
+                                                        {% if examen.prestation.categorie == 'LABO' %}
+                                                            <span class="badge badge-info">
+                                                                Laboratoire
+                                                            </span>
+                                                        {% elif examen.prestation.categorie == 'ECHO' %}
+                                                            <span class="badge badge-primary">
+                                                                Échographie
+                                                            </span>
+                                                        {% elif examen.prestation.categorie == 'RADIO' %}
+                                                            <span class="badge badge-secondary">
+                                                                Radiologie
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge badge-light">
+                                                                {{ examen.prestation.get_categorie_display }}
+                                                            </span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    <td>
+                                                        <strong>
+                                                            {{ examen.prestation.libelle }}
+                                                        </strong>
+                                                    </td>
+
+                                                    <td class="text-center">
+                                                        {{ examen.quantite }}
+                                                    </td>
+
+                                                    <td>
+                                                        {{ examen.indication|default:"—"|truncatechars:55 }}
+                                                    </td>
+
+                                                    <td>
+                                                        {% if examen.statut == 'EN_ATTENTE' %}
+                                                            <span class="badge badge-warning text-dark">
+                                                                En attente
+                                                            </span>
+                                                        {% elif examen.statut == 'TERMINE' %}
+                                                            <span class="badge badge-success">
+                                                                Terminé
+                                                            </span>
+                                                        {% elif examen.statut == 'ANNULE' %}
+                                                            <span class="badge badge-danger">
+                                                                Annulé
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge badge-secondary">
+                                                                {{ examen.get_statut_display }}
+                                                            </span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    <td>
+                                                        {% if examen.resultat %}
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-xs btn-outline-success"
+                                                                data-toggle="modal"
+                                                                data-target="#resultatExamen{{ examen.id }}"
+                                                            >
+                                                                <i class="fa fa-eye"></i>
+                                                                Voir
+                                                            </button>
+
+                                                            <div
+                                                                class="modal fade"
+                                                                id="resultatExamen{{ examen.id }}"
+                                                                tabindex="-1"
+                                                                role="dialog"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <div
+                                                                    class="modal-dialog modal-lg"
+                                                                    role="document"
+                                                                >
+                                                                    <div class="modal-content">
+                                                                        <div class="modal-header bg-success text-white">
+                                                                            <h5 class="modal-title">
+                                                                                Résultat :
+                                                                                {{ examen.prestation.libelle }}
+                                                                            </h5>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                class="close text-white"
+                                                                                data-dismiss="modal"
+                                                                                aria-label="Fermer"
+                                                                            >
+                                                                                <span aria-hidden="true">
+                                                                                    &times;
+                                                                                </span>
+                                                                            </button>
+                                                                        </div>
+
+                                                                        <div class="modal-body">
+                                                                            <p>
+                                                                                <strong>Demande créée le :</strong>
+                                                                                {{ examen.date_demande|date:"d/m/Y H:i" }}
+                                                                            </p>
+
+                                                                            {% if examen.date_realisation %}
+                                                                                <p>
+                                                                                    <strong>Réalisé le :</strong>
+                                                                                    {{ examen.date_realisation|date:"d/m/Y H:i" }}
+                                                                                </p>
+                                                                            {% endif %}
+
+                                                                            {% if examen.technicien %}
+                                                                                <p>
+                                                                                    <strong>Technicien :</strong>
+                                                                                    {{ examen.technicien.get_full_name|default:examen.technicien.username }}
+                                                                                </p>
+                                                                            {% endif %}
+
+                                                                            {% if examen.indication %}
+                                                                                <p>
+                                                                                    <strong>Indication :</strong>
+                                                                                    {{ examen.indication }}
+                                                                                </p>
+                                                                            {% endif %}
+
+                                                                            <hr>
+
+                                                                            <p class="mb-1">
+                                                                                <strong>Résultat :</strong>
+                                                                            </p>
+
+                                                                            <div class="p-3 bg-light rounded">
+                                                                                {{ examen.resultat|linebreaks }}
+                                                                            </div>
+
+                                                                            {% if examen.image_resultat %}
+                                                                                <hr>
+
+                                                                                <a
+                                                                                    href="{{ examen.image_resultat.url }}"
+                                                                                    target="_blank"
+                                                                                    class="btn btn-outline-primary btn-sm"
+                                                                                >
+                                                                                    <i class="fa fa-image"></i>
+                                                                                    Ouvrir l'image / document
+                                                                                </a>
+                                                                            {% endif %}
+                                                                        </div>
+
+                                                                        <div class="modal-footer">
+                                                                            <button
+                                                                                type="button"
+                                                                                class="btn btn-secondary"
+                                                                                data-dismiss="modal"
+                                                                            >
+                                                                                Fermer
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% else %}
+                                                            <span class="text-muted">
+                                                                En attente
+                                                            </span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td
+                                                        colspan="7"
+                                                        class="text-center text-muted py-3"
+                                                    >
+                                                        Aucun examen demandé pour le moment.
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Suivis médicaux -->
                         <div class="card shadow-sm">
                             <div class="card-header bg-primary text-white">
@@ -1177,5 +1614,210 @@
     </div>
 
     {% include 'back-end/includes/js.html' %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const categorieSelect = document.getElementById(
+                'categorie-examen'
+            );
+
+            const prestationSelect = document.getElementById(
+                'prestation-examen'
+            );
+
+            const boutonAjouter = document.getElementById(
+                'btn-ajouter-examen-selection'
+            );
+
+            const listeSelection = document.getElementById(
+                'liste-examens-selectionnes'
+            );
+
+            const messageVide = document.getElementById(
+                'aucun-examen-selectionne'
+            );
+
+            const formExamens = document.getElementById(
+                'form-demande-examens'
+            );
+
+            if (
+                !categorieSelect ||
+                !prestationSelect ||
+                !boutonAjouter ||
+                !listeSelection ||
+                !formExamens
+            ) {
+                return;
+            }
+
+            const optionsOriginales = Array.from(
+                prestationSelect.options
+            );
+
+            function filtrerPrestations() {
+                const categorieChoisie = categorieSelect.value;
+
+                prestationSelect.value = '';
+
+                optionsOriginales.forEach(function (option) {
+                    if (!option.value) {
+                        option.hidden = false;
+                        return;
+                    }
+
+                    const categoriePrestation = option.dataset.categorie;
+
+                    option.hidden = (
+                        categorieChoisie !== 'TOUT' &&
+                        categoriePrestation !== categorieChoisie
+                    );
+                });
+            }
+
+            function badgeCategorie(categorie) {
+                if (categorie === 'LABO') {
+                    return '<span class="badge badge-info badge-categorie-examen ml-1">Labo</span>';
+                }
+
+                if (categorie === 'ECHO') {
+                    return '<span class="badge badge-primary badge-categorie-examen ml-1">Écho</span>';
+                }
+
+                if (categorie === 'RADIO') {
+                    return '<span class="badge badge-secondary badge-categorie-examen ml-1">Radio</span>';
+                }
+
+                return '';
+            }
+
+            function mettreAJourMessageVide() {
+                const elements = listeSelection.querySelectorAll(
+                    '.examen-selection-item'
+                );
+
+                if (elements.length > 0) {
+                    if (messageVide) {
+                        messageVide.style.display = 'none';
+                    }
+                } else {
+                    if (messageVide) {
+                        messageVide.style.display = 'block';
+                    }
+                }
+            }
+
+            function creerExamenSelectionne(option) {
+                const prestationId = option.value;
+                const libelle = option.dataset.libelle;
+                const categorie = option.dataset.categorie;
+                const prix = option.dataset.prix;
+
+                const existeDeja = document.getElementById(
+                    'examen-selection-' + prestationId
+                );
+
+                if (existeDeja) {
+                    alert(
+                        'Cet examen est déjà présent dans votre sélection.'
+                    );
+                    return;
+                }
+
+                const bloc = document.createElement('div');
+
+                bloc.id = 'examen-selection-' + prestationId;
+                bloc.className = 'examen-selection-item';
+
+                bloc.innerHTML =
+                    '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div>' +
+                            '<strong>' + libelle + '</strong>' +
+                            badgeCategorie(categorie) +
+                            '<small class="text-muted d-block">' +
+                                'Prix : ' + prix + ' CDF' +
+                            '</small>' +
+                        '</div>' +
+                        '<div class="d-flex align-items-center">' +
+                            '<label class="small text-muted mb-0 mr-1">' +
+                                'Qté' +
+                            '</label>' +
+                            '<input ' +
+                                'type="number" ' +
+                                'name="quantite_' + prestationId + '" ' +
+                                'class="form-control form-control-sm examen-quantite mr-2" ' +
+                                'value="1" ' +
+                                'min="1" ' +
+                                'required' +
+                            '>' +
+                            '<button ' +
+                                'type="button" ' +
+                                'class="btn btn-sm btn-outline-danger btn-retirer-examen" ' +
+                                'data-prestation-id="' + prestationId + '"' +
+                            '>' +
+                                '<i class="fa fa-times"></i>' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<input ' +
+                        'type="hidden" ' +
+                        'name="prestations" ' +
+                        'value="' + prestationId + '"' +
+                    '>';
+
+                listeSelection.appendChild(bloc);
+
+                const boutonRetirer = bloc.querySelector(
+                    '.btn-retirer-examen'
+                );
+
+                boutonRetirer.addEventListener('click', function () {
+                    bloc.remove();
+                    mettreAJourMessageVide();
+                });
+
+                mettreAJourMessageVide();
+            }
+
+            categorieSelect.addEventListener(
+                'change',
+                filtrerPrestations
+            );
+
+            boutonAjouter.addEventListener('click', function () {
+                const optionSelectionnee = prestationSelect.options[
+                    prestationSelect.selectedIndex
+                ];
+
+                if (!prestationSelect.value) {
+                    alert(
+                        'Veuillez choisir un examen avant de l’ajouter.'
+                    );
+                    return;
+                }
+
+                creerExamenSelectionne(optionSelectionnee);
+
+                prestationSelect.value = '';
+            });
+
+            formExamens.addEventListener('submit', function (event) {
+                const examensChoisis = formExamens.querySelectorAll(
+                    'input[name="prestations"]'
+                );
+
+                if (examensChoisis.length === 0) {
+                    event.preventDefault();
+
+                    alert(
+                        'Veuillez ajouter au moins un examen à la sélection.'
+                    );
+                }
+            });
+
+            filtrerPrestations();
+            mettreAJourMessageVide();
+        });
+    </script>
 </body>
 </html>

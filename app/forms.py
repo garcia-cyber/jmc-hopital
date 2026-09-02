@@ -162,7 +162,7 @@ class ServiceForm(forms.ModelForm):
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
-        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'service', 'entreprise']
+        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'service', 'entreprise','statut_p']
         widgets = {
             'noms': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom, Post-nom et Prénom'}),
             'sexe': forms.Select(attrs={'class': 'form-select'}),
@@ -171,6 +171,7 @@ class PatientForm(forms.ModelForm):
             'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Adresse de résidence'}),
             'service': forms.Select(attrs={'class': 'form-select'}),
             'entreprise': forms.Select(attrs={'class': 'form-select'}),
+            'statut_p': forms.Select(attrs={'class':'form-select'}) 
         }
 
     def clean_noms(self):
@@ -515,7 +516,7 @@ class LotPharmacieForm(forms.ModelForm):
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
-        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'entreprise', 'service']
+        fields = ['noms', 'sexe', 'age', 'adresse', 'telephone', 'entreprise', 'service','statut_p']
         widgets = {
             'noms': forms.TextInput(attrs={'class': 'form-control'}),
             'sexe': forms.Select(attrs={'class': 'form-control'}),
@@ -524,6 +525,7 @@ class PatientForm(forms.ModelForm):
             'telephone': forms.TextInput(attrs={'class': 'form-control'}),
             'entreprise': forms.Select(attrs={'class': 'form-control'}),
             'service': forms.Select(attrs={'class': 'form-control'}), # Liste déroulante des services
+            'statut_p' : forms.Select(attrs={'class': 'form-control'}),
         }
 
 

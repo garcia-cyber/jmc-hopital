@@ -524,6 +524,7 @@ def modifier_service(request, pk):
 # ==================================================================================================
 @login_required
 def enregistrement_patient(request):
+    # Rôle et hôpital de l'utilisateur
     user_fonction = Fonction.objects.select_related('hopital', 'fonctionKey').filter(
         userKey=request.user
     ).first()
@@ -576,37 +577,54 @@ def enregistrement_patient(request):
                 patient = form.save(commit=False)
                 patient.created_by = request.user
 
+                # Vérification hôpital
                 if not hopital_user and fonctionKey != 'admin':
-                    messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                    messages.error(
+                        request,
+                        "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
+                    )
                     return redirect('enregistrement_patient')
 
                 # Si l'utilisateur n'est pas admin, on impose son hôpital
                 if fonctionKey != 'admin':
                     if not hopital_user:
-                        messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                        messages.error(
+                            request,
+                            "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
+                        )
                         return redirect('enregistrement_patient')
                     patient.hopital = hopital_user
                 else:
-                    # Admin : s'il n'y a pas d'hôpital utilisateur, on peut soit bloquer, soit imposer un hôpital par défaut
+                    # Admin : s'il n'y a pas d'hôpital utilisateur, on bloque aussi
                     if not hopital_user:
-                        messages.error(request, "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital.")
+                        messages.error(
+                            request,
+                            "Impossible d'enregistrer : votre compte n'est rattaché à aucun hôpital."
+                        )
                         return redirect('enregistrement_patient')
                     patient.hopital = hopital_user
 
+                # Vérifier entreprise
                 if patient.entreprise and patient.entreprise.hopital_id != hopital_user.id:
                     messages.error(request, "Cette entreprise n'appartient pas à votre hôpital.")
                     return redirect('enregistrement_patient')
 
+                # Type patient
                 if patient.entreprise:
                     patient.type_patient = 'CONVENTIONNE'
 
                 patient.save()
                 messages.success(request, f"Patient {patient.noms} enregistré avec succès.")
 
-                if patient.entreprise:
-                    return redirect('liste_attente_triage')
-
-                return redirect('payer_fiche', patient_id=patient.id)
+                # --- NOUVELLE LOGIQUE DE REDIRECTION ---
+                if patient.statut_p == 'A':
+                    # Ancien patient : on saute le paiement fiche, on va directement aux signes vitaux
+                    return redirect('saisir_signes', patient_id=patient.id)
+                else:
+                    # Nouveau patient (ou autre) : parcours normal
+                    if patient.entreprise:
+                        return redirect('liste_attente_triage')
+                    return redirect('payer_fiche', patient_id=patient.id)
 
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")

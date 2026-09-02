@@ -103,6 +103,24 @@
             color: #2563eb;
         }
 
+        /* Design amélioré pour le modal d'enregistrement */
+        .modal-body .form-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+            margin: 10px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-body .form-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .modal-body .form-grid {
+            margin-top: 6px;
+        }
+
         @media (max-width: 768px) {
             .page-card { padding: 16px; }
             .filter-card { padding: 16px; }
@@ -334,6 +352,7 @@
     </div>
 </div>
 
+<!-- Modal Enregistrement Patient -->
 <div id="add_patient" class="modal fade" role="dialog">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-scrollable">
         <div class="modal-content">
@@ -344,6 +363,9 @@
             <div class="modal-body">
                 <form action="{% url 'enregistrement_patient' %}" method="POST">
                     {% csrf_token %}
+
+                    <!-- Informations principales -->
+                    <div class="form-section-title">Informations principales</div>
                     <div class="row form-grid">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -351,13 +373,13 @@
                                 {{ form.noms }}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Sexe</label>
                                 {{ form.sexe }}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Âge</label>
                                 {{ form.age }}
@@ -369,6 +391,17 @@
                                 {{ form.telephone }}
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Service</label>
+                                {{ form.service }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coordonnées & statut -->
+                    <div class="form-section-title">Coordonnées et statut</div>
+                    <div class="row form-grid">
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label>Adresse</label>
@@ -377,13 +410,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Service</label>
-                                {{ form.service }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Entreprise</label>
+                                <label>Entreprise (si conventionné)</label>
                                 <select name="entreprise" id="id_entreprise" class="form-control form-select">
                                     <option value="">---------</option>
                                     {% for entreprise in entreprises %}
@@ -392,9 +419,18 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Statut du patient</label>
+                                {{ form.statut_p }}
+                            </div>
+                        </div>
                     </div>
+
                     <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">Enregistrer</button>
+                        <button type="submit" class="btn btn-primary px-5" style="border-radius: 30px; min-height: 44px;">
+                            Enregistrer
+                        </button>
                     </div>
                 </form>
             </div>

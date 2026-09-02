@@ -1,0 +1,1095 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Consultations - {{ hopital_user }}
+    </title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        :root {
+            --bank-primary: #102a43;
+            --bank-primary-light: #1f4d78;
+            --bank-secondary: #2f80ed;
+            --bank-success: #1d9a6c;
+            --bank-danger: #dc3545;
+            --bank-warning: #f59e0b;
+            --bank-background: #f4f7fb;
+            --bank-card: #ffffff;
+            --bank-border: #e3eaf2;
+            --bank-text: #243b53;
+            --bank-muted: #6b7c93;
+        }
+
+        body {
+            background: var(--bank-background);
+            color: var(--bank-text);
+        }
+
+        .page-wrapper {
+            padding: 24px 0 40px;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(
+                135deg,
+                #102a43 0%,
+                #1f4d78 100%
+            );
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(16, 42, 67, 0.20);
+            color: #ffffff;
+            margin-bottom: 22px;
+            overflow: hidden;
+            padding: 24px;
+            position: relative;
+        }
+
+        .dashboard-header::after {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            content: "";
+            height: 250px;
+            position: absolute;
+            right: -70px;
+            top: -110px;
+            width: 250px;
+        }
+
+        .dashboard-header h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            margin: 0 0 6px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-header p {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 0.88rem;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-hospital {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 8px;
+            display: inline-flex;
+            font-size: 0.82rem;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 7px 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-logo {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.13);
+            border-radius: 12px;
+            display: flex;
+            font-size: 1.45rem;
+            height: 55px;
+            justify-content: center;
+            margin-right: 15px;
+            position: relative;
+            width: 55px;
+            z-index: 1;
+        }
+
+        .card {
+            background: var(--bank-card);
+            border: 1px solid var(--bank-border);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(16, 42, 67, 0.05);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--bank-border);
+            color: var(--bank-primary);
+            font-size: 0.92rem;
+            font-weight: 700;
+            padding: 15px 18px;
+        }
+
+        .stat-card {
+            border-radius: 12px;
+            color: #ffffff;
+            min-height: 122px;
+            overflow: hidden;
+            padding: 18px;
+            position: relative;
+        }
+
+        .stat-card::after {
+            color: rgba(255, 255, 255, 0.12);
+            font-family: "Font Awesome 5 Free";
+            font-size: 4.6rem;
+            font-weight: 900;
+            position: absolute;
+            right: 13px;
+            top: 15px;
+        }
+
+        .stat-card-total {
+            background: linear-gradient(135deg, #1f4d78, #102a43);
+        }
+
+        .stat-card-total::after {
+            content: "\f0f0";
+        }
+
+        .stat-card-paid {
+            background: linear-gradient(135deg, #24966b, #12724f);
+        }
+
+        .stat-card-paid::after {
+            content: "\f00c";
+        }
+
+        .stat-card-unpaid {
+            background: linear-gradient(135deg, #e35d6a, #bb2d3b);
+        }
+
+        .stat-card-unpaid::after {
+            content: "\f071";
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.84);
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .stat-info {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.76rem;
+            margin-top: 9px;
+        }
+
+        .filter-card {
+            border-left: 5px solid var(--bank-secondary);
+        }
+
+        .section-title {
+            align-items: center;
+            color: var(--bank-primary);
+            display: flex;
+            font-size: 0.9rem;
+            font-weight: 700;
+            gap: 8px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .section-title i {
+            color: var(--bank-secondary);
+        }
+
+        .filter-label {
+            color: #52677d;
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            border: 1px solid #d8e2ec;
+            border-radius: 7px;
+            box-shadow: none;
+            color: var(--bank-text);
+            font-size: 0.86rem;
+            min-height: 39px;
+        }
+
+        .form-control:focus {
+            border-color: var(--bank-secondary);
+            box-shadow: 0 0 0 0.14rem rgba(47, 128, 237, 0.15);
+        }
+
+        .btn {
+            border-radius: 7px;
+            font-size: 0.83rem;
+            font-weight: 700;
+            padding: 0.52rem 0.88rem;
+        }
+
+        .btn-bank-primary {
+            background: var(--bank-primary);
+            border-color: var(--bank-primary);
+            color: #ffffff;
+        }
+
+        .btn-bank-primary:hover {
+            background: #0b2238;
+            border-color: #0b2238;
+            color: #ffffff;
+        }
+
+        .btn-bank-secondary {
+            background: var(--bank-secondary);
+            border-color: var(--bank-secondary);
+            color: #ffffff;
+        }
+
+        .btn-bank-secondary:hover {
+            background: #1268cb;
+            border-color: #1268cb;
+            color: #ffffff;
+        }
+
+        .btn-bank-outline {
+            background: #ffffff;
+            border: 1px solid #c9d5e2;
+            color: #52677d;
+        }
+
+        .btn-bank-outline:hover {
+            background: #edf3f8;
+            color: var(--bank-primary);
+        }
+
+        .results-header {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .results-count {
+            background: #e7f0fb;
+            border-radius: 30px;
+            color: #1f4d78;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 6px 10px;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: #f6f9fc;
+            border-bottom: 1px solid #dce6f0;
+            border-top: none;
+            color: #5c7085;
+            font-size: 0.70rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            padding: 13px 12px;
+            text-transform: uppercase;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .table tbody td {
+            border-color: #edf2f7;
+            color: #3c4d5f;
+            font-size: 0.84rem;
+            padding: 14px 12px;
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fbfe;
+        }
+
+        .date-box {
+            color: var(--bank-primary);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .time-box {
+            color: var(--bank-muted);
+            font-size: 0.75rem;
+            margin-top: 3px;
+        }
+
+        .patient-avatar {
+            align-items: center;
+            background: #e5effa;
+            border-radius: 50%;
+            color: #1f4d78;
+            display: flex;
+            font-size: 0.82rem;
+            font-weight: 700;
+            height: 37px;
+            justify-content: center;
+            margin-right: 9px;
+            text-transform: uppercase;
+            width: 37px;
+        }
+
+        .patient-name {
+            color: var(--bank-primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .patient-code {
+            color: var(--bank-muted);
+            font-size: 0.72rem;
+            margin-top: 3px;
+        }
+
+        .doctor-name {
+            color: #3c4d5f;
+            font-weight: 600;
+        }
+
+        .medical-text {
+            line-height: 1.42;
+            max-width: 250px;
+            min-width: 180px;
+            white-space: normal;
+        }
+
+        .badge {
+            border-radius: 20px;
+            font-size: 0.70rem;
+            font-weight: 700;
+            padding: 6px 9px;
+        }
+
+        .badge-paid {
+            background: #d9f4e6;
+            color: #08733d;
+        }
+
+        .badge-unpaid {
+            background: #fde2e5;
+            color: #b42332;
+        }
+
+        .btn-view {
+            align-items: center;
+            border: 1px solid #b6d0ed;
+            border-radius: 7px;
+            color: #1f6fb8;
+            display: inline-flex;
+            height: 34px;
+            justify-content: center;
+            width: 35px;
+        }
+
+        .btn-view:hover {
+            background: #eaf3fc;
+            color: #0e4e87;
+        }
+
+        .empty-state {
+            color: #708090;
+            padding: 55px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            align-items: center;
+            background: #edf3f9;
+            border-radius: 50%;
+            color: #9baebb;
+            display: inline-flex;
+            font-size: 1.6rem;
+            height: 70px;
+            justify-content: center;
+            margin-bottom: 14px;
+            width: 70px;
+        }
+
+        .empty-state h5 {
+            color: #405264;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .empty-state p {
+            font-size: 0.86rem;
+            margin-bottom: 16px;
+        }
+
+        .card-footer {
+            background: #ffffff;
+            border-top: 1px solid var(--bank-border);
+            padding: 13px 18px;
+        }
+
+        .pagination {
+            margin: 0;
+        }
+
+        .pagination .page-link {
+            border: 1px solid #d7e1eb;
+            border-radius: 6px;
+            color: var(--bank-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-left: 3px;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--bank-primary);
+            border-color: var(--bank-primary);
+            color: #ffffff;
+        }
+
+        .pagination .page-link:hover {
+            background: #eaf2fa;
+            color: var(--bank-primary);
+        }
+
+        @media (max-width: 991px) {
+            .medical-text {
+                min-width: 210px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .page-wrapper {
+                padding: 15px 0 30px;
+            }
+
+            .dashboard-header {
+                border-radius: 10px;
+                padding: 18px;
+            }
+
+            .dashboard-header h2 {
+                font-size: 1.15rem;
+            }
+
+            .header-logo {
+                font-size: 1.15rem;
+                height: 44px;
+                margin-right: 10px;
+                width: 44px;
+            }
+
+            .stats-card {
+                min-height: 105px;
+            }
+
+            .stat-value {
+                font-size: 1.65rem;
+            }
+
+            .card-body {
+                padding: 15px;
+            }
+
+            .btn-mobile {
+                margin-bottom: 8px;
+                width: 100%;
+            }
+
+            .card-footer .d-flex {
+                align-items: flex-start !important;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .pagination {
+                flex-wrap: wrap;
+            }
+
+            .table {
+                min-width: 1100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+
+                <!-- Messages Django -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div
+                            class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                            role="alert"
+                        >
+                            {{ message }}
+
+                            <button
+                                type="button"
+                                class="close"
+                                data-dismiss="alert"
+                                aria-label="Fermer"
+                            >
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- En-tête -->
+                <div class="dashboard-header">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="d-flex align-items-center">
+                            <div class="header-logo">
+                                <i class="fa fa-file-medical"></i>
+                            </div>
+
+                            <div>
+                                <h2>
+                                    Registre des consultations
+                                </h2>
+
+                                <p>
+                                    Consultation et suivi des dossiers médicaux
+                                </p>
+
+                                <div class="header-hospital">
+                                    <i class="fa fa-hospital"></i>
+
+                                    <span>
+                                        Hôpital :
+                                        <strong>{{ hopital_user }}</strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 mt-md-0">
+                            <a
+                                href="{% url 'liste_consultations_generalAgent' %}"
+                                class="btn btn-light text-dark btn-mobile"
+                            >
+                                <i class="fa fa-sync-alt"></i>
+                                Actualiser
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cartes statistiques -->
+                <div class="row mb-4">
+                    <div class="col-lg-4 col-md-4 mb-3">
+                        <div class="stat-card stat-card-total">
+                            <div class="stat-label">
+                                Total consultations
+                            </div>
+
+                            <p class="stat-value">
+                                {{ total_consultations }}
+                            </p>
+
+                            <div class="stat-info">
+                                Toutes les consultations affichées
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-4 mb-3">
+                        <div class="stat-card stat-card-paid">
+                            <div class="stat-label">
+                                Consultations payées
+                            </div>
+
+                            <p class="stat-value">
+                                {{ total_payees }}
+                            </p>
+
+                            <div class="stat-info">
+                                Paiements confirmés
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-4 mb-3">
+                        <div class="stat-card stat-card-unpaid">
+                            <div class="stat-label">
+                                Consultations non payées
+                            </div>
+
+                            <p class="stat-value">
+                                {{ total_non_payees }}
+                            </p>
+
+                            <div class="stat-info">
+                                Paiements en attente
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtres -->
+                <div class="card filter-card mb-4">
+                    <div class="card-body p-4">
+                        <div class="section-title">
+                            <i class="fa fa-filter"></i>
+                            Recherche et filtres
+                        </div>
+
+                        <form
+                            method="GET"
+                            action="{% url 'liste_consultations_generalAgent' %}"
+                        >
+                            <div class="row">
+
+                                <div class="col-xl-4 col-lg-4 col-md-6 mb-3">
+                                    <label class="filter-label" for="q">
+                                        Patient, médecin, motif ou diagnostic
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="q"
+                                        name="q"
+                                        value="{{ q }}"
+                                        class="form-control"
+                                        placeholder="Nom, motif ou diagnostic..."
+                                    >
+                                </div>
+
+                                <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+                                    <label class="filter-label" for="medecin">
+                                        Médecin
+                                    </label>
+
+                                    <select
+                                        id="medecin"
+                                        name="medecin"
+                                        class="form-control"
+                                    >
+                                        <option value="">
+                                            Tous les médecins
+                                        </option>
+
+                                        {% for medecin in medecins %}
+                                            <option
+                                                value="{{ medecin.id }}"
+                                                {% if medecin_id == medecin.id|stringformat:"s" %}
+                                                    selected
+                                                {% endif %}
+                                            >
+                                                {{ medecin.get_full_name|default:medecin.username }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+                                    <label
+                                        class="filter-label"
+                                        for="statut_paiement"
+                                    >
+                                        État du paiement
+                                    </label>
+
+                                    <select
+                                        id="statut_paiement"
+                                        name="statut_paiement"
+                                        class="form-control"
+                                    >
+                                        <option value="">
+                                            Tous les statuts
+                                        </option>
+
+                                        <option
+                                            value="PAYEE"
+                                            {% if statut_paiement == 'PAYEE' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Payée
+                                        </option>
+
+                                        <option
+                                            value="NON_PAYEE"
+                                            {% if statut_paiement == 'NON_PAYEE' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Non payée
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-xl-2 col-lg-3 col-md-6 mb-3">
+                                    <label class="filter-label" for="date">
+                                        Date précise
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        id="date"
+                                        name="date"
+                                        value="{{ date_unique }}"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-xl-2 col-lg-3 col-md-6 mb-3">
+                                    <label
+                                        class="filter-label"
+                                        for="date_debut"
+                                    >
+                                        Date début
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        id="date_debut"
+                                        name="date_debut"
+                                        value="{{ date_debut }}"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-xl-2 col-lg-3 col-md-6 mb-3">
+                                    <label
+                                        class="filter-label"
+                                        for="date_fin"
+                                    >
+                                        Date fin
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        id="date_fin"
+                                        name="date_fin"
+                                        value="{{ date_fin }}"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-xl-2 col-lg-3 col-md-6 mb-3">
+                                    <label
+                                        class="filter-label"
+                                        for="heure_debut"
+                                    >
+                                        Heure début
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        id="heure_debut"
+                                        name="heure_debut"
+                                        value="{{ heure_debut }}"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-xl-2 col-lg-3 col-md-6 mb-3">
+                                    <label
+                                        class="filter-label"
+                                        for="heure_fin"
+                                    >
+                                        Heure fin
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        id="heure_fin"
+                                        name="heure_fin"
+                                        value="{{ heure_fin }}"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-xl-4 col-lg-6 col-md-12 mb-3 d-flex align-items-end flex-wrap">
+                                    <button
+                                        type="submit"
+                                        class="btn btn-bank-secondary mr-2 btn-mobile"
+                                    >
+                                        <i class="fa fa-search"></i>
+                                        Rechercher
+                                    </button>
+
+                                    <a
+                                        href="{% url 'liste_consultations_generalAgent' %}"
+                                        class="btn btn-bank-outline btn-mobile"
+                                    >
+                                        <i class="fa fa-times"></i>
+                                        Effacer les filtres
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tableau -->
+                <div class="card">
+                    <div class="card-header results-header">
+                        <div>
+                            <i class="fa fa-list text-primary mr-2"></i>
+                            Liste des consultations
+                        </div>
+
+                        <span class="results-count">
+                            {{ total_consultations }}
+                            résultat{{ total_consultations|pluralize }}
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date / Heure</th>
+                                        <th>Patient</th>
+                                        <th>Médecin</th>
+                                        <th>Motif</th>
+                                        <th>Hypothèse diagnostique</th>
+                                        <th>Diagnostic final</th>
+                                        <th>Paiement</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {% for consultation in consultations %}
+                                        <tr>
+                                            <td class="text-nowrap">
+                                                <div class="date-box">
+                                                    <i class="fa fa-calendar-alt text-primary mr-1"></i>
+                                                    {{ consultation.date_creation|date:"d/m/Y" }}
+                                                </div>
+
+                                                <div class="time-box">
+                                                    <i class="fa fa-clock mr-1"></i>
+                                                    {{ consultation.date_creation|date:"H:i" }}
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="patient-avatar">
+                                                        {{ consultation.triage.patient.noms|slice:":1" }}
+                                                    </div>
+
+                                                    <div>
+                                                        <div class="patient-name">
+                                                            {{ consultation.triage.patient.noms }}
+                                                        </div>
+
+                                                        <div class="patient-code">
+                                                            Dossier n°{{ consultation.triage.patient.id }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                {% if consultation.medecin %}
+                                                    <div class="doctor-name">
+                                                        <i class="fa fa-user-md text-primary mr-1"></i>
+
+                                                        {{ consultation.medecin.get_full_name|default:consultation.medecin.username }}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">
+                                                        Non attribué
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                            <td class="medical-text">
+                                                {{ consultation.motif_consultation|default:"—"|truncatechars:85 }}
+                                            </td>
+
+                                            <td class="medical-text">
+                                                {{ consultation.hypothese_diagnostique|default:"—"|truncatechars:85 }}
+                                            </td>
+
+                                            <td class="medical-text">
+                                                {% if consultation.diagnostic_final %}
+                                                    <span class="text-success">
+                                                        <i class="fa fa-check-circle mr-1"></i>
+                                                        {{ consultation.diagnostic_final|truncatechars:85 }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">
+                                                        Non renseigné
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                            <td class="text-nowrap">
+                                                {% if consultation.consultation_payee %}
+                                                    <span class="badge badge-paid">
+                                                        <i class="fa fa-check-circle"></i>
+                                                        Payée
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-unpaid">
+                                                        <i class="fa fa-exclamation-circle"></i>
+                                                        Non payée
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                            <td class="text-center">
+                                                <!-- Modifie detail_consultation si ton URL a un autre nom -->
+                                                <a
+                                                    href="{% url 'detail_consultation' consultation.id %}"
+                                                    class="btn-view"
+                                                    title="Voir le détail de la consultation"
+                                                >
+                                                    <i class="fa fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="empty-state">
+                                                    <div class="empty-icon">
+                                                        <i class="fa fa-folder-open"></i>
+                                                    </div>
+
+                                                    <h5>
+                                                        Aucune consultation trouvée
+                                                    </h5>
+
+                                                    <p>
+                                                        Aucun dossier ne correspond aux critères de recherche.
+                                                    </p>
+
+                                                    <a
+                                                        href="{% url 'liste_consultations_generalAgent' %}"
+                                                        class="btn btn-bank-secondary"
+                                                    >
+                                                        <i class="fa fa-sync-alt"></i>
+                                                        Réinitialiser la liste
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if consultations.paginator.num_pages > 1 %}
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                <span class="text-muted small">
+                                    Page {{ consultations.number }}
+                                    sur {{ consultations.paginator.num_pages }}
+                                    — {{ total_consultations }}
+                                    résultat{{ total_consultations|pluralize }}
+                                </span>
+
+                                <nav aria-label="Pagination des consultations">
+                                    <ul class="pagination">
+
+                                        {% if consultations.has_previous %}
+                                            <li class="page-item">
+                                                <a
+                                                    class="page-link"
+                                                    href="?page=1&q={{ q|urlencode }}&medecin={{ medecin_id|urlencode }}&date={{ date_unique|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}&heure_debut={{ heure_debut|urlencode }}&heure_fin={{ heure_fin|urlencode }}&statut_paiement={{ statut_paiement|urlencode }}"
+                                                    title="Première page"
+                                                >
+                                                    <i class="fa fa-angle-double-left"></i>
+                                                </a>
+                                            </li>
+
+                                            <li class="page-item">
+                                                <a
+                                                    class="page-link"
+                                                    href="?page={{ consultations.previous_page_number }}&q={{ q|urlencode }}&medecin={{ medecin_id|urlencode }}&date={{ date_unique|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}&heure_debut={{ heure_debut|urlencode }}&heure_fin={{ heure_fin|urlencode }}&statut_paiement={{ statut_paiement|urlencode }}"
+                                                    title="Page précédente"
+                                                >
+                                                    <i class="fa fa-angle-left"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+
+                                        {% for numero_page in consultations.paginator.page_range %}
+                                            {% if numero_page == consultations.number %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">
+                                                        {{ numero_page }}
+                                                    </span>
+                                                </li>
+                                            {% elif numero_page >= consultations.number|add:"-2" and numero_page <= consultations.number|add:"2" %}
+                                                <li class="page-item">
+                                                    <a
+                                                        class="page-link"
+                                                        href="?page={{ numero_page }}&q={{ q|urlencode }}&medecin={{ medecin_id|urlencode }}&date={{ date_unique|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}&heure_debut={{ heure_debut|urlencode }}&heure_fin={{ heure_fin|urlencode }}&statut_paiement={{ statut_paiement|urlencode }}"
+                                                    >
+                                                        {{ numero_page }}
+                                                    </a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        {% if consultations.has_next %}
+                                            <li class="page-item">
+                                                <a
+                                                    class="page-link"
+                                                    href="?page={{ consultations.next_page_number }}&q={{ q|urlencode }}&medecin={{ medecin_id|urlencode }}&date={{ date_unique|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}&heure_debut={{ heure_debut|urlencode }}&heure_fin={{ heure_fin|urlencode }}&statut_paiement={{ statut_paiement|urlencode }}"
+                                                    title="Page suivante"
+                                                >
+                                                    <i class="fa fa-angle-right"></i>
+                                                </a>
+                                            </li>
+
+                                            <li class="page-item">
+                                                <a
+                                                    class="page-link"
+                                                    href="?page={{ consultations.paginator.num_pages }}&q={{ q|urlencode }}&medecin={{ medecin_id|urlencode }}&date={{ date_unique|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}&heure_debut={{ heure_debut|urlencode }}&heure_fin={{ heure_fin|urlencode }}&statut_paiement={{ statut_paiement|urlencode }}"
+                                                    title="Dernière page"
+                                                >
+                                                    <i class="fa fa-angle-double-right"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

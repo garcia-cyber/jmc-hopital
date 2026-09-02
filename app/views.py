@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db.models import Q , Sum ,Prefetch , Count , ExpressionWrapper , OuterRef, Subquery , F , Value ,DecimalField, FloatField ,IntegerField ,Exists , Case, When
 from decimal import Decimal , ROUND_HALF_UP , InvalidOperation
 import pytz
-from datetime import timedelta , date  , datetime
+from datetime import timedelta , date  , datetime , time 
 from django.db import transaction
 from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -12570,3 +12570,346 @@ def liste_prestations_receptionniste(request):
         "user_hopital": user_hopital,
         "q": q,
     })
+
+# --------------------------------------------------------------------------------------
+# LISTE DE CONSULTATION 
+# --------------------------------------------------------------------------------------
+@login_required
+def liste_consultations_generalAgent(request):
+    # ==========================================================
+    # 1. Récupérer l'hôpital et le rôle de l'utilisateur connecté
+    # ==========================================================
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+
+    hopital_user = role.hopital if role else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
+
+    if not hopital_user:
+        messages.error(
+            request,
+            "Votre compte n'est rattaché à aucun hôpital."
+        )
+        return redirect('dashboard')
+
+    # ==========================================================
+    # 2. Paramètres de filtres GET
+    # ==========================================================
+    q = request.GET.get('q', '').strip()
+
+    medecin_id = request.GET.get(
+        'medecin',
+        ''
+    ).strip()
+
+    date_unique = request.GET.get(
+        'date',
+        ''
+    ).strip()
+
+    date_debut = request.GET.get(
+        'date_debut',
+        ''
+    ).strip()
+
+    date_fin = request.GET.get(
+        'date_fin',
+        ''
+    ).strip()
+
+    heure_debut = request.GET.get(
+        'heure_debut',
+        ''
+    ).strip()
+
+    heure_fin = request.GET.get(
+        'heure_fin',
+        ''
+    ).strip()
+
+    statut_paiement = request.GET.get(
+        'statut_paiement',
+        ''
+    ).strip()
+
+    # ==========================================================
+    # 3. Base sécurisée :
+    # seulement les consultations de l'hôpital connecté.
+    #
+    # -date_creation = ordre décroissant :
+    # dernière consultation créée en premier.
+    # ==========================================================
+    consultations = (
+        Consultation.objects
+        .filter(
+            hopital=hopital_user
+        )
+        .select_related(
+            'triage',
+            'triage__patient',
+            'medecin',
+            'session'
+        )
+        .order_by('-date_creation')
+    )
+
+    # ==========================================================
+    # 4. Recherche libre
+    # ==========================================================
+    if q:
+        consultations = consultations.filter(
+            Q(triage__patient__noms__icontains=q)
+            | Q(medecin__first_name__icontains=q)
+            | Q(medecin__last_name__icontains=q)
+            | Q(medecin__username__icontains=q)
+            | Q(motif_consultation__icontains=q)
+            | Q(hypothese_diagnostique__icontains=q)
+            | Q(diagnostic_final__icontains=q)
+        )
+
+    # ==========================================================
+    # 5. Filtre par médecin
+    # ==========================================================
+    medecin_id_filtre = ''
+
+    if medecin_id:
+        try:
+            medecin_id_filtre = int(medecin_id)
+
+            consultations = consultations.filter(
+                medecin_id=medecin_id_filtre
+            )
+
+        except (TypeError, ValueError):
+            messages.warning(
+                request,
+                "Le médecin sélectionné est invalide."
+            )
+
+            medecin_id_filtre = ''
+
+    # ==========================================================
+    # 6. Filtre par une date précise
+    # ==========================================================
+    if date_unique:
+        try:
+            date_obj = datetime.strptime(
+                date_unique,
+                '%Y-%m-%d'
+            ).date()
+
+            debut_jour = datetime.combine(
+                date_obj,
+                time.min
+            )
+
+            fin_jour = debut_jour + timedelta(days=1)
+
+            consultations = consultations.filter(
+                date_creation__gte=debut_jour,
+                date_creation__lt=fin_jour
+            )
+
+        except ValueError:
+            messages.warning(
+                request,
+                "La date sélectionnée est invalide."
+            )
+
+    # ==========================================================
+    # 7. Filtre par période
+    # La date précise est prioritaire.
+    # ==========================================================
+    elif date_debut or date_fin:
+        if date_debut:
+            try:
+                date_debut_obj = datetime.strptime(
+                    date_debut,
+                    '%Y-%m-%d'
+                ).date()
+
+                debut_intervalle = datetime.combine(
+                    date_debut_obj,
+                    time.min
+                )
+
+                consultations = consultations.filter(
+                    date_creation__gte=debut_intervalle
+                )
+
+            except ValueError:
+                messages.warning(
+                    request,
+                    "La date de début est invalide."
+                )
+
+        if date_fin:
+            try:
+                date_fin_obj = datetime.strptime(
+                    date_fin,
+                    '%Y-%m-%d'
+                ).date()
+
+                fin_intervalle = datetime.combine(
+                    date_fin_obj + timedelta(days=1),
+                    time.min
+                )
+
+                consultations = consultations.filter(
+                    date_creation__lt=fin_intervalle
+                )
+
+            except ValueError:
+                messages.warning(
+                    request,
+                    "La date de fin est invalide."
+                )
+
+    # ==========================================================
+    # 8. Filtre par heure
+    # ==========================================================
+    if heure_debut:
+        try:
+            heure_debut_obj = datetime.strptime(
+                heure_debut,
+                '%H:%M'
+            ).time()
+
+            consultations = consultations.filter(
+                date_creation__time__gte=heure_debut_obj
+            )
+
+        except ValueError:
+            messages.warning(
+                request,
+                "L'heure de début est invalide."
+            )
+
+    if heure_fin:
+        try:
+            heure_fin_obj = datetime.strptime(
+                heure_fin,
+                '%H:%M'
+            ).time()
+
+            consultations = consultations.filter(
+                date_creation__time__lte=heure_fin_obj
+            )
+
+        except ValueError:
+            messages.warning(
+                request,
+                "L'heure de fin est invalide."
+            )
+
+    # ==========================================================
+    # 9. Filtre sur le paiement
+    # ==========================================================
+    if statut_paiement == 'PAYEE':
+        consultations = consultations.filter(
+            consultation_payee=True
+        )
+
+    elif statut_paiement == 'NON_PAYEE':
+        consultations = consultations.filter(
+            consultation_payee=False
+        )
+
+    # ==========================================================
+    # 10. Récupérer la liste unique des médecins
+    # uniquement dans l'hôpital connecté.
+    # ==========================================================
+    consultations_avec_medecin = (
+        Consultation.objects
+        .filter(
+            hopital=hopital_user,
+            medecin__isnull=False
+        )
+        .select_related('medecin')
+        .order_by(
+            'medecin__first_name',
+            'medecin__last_name',
+            'medecin__username'
+        )
+    )
+
+    medecins_ids_vus = set()
+    medecins_uniques = []
+
+    for consultation in consultations_avec_medecin:
+        if consultation.medecin_id not in medecins_ids_vus:
+            medecins_ids_vus.add(
+                consultation.medecin_id
+            )
+
+            medecins_uniques.append(
+                consultation.medecin
+            )
+
+    # ==========================================================
+    # 11. Compteurs
+    # ==========================================================
+    total_consultations = consultations.count()
+
+    total_payees = consultations.filter(
+        consultation_payee=True
+    ).count()
+
+    total_non_payees = consultations.filter(
+        consultation_payee=False
+    ).count()
+
+    # ==========================================================
+    # 12. Pagination
+    # ==========================================================
+    paginator = Paginator(
+        consultations,
+        15
+    )
+
+    page_number = request.GET.get('page')
+
+    page_consultations = paginator.get_page(
+        page_number
+    )
+
+    # ==========================================================
+    # 13. Rendu
+    # ==========================================================
+    return render(
+        request,
+        'back-end/consultation/listeAll.html',
+        {
+            'consultations': page_consultations,
+            'medecins': medecins_uniques,
+
+            'hopital_user': hopital_user,
+            'fonctionKey': fonctionKey,
+
+            'total_consultations': total_consultations,
+            'total_payees': total_payees,
+            'total_non_payees': total_non_payees,
+
+            'q': q,
+            'medecin_id': (
+                str(medecin_id_filtre)
+                if medecin_id_filtre
+                else ''
+            ),
+            'date_unique': date_unique,
+            'date_debut': date_debut,
+            'date_fin': date_fin,
+            'heure_debut': heure_debut,
+            'heure_fin': heure_fin,
+            'statut_paiement': statut_paiement,
+        }
+    )

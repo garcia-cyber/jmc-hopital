@@ -81,7 +81,17 @@
                             <span>Examens externe</span>
                         </a>
                     </li>
+
+                    
+
+                    
                     {% endif %}
+                    <li>
+                        <a href="{% url 'liste_consultations_generalAgent' %}">
+                            <i class="fa fa-stethoscope"></i>
+                            <span>Consultation journaliere</span>
+                        </a>
+                    </li>
                     <li class="submenu">
                         <a href="#">
                             <i class="fa fa-cog"></i>
@@ -408,7 +418,12 @@
 
                 {% endif %}
 
+{% comment %} 
+ ----------------------------------------------------------------------------------------------------------------------------------------
+ ----------------------------------------------------------------------------------------------------------------------------------------
+ ----------------------------------------------------------------------------------------------------------------------------------------
 
+{% endcomment %}
                 {% if fonctionKey == 'receptionniste' %}
 
                     <li class="menu-title">
@@ -419,6 +434,13 @@
                         <a href="{% url 'enregistrement_patient' %}">
                             <i class="fa fa-user-plus"></i>
                             <span>Enregistrement Patient</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{% url 'liste_consultations_generalAgent' %}">
+                            <i class="fa fa-stethoscope"></i>
+                            <span>Consultation journaliere</span>
                         </a>
                     </li>
 

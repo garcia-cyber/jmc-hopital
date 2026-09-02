@@ -340,4 +340,10 @@ urlpatterns =[
     #
     path("assistant/questions/", assistant_questions_view, name="assistant_questions_view"),
 
+
+
+    #-------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------
+    path('liste_consultations_generalAgent/',liste_consultations_generalAgent , name = "liste_consultations_generalAgent"),
+
  ]

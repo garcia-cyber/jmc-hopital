@@ -558,10 +558,6 @@ def enregistrement_patient(request):
         .order_by('-date_creation')
     )
 
-    # Gardé selon votre logique originale :
-    # - Si un hôpital est choisi, on filtre.
-    # - Sinon, non-admin voit son hôpital.
-    # - Admin sans filtre voit tous les hôpitaux.
     if hopital_filter:
         patients = patients.filter(hopital_id=hopital_filter)
     else:
@@ -641,10 +637,6 @@ def enregistrement_patient(request):
 
                 # ------------------------------------------------
                 # Recherche d'un ancien patient dans le même hôpital
-                #
-                # Priorité :
-                # 1. Téléphone + nom
-                # 2. Nom + sexe + âge
                 # ------------------------------------------------
                 patient_existant = None
 
@@ -672,11 +664,9 @@ def enregistrement_patient(request):
                     )
 
                 # ------------------------------------------------
-                # Patient déjà dans la base :
-                # ne pas créer un deuxième dossier.
+                # Patient déjà dans la base
                 # ------------------------------------------------
                 if patient_existant:
-                    # Le patient est désormais considéré comme ancien.
                     if patient_existant.statut_p != 'A':
                         patient_existant.statut_p = 'A'
                         patient_existant.save(update_fields=['statut_p'])
@@ -700,7 +690,6 @@ def enregistrement_patient(request):
                 patient.created_by = request.user
                 patient.hopital = hopital_user
 
-                # Une entreprise signifie que le patient est conventionné.
                 if patient.entreprise:
                     if patient.entreprise.hopital_id != hopital_user.id:
                         messages.error(
@@ -710,19 +699,8 @@ def enregistrement_patient(request):
                         return redirect('enregistrement_patient')
 
                     patient.type_patient = 'CONVENTIONNE'
-
-                # Si aucune entreprise n'est sélectionnée, le patient reste simple.
                 else:
                     patient.type_patient = 'SIMPLE'
-
-                # Attention :
-                # Votre formulaire expose statut_p.
-                # Si l'utilisateur sélectionne "ancien", il restera ancien.
-                #
-                # Si vous souhaitez que tout nouveau patient créé soit toujours
-                # nouveau, décommentez la ligne suivante :
-                #
-                # patient.statut_p = 'N'
 
                 patient.save()
 
@@ -732,42 +710,20 @@ def enregistrement_patient(request):
                 )
 
                 # ------------------------------------------------
-                # Redirection après création
+                # LOGIQUE DE REDIRECTION APRÈS CRÉATION
                 # ------------------------------------------------
-                # Patient ancien/fidèle : accès direct.
-                if patient.statut_p == 'A':
-                    messages.info(
-                        request,
-                        f"{patient.noms} est un ancien patient. "
-                        f"Nouvelle session de soins autorisée."
-                    )
-                    return redirect(
-                        'creer_session_soins',
-                        patient_id=patient.id
-                    )
 
-                # Patient fidèle : accès direct.
-                if patient.type_patient == 'FIDELE':
-                    return redirect(
-                        'creer_session_soins',
-                        patient_id=patient.id
-                    )
+                # Ancien ou conventionné → créer session de soins
+                if patient.statut_p == 'A' or patient.type_patient == 'CONVENTIONNE':
+                    messages.success(request, f"Ancien patient {patient.noms} enregistré avec succès.")
+                    # return redirect('enregistrement_patient')  # ou redirect(request.path)
+                    return redirect('saisir_signes', patient_id=patient.id)
+                    # return redirect(
+                    #     'creer_session_soins',
+                    #     patient_id=patient.id
+                    # )
 
-                # Patient conventionné : accès direct.
-                if patient.type_patient == 'CONVENTIONNE':
-                    return redirect(
-                        'creer_session_soins',
-                        patient_id=patient.id
-                    )
-
-                # Fiche déjà payée : session autorisée.
-                if patient.fiche_payee:
-                    return redirect(
-                        'creer_session_soins',
-                        patient_id=patient.id
-                    )
-
-                # Nouveau patient simple : paiement obligatoire.
+                # Nouveau (pas ancien, pas conventionné) → paiement fiche
                 messages.warning(
                     request,
                     f"{patient.noms} doit d'abord payer sa fiche d'ouverture."
@@ -811,7 +767,6 @@ def enregistrement_patient(request):
         else Entreprise.objects.none()
     )
 
-    # Gardé : liste de tous les hôpitaux visible dans votre filtre.
     hopitaux = Hopital.objects.all().order_by('nomH')
 
     # ============================================================

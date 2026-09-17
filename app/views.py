@@ -12992,7 +12992,7 @@ def tout_reinitialiser_stock_hopital(request, hopital_id):
             request,
             "Réinitialisation annulée : saisissez exactement REINITIALISER."
         )
-        return redirect('pharmacie:liste_stocks_hopitaux')
+        return redirect('liste_stocks_hopitaux')
 
     try:
         resultat = LotPharmacie.reinitialiser_stock_hopital(

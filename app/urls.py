@@ -366,5 +366,11 @@ urlpatterns =[
         name='tout_reinitialiser_stock_hopital'
     ),
 
+    path(
+    'stocks-hopitaux/<int:hopital_id>/reinitialiser-medicaments/',
+    views.reinitialiser_medicaments_hopital,
+    name='reinitialiser_medicaments_hopital'
+),
+
 
  ]

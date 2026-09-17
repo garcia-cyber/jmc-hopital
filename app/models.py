@@ -1109,20 +1109,54 @@ class SoinOccasionnel(models.Model):
 # =======================================================================================================================
 
 class ProduitPharmacie(models.Model):
-    DEVISE_CHOICES = [('USD', 'USD'), ('CDF', 'CDF')]
-    
-    nom = models.CharField(max_length=200, verbose_name="Nom commercial / DCI")
+    DEVISE_CHOICES = [
+        ('USD', 'USD'),
+        ('CDF', 'CDF'),
+    ]
+
+    nom = models.CharField(
+        max_length=200,
+        verbose_name="Nom commercial / DCI"
+    )
     forme = models.CharField(max_length=100)
     dosage = models.CharField(max_length=50)
     categorie = models.CharField(max_length=100)
     unites_par_carton = models.PositiveIntegerField(default=1)
-    devise = models.CharField(max_length=3, choices=DEVISE_CHOICES, default='CDF')
-    prix_achat_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
-    prix_vente_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
-    enregistre_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+
+    devise = models.CharField(
+        max_length=3,
+        choices=DEVISE_CHOICES,
+        default='CDF'
+    )
+
+    prix_achat_unitaire = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    prix_vente_unitaire = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    enregistre_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
     date_enregistrement = models.DateTimeField(auto_now_add=True)
+
     stock_initial = models.PositiveIntegerField(default=0)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+
+    # AJOUTE CETTE LIGNE ICI
+    actif = models.BooleanField(default=True)
+
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.SET_NULL,
+        null=True
+    )
 
     class Meta:
         unique_together = ('nom', 'forme', 'dosage')

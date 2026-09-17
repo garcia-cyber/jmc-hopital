@@ -7166,8 +7166,6 @@ def gestion_pharmacie(request):
         produits = ProduitPharmacie.objects.none()
 
     else:
-        # Somme de la quantité actuellement disponible
-        # dans tous les lots du médicament et de cet hôpital.
         stock_reel_subquery = (
             LotPharmacie.objects
             .filter(
@@ -7187,7 +7185,10 @@ def gestion_pharmacie(request):
 
         produits = (
             ProduitPharmacie.objects
-            .filter(hopital=hopital_user)
+            .filter(
+                hopital=hopital_user,
+                actif=True
+            )
             .annotate(
                 stock_reel=Coalesce(
                     Subquery(
@@ -7200,7 +7201,6 @@ def gestion_pharmacie(request):
             .order_by('nom')
         )
 
-        # Valeur du stock qui est réellement disponible.
         for p in produits:
             p.valeur_totale = (
                 Decimal(p.stock_reel) * p.prix_vente_unitaire
@@ -12929,17 +12929,26 @@ def liste_stocks_hopitaux(request):
 
     hopitaux = Hopital.objects.all().order_by('nomH')
 
-    # Ajoute des informations utiles pour l'affichage.
     for hopital in hopitaux:
+        # Compte uniquement les médicaments encore actifs.
         hopital.nombre_produits = ProduitPharmacie.objects.filter(
-            hopital=hopital
+            hopital=hopital,
+            actif=True
         ).count()
 
+        # Utilise l'hôpital du produit afin d'inclure
+        # aussi les anciens lots si lot.hopital est vide.
         hopital.stock_total = (
-            LotPharmacie.objects.filter(hopital=hopital)
+            LotPharmacie.objects.filter(
+                produit__hopital=hopital
+            )
             .aggregate(total=Sum('quantite_actuelle'))['total']
             or 0
         )
+
+        # Cette variable servira dans le template pour n'afficher
+        # le bouton médicaments que lorsque le stock est vraiment vide.
+        hopital.stock_est_vide = hopital.stock_total == 0
 
     context = {
         'hopitaux': hopitaux,
@@ -12966,24 +12975,34 @@ def tout_reinitialiser_stock_hopital(request, hopital_id):
     )
 
     fonction_key = (
-        role_obj.fonctionKey.roleName
-        if role_obj and role_obj.fonctionKey
-        else 'Utilisateur'
+        role_obj.fonctionKey.roleName.strip().lower()
+        if role_obj
+        and role_obj.fonctionKey
+        and role_obj.fonctionKey.roleName
+        else ''
     )
 
     hopital = get_object_or_404(Hopital, pk=hopital_id)
 
     roles_autorises = [
         'admin',
-        'Administrateur',
-        'Super Administrateur',
-        'Superadmin',
+        'administrateur',
+        'super administrateur',
+        'superadmin',
     ]
 
-    if fonction_key not in roles_autorises:
-        return HttpResponseForbidden(
+    est_admin = (
+        request.user.is_superuser
+        or request.user.is_staff
+        or fonction_key in roles_autorises
+    )
+
+    if not est_admin:
+        messages.error(
+            request,
             "Vous n'avez pas l'autorisation de réinitialiser les stocks."
         )
+        return redirect('liste_stocks_hopitaux')
 
     confirmation = request.POST.get('confirmation', '').strip()
 
@@ -13014,5 +13033,98 @@ def tout_reinitialiser_stock_hopital(request, hopital_id):
             request,
             f"Erreur : aucune modification n'a été validée. Détail : {erreur}"
         )
+
+    return redirect('liste_stocks_hopitaux')
+
+
+# -------------------------------------------------------------------------------
+#  RENITIALISE MEDICAMENT
+# -------------------------------------------------------------------------------
+@login_required
+@require_POST
+def reinitialiser_medicaments_hopital(request, hopital_id):
+    role_obj = (
+        Fonction.objects.filter(userKey=request.user)
+        .select_related('hopital', 'fonctionKey')
+        .first()
+    )
+
+    fonction_key = (
+        role_obj.fonctionKey.roleName.strip().lower()
+        if role_obj
+        and role_obj.fonctionKey
+        and role_obj.fonctionKey.roleName
+        else ''
+    )
+
+    hopital = get_object_or_404(Hopital, pk=hopital_id)
+
+    roles_autorises = [
+        'admin',
+        'administrateur',
+        'super administrateur',
+        'superadmin',
+    ]
+
+    est_admin = (
+        request.user.is_superuser
+        or request.user.is_staff
+        or fonction_key in roles_autorises
+    )
+
+    if not est_admin:
+        messages.error(
+            request,
+            "Vous n'avez pas l'autorisation de réinitialiser les médicaments."
+        )
+        return redirect('liste_stocks_hopitaux')
+
+    confirmation = request.POST.get(
+        'confirmation_medicaments',
+        ''
+    ).strip()
+
+    if confirmation != 'REINITIALISER MEDICAMENTS':
+        messages.error(
+            request,
+            "Action annulée : écrivez exactement REINITIALISER MEDICAMENTS."
+        )
+        return redirect('liste_stocks_hopitaux')
+
+    stock_restant = (
+        LotPharmacie.objects.filter(
+            produit__hopital=hopital,
+            quantite_actuelle__gt=0
+        )
+        .aggregate(total=Sum('quantite_actuelle'))['total']
+        or 0
+    )
+
+    if stock_restant > 0:
+        messages.error(
+            request,
+            (
+                f"Impossible : le stock de « {hopital.nomH} » contient encore "
+                f"{stock_restant} unité(s). Réinitialisez d'abord le stock."
+            )
+        )
+        return redirect('liste_stocks_hopitaux')
+
+    nombre_medicaments = ProduitPharmacie.objects.filter(
+        hopital=hopital,
+        actif=True
+    ).update(
+        actif=False,
+        stock_initial=0
+    )
+
+    messages.success(
+        request,
+        (
+            f"{nombre_medicaments} médicament(s) de l'hôpital "
+            f"« {hopital.nomH} » ont été réinitialisés. "
+            f"Ils sont maintenant cachés dans la page pharmacie."
+        )
+    )
 
     return redirect('liste_stocks_hopitaux')

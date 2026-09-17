@@ -85,6 +85,16 @@
             background-color: #fffbeb;
             color: #92400e;
         }
+
+        .btn-medication-reset {
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .action-info {
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
     </style>
 </head>
 
@@ -151,12 +161,15 @@
                         <div>
                             <strong>Attention à la réinitialisation.</strong><br>
 
-                            Cette action met les quantités actuellement disponibles
-                            des lots à zéro uniquement pour l'hôpital sélectionné.
+                            Première étape : réinitialisez le stock disponible des lots.<br>
 
-                            Les produits, les lots, les paiements, les ventes et
-                            l'historique des mouvements doivent être conservés
-                            pour assurer la traçabilité.
+                            Deuxième étape : lorsque le stock est déjà à zéro,
+                            vous pouvez réinitialiser les médicaments de l'hôpital.
+
+                            Les médicaments réinitialisés deviennent inactifs et ne
+                            s'afficheront plus dans la gestion quotidienne de la
+                            pharmacie. Les lots, ventes, paiements et historiques
+                            restent conservés pour la traçabilité.
                         </div>
                     </div>
                 </div>
@@ -171,7 +184,7 @@
                             </h5>
 
                             <small class="text-muted">
-                                Sélectionnez uniquement l'hôpital dont le stock doit être remis à zéro.
+                                Réinitialisez uniquement l'hôpital que vous avez sélectionné.
                             </small>
                         </div>
 
@@ -188,7 +201,7 @@
                                     <th style="width: 70px;">#</th>
                                     <th>Nom de l'hôpital</th>
                                     <th>État du stock</th>
-                                    <th class="text-center">Action globale</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
 
@@ -204,8 +217,6 @@
                                         <td>
                                             <div class="hospital-name">
                                                 <i class="fas fa-hospital text-success me-2"></i>
-
-                                                <!-- CORRECTION : ton modèle possède nomH -->
                                                 {{ hopital.nomH }}
                                             </div>
 
@@ -215,30 +226,68 @@
                                         </td>
 
                                         <td>
+                                            {% if hopital.stock_total > 0 %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-boxes-stacked me-1"></i>
+                                                    {{ hopital.stock_total }} unité(s) en stock
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-box-open me-1"></i>
+                                                    Stock déjà à zéro
+                                                </span>
+                                            {% endif %}
+
+                                            <br>
+
                                             <span class="pill-product">
-                                                <i class="fas fa-boxes-stacked me-1"></i>
-                                                Stock rattaché à cet hôpital
+                                                <i class="fas fa-pills me-1"></i>
+                                                {{ hopital.nombre_produits }} médicament{{ hopital.nombre_produits|pluralize }}
+                                                actif{{ hopital.nombre_produits|pluralize }}
                                             </span>
                                         </td>
 
                                         <td class="text-center">
 
-                                            <!--
-                                                NOTE :
-                                                Le contrôle dans le template est visuel seulement.
-                                                La vue Django doit aussi contrôler le rôle
-                                                et l'hôpital de l'utilisateur connecté.
-                                            -->
                                             {% if fonctionKey == 'admin' or fonctionKey == 'Administrateur' or fonctionKey == 'Super Administrateur' or fonctionKey == 'Superadmin' %}
 
+                                                <!-- Bouton 1 : reset stock -->
                                                 <button type="button"
                                                         class="btn btn-sm btn-danger px-3 py-2 btn-reset"
                                                         data-bs-toggle="modal"
-                                                        data-bs-target="#modalReset{{ hopital.id }}">
+                                                        data-bs-target="#modalResetStock{{ hopital.id }}">
 
                                                     <i class="fas fa-rotate-left me-1"></i>
-                                                    Tout réinitialiser
+                                                    Réinitialiser stock
                                                 </button>
+
+                                                <br>
+
+                                                <!-- Bouton 2 : reset médicaments seulement si stock = 0 -->
+                                                {% if hopital.stock_est_vide %}
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-dark px-3 py-2 mt-2 btn-medication-reset"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#modalResetMedicaments{{ hopital.id }}">
+
+                                                        <i class="fas fa-pills me-1"></i>
+                                                        Réinitialiser médicaments
+                                                    </button>
+
+                                                    <div class="text-success action-info mt-2">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        Stock à zéro : médicaments réinitialisables.
+                                                    </div>
+
+                                                {% else %}
+
+                                                    <div class="text-warning action-info mt-2">
+                                                        <i class="fas fa-lock me-1"></i>
+                                                        Réinitialisez d'abord le stock.
+                                                    </div>
+
+                                                {% endif %}
 
                                             {% else %}
                                                 <span class="text-muted small">
@@ -249,11 +298,11 @@
                                         </td>
                                     </tr>
 
-                                    <!-- Modal de confirmation pour cet hôpital -->
+                                    <!-- Modal 1 : réinitialisation du stock -->
                                     <div class="modal fade"
-                                         id="modalReset{{ hopital.id }}"
+                                         id="modalResetStock{{ hopital.id }}"
                                          tabindex="-1"
-                                         aria-labelledby="modalResetLabel{{ hopital.id }}"
+                                         aria-labelledby="modalResetStockLabel{{ hopital.id }}"
                                          aria-hidden="true">
 
                                         <div class="modal-dialog modal-dialog-centered">
@@ -261,10 +310,10 @@
 
                                                 <div class="modal-header bg-danger text-white">
                                                     <h5 class="modal-title"
-                                                        id="modalResetLabel{{ hopital.id }}">
+                                                        id="modalResetStockLabel{{ hopital.id }}">
 
                                                         <i class="fas fa-triangle-exclamation me-2"></i>
-                                                        Confirmer la réinitialisation
+                                                        Confirmer la réinitialisation du stock
                                                     </h5>
 
                                                     <button type="button"
@@ -281,12 +330,6 @@
 
                                                     <div class="modal-body">
 
-                                                        <p class="mb-3">
-                                                            Vous êtes sur le point de remettre à zéro
-                                                            tous les stocks actuellement disponibles
-                                                            pour l'hôpital :
-                                                        </p>
-
                                                         <div class="alert alert-danger">
                                                             <strong>
                                                                 <i class="fas fa-hospital me-2"></i>
@@ -294,26 +337,24 @@
                                                             </strong>
                                                         </div>
 
-                                                        <p class="mb-2">
-                                                            Le système doit :
+                                                        <p>
+                                                            Cette action remet à zéro le stock disponible
+                                                            de tous les lots liés à cet hôpital.
                                                         </p>
 
                                                         <ul class="mb-3">
-                                                            <li>mettre <code>quantite_actuelle</code> des lots à zéro ;</li>
-                                                            <li>créer un mouvement de type <code>AJUSTEMENT</code> ;</li>
-                                                            <li>conserver les médicaments, lots, ventes et paiements existants ;</li>
-                                                            <li>ne modifier aucun autre hôpital.</li>
+                                                            <li><code>quantite_actuelle</code> des lots devient zéro</li>
+                                                            <li>Un mouvement <code>AJUSTEMENT</code> est créé</li>
+                                                            <li>Les médicaments, lots, ventes et paiements restent enregistrés</li>
+                                                            <li>Aucun autre hôpital n’est modifié</li>
                                                         </ul>
 
                                                         <div class="form-group mb-0">
                                                             <label for="confirmation{{ hopital.id }}"
                                                                    class="form-label fw-bold">
 
-                                                                Écrivez exactement
-                                                                <span class="text-danger">
-                                                                    REINITIALISER
-                                                                </span>
-                                                                pour confirmer :
+                                                                Écrivez exactement :
+                                                                <span class="text-danger">REINITIALISER</span>
                                                             </label>
 
                                                             <input type="text"
@@ -324,7 +365,6 @@
                                                                    placeholder="REINITIALISER"
                                                                    required>
                                                         </div>
-
                                                     </div>
 
                                                     <div class="modal-footer">
@@ -336,9 +376,101 @@
 
                                                         <button type="submit"
                                                                 class="btn btn-danger btn-reset">
-
                                                             <i class="fas fa-rotate-left me-1"></i>
-                                                            Confirmer la réinitialisation
+                                                            Confirmer le stock
+                                                        </button>
+                                                    </div>
+
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal 2 : réinitialisation des médicaments -->
+                                    <div class="modal fade"
+                                         id="modalResetMedicaments{{ hopital.id }}"
+                                         tabindex="-1"
+                                         aria-labelledby="modalResetMedicamentsLabel{{ hopital.id }}"
+                                         aria-hidden="true">
+
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow">
+
+                                                <div class="modal-header bg-dark text-white">
+                                                    <h5 class="modal-title"
+                                                        id="modalResetMedicamentsLabel{{ hopital.id }}">
+
+                                                        <i class="fas fa-pills me-2"></i>
+                                                        Confirmer la réinitialisation des médicaments
+                                                    </h5>
+
+                                                    <button type="button"
+                                                            class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal"
+                                                            aria-label="Fermer">
+                                                    </button>
+                                                </div>
+
+                                                <form method="post"
+                                                      action="{% url 'reinitialiser_medicaments_hopital' hopital.id %}">
+
+                                                    {% csrf_token %}
+
+                                                    <div class="modal-body">
+
+                                                        <div class="alert alert-warning">
+                                                            <strong>
+                                                                <i class="fas fa-hospital me-2"></i>
+                                                                {{ hopital.nomH }}
+                                                            </strong>
+                                                            <br>
+                                                            Stock actuel : zéro.
+                                                        </div>
+
+                                                        <p>
+                                                            Cette action réinitialise les médicaments
+                                                            de cet hôpital uniquement.
+                                                        </p>
+
+                                                        <ul class="mb-3">
+                                                            <li>Les produits deviennent <code>actif=False</code></li>
+                                                            <li>Ils disparaissent de la page de gestion de pharmacie</li>
+                                                            <li>Le champ <code>stock_initial</code> reste à zéro</li>
+                                                            <li>Les lots, ventes, paiements et historiques restent conservés</li>
+                                                            <li>Les médicaments des autres hôpitaux ne changent pas</li>
+                                                        </ul>
+
+                                                        <div class="form-group mb-0">
+                                                            <label for="confirmationMedicaments{{ hopital.id }}"
+                                                                   class="form-label fw-bold">
+
+                                                                Écrivez exactement :
+                                                                <span class="text-danger">
+                                                                    REINITIALISER MEDICAMENTS
+                                                                </span>
+                                                            </label>
+
+                                                            <input type="text"
+                                                                   id="confirmationMedicaments{{ hopital.id }}"
+                                                                   name="confirmation_medicaments"
+                                                                   class="form-control"
+                                                                   autocomplete="off"
+                                                                   placeholder="REINITIALISER MEDICAMENTS"
+                                                                   required>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="modal-footer">
+                                                        <button type="button"
+                                                                class="btn btn-light"
+                                                                data-bs-dismiss="modal">
+                                                            Annuler
+                                                        </button>
+
+                                                        <button type="submit"
+                                                                class="btn btn-dark btn-medication-reset">
+                                                            <i class="fas fa-pills me-1"></i>
+                                                            Confirmer les médicaments
                                                         </button>
                                                     </div>
 
@@ -366,8 +498,7 @@
 
     {% include 'back-end/includes/js.html' %}
 
-    <!-- Bootstrap 5 : nécessaire pour les modals data-bs-toggle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
-</html> 
+</html>

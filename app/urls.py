@@ -5,6 +5,9 @@ from django.views.generic import TemplateView
 # 
 #
 #  
+
+# app_name = 'pharmacie'
+
 urlpatterns =[
 
     path(
@@ -345,5 +348,23 @@ urlpatterns =[
     #-------------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------------
     path('liste_consultations_generalAgent/',liste_consultations_generalAgent , name = "liste_consultations_generalAgent"),
+
+
+
+    # ------------------------------------------------------------------------
+    # ------------------------------------------------------------------------
+    # mise en jour le 17/09/2026
+    path(
+        'pharmacie/stocks-hopitaux/',
+        views.liste_stocks_hopitaux,
+        name='liste_stocks_hopitaux',
+    ),
+
+    path(
+        'stocks-hopitaux/<int:hopital_id>/tout-reinitialiser/',
+        views.tout_reinitialiser_stock_hopital,
+        name='tout_reinitialiser_stock_hopital'
+    ),
+
 
  ]

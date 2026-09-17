@@ -1,4 +1,5 @@
-from django.db import models
+from django.db import models , transaction
+
 from django.contrib.auth.models import User
 import uuid
 from decimal import Decimal  # Ajout crucial pour la sécurité des calculs financiers
@@ -1135,13 +1136,17 @@ class ProduitPharmacie(models.Model):
 
 # --- 3. LOT ---
 class LotPharmacie(models.Model):
-    produit = models.ForeignKey('ProduitPharmacie', related_name='les_lots', on_delete=models.CASCADE)
+    produit = models.ForeignKey(
+        'ProduitPharmacie',
+        related_name='les_lots',
+        on_delete=models.CASCADE
+    )
     numero_lot = models.CharField(max_length=100)
     quantite_initiale = models.PositiveIntegerField(default=0)
     quantite_actuelle = models.PositiveIntegerField(default=0)
     date_peremption = models.DateField()
     date_entree = models.DateField(auto_now_add=True)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+    hopital = models.ForeignKey(Hopital, on_delete=models.SET_NULL, null=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:
@@ -1153,6 +1158,62 @@ class LotPharmacie(models.Model):
 
     def __str__(self):
         return f"{self.produit.nom} | Lot: {self.numero_lot} | Stock: {self.quantite_actuelle}"
+
+    @classmethod
+    def reinitialiser_stock_hopital(cls, hopital_concerne, utilisateur):
+        """
+        Réinitialise seulement le stock de l'hôpital reçu.
+
+        Les produits, lots, ventes et mouvements historiques ne sont pas supprimés.
+        Chaque retrait de stock est enregistré comme AJUSTEMENT.
+        """
+
+        if not hopital_concerne:
+            raise ValueError("Aucun hôpital n'a été sélectionné.")
+
+        with transaction.atomic():
+            lots_a_vider = list(
+                cls.objects
+                .select_for_update()
+                .filter(
+                    hopital=hopital_concerne,
+                    quantite_actuelle__gt=0
+                )
+                .select_related('produit')
+            )
+
+            mouvements = []
+            total_unites_reinitialisees = 0
+
+            for lot in lots_a_vider:
+                ancienne_quantite = lot.quantite_actuelle
+
+                lot.quantite_actuelle = 0
+                lot.save(update_fields=['quantite_actuelle'])
+
+                mouvements.append(
+                    MouvementStock(
+                        hopital=hopital_concerne,
+                        lot=lot,
+                        type_mouvement='AJUSTEMENT',
+                        quantite_unites=-ancienne_quantite,
+                        effectue_par=utilisateur
+                    )
+                )
+
+                total_unites_reinitialisees += ancienne_quantite
+
+            if mouvements:
+                MouvementStock.objects.bulk_create(mouvements)
+
+            ProduitPharmacie.objects.filter(
+                hopital=hopital_concerne
+            ).update(stock_initial=0)
+
+            return {
+                'nombre_lots': len(lots_a_vider),
+                'total_unites': total_unites_reinitialisees,
+            }
 
 
 # --- 4. MOUVEMENT DE STOCK ---

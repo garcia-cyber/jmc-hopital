@@ -22,6 +22,7 @@ from django.utils.dateparse import parse_datetime
 from django.core.exceptions import PermissionDenied
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import ProtectedError
+from django.views.decorators.http import require_POST
 
 
 # Create your views here.
@@ -7146,48 +7147,65 @@ def ajouter_produit(request):
 # ====================================================================================
 @login_required
 def gestion_pharmacie(request):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+
     hopital_user = role.hopital if role else None
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
 
     if not hopital_user:
         produits = ProduitPharmacie.objects.none()
+
     else:
-        # Sous-requête pour les entrées totales
-        entrees_subquery = LotPharmacie.objects.filter(
-            produit_id=OuterRef('pk'),
-            hopital=hopital_user
-        ).values('produit_id').annotate(
-            total_entrees=Coalesce(Sum('quantite_initiale'), 0)
-        ).values('total_entrees')[:1]
-
-        # Sous-requête pour les sorties totales
-        sorties_subquery = SortiePharmacie.objects.filter(
-            lot__produit_id=OuterRef('pk'),
-            lot__hopital=hopital_user
-        ).values('lot__produit_id').annotate(
-            total_sorties=Coalesce(Sum('quantite_vendue'), 0)
-        ).values('total_sorties')[:1]
-
-        # Requête principale
-        produits = ProduitPharmacie.objects.filter(
-            hopital=hopital_user
-        ).annotate(
-            total_entrees=Coalesce(Subquery(entrees_subquery, output_field=IntegerField()), 0),
-            total_sorties=Coalesce(Subquery(sorties_subquery, output_field=IntegerField()), 0),
-        ).annotate(
-            stock_reel=ExpressionWrapper(
-                F('total_entrees') - F('total_sorties'),
-                output_field=IntegerField()
+        # Somme de la quantité actuellement disponible
+        # dans tous les lots du médicament et de cet hôpital.
+        stock_reel_subquery = (
+            LotPharmacie.objects
+            .filter(
+                produit_id=OuterRef('pk'),
+                hopital=hopital_user
             )
-        ).order_by('nom')
+            .order_by()
+            .values('produit_id')
+            .annotate(
+                total_stock=Coalesce(
+                    Sum('quantite_actuelle'),
+                    0
+                )
+            )
+            .values('total_stock')[:1]
+        )
 
-        # Calcul de la valeur totale du stock (en CDF)
+        produits = (
+            ProduitPharmacie.objects
+            .filter(hopital=hopital_user)
+            .annotate(
+                stock_reel=Coalesce(
+                    Subquery(
+                        stock_reel_subquery,
+                        output_field=IntegerField()
+                    ),
+                    0
+                )
+            )
+            .order_by('nom')
+        )
+
+        # Valeur du stock qui est réellement disponible.
         for p in produits:
-            # prix_vente_unitaire est déjà en CDF
-            p.valeur_totale = Decimal(p.stock_reel) * p.prix_vente_unitaire
+            p.valeur_totale = (
+                Decimal(p.stock_reel) * p.prix_vente_unitaire
+            )
 
-    # Taux de change (optionnel, pour affichage USD si besoin)
     taux_change = ConfigurationHopital.get_taux()
 
     context = {
@@ -7196,7 +7214,11 @@ def gestion_pharmacie(request):
         'taux': taux_change,
     }
 
-    return render(request, 'back-end/pharmacie/gestion_stock.html', context)
+    return render(
+        request,
+        'back-end/pharmacie/gestion_stock.html',
+        context
+    )
 #
 # ====================================================================================
 # MODIFIER MEDICAMENT
@@ -12868,3 +12890,129 @@ def liste_consultations_generalAgent(request):
             'statut_paiement': statut_paiement,
         }
     )
+
+
+# -------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
+######################### MISE EN JOUR DU LOGICIEL ##############################
+
+# -------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+# le 17/07/2026
+
+# ###############################################################################
+# ###############################################################################
+
+
+
+
+
+# ---------------------------------------------------------------------------------
+# LISTE DES STOCK PRES POUR RENITIALISE  LES STOCKS PAR HOPITAL 
+# --------------------------------------------------------------------------------- 
+@login_required
+def liste_stocks_hopitaux(request):
+    role_obj = (
+        Fonction.objects.filter(userKey=request.user)
+        .select_related('hopital', 'fonctionKey')
+        .first()
+    )
+
+    fonction_key = (
+        role_obj.fonctionKey.roleName
+        if role_obj and role_obj.fonctionKey
+        else 'Utilisateur'
+    )
+
+    hopitaux = Hopital.objects.all().order_by('nomH')
+
+    # Ajoute des informations utiles pour l'affichage.
+    for hopital in hopitaux:
+        hopital.nombre_produits = ProduitPharmacie.objects.filter(
+            hopital=hopital
+        ).count()
+
+        hopital.stock_total = (
+            LotPharmacie.objects.filter(hopital=hopital)
+            .aggregate(total=Sum('quantite_actuelle'))['total']
+            or 0
+        )
+
+    context = {
+        'hopitaux': hopitaux,
+        'fonctionKey': fonction_key,
+        'role_obj': role_obj,
+    }
+
+    return render(
+        request,
+        'back-end/pharmacie/stocks_hopitaux.html',
+        context
+    )
+
+# ------------------------------------------------------------------------
+# RENITIALISATION DES STOCKS 
+# ------------------------------------------------------------------------
+@login_required
+@require_POST
+def tout_reinitialiser_stock_hopital(request, hopital_id):
+    role_obj = (
+        Fonction.objects.filter(userKey=request.user)
+        .select_related('hopital', 'fonctionKey')
+        .first()
+    )
+
+    fonction_key = (
+        role_obj.fonctionKey.roleName
+        if role_obj and role_obj.fonctionKey
+        else 'Utilisateur'
+    )
+
+    hopital = get_object_or_404(Hopital, pk=hopital_id)
+
+    roles_autorises = [
+        'admin',
+        'Administrateur',
+        'Super Administrateur',
+        'Superadmin',
+    ]
+
+    if fonction_key not in roles_autorises:
+        return HttpResponseForbidden(
+            "Vous n'avez pas l'autorisation de réinitialiser les stocks."
+        )
+
+    confirmation = request.POST.get('confirmation', '').strip()
+
+    if confirmation != 'REINITIALISER':
+        messages.error(
+            request,
+            "Réinitialisation annulée : saisissez exactement REINITIALISER."
+        )
+        return redirect('pharmacie:liste_stocks_hopitaux')
+
+    try:
+        resultat = LotPharmacie.reinitialiser_stock_hopital(
+            hopital_concerne=hopital,
+            utilisateur=request.user
+        )
+
+        messages.success(
+            request,
+            (
+                f"Le stock de l'hôpital « {hopital.nomH} » a été réinitialisé. "
+                f"{resultat['nombre_lots']} lot(s) traité(s), "
+                f"{resultat['total_unites']} unité(s) retirée(s)."
+            )
+        )
+
+    except Exception as erreur:
+        messages.error(
+            request,
+            f"Erreur : aucune modification n'a été validée. Détail : {erreur}"
+        )
+
+    return redirect('liste_stocks_hopitaux')

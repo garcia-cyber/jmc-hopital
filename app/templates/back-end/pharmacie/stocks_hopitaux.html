@@ -1,0 +1,373 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Stocks par Hôpital | Pharmacie JMC</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .card {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .table thead th {
+            background: #f8fafc;
+            border: none;
+            color: #64748b;
+            font-size: 0.85rem;
+            padding: 1rem;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .pill-product {
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 2px;
+            display: inline-block;
+            color: #334155;
+        }
+
+        .pharm-header {
+            background: linear-gradient(135deg, #10b981, #14b8a6);
+            color: #fff;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+
+        .pharm-header h4 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .pharm-header small {
+            opacity: 0.95;
+            font-size: 0.85rem;
+        }
+
+        .btn-reset {
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .hospital-name {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .warning-box {
+            border-radius: 14px;
+            border: 1px solid #fde68a;
+            background-color: #fffbeb;
+            color: #92400e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+
+                <!-- En-tête -->
+                <div class="pharm-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4>
+                                <i class="fas fa-hospital me-2"></i>
+                                Gestion et réinitialisation des stocks par hôpital
+                            </h4>
+
+                            <small>
+                                Rôle connecté :
+                                <strong>{{ fonctionKey }}</strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Django -->
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                                 role="alert">
+
+                                {% if message.tags == 'success' %}
+                                    <i class="fas fa-check-circle me-2"></i>
+                                {% elif message.tags == 'error' %}
+                                    <i class="fas fa-times-circle me-2"></i>
+                                {% elif message.tags == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle me-2"></i>
+                                {% endif %}
+
+                                {{ message }}
+
+                                <button type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Fermer">
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Avertissement -->
+                <div class="alert warning-box mb-4">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-triangle-exclamation fa-lg me-3 mt-1"></i>
+
+                        <div>
+                            <strong>Attention à la réinitialisation.</strong><br>
+
+                            Cette action met les quantités actuellement disponibles
+                            des lots à zéro uniquement pour l'hôpital sélectionné.
+
+                            Les produits, les lots, les paiements, les ventes et
+                            l'historique des mouvements doivent être conservés
+                            pour assurer la traçabilité.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tableau des hôpitaux -->
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="mb-1">
+                                <i class="fas fa-list me-2 text-success"></i>
+                                Hôpitaux enregistrés
+                            </h5>
+
+                            <small class="text-muted">
+                                Sélectionnez uniquement l'hôpital dont le stock doit être remis à zéro.
+                            </small>
+                        </div>
+
+                        <span class="badge bg-success">
+                            {{ hopitaux|length }} hôpital{{ hopitaux|length|pluralize }}
+                        </span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="hopitalTable">
+
+                            <thead>
+                                <tr>
+                                    <th style="width: 70px;">#</th>
+                                    <th>Nom de l'hôpital</th>
+                                    <th>État du stock</th>
+                                    <th class="text-center">Action globale</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for hopital in hopitaux %}
+                                    <tr>
+                                        <td>
+                                            <span class="text-muted">
+                                                {{ forloop.counter }}
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <div class="hospital-name">
+                                                <i class="fas fa-hospital text-success me-2"></i>
+
+                                                <!-- CORRECTION : ton modèle possède nomH -->
+                                                {{ hopital.nomH }}
+                                            </div>
+
+                                            <small class="text-muted">
+                                                ID hôpital : {{ hopital.id }}
+                                            </small>
+                                        </td>
+
+                                        <td>
+                                            <span class="pill-product">
+                                                <i class="fas fa-boxes-stacked me-1"></i>
+                                                Stock rattaché à cet hôpital
+                                            </span>
+                                        </td>
+
+                                        <td class="text-center">
+
+                                            <!--
+                                                NOTE :
+                                                Le contrôle dans le template est visuel seulement.
+                                                La vue Django doit aussi contrôler le rôle
+                                                et l'hôpital de l'utilisateur connecté.
+                                            -->
+                                            {% if fonctionKey == 'admin' or fonctionKey == 'Administrateur' or fonctionKey == 'Super Administrateur' or fonctionKey == 'Superadmin' %}
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-danger px-3 py-2 btn-reset"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#modalReset{{ hopital.id }}">
+
+                                                    <i class="fas fa-rotate-left me-1"></i>
+                                                    Tout réinitialiser
+                                                </button>
+
+                                            {% else %}
+                                                <span class="text-muted small">
+                                                    <i class="fas fa-lock me-1"></i>
+                                                    Accès restreint
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+
+                                    <!-- Modal de confirmation pour cet hôpital -->
+                                    <div class="modal fade"
+                                         id="modalReset{{ hopital.id }}"
+                                         tabindex="-1"
+                                         aria-labelledby="modalResetLabel{{ hopital.id }}"
+                                         aria-hidden="true">
+
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 shadow">
+
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title"
+                                                        id="modalResetLabel{{ hopital.id }}">
+
+                                                        <i class="fas fa-triangle-exclamation me-2"></i>
+                                                        Confirmer la réinitialisation
+                                                    </h5>
+
+                                                    <button type="button"
+                                                            class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal"
+                                                            aria-label="Fermer">
+                                                    </button>
+                                                </div>
+
+                                                <form method="post"
+                                                      action="{% url 'tout_reinitialiser_stock_hopital' hopital.id %}">
+
+                                                    {% csrf_token %}
+
+                                                    <div class="modal-body">
+
+                                                        <p class="mb-3">
+                                                            Vous êtes sur le point de remettre à zéro
+                                                            tous les stocks actuellement disponibles
+                                                            pour l'hôpital :
+                                                        </p>
+
+                                                        <div class="alert alert-danger">
+                                                            <strong>
+                                                                <i class="fas fa-hospital me-2"></i>
+                                                                {{ hopital.nomH }}
+                                                            </strong>
+                                                        </div>
+
+                                                        <p class="mb-2">
+                                                            Le système doit :
+                                                        </p>
+
+                                                        <ul class="mb-3">
+                                                            <li>mettre <code>quantite_actuelle</code> des lots à zéro ;</li>
+                                                            <li>créer un mouvement de type <code>AJUSTEMENT</code> ;</li>
+                                                            <li>conserver les médicaments, lots, ventes et paiements existants ;</li>
+                                                            <li>ne modifier aucun autre hôpital.</li>
+                                                        </ul>
+
+                                                        <div class="form-group mb-0">
+                                                            <label for="confirmation{{ hopital.id }}"
+                                                                   class="form-label fw-bold">
+
+                                                                Écrivez exactement
+                                                                <span class="text-danger">
+                                                                    REINITIALISER
+                                                                </span>
+                                                                pour confirmer :
+                                                            </label>
+
+                                                            <input type="text"
+                                                                   id="confirmation{{ hopital.id }}"
+                                                                   name="confirmation"
+                                                                   class="form-control"
+                                                                   autocomplete="off"
+                                                                   placeholder="REINITIALISER"
+                                                                   required>
+                                                        </div>
+
+                                                    </div>
+
+                                                    <div class="modal-footer">
+                                                        <button type="button"
+                                                                class="btn btn-light"
+                                                                data-bs-dismiss="modal">
+                                                            Annuler
+                                                        </button>
+
+                                                        <button type="submit"
+                                                                class="btn btn-danger btn-reset">
+
+                                                            <i class="fas fa-rotate-left me-1"></i>
+                                                            Confirmer la réinitialisation
+                                                        </button>
+                                                    </div>
+
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-5">
+                                            <i class="fas fa-hospital-user fa-2x mb-3 d-block text-secondary"></i>
+                                            Aucun hôpital n'est enregistré dans le système.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+
+    <!-- Bootstrap 5 : nécessaire pour les modals data-bs-toggle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html> 

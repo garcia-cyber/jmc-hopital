@@ -7327,32 +7327,92 @@ def supprimer_produit_pharmacie(request, produit_id):
 
 #
 # ====================================================================================
-# GESTION DES STOCKS
+# GESTION DES STOCKS LOT REGISTER 
 # ====================================================================================
+# mise en jour le 18/09/2026
+#
 @login_required
 def ajouter_lot(request):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+
     hopital_user = role.hopital if role else None
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
+
+    if not hopital_user:
+        messages.error(
+            request,
+            "Votre compte n'est associé à aucun hôpital."
+        )
+        return redirect('gestion_pharmacie')
 
     if request.method == 'POST':
-        form = LotPharmacieForm(request.POST, hopital=hopital_user)
+        form = LotPharmacieForm(
+            request.POST,
+            hopital=hopital_user
+        )
+
         if form.is_valid():
             lot = form.save(commit=False)
+
+            # Ne jamais laisser le navigateur définir l'hôpital.
             lot.hopital = hopital_user
-            lot.save()
-            messages.success(request, "Lot ajouté avec succès, stock mis à jour.")
-            return redirect('gestion_pharmacie')
+
+            # Protection supplémentaire :
+            # le produit choisi doit être actif et appartenir à cet hôpital.
+            produit_valide = ProduitPharmacie.objects.filter(
+                pk=lot.produit_id,
+                hopital=hopital_user,
+                actif=True
+            ).exists()
+
+            if not produit_valide:
+                form.add_error(
+                    'produit',
+                    "Ce médicament est inactif ou n'appartient pas à votre hôpital."
+                )
+            else:
+                lot.save()
+
+                messages.success(
+                    request,
+                    "Lot ajouté avec succès. Le stock a été mis à jour."
+                )
+
+                return redirect('gestion_pharmacie')
+
     else:
         form = LotPharmacieForm(hopital=hopital_user)
 
-    lots = LotPharmacie.objects.filter(hopital=hopital_user).select_related('produit').order_by('-id')
+    # N'affiche que les lots dont le médicament est toujours actif.
+    lots = (
+        LotPharmacie.objects
+        .filter(
+            produit__hopital=hopital_user,
+            produit__actif=True
+        )
+        .select_related('produit')
+        .order_by('-id')
+    )
 
-    return render(request, 'back-end/pharmacie/ajouter_lot.html', {
-        'form': form,
-        'fonctionKey': fonctionKey,
-        'lots': lots
-    })
+    return render(
+        request,
+        'back-end/pharmacie/ajouter_lot.html',
+        {
+            'form': form,
+            'fonctionKey': fonctionKey,
+            'lots': lots,
+        }
+    )
 #
 # =====================================================================================
 # VENTE DE PRODUIT 

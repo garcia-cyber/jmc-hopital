@@ -490,24 +490,66 @@ class ProduitPharmacieForm(forms.ModelForm):
             'prix_vente_unitaire': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+
+
+
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+
 class LotPharmacieForm(forms.ModelForm):
     class Meta:
         model = LotPharmacie
-        fields = ['produit', 'numero_lot', 'quantite_initiale', 'date_peremption']
+        fields = [
+            'produit',
+            'numero_lot',
+            'quantite_initiale',
+            'date_peremption',
+        ]
+
         widgets = {
-            'produit': forms.Select(attrs={'class': 'form-control'}),
-            'numero_lot': forms.TextInput(attrs={'class': 'form-control'}),
-            'quantite_initiale': forms.NumberInput(attrs={'class': 'form-control'}),
-            'date_peremption': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'produit': forms.Select(
+                attrs={'class': 'form-control'}
+            ),
+            'numero_lot': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Exemple : LOT-001'
+                }
+            ),
+            'quantite_initiale': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'min': '1'
+                }
+            ),
+            'date_peremption': forms.DateInput(
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date'
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         hopital = kwargs.pop('hopital', None)
+
         super().__init__(*args, **kwargs)
+
         if hopital:
-            self.fields['produit'].queryset = ProduitPharmacie.objects.filter(hopital=hopital)
+            # Important :
+            # seul ce qui appartient à cet hôpital ET est encore actif
+            # apparaît dans la liste déroulante.
+            self.fields['produit'].queryset = (
+                ProduitPharmacie.objects.filter(
+                    hopital=hopital,
+                    actif=True
+                ).order_by('nom', 'dosage')
+            )
         else:
-            self.fields['produit'].queryset = ProduitPharmacie.objects.none()
+            # Sans hôpital, aucun médicament ne doit être affiché.
+            self.fields['produit'].queryset = (
+                ProduitPharmacie.objects.none()
+            )
 
 
 # ==========================================================================================

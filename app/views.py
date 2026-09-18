@@ -7419,75 +7419,182 @@ def ajouter_lot(request):
 # =====================================================================================
 @login_required
 def enregistrer_vente(request):
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+    role = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
+
     hopital_user = role.hopital if role else None
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
+
+    fonctionKey = (
+        role.fonctionKey.roleName
+        if role and role.fonctionKey
+        else None
+    )
+
+    # Un utilisateur sans hôpital ne peut ni voir ni vendre les produits.
+    if not hopital_user:
+        if request.method == 'POST':
+            return JsonResponse({
+                'status': 'error',
+                'message': "Votre compte n'est associé à aucun hôpital."
+            })
+
+        messages.error(
+            request,
+            "Votre compte n'est associé à aucun hôpital."
+        )
+
+        return render(
+            request,
+            'back-end/pharmacie/enregistrer_vente.html',
+            {
+                'produits': ProduitPharmacie.objects.none(),
+                'taux_actuel': float(ConfigurationHopital.get_taux()),
+                'fonctionKey': fonctionKey,
+            }
+        )
 
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+
             panier = data.get('panier_data', [])
-            devise = data.get('devise', 'CDF')  # CDF par défaut
+            devise = data.get('devise', 'CDF')
             montant_verse = Decimal(str(data.get('montant_verse', 0)))
 
             if not panier:
-                return JsonResponse({'status': 'error', 'message': 'Le panier est vide.'})
-            if montant_verse < 0:
-                return JsonResponse({'status': 'error', 'message': 'Montant versé invalide.'})
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Le panier est vide.'
+                })
 
-            # Taux de change (1 USD = taux CDF)
+            if montant_verse < 0:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Montant versé invalide.'
+                })
+
+            if devise not in ['CDF', 'USD']:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Devise invalide.'
+                })
+
             taux = Decimal(str(ConfigurationHopital.get_taux()))
-            if not taux or taux <= 0:
+
+            if taux <= 0:
                 taux = Decimal('2300.00')
 
             with transaction.atomic():
                 montant_total_cdf = Decimal('0.00')
                 items_a_vendre = []
 
-                # Calcul du total en CDF
                 for item in panier:
-                    lot = LotPharmacie.objects.select_for_update().filter(
-                        produit_id=item['id'],
-                        hopital=hopital_user,
-                        quantite_actuelle__gte=int(item['qte'])
-                    ).first()
+                    try:
+                        produit_id = int(item.get('id'))
+                        quantite = int(item.get('qte'))
+                    except (TypeError, ValueError):
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Produit ou quantité invalide.'
+                        })
+
+                    if quantite <= 0:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'La quantité doit être supérieure à zéro.'
+                        })
+
+                    # Vérifie que le médicament :
+                    # - appartient à l'hôpital connecté ;
+                    # - est encore actif ;
+                    # - peut encore être vendu.
+                    produit = (
+                        ProduitPharmacie.objects
+                        .filter(
+                            pk=produit_id,
+                            hopital=hopital_user,
+                            actif=True
+                        )
+                        .first()
+                    )
+
+                    if not produit:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': (
+                                "Ce médicament est introuvable, inactif "
+                                "ou n'appartient pas à votre hôpital."
+                            )
+                        })
+
+                    # Cherche un lot de CE médicament, dans CET hôpital,
+                    # avec une quantité suffisante.
+                    lot = (
+                        LotPharmacie.objects
+                        .select_for_update()
+                        .filter(
+                            produit=produit,
+                            produit__actif=True,
+                            quantite_actuelle__gte=quantite
+                        )
+                        .order_by('date_peremption', 'id')
+                        .first()
+                    )
 
                     if not lot:
-                        produit = ProduitPharmacie.objects.filter(id=item['id'], hopital=hopital_user).first()
-                        nom_produit = produit.nom if produit else "Produit"
-                        return JsonResponse({'status': 'error', 'message': f'Stock insuffisant pour {nom_produit}'})
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': (
+                                f"Stock insuffisant pour « {produit.nom} »."
+                            )
+                        })
 
-                    # prix_vente_unitaire est considéré en CDF
-                    prix_u_cdf = Decimal(str(lot.produit.prix_vente_unitaire or 0))
-                    montant_total_cdf += (prix_u_cdf * int(item['qte']))
-                    items_a_vendre.append({'lot': lot, 'qte': int(item['qte'])})
+                    prix_u_cdf = Decimal(
+                        str(produit.prix_vente_unitaire or 0)
+                    )
 
-                # Convertir le montant versé en CDF pour comparer
+                    montant_total_cdf += prix_u_cdf * quantite
+
+                    items_a_vendre.append({
+                        'lot': lot,
+                        'quantite': quantite,
+                    })
+
                 if devise == 'CDF':
                     montant_verse_cdf = montant_verse
-                else:  # USD
+                else:
                     montant_verse_cdf = montant_verse * taux
 
                 if montant_verse_cdf > montant_total_cdf + Decimal('1'):
-                    return JsonResponse({'status': 'error', 'message': 'Le montant versé dépasse le total à payer.'})
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': (
+                            'Le montant versé dépasse le total à payer.'
+                        )
+                    })
 
                 reste_a_payer_cdf = montant_total_cdf - montant_verse_cdf
 
                 paiement = Paiement.objects.create(
-                    montant_verse=montant_verse,      # montant dans la devise saisie
+                    montant_verse=montant_verse,
                     devise=devise,
                     service='PHARMACIE',
                     caissier=request.user,
                     hopital=hopital_user,
-                    reste_a_payer=reste_a_payer_cdf   # reste en CDF
+                    reste_a_payer=reste_a_payer_cdf
                 )
 
                 for item in items_a_vendre:
                     SortiePharmacie.objects.create(
                         paiement=paiement,
                         lot=item['lot'],
-                        quantite_vendue=item['qte'],
-                        vendu_par=request.user
+                        quantite_vendue=item['quantite'],
+                        vendu_par=request.user,
+                        hopital=hopital_user
                     )
 
             return JsonResponse({
@@ -7497,20 +7604,44 @@ def enregistrer_vente(request):
                 'total_cdf': str(montant_total_cdf)
             })
 
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Données de vente invalides.'
+            })
+
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
 
-    produits = ProduitPharmacie.objects.filter(
-        hopital=hopital_user
-    ).annotate(
-        stock_reel=Sum('les_lots__quantite_actuelle')
-    ).order_by('nom')
+    # GET :
+    # Affiche uniquement les médicaments actifs de l'hôpital connecté.
+    produits = (
+        ProduitPharmacie.objects
+        .filter(
+            hopital=hopital_user,
+            actif=True
+        )
+        .annotate(
+            stock_reel=Coalesce(
+                Sum('les_lots__quantite_actuelle'),
+                0
+            )
+        )
+        .order_by('nom')
+    )
 
-    return render(request, 'back-end/pharmacie/enregistrer_vente.html', {
-        'produits': produits,
-        'taux_actuel': float(ConfigurationHopital.get_taux()),
-        'fonctionKey': fonctionKey
-    })
+    return render(
+        request,
+        'back-end/pharmacie/enregistrer_vente.html',
+        {
+            'produits': produits,
+            'taux_actuel': float(ConfigurationHopital.get_taux()),
+            'fonctionKey': fonctionKey
+        }
+    )
 #
 # =============================================================================================================================
 # DASHBOARD COTE PHARMACIE 
@@ -7620,21 +7751,65 @@ def dashboard_ventes(request):
 # LISTE DES VENTES
 # ==================================================================================================
 @login_required
-@login_required
 def liste_ventes(request):
-    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    hopital_user = role_obj.hopital if role_obj else None
-    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Invité"
+    role_obj = (
+        Fonction.objects
+        .select_related('hopital', 'fonctionKey')
+        .filter(userKey=request.user)
+        .first()
+    )
 
-    # Taux de change (1 USD = taux CDF)
+    hopital_user = role_obj.hopital if role_obj else None
+
+    fonctionKey = (
+        role_obj.fonctionKey.roleName
+        if role_obj and role_obj.fonctionKey
+        else "Invité"
+    )
+
+    fonction_key_normalise = (
+        fonctionKey.strip().lower()
+        if fonctionKey
+        else ''
+    )
+
+    est_admin = (
+        request.user.is_superuser
+        or request.user.is_staff
+        or fonction_key_normalise == 'admin'
+    )
+
     taux = Decimal(str(ConfigurationHopital.get_taux()))
+
     if not taux or taux <= 0:
         taux = Decimal('2300.00')
 
-    # Base : toutes les ventes pharmacie de l’hôpital
-    ventes = Paiement.objects.filter(service='PHARMACIE', hopital=hopital_user).order_by('-date_paiement')
+    # ADMIN : toutes les ventes de pharmacie de tous les hôpitaux.
+    if est_admin:
+        ventes = (
+            Paiement.objects
+            .filter(service='PHARMACIE')
+            .select_related('hopital', 'caissier')
+            .order_by('-date_paiement')
+        )
 
-    # Filtres
+    # GESTIONNAIRE / PHARMACIEN / AUTRES :
+    # uniquement les ventes de l'hôpital du compte connecté.
+    elif hopital_user:
+        ventes = (
+            Paiement.objects
+            .filter(
+                service='PHARMACIE',
+                hopital=hopital_user
+            )
+            .select_related('hopital', 'caissier')
+            .order_by('-date_paiement')
+        )
+
+    # Utilisateur sans hôpital : aucune donnée.
+    else:
+        ventes = Paiement.objects.none()
+
     q = request.GET.get('q', '').strip()
     devise = request.GET.get('devise', '').strip()
     date_debut = request.GET.get('date_debut', '').strip()
@@ -7642,73 +7817,120 @@ def liste_ventes(request):
 
     if q:
         ventes = ventes.filter(
-            Q(service__icontains=q) |
-            Q(devise__icontains=q) |
-            Q(montant_verse__icontains=q) |
-            Q(reste_a_payer__icontains=q)
+            Q(service__icontains=q)
+            | Q(devise__icontains=q)
+            | Q(montant_verse__icontains=q)
+            | Q(reste_a_payer__icontains=q)
+            | Q(hopital__nomH__icontains=q)
+            | Q(caissier__username__icontains=q)
         )
 
     if devise in ['USD', 'CDF']:
         ventes = ventes.filter(devise=devise)
 
     if date_debut:
-        ventes = ventes.filter(date_paiement__date__gte=date_debut)
+        ventes = ventes.filter(
+            date_paiement__date__gte=date_debut
+        )
 
     if date_fin:
-        ventes = ventes.filter(date_paiement__date__lte=date_fin)
+        ventes = ventes.filter(
+            date_paiement__date__lte=date_fin
+        )
 
-    # Séparation par devise
     usd_ventes = ventes.filter(devise='USD')
     cdf_ventes = ventes.filter(devise='CDF')
 
-    # Totaux bruts (dans leur devise)
-    total_verse_usd = usd_ventes.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
-    total_verse_cdf = cdf_ventes.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+    total_verse_usd = (
+        usd_ventes.aggregate(total=Sum('montant_verse'))['total']
+        or Decimal('0.00')
+    )
 
-    total_reste_usd = usd_ventes.aggregate(total=Sum('reste_a_payer'))['total'] or Decimal('0.00')
-    total_reste_cdf = cdf_ventes.aggregate(total=Sum('reste_a_payer'))['total'] or Decimal('0.00')
+    total_verse_cdf = (
+        cdf_ventes.aggregate(total=Sum('montant_verse'))['total']
+        or Decimal('0.00')
+    )
 
-    total_reduction_usd = usd_ventes.aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
-    total_reduction_cdf = cdf_ventes.aggregate(total=Sum('montant_reduction'))['total'] or Decimal('0.00')
+    total_reste_usd = (
+        usd_ventes.aggregate(total=Sum('reste_a_payer'))['total']
+        or Decimal('0.00')
+    )
 
-    # Conversion CDF <-> USD pour l’affichage
-    # On considère que les totaux "principaux" sont en CDF
-    total_verse_cdf_total = total_verse_cdf + (total_verse_usd * taux)
-    total_verse_usd_total = total_verse_cdf_total / taux if taux else Decimal('0.00')
+    total_reste_cdf = (
+        cdf_ventes.aggregate(total=Sum('reste_a_payer'))['total']
+        or Decimal('0.00')
+    )
 
-    total_reste_cdf_total = total_reste_cdf + (total_reste_usd * taux)
-    total_reste_usd_total = total_reste_cdf_total / taux if taux else Decimal('0.00')
+    total_reduction_usd = (
+        usd_ventes.aggregate(total=Sum('montant_reduction'))['total']
+        or Decimal('0.00')
+    )
 
-    total_reduction_cdf_total = total_reduction_cdf + (total_reduction_usd * taux)
-    total_reduction_usd_total = total_reduction_cdf_total / taux if taux else Decimal('0.00')
+    total_reduction_cdf = (
+        cdf_ventes.aggregate(total=Sum('montant_reduction'))['total']
+        or Decimal('0.00')
+    )
 
-    return render(request, 'back-end/pharmacie/liste_ventes.html', {
-        'ventes': ventes,
-        'fonctionKey': fonctionKey,
+    total_verse_cdf_total = total_verse_cdf + (
+        total_verse_usd * taux
+    )
 
-        # Totaux par devise (bruts)
-        'total_verse_usd': total_verse_usd,
-        'total_verse_cdf': total_verse_cdf,
-        'total_reste_usd': total_reste_usd,
-        'total_reste_cdf': total_reste_cdf,
-        'total_reduction_usd': total_reduction_usd,
-        'total_reduction_cdf': total_reduction_cdf,
+    total_verse_usd_total = (
+        total_verse_cdf_total / taux
+        if taux
+        else Decimal('0.00')
+    )
 
-        # Totaux globaux (CDF + USD convertis)
-        'total_verse_cdf_total': total_verse_cdf_total,
-        'total_verse_usd_total': total_verse_usd_total,
-        'total_reste_cdf_total': total_reste_cdf_total,
-        'total_reste_usd_total': total_reste_usd_total,
-        'total_reduction_cdf_total': total_reduction_cdf_total,
-        'total_reduction_usd_total': total_reduction_usd_total,
+    total_reste_cdf_total = total_reste_cdf + (
+        total_reste_usd * taux
+    )
 
-        'nb_ventes': ventes.count(),
-        'q': q,
-        'devise': devise,
-        'date_debut': date_debut,
-        'date_fin': date_fin,
-        'taux_actuel': float(taux),
-    })
+    total_reste_usd_total = (
+        total_reste_cdf_total / taux
+        if taux
+        else Decimal('0.00')
+    )
+
+    total_reduction_cdf_total = total_reduction_cdf + (
+        total_reduction_usd * taux
+    )
+
+    total_reduction_usd_total = (
+        total_reduction_cdf_total / taux
+        if taux
+        else Decimal('0.00')
+    )
+
+    return render(
+        request,
+        'back-end/pharmacie/liste_ventes.html',
+        {
+            'ventes': ventes,
+            'fonctionKey': fonctionKey,
+            'est_admin': est_admin,
+
+            'total_verse_usd': total_verse_usd,
+            'total_verse_cdf': total_verse_cdf,
+            'total_reste_usd': total_reste_usd,
+            'total_reste_cdf': total_reste_cdf,
+            'total_reduction_usd': total_reduction_usd,
+            'total_reduction_cdf': total_reduction_cdf,
+
+            'total_verse_cdf_total': total_verse_cdf_total,
+            'total_verse_usd_total': total_verse_usd_total,
+            'total_reste_cdf_total': total_reste_cdf_total,
+            'total_reste_usd_total': total_reste_usd_total,
+            'total_reduction_cdf_total': total_reduction_cdf_total,
+            'total_reduction_usd_total': total_reduction_usd_total,
+
+            'nb_ventes': ventes.count(),
+            'q': q,
+            'devise': devise,
+            'date_debut': date_debut,
+            'date_fin': date_fin,
+            'taux_actuel': float(taux),
+        }
+    )
 #
 # ===================================================================================================
 # FACTURATION DES VENTES PRODUITS

@@ -893,3 +893,160 @@ class DemandeExamenHospitalisationForm(forms.Form):
             ).order_by('libelle')
 
             self.fields['prestation'].queryset = prestations
+
+# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
+# MISE EN JOUR 
+#   - acte medical le 25/09/2026
+#   - ici formulaire 
+#
+#
+class ActeMedicalForm(forms.ModelForm):
+    class Meta:
+        model = ActeMedical
+        fields = [
+            'prestation',
+            'type_patient',
+            'patient',
+            'client_externe',
+            'date_acte',
+            'medecin',
+            'statut',
+            'observation',
+        ]
+
+        widgets = {
+            'prestation': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_prestation',
+            }),
+
+            'type_patient': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_type_patient',
+            }),
+
+            'patient': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_patient',
+            }),
+
+            'client_externe': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_client_externe',
+            }),
+
+            'date_acte': forms.DateTimeInput(
+                attrs={
+                    'class': 'form-control',
+                    'type': 'datetime-local',
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
+
+            'medecin': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+
+            'statut': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+
+            'observation': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+            }),
+        }
+
+    def __init__(self, *args, hopital=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if hopital:
+            self.fields['prestation'].queryset = Prestation.objects.filter(
+                hopital=hopital
+            ).order_by('categorie', 'libelle')
+
+            self.fields['patient'].queryset = Patient.objects.filter(
+                hopital=hopital
+            ).order_by('noms')
+
+            self.fields['client_externe'].queryset = ClientExterne.objects.filter(
+                hopital=hopital
+            ).order_by('noms')
+
+        self.fields['patient'].required = False
+        self.fields['client_externe'].required = False
+        self.fields['medecin'].required = False
+        self.fields['observation'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        type_patient = cleaned_data.get('type_patient')
+        patient = cleaned_data.get('patient')
+        client_externe = cleaned_data.get('client_externe')
+
+        if type_patient == 'INTERNE' and not patient:
+            self.add_error(
+                'patient',
+                'Sélectionnez un patient interne.'
+            )
+
+        if type_patient == 'EXTERNE' and not client_externe:
+            self.add_error(
+                'client_externe',
+                'Sélectionnez un client externe.'
+            )
+
+        if type_patient == 'INTERNE' and client_externe:
+            self.add_error(
+                'client_externe',
+                'Ne sélectionnez pas de client externe pour un patient interne.'
+            )
+
+        if type_patient == 'EXTERNE' and patient:
+            self.add_error(
+                'patient',
+                'Ne sélectionnez pas de patient interne pour un client externe.'
+            )
+
+        return cleaned_data
+
+class ClientExterneFormDeux(forms.ModelForm):
+    class Meta:
+        model = ClientExterne
+
+        fields = [
+            'noms',
+            'sexe',
+            'poids',
+            'age',
+            'telephone',
+        ]
+
+        widgets = {
+            'noms': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nom complet du client externe',
+            }),
+
+            'sexe': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+
+            'poids': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. 65 kg',
+            }),
+
+            'age': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. 32 ans',
+            }),
+
+            'telephone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex. +243...',
+            }),
+        }

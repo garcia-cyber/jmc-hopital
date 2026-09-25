@@ -219,11 +219,19 @@ class Paiement(models.Model):
         ('MATERNITE', 'Maternité'), ('DECES', 'Actes de décès'), ('EXAMENS', 'Examens'),
         ('CHIRURGIE', 'Chirurgie'), ('CARTE_FIDELITE', 'Achat Carte de Fidélité'), 
         ('PHARMACIE', 'Pharmacie'), ('EXAMEN_EXTERNE', 'Examen Externe'),
-        ('ENTREPRISE', 'Paiement Entreprise'), ('HOSPITALISATION', 'Hospitalisation')
+        ('ENTREPRISE', 'Paiement Entreprise'), ('HOSPITALISATION', 'Hospitalisation'), ('ACTE_MEDICAL', 'Acte médical')
     ]
 
     # Relations
     bloc_op = models.ForeignKey('BlocOperatoire', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
+    acte_medical = models.ForeignKey(
+    'ActeMedical',
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='paiements',
+    verbose_name='Acte médical'
+)
     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, null=True, blank=True)
     demande_examen_externe = models.ForeignKey('DemandeExamenExterne', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
     consultation = models.ForeignKey('Consultation', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
@@ -1739,3 +1747,158 @@ class AvisMedecin(models.Model):
     def __str__(self):
         medecin_str = self.medecin.get_full_name() or self.medecin.username if self.medecin else "Inconnu"
         return f"Avis de {medecin_str} sur {self.patient.noms} le {self.date_avis.strftime('%d/%m/%Y %H:%M')}"
+
+
+
+# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
+# MISE EN JOUR 
+#   acte medical le 25/09/2026
+#
+#
+class ActeMedical(models.Model):
+    TYPE_PATIENT = [
+        ('INTERNE', 'Patient interne'),
+        ('EXTERNE', 'Client externe'),
+    ]
+
+    STATUT_CHOICES = [
+        ('EN_ATTENTE', 'En attente'),
+        ('PLANIFIE', 'Planifié'),
+        ('EN_COURS', 'En cours'),
+        ('TERMINE', 'Terminé'),
+        ('ANNULE', 'Annulé'),
+    ]
+
+    prestation = models.ForeignKey(
+        'Prestation',
+        on_delete=models.PROTECT,
+        related_name='actes_medicaux'
+    )
+
+    patient = models.ForeignKey(
+        'Patient',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='actes_medicaux'
+    )
+
+    client_externe = models.ForeignKey(
+        'ClientExterne',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='actes_medicaux'
+    )
+
+    type_patient = models.CharField(
+        max_length=10,
+        choices=TYPE_PATIENT
+    )
+
+    date_acte = models.DateTimeField(default=timezone.now)
+
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='EN_ATTENTE'
+    )
+
+    montant_prevu = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+
+    observation = models.TextField(blank=True, null=True)
+
+    medecin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='actes_medicaux_realises'
+    )
+
+    hopital = models.ForeignKey(
+        'Hopital',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='actes_medicaux'
+    )
+
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='actes_medicaux_crees'
+    )
+
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        erreurs = {}
+
+        if self.type_patient == 'INTERNE':
+            if not self.patient:
+                erreurs['patient'] = (
+                    "Vous devez sélectionner un patient interne."
+                )
+
+            if self.client_externe:
+                erreurs['client_externe'] = (
+                    "Un acte interne ne peut pas avoir un client externe."
+                )
+
+        elif self.type_patient == 'EXTERNE':
+            if not self.client_externe:
+                erreurs['client_externe'] = (
+                    "Vous devez sélectionner ou créer un client externe."
+                )
+
+            if self.patient:
+                erreurs['patient'] = (
+                    "Un acte externe ne peut pas avoir un patient interne."
+                )
+
+        if erreurs:
+            raise ValidationError(erreurs)
+
+    def save(self, *args, **kwargs):
+        if self.prestation:
+            self.montant_prevu = self.prestation.prix
+
+        if self.patient:
+            self.type_patient = 'INTERNE'
+
+        elif self.client_externe:
+            self.type_patient = 'EXTERNE'
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def nom_personne(self):
+        if self.patient:
+            return self.patient.noms
+
+        if self.client_externe:
+            return self.client_externe.noms
+
+        return "Personne non identifiée"
+
+    @property
+    def telephone_personne(self):
+        if self.patient:
+            return self.patient.telephone
+
+        if self.client_externe:
+            return self.client_externe.telephone
+
+        return ""
+
+    def __str__(self):
+        return f"{self.prestation.libelle} - {self.nom_personne}"

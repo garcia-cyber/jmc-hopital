@@ -13410,3 +13410,304 @@ def reinitialiser_medicaments_hopital(request, hopital_id):
     )
 
     return redirect('liste_stocks_hopitaux')
+
+
+# 
+# - le 25/09/2026
+# --------------------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------------------
+# acte medical 
+
+def get_hopital_et_fonction(user):
+    """
+    Récupère la fonction active de l'utilisateur, son hôpital et son rôle.
+    """
+    fonction = Fonction.objects.filter(
+        userKey=user,
+        autorisation='oui'
+    ).select_related('hopital', 'fonctionKey').first()
+
+    if fonction:
+        return fonction.hopital, fonction.fonctionKey.roleName if fonction.fonctionKey else None
+
+    return None, None
+
+@login_required
+@transaction.atomic
+def creer_acte_medical(request):
+    hopital, fonction_key = get_hopital_et_fonction(request.user)
+
+    if not hopital:
+        messages.error(
+            request,
+            "Votre compte n'est associé à aucun hôpital ou n'a pas l'autorisation requise."
+        )
+        return redirect('dashboard')
+
+    def afficher_formulaire(acte_form, client_form):
+        return render(
+            request,
+            'back-end/actes/creer_acte.html',
+            {
+                'acte_form': acte_form,
+                'client_form': client_form,
+                'hopital': hopital,
+                'fonctionKey': fonction_key,
+            }
+        )
+
+    # ============================================================
+    # MODE GET : affichage initial du formulaire
+    # ============================================================
+    if request.method == 'GET':
+        categorie_selectionnee = request.GET.get('categorie', '')
+
+        acte_form = ActeMedicalForm(
+            hopital=hopital,
+            user=request.user,
+            fonction_key=fonction_key,
+            initial={
+            'categorie': categorie_selectionnee
+            }
+        )
+
+        client_form = ClientExterneFormDeux(
+            prefix='externe'
+        )
+
+        return afficher_formulaire(acte_form, client_form)
+
+    # ============================================================
+    # MODE POST : enregistrement
+    # ============================================================
+    post_data = request.POST.copy()
+
+    type_patient = post_data.get('type_patient')
+
+    client_form = ClientExterneFormDeux(
+        request.POST,
+        prefix='externe'
+    )
+
+    # ============================================================
+    # AUCUN TYPE DE PERSONNE SÉLECTIONNÉ
+    # ============================================================
+    if type_patient not in ['INTERNE', 'EXTERNE']:
+        messages.error(
+            request,
+            "Veuillez choisir « Patient interne » ou « Client externe »."
+        )
+
+        acte_form = ActeMedicalForm(
+            post_data,
+            hopital=hopital,
+            user=request.user,
+            fonction_key=fonction_key
+        )
+
+        return afficher_formulaire(acte_form, client_form)
+
+    # ============================================================
+    # CAS 1 : PATIENT INTERNE
+    # ============================================================
+    if type_patient == 'INTERNE':
+        # Un acte interne ne peut pas avoir de client externe.
+        post_data['client_externe'] = ''
+
+        acte_form = ActeMedicalForm(
+            post_data,
+            hopital=hopital,
+            user=request.user,
+            fonction_key=fonction_key
+        )
+
+        if not acte_form.is_valid():
+            return afficher_formulaire(acte_form, client_form)
+
+        # Les prestations cochées et le patient sélectionné
+        # ont déjà été vérifiés par ActeMedicalForm.
+        acte = acte_form.save(commit=False)
+
+        acte.hopital = hopital
+        acte.cree_par = request.user
+        acte.patient = acte_form.cleaned_data.get('patient')
+        acte.client_externe = None
+
+        acte.save()
+
+        # Enregistre toutes les prestations cochées.
+        acte.prestations.set(
+            acte_form.cleaned_data['prestations']
+        )
+
+        # Recalcule la somme de toutes les prestations.
+        acte.recalculer_montant_prevu()
+
+        messages.success(
+            request,
+            "L'acte médical du patient interne a été enregistré avec succès."
+        )
+
+        return redirect(
+            'detail_acte_medical',
+            pk=acte.pk
+        )
+
+    # ============================================================
+    # CAS 2 : CLIENT EXTERNE
+    # ============================================================
+    client_externe_id = post_data.get('client_externe')
+    nouveau_client_cree = False
+
+    # ------------------------------------------------------------
+    # A. Un client externe déjà existant a été sélectionné
+    # ------------------------------------------------------------
+    if client_externe_id:
+        client_externe = ClientExterne.objects.filter(
+            pk=client_externe_id,
+            hopital=hopital
+        ).first()
+
+        if not client_externe:
+            messages.error(
+                request,
+                "Le client externe sélectionné n'existe pas dans votre hôpital."
+            )
+
+            acte_form = ActeMedicalForm(
+                post_data,
+                hopital=hopital,
+                user=request.user,
+                fonction_key=fonction_key
+            )
+
+            return afficher_formulaire(acte_form, client_form)
+
+    # ------------------------------------------------------------
+    # B. Aucun client n'est sélectionné : création d'un nouveau
+    # ------------------------------------------------------------
+    else:
+        if not client_form.is_valid():
+            acte_form = ActeMedicalForm(
+                post_data,
+                hopital=hopital,
+                user=request.user,
+                fonction_key=fonction_key
+            )
+
+            messages.error(
+                request,
+                "Veuillez compléter correctement les informations du client externe."
+            )
+
+            return afficher_formulaire(acte_form, client_form)
+
+        client_externe = client_form.save(commit=False)
+        client_externe.hopital = hopital
+        client_externe.save()
+
+        nouveau_client_cree = True
+
+    # ============================================================
+    # Le client externe est maintenant obligatoirement associé
+    # aux données de l'acte avant validation du formulaire.
+    # ============================================================
+    post_data['client_externe'] = str(client_externe.pk)
+    post_data['patient'] = ''
+
+    acte_form = ActeMedicalForm(
+        post_data,
+        hopital=hopital,
+        user=request.user,
+        fonction_key=fonction_key
+    )
+
+    # Les validations comprennent :
+    # - catégorie obligatoire ;
+    # - une ou plusieurs prestations cochées ;
+    # - prestations appartenant à la catégorie ;
+    # - prestations appartenant à l'hôpital ;
+    # - aucune sélection de patient interne ;
+    # - client externe correctement lié.
+    if not acte_form.is_valid():
+        # Si un nouveau client venait d'être créé mais que l'acte
+        # est invalide, on annule toute la transaction.
+        # Le client ne restera donc pas enregistré seul par erreur.
+        if nouveau_client_cree:
+            transaction.set_rollback(True)
+
+        return afficher_formulaire(acte_form, client_form)
+
+    acte = acte_form.save(commit=False)
+
+    acte.hopital = hopital
+    acte.cree_par = request.user
+    acte.patient = None
+    acte.client_externe = client_externe
+
+    acte.save()
+
+    # Ajoute toutes les prestations cochées à cet acte médical.
+    acte.prestations.set(
+        acte_form.cleaned_data['prestations']
+    )
+
+    # Calcule le total depuis les prix des prestations cochées.
+    acte.recalculer_montant_prevu()
+
+    messages.success(
+        request,
+        "L'acte médical du client externe a été enregistré avec succès."
+    )
+
+    return redirect(
+        'detail_acte_medical',
+        pk=acte.pk
+    )
+
+
+# --------------------------------------------------------------------------------------------------
+#  detail acte medical
+# --------------------------------------------------------------------------------------------------
+@login_required
+def detail_acte_medical(request, pk):
+    # get_hopital_et_fonction retourne :
+    # hopital, fonction_key
+    hopital, fonction_key = get_hopital_et_fonction(
+        request.user
+    )
+
+    if not hopital:
+        messages.error(
+            request,
+            "Votre compte n'est associé à aucun hôpital ou n'a pas l'autorisation requise."
+        )
+        return redirect('dashboard')
+
+    # Récupère l'acte uniquement s'il appartient à l'hôpital
+    # de l'utilisateur connecté.
+    acte = get_object_or_404(
+        ActeMedical.objects.select_related(
+            'hopital',
+            'patient',
+            'client_externe',
+            'medecin',
+            'cree_par',
+        ).prefetch_related(
+            'prestations'
+        ),
+        pk=pk,
+        hopital=hopital
+    )
+
+    context = {
+        'acte': acte,
+        'hopital': hopital,
+        'fonctionKey': fonction_key,
+    }
+
+    return render(
+        request,
+        'back-end/actes/detail_acte.html',
+        context
+    )

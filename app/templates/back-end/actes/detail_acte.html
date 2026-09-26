@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Détail de l'Acte Médical</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <div class="page-header">
+                <h3 class="page-title">Détail de l'Acte Médical</h3>
+                <p>Hôpital : <strong>{{ hopital.nomH }}</strong></p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-10 offset-md-1 col-lg-8 offset-lg-2">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary"><i class="fa fa-stethoscope"></i> Informations de l'Acte</h5>
+                            <hr>
+
+                            <!-- ==================================================== -->
+                            <!-- IDENTITE DE LA PERSONNE -->
+                            <!-- ==================================================== -->
+                            <div class="row">
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Nom</label>
+                                    <p class="mb-0">{{ acte.nom_personne }}</p>
+                                </div>
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Téléphone</label>
+                                    <p class="mb-0">{{ acte.telephone_personne|default:"—" }}</p>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 form-group">
+                                    <label>Type de patient</label>
+                                    <p class="mb-0">{{ acte.get_type_patient_display }}</p>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- ==================================================== -->
+                            <!-- INFORMATIONS DE L'ACTE -->
+                            <!-- ==================================================== -->
+                            <div class="row">
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Prestation</label>
+                                    <p class="mb-0">{{ acte.prestation.libelle }}</p>
+                                </div>
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Montant prévu</label>
+                                    <p class="mb-0">{{ acte.montant_prevu }}</p>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Médecin</label>
+                                    <p class="mb-0">{{ acte.medecin|default:"Non assigné" }}</p>
+                                </div>
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Date de l'acte</label>
+                                    <p class="mb-0">{{ acte.date_acte|date:"d/m/Y H:i" }}</p>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Statut</label>
+                                    <p class="mb-0">
+                                        <span class="badge
+                                            {% if acte.statut == 'TERMINE' %}bg-success
+                                            {% elif acte.statut == 'ANNULE' %}bg-danger
+                                            {% elif acte.statut == 'EN_COURS' %}bg-info
+                                            {% elif acte.statut == 'PLANIFIE' %}bg-primary
+                                            {% else %}bg-secondary
+                                            {% endif %}">
+                                            {{ acte.get_statut_display }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Créé par</label>
+                                    <p class="mb-0">{{ acte.cree_par|default:"—" }}</p>
+                                </div>
+                            </div>
+
+                            {% if acte.observation %}
+                            <div class="row">
+                                <div class="col-12 form-group">
+                                    <label>Observation</label>
+                                    <p class="mb-0">{{ acte.observation }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <hr>
+
+                            <div class="row">
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Date de création</label>
+                                    <p class="mb-0">{{ acte.date_creation|date:"d/m/Y H:i" }}</p>
+                                </div>
+                                <div class="col-12 col-md-6 form-group">
+                                    <label>Dernière modification</label>
+                                    <p class="mb-0">{{ acte.date_modification|date:"d/m/Y H:i" }}</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 text-center">
+                                <a href="{% url 'creer_acte_medical' %}" class="btn btn-primary btn-lg px-5">
+                                    <i class="fa fa-plus"></i> Nouvel Acte
+                                </a>
+                                <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-lg px-5">
+                                    <i class="fa fa-arrow-left"></i> Retour
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

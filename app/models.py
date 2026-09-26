@@ -212,50 +212,171 @@ class ClientExterne(models.Model):
 
 # 6. PATIENT =======================================================
 class Paiement(models.Model):
-    CURRENCY = [('CDF', 'CDF'), ('USD', 'USD')]
-    SERVICES = [
-        ('FICHE', 'Fiche'), ('CONSULTATION', 'Consultation'), ('LABO', 'Labo'),
-        ('ECHOGRAPHIE', 'Échographie'), ('RADIO', 'Radiographie'), ('SOIN', 'Soins'),
-        ('MATERNITE', 'Maternité'), ('DECES', 'Actes de décès'), ('EXAMENS', 'Examens'),
-        ('CHIRURGIE', 'Chirurgie'), ('CARTE_FIDELITE', 'Achat Carte de Fidélité'), 
-        ('PHARMACIE', 'Pharmacie'), ('EXAMEN_EXTERNE', 'Examen Externe'),
-        ('ENTREPRISE', 'Paiement Entreprise'), ('HOSPITALISATION', 'Hospitalisation'), ('ACTE_MEDICAL', 'Acte médical')
+    CURRENCY = [
+        ('CDF', 'CDF'),
+        ('USD', 'USD'),
     ]
 
-    # Relations
-    bloc_op = models.ForeignKey('BlocOperatoire', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    acte_medical = models.ForeignKey(
-    'ActeMedical',
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='paiements',
-    verbose_name='Acte médical'
-)
-    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, null=True, blank=True)
-    demande_examen_externe = models.ForeignKey('DemandeExamenExterne', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    consultation = models.ForeignKey('Consultation', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    dossier_maternite = models.ForeignKey('Maternite', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    deces = models.ForeignKey('Deces', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    session = models.ForeignKey('SessionSoins', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    entreprise = models.ForeignKey('Entreprise', on_delete=models.CASCADE, null=True, blank=True, related_name='paiements')
-    hospitalisation = models.ForeignKey('Hospitalisation', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiements')
-    compte_rendu = models.OneToOneField('CompteRenduAccouchement', on_delete=models.SET_NULL, null=True, blank=True, related_name='paiement')
-    clientEx = models.ForeignKey('ClientExterne', on_delete=models.SET_NULL, null=True, blank=True)
+    SERVICES = [
+        ('FICHE', 'Fiche'),
+        ('CONSULTATION', 'Consultation'),
+        ('LABO', 'Labo'),
+        ('ECHOGRAPHIE', 'Échographie'),
+        ('RADIO', 'Radiographie'),
+        ('SOIN', 'Soins'),
+        ('MATERNITE', 'Maternité'),
+        ('DECES', 'Actes de décès'),
+        ('EXAMENS', 'Examens'),
+        ('CHIRURGIE', 'Chirurgie'),
+        ('CARTE_FIDELITE', 'Achat Carte de Fidélité'),
+        ('PHARMACIE', 'Pharmacie'),
+        ('EXAMEN_EXTERNE', 'Examen Externe'),
+        ('ENTREPRISE', 'Paiement Entreprise'),
+        ('HOSPITALISATION', 'Hospitalisation'),
+        ('ACTE_MEDICAL', 'Acte médical'),
+    ]
 
-    # Champs de paiement
-    service = models.CharField(max_length=20, choices=SERVICES)
-    montant_verse = models.DecimalField(max_digits=15, decimal_places=2)
-    montant_reduction = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    devise = models.CharField(max_length=3, choices=CURRENCY, default='CDF')
-    date_paiement = models.DateTimeField(default=timezone.now)
-    caissier = models.ForeignKey(User, on_delete=models.PROTECT)
+    # ============================================================
+    # RELATIONS
+    # ============================================================
+
+    bloc_op = models.ForeignKey(
+        'BlocOperatoire',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    acte_medical = models.ForeignKey(
+        'ActeMedical',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements',
+        verbose_name='Acte médical'
+    )
+
+    patient = models.ForeignKey(
+        'Patient',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
+    demande_examen_externe = models.ForeignKey(
+        'DemandeExamenExterne',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    consultation = models.ForeignKey(
+        'Consultation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    dossier_maternite = models.ForeignKey(
+        'Maternite',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    deces = models.ForeignKey(
+        'Deces',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    session = models.ForeignKey(
+        'SessionSoins',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    entreprise = models.ForeignKey(
+        'Entreprise',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    hospitalisation = models.ForeignKey(
+        'Hospitalisation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements'
+    )
+
+    compte_rendu = models.OneToOneField(
+        'CompteRenduAccouchement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiement'
+    )
+
+    clientEx = models.ForeignKey(
+        'ClientExterne',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    # ============================================================
+    # CHAMPS DE PAIEMENT
+    # ============================================================
+
+    service = models.CharField(
+        max_length=20,
+        choices=SERVICES
+    )
+
+    montant_verse = models.DecimalField(
+        max_digits=15,
+        decimal_places=2
+    )
+
+    montant_reduction = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    devise = models.CharField(
+        max_length=3,
+        choices=CURRENCY,
+        default='CDF'
+    )
+
+    date_paiement = models.DateTimeField(
+        default=timezone.now
+    )
+
+    caissier = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT
+    )
+
     reste_a_payer = models.DecimalField(
         max_digits=15,
         decimal_places=2,
         default=Decimal('0.00'),
         verbose_name="Dette / Reste à payer"
     )
+
     hopital = models.ForeignKey(
         'Hopital',
         on_delete=models.SET_NULL,
@@ -263,144 +384,280 @@ class Paiement(models.Model):
         related_name="paiement_hopital"
     )
 
-    # NOUVEAUX : Pourcentage et répartition
+    # ============================================================
+    # POURCENTAGE ET REPARTITION
+    # ============================================================
+
     pourcentage_medecin = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
+        max_digits=5,
+        decimal_places=2,
         default=0,
-        help_text="Pourcentage pour le médecin référent (ex: 10.00 pour 10%)",
-        null = True , 
-        blank = True
-    )
-    
-    montant_medecin = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0,
-        help_text="Montant pour le médecin (calculé automatiquement)",
-        null = True , 
-        blank = True
-    )
-    
-    montant_hopital = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0,
-        help_text="Montant pour l'hôpital (calculé automatiquement)",
-        null = True , 
-        blank = True
+        help_text=(
+            "Pourcentage pour le médecin référent "
+            "(ex: 10.00 pour 10%)"
+        ),
+        null=True,
+        blank=True
     )
 
+    montant_medecin = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Montant pour le médecin (calculé automatiquement)",
+        null=True,
+        blank=True
+    )
+
+    montant_hopital = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Montant pour l'hôpital (calculé automatiquement)",
+        null=True,
+        blank=True
+    )
+
+    # ============================================================
+    # SAUVEGARDE ET LOGIQUES METIER
+    # ============================================================
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 
-        # --- LOGIQUE SERVICES STANDARDS ---
+        # --------------------------------------------------------
+        # LOGIQUE SERVICES STANDARDS
+        # --------------------------------------------------------
         if self.service == 'FICHE' and self.patient:
             self.patient.fiche_payee = True
             self.patient.save()
+
         elif self.service == 'CONSULTATION' and self.consultation:
             self.consultation.consultation_payee = True
             self.consultation.save()
+
         elif self.service == 'CARTE_FIDELITE' and self.patient:
             self.patient.a_carte_fidelite = True
             self.patient.type_patient = 'FIDELE'
             self.patient.save()
 
-        # --- LOGIQUE HOSPITALISATION ---
+        # --------------------------------------------------------
+        # LOGIQUE HOSPITALISATION
+        # --------------------------------------------------------
         if self.hospitalisation:
-            total_due = Decimal(str(self.hospitalisation.cout_total))
-            paiements_existants = self.hospitalisation.paiements.exclude(pk=self.pk)
-            total_deja_verse = paiements_existants.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
-            total_deja_reduit = paiements_existants.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
+            total_due = Decimal(
+                str(self.hospitalisation.cout_total)
+            )
+
+            paiements_existants = self.hospitalisation.paiements.exclude(
+                pk=self.pk
+            )
+
+            total_deja_verse = paiements_existants.aggregate(
+                Sum('montant_verse')
+            )['montant_verse__sum'] or 0
+
+            total_deja_reduit = paiements_existants.aggregate(
+                Sum('montant_reduction')
+            )['montant_reduction__sum'] or 0
 
             self.reste_a_payer = max(
                 0,
-                total_due - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse)
+                total_due
+                - (total_deja_reduit + self.montant_reduction)
+                - (total_deja_verse + self.montant_verse)
             )
-            self.hospitalisation.est_payee = (self.reste_a_payer <= 0)
+
+            self.hospitalisation.est_payee = (
+                self.reste_a_payer <= 0
+            )
+
             self.hospitalisation.save()
 
-        # --- LOGIQUE SESSIONS SOINS ---
+        # --------------------------------------------------------
+        # LOGIQUE SESSIONS SOINS
+        # --------------------------------------------------------
         if self.session:
-            tous_paiements = self.session.paiements.exclude(pk=self.pk)
-            total_deja_verse = tous_paiements.aggregate(Sum('montant_verse'))['montant_verse__sum'] or 0
-            total_deja_reduit = tous_paiements.aggregate(Sum('montant_reduction'))['montant_reduction__sum'] or 0
+            tous_paiements = self.session.paiements.exclude(
+                pk=self.pk
+            )
+
+            total_deja_verse = tous_paiements.aggregate(
+                Sum('montant_verse')
+            )['montant_verse__sum'] or 0
+
+            total_deja_reduit = tous_paiements.aggregate(
+                Sum('montant_reduction')
+            )['montant_reduction__sum'] or 0
 
             self.reste_a_payer = max(
                 0,
-                self.session.total_a_payer - (total_deja_reduit + self.montant_reduction) - (total_deja_verse + self.montant_verse)
+                self.session.total_a_payer
+                - (
+                    total_deja_reduit
+                    + self.montant_reduction
+                    + total_deja_verse
+                    + self.montant_verse
+                )
             )
-            self.session.est_payee = (self.reste_a_payer <= 0)
+
+            self.session.est_payee = (
+                self.reste_a_payer <= 0
+            )
+
             self.session.save()
 
-        # --- LOGIQUE EXAMEN EXTERNE ---
+        # --------------------------------------------------------
+        # LOGIQUE ACTE MEDICAL
+        # --------------------------------------------------------
+        if self.acte_medical:
+            paiements_existants = self.acte_medical.paiements.exclude(
+                pk=self.pk
+            )
+
+            total_deja_verse = paiements_existants.aggregate(
+                total=Sum('montant_verse')
+            )['total'] or Decimal('0.00')
+
+            total_deja_reduit = paiements_existants.aggregate(
+                total=Sum('montant_reduction')
+            )['total'] or Decimal('0.00')
+
+            montant_actuel = self.montant_verse or Decimal('0.00')
+            reduction_actuelle = (
+                self.montant_reduction or Decimal('0.00')
+            )
+
+            total_acte = (
+                self.acte_medical.montant_prevu
+                or Decimal('0.00')
+            )
+
+            self.reste_a_payer = max(
+                Decimal('0.00'),
+                total_acte - (
+                    total_deja_verse
+                    + total_deja_reduit
+                    + montant_actuel
+                    + reduction_actuelle
+                )
+            )
+
+        # --------------------------------------------------------
+        # LOGIQUE EXAMEN EXTERNE
+        # --------------------------------------------------------
         if self.demande_examen_externe:
             from .models import ConfigurationHopital
 
-            # Récupérer le taux
             config = ConfigurationHopital.objects.first()
-            taux = config.taux_usd_en_cdf if config else Decimal('2300.00')
+
+            taux = (
+                config.taux_usd_en_cdf
+                if config
+                else Decimal('2300.00')
+            )
+
             if not taux or taux == 0:
                 taux = Decimal('2300.00')
 
-            # total_a_payer est en USD, on le convertit en CDF
-            total_due_cdf = (self.demande_examen_externe.total_a_payer * taux)
-
-            # Paiements existants (hors celui en cours)
-            paiements_existants = self.demande_examen_externe.paiements.exclude(pk=self.pk)
-
-            # Convertir tous les paiements existants en CDF
-            total_deja_verse_cdf = Decimal('0')
-            for p in paiements_existants:
-                if p.devise == 'CDF':
-                    total_deja_verse_cdf += p.montant_verse or Decimal('0')
-                else:  # USD
-                    total_deja_verse_cdf += (p.montant_verse or Decimal('0')) * taux
-
-            # Convertir le paiement actuel en CDF
-            if self.devise == 'CDF':
-                montant_verse_cdf = self.montant_verse or Decimal('0')
-            else:  # USD
-                montant_verse_cdf = (self.montant_verse or Decimal('0')) * taux
-
-            # Calcul du reste à payer en CDF
-            self.reste_a_payer = max(
-                Decimal('0'),
-                total_due_cdf - (total_deja_verse_cdf + montant_verse_cdf)
+            # total_a_payer est en USD : conversion en CDF
+            total_due_cdf = (
+                self.demande_examen_externe.total_a_payer * taux
             )
 
-            # Si le reste est <= 0, la demande est considérée comme payée
-            if self.reste_a_payer <= Decimal('1'):  # tolérance 1 CDF
+            paiements_existants = (
+                self.demande_examen_externe.paiements.exclude(
+                    pk=self.pk
+                )
+            )
+
+            total_deja_verse_cdf = Decimal('0.00')
+
+            for paiement in paiements_existants:
+                if paiement.devise == 'CDF':
+                    total_deja_verse_cdf += (
+                        paiement.montant_verse
+                        or Decimal('0.00')
+                    )
+                else:
+                    total_deja_verse_cdf += (
+                        paiement.montant_verse
+                        or Decimal('0.00')
+                    ) * taux
+
+            if self.devise == 'CDF':
+                montant_verse_cdf = (
+                    self.montant_verse
+                    or Decimal('0.00')
+                )
+            else:
+                montant_verse_cdf = (
+                    self.montant_verse
+                    or Decimal('0.00')
+                ) * taux
+
+            self.reste_a_payer = max(
+                Decimal('0.00'),
+                total_due_cdf - (
+                    total_deja_verse_cdf
+                    + montant_verse_cdf
+                )
+            )
+
+            if self.reste_a_payer <= Decimal('1'):
                 self.demande_examen_externe.statut = 'PAYE'
                 self.demande_examen_externe.save()
 
-        # --- LOGIQUE MATERNITE ---
+        # --------------------------------------------------------
+        # LOGIQUE MATERNITE
+        # --------------------------------------------------------
         if self.service == 'MATERNITE' and self.dossier_maternite:
             if self.reste_a_payer <= 0:
                 self.dossier_maternite.est_paye = True
                 self.dossier_maternite.save()
 
-                # --- LOGIQUE ENTREPRISE ---
+        # --------------------------------------------------------
+        # LOGIQUE ENTREPRISE
+        # --------------------------------------------------------
         if self.service == 'ENTREPRISE' and self.entreprise:
-            # Tout en CDF
-            montant_cdf = self.montant_verse or Decimal('0')
-            reduction_cdf = self.montant_reduction or Decimal('0')
-            total_a_deduire_cdf = montant_cdf + reduction_cdf
+            montant_cdf = self.montant_verse or Decimal('0.00')
+
+            reduction_cdf = (
+                self.montant_reduction
+                or Decimal('0.00')
+            )
+
+            total_a_deduire_cdf = (
+                montant_cdf + reduction_cdf
+            )
 
             self.entreprise.dette_mensuelle = max(
                 Decimal('0.00'),
-                (self.entreprise.dette_mensuelle or Decimal('0')) - total_a_deduire_cdf
+                (
+                    self.entreprise.dette_mensuelle
+                    or Decimal('0.00')
+                ) - total_a_deduire_cdf
             )
+
             self.entreprise.save()
 
+        # --------------------------------------------------------
+        # SAUVEGARDE DU PAIEMENT
+        # --------------------------------------------------------
         super().save(*args, **kwargs)
 
+        # --------------------------------------------------------
+        # CREATION AUTOMATIQUE DE FACTURE
+        # --------------------------------------------------------
         if is_new:
             from .models import Facture
+
             Facture.objects.create(
                 paiement=self,
-                numero_facture=f"FAC-{timezone.now().strftime('%y%m%d')}-{self.id}"
+                numero_facture=(
+                    f"FAC-{timezone.now().strftime('%y%m%d')}-"
+                    f"{self.id}"
+                )
             )
 
 
@@ -1771,10 +2028,12 @@ class ActeMedical(models.Model):
         ('ANNULE', 'Annulé'),
     ]
 
-    prestation = models.ForeignKey(
+    # Une catégorie peut contenir plusieurs prestations cochées.
+    # Exemple : Laboratoire -> NFS, Glycémie, Test VIH.
+    prestations = models.ManyToManyField(
         'Prestation',
-        on_delete=models.PROTECT,
-        related_name='actes_medicaux'
+        related_name='actes_medicaux',
+        verbose_name="Prestations"
     )
 
     patient = models.ForeignKey(
@@ -1782,7 +2041,8 @@ class ActeMedical(models.Model):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name='actes_medicaux'
+        related_name='actes_medicaux',
+        verbose_name="Patient interne"
     )
 
     client_externe = models.ForeignKey(
@@ -1790,58 +2050,88 @@ class ActeMedical(models.Model):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name='actes_medicaux'
+        related_name='actes_medicaux',
+        verbose_name="Client externe"
     )
 
     type_patient = models.CharField(
         max_length=10,
-        choices=TYPE_PATIENT
+        choices=TYPE_PATIENT,
+        verbose_name="Type de personne"
     )
 
-    date_acte = models.DateTimeField(default=timezone.now)
+    date_acte = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Date de l'acte"
+    )
 
     statut = models.CharField(
         max_length=20,
         choices=STATUT_CHOICES,
-        default='EN_ATTENTE'
+        default='EN_ATTENTE',
+        verbose_name="Statut"
     )
 
+    # Ce montant est recalculé à partir de toutes les prestations
+    # cochées dans l'acte médical.
     montant_prevu = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=Decimal('0.00')
+        default=Decimal('0.00'),
+        verbose_name="Montant total prévu"
     )
 
-    observation = models.TextField(blank=True, null=True)
+    observation = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observation"
+    )
 
     medecin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='actes_medicaux_realises'
+        related_name='actes_medicaux_realises',
+        verbose_name="Médecin"
     )
 
     hopital = models.ForeignKey(
         'Hopital',
         on_delete=models.SET_NULL,
         null=True,
-        related_name='actes_medicaux'
+        related_name='actes_medicaux',
+        verbose_name="Hôpital"
     )
 
     cree_par = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='actes_medicaux_crees'
+        blank=True,
+        related_name='actes_medicaux_crees',
+        verbose_name="Créé par"
     )
 
-    date_creation = models.DateTimeField(auto_now_add=True)
-    date_modification = models.DateTimeField(auto_now=True)
+    date_creation = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    date_modification = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = ['-date_acte', '-date_creation']
+        verbose_name = "Acte médical"
+        verbose_name_plural = "Actes médicaux"
 
     def clean(self):
         erreurs = {}
 
+        # =========================================================
+        # ACTE POUR PATIENT INTERNE
+        # =========================================================
         if self.type_patient == 'INTERNE':
             if not self.patient:
                 erreurs['patient'] = (
@@ -1850,9 +2140,13 @@ class ActeMedical(models.Model):
 
             if self.client_externe:
                 erreurs['client_externe'] = (
-                    "Un acte interne ne peut pas avoir un client externe."
+                    "Un acte pour patient interne ne peut pas avoir "
+                    "un client externe."
                 )
 
+        # =========================================================
+        # ACTE POUR CLIENT EXTERNE
+        # =========================================================
         elif self.type_patient == 'EXTERNE':
             if not self.client_externe:
                 erreurs['client_externe'] = (
@@ -1861,16 +2155,30 @@ class ActeMedical(models.Model):
 
             if self.patient:
                 erreurs['patient'] = (
-                    "Un acte externe ne peut pas avoir un patient interne."
+                    "Un acte pour client externe ne peut pas avoir "
+                    "un patient interne."
+                )
+
+        # =========================================================
+        # COHÉRENCE AVEC L'HÔPITAL
+        # =========================================================
+        if self.patient and self.hopital:
+            if self.patient.hopital_id != self.hopital_id:
+                erreurs['patient'] = (
+                    "Ce patient n'appartient pas à votre hôpital."
+                )
+
+        if self.client_externe and self.hopital:
+            if self.client_externe.hopital_id != self.hopital_id:
+                erreurs['client_externe'] = (
+                    "Ce client externe n'appartient pas à votre hôpital."
                 )
 
         if erreurs:
             raise ValidationError(erreurs)
 
     def save(self, *args, **kwargs):
-        if self.prestation:
-            self.montant_prevu = self.prestation.prix
-
+        # Le type est automatiquement sécurisé selon la personne liée.
         if self.patient:
             self.type_patient = 'INTERNE'
 
@@ -1878,7 +2186,32 @@ class ActeMedical(models.Model):
             self.type_patient = 'EXTERNE'
 
         self.full_clean()
+
         super().save(*args, **kwargs)
+
+    def recalculer_montant_prevu(self):
+        """
+        Recalcule le total de l'acte après ajout/suppression
+        des prestations cochées.
+        """
+
+        total = sum(
+            (
+                prestation.prix
+                for prestation in self.prestations.all()
+            ),
+            Decimal('0.00')
+        )
+
+        self.montant_prevu = total
+
+        # update() évite de relancer save() et full_clean()
+        # inutilement.
+        ActeMedical.objects.filter(
+            pk=self.pk
+        ).update(
+            montant_prevu=total
+        )
 
     @property
     def nom_personne(self):
@@ -1893,12 +2226,34 @@ class ActeMedical(models.Model):
     @property
     def telephone_personne(self):
         if self.patient:
-            return self.patient.telephone
+            return self.patient.telephone or ""
 
         if self.client_externe:
-            return self.client_externe.telephone
+            return self.client_externe.telephone or ""
 
         return ""
 
+    @property
+    def liste_prestations(self):
+        """
+        Retourne une phrase lisible avec toutes les prestations.
+        Exemple : NFS, Glycémie, Test VIH.
+        """
+
+        return ", ".join(
+            prestation.libelle
+            for prestation in self.prestations.all().order_by(
+                'categorie',
+                'libelle'
+            )
+        )
+
+    @property
+    def nombre_prestations(self):
+        return self.prestations.count()
+
     def __str__(self):
-        return f"{self.prestation.libelle} - {self.nom_personne}"
+        return (
+            f"{self.nom_personne} - "
+            f"{self.liste_prestations or 'Aucune prestation'}"
+        )

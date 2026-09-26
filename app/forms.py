@@ -902,11 +902,35 @@ class DemandeExamenHospitalisationForm(forms.Form):
 #   - ici formulaire 
 #
 #
+from django.contrib.auth import get_user_model
+User = get_user_model()
 class ActeMedicalForm(forms.ModelForm):
+    categorie = forms.ChoiceField(
+        required=True,
+        label="Catégorie de prestation",
+        choices=[],
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_categorie',
+        })
+    )
+
+    prestations = forms.ModelMultipleChoiceField(
+        queryset=Prestation.objects.none(),
+        required=True,
+        label="Prestations à réaliser",
+        widget=forms.CheckboxSelectMultiple(
+            attrs={
+                'class': 'form-check-input prestation-checkbox',
+            }
+        )
+    )
+
     class Meta:
         model = ActeMedical
+
         fields = [
-            'prestation',
+            'prestations',
             'type_patient',
             'patient',
             'client_externe',
@@ -917,11 +941,6 @@ class ActeMedicalForm(forms.ModelForm):
         ]
 
         widgets = {
-            'prestation': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_prestation',
-            }),
-
             'type_patient': forms.Select(attrs={
                 'class': 'form-select',
                 'id': 'id_type_patient',
@@ -942,7 +961,7 @@ class ActeMedicalForm(forms.ModelForm):
                     'class': 'form-control',
                     'type': 'datetime-local',
                 },
-                format='%Y-%m-%dT%H:%M'
+                format='%Y-%m-%dT%H:%M',
             ),
 
             'medecin': forms.Select(attrs={
@@ -959,64 +978,183 @@ class ActeMedicalForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, hopital=None, **kwargs):
+    # Important : cette méthode doit être alignée avec "class Meta",
+    # mais toujours rester dans "class ActeMedicalForm".
+    def __init__(self, *args, **kwargs):
+        hopital = kwargs.pop('hopital', None)
+        user = kwargs.pop('user', None)
+        fonction_key = kwargs.pop('fonction_key', None)
+
         super().__init__(*args, **kwargs)
 
-        if hopital:
-            self.fields['prestation'].queryset = Prestation.objects.filter(
-                hopital=hopital
-            ).order_by('categorie', 'libelle')
-
-            self.fields['patient'].queryset = Patient.objects.filter(
-                hopital=hopital
-            ).order_by('noms')
-
-            self.fields['client_externe'].queryset = ClientExterne.objects.filter(
-                hopital=hopital
-            ).order_by('noms')
+        self.hopital = hopital
 
         self.fields['patient'].required = False
         self.fields['client_externe'].required = False
         self.fields['medecin'].required = False
         self.fields['observation'].required = False
 
+        if not hopital:
+            self.fields['prestations'].queryset = Prestation.objects.none()
+            self.fields['patient'].queryset = Patient.objects.none()
+            self.fields['client_externe'].queryset = ClientExterne.objects.none()
+            self.fields['medecin'].queryset = User.objects.none()
+            return
+
+        prestations_hopital = Prestation.objects.filter(
+            hopital=hopital
+        ).order_by(
+            'categorie',
+            'libelle'
+        )
+
+        categories = (
+            prestations_hopital
+            .exclude(categorie__isnull=True)
+            .exclude(categorie__exact='')
+            .values_list('categorie', flat=True)
+            .distinct()
+            .order_by('categorie')
+        )
+
+        self.fields['categorie'].choices = [
+            ('', '--------- Sélectionnez une catégorie ---------')
+        ] + [
+            (categorie, categorie)
+            for categorie in categories
+        ]
+
+        categorie_selectionnee = (
+            self.data.get('categorie')
+            or self.initial.get('categorie')
+        )
+
+        if categorie_selectionnee:
+            self.fields['prestations'].queryset = (
+                prestations_hopital
+                .filter(categorie=categorie_selectionnee)
+                .order_by('libelle')
+            )
+        else:
+            self.fields['prestations'].queryset = (
+                Prestation.objects.none()
+            )
+
+        self.fields['patient'].queryset = (
+            Patient.objects
+            .filter(hopital=hopital)
+            .order_by('noms')
+        )
+
+        self.fields['client_externe'].queryset = (
+            ClientExterne.objects
+            .filter(hopital=hopital)
+            .order_by('noms')
+        )
+
+        fonctions_medecins = (
+            Fonction.objects
+            .filter(
+                hopital=hopital,
+                fonctionKey__roleName__icontains='medecin',
+            )
+            .select_related('userKey')
+        )
+
+        medecins_users_ids = [
+            fonction.userKey_id
+            for fonction in fonctions_medecins
+            if fonction.userKey_id
+        ]
+
+        est_medecin = (
+            fonction_key
+            and 'medecin' in fonction_key.lower()
+            and user
+        )
+
+        if est_medecin:
+            self.fields['medecin'].queryset = User.objects.filter(
+                pk=user.pk
+            )
+
+            self.initial['medecin'] = user
+        else:
+            self.fields['medecin'].queryset = (
+                User.objects
+                .filter(pk__in=medecins_users_ids)
+                .order_by('last_name', 'first_name')
+            )
+
     def clean(self):
         cleaned_data = super().clean()
 
+        categorie = cleaned_data.get('categorie')
+        prestations = cleaned_data.get('prestations')
         type_patient = cleaned_data.get('type_patient')
         patient = cleaned_data.get('patient')
         client_externe = cleaned_data.get('client_externe')
 
-        if type_patient == 'INTERNE' and not patient:
+        if not categorie:
             self.add_error(
-                'patient',
-                'Sélectionnez un patient interne.'
+                'categorie',
+                "Veuillez sélectionner une catégorie."
             )
 
-        if type_patient == 'EXTERNE' and not client_externe:
+        if not prestations:
             self.add_error(
-                'client_externe',
-                'Sélectionnez un client externe.'
+                'prestations',
+                "Cochez au moins une prestation."
             )
 
-        if type_patient == 'INTERNE' and client_externe:
-            self.add_error(
-                'client_externe',
-                'Ne sélectionnez pas de client externe pour un patient interne.'
+        if categorie and prestations:
+            prestations_hors_categorie = prestations.exclude(
+                categorie=categorie
             )
 
-        if type_patient == 'EXTERNE' and patient:
-            self.add_error(
-                'patient',
-                'Ne sélectionnez pas de patient interne pour un client externe.'
+            if prestations_hors_categorie.exists():
+                self.add_error(
+                    'prestations',
+                    "Toutes les prestations doivent appartenir à la catégorie choisie."
+                )
+
+        if prestations and self.hopital:
+            prestations_autre_hopital = prestations.exclude(
+                hopital=self.hopital
             )
+
+            if prestations_autre_hopital.exists():
+                self.add_error(
+                    'prestations',
+                    "Une ou plusieurs prestations ne sont pas liées à votre hôpital."
+                )
+
+        if type_patient == 'INTERNE':
+            if not patient:
+                self.add_error(
+                    'patient',
+                    "Sélectionnez un patient interne."
+                )
+
+            if client_externe:
+                self.add_error(
+                    'client_externe',
+                    "Ne sélectionnez pas de client externe pour un patient interne."
+                )
+
+        elif type_patient == 'EXTERNE':
+            if patient:
+                self.add_error(
+                    'patient',
+                    "Ne sélectionnez pas de patient interne pour un client externe."
+                )
 
         return cleaned_data
+
 
 class ClientExterneFormDeux(forms.ModelForm):
     class Meta:
         model = ClientExterne
-
         fields = [
             'noms',
             'sexe',
@@ -1030,21 +1168,17 @@ class ClientExterneFormDeux(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Nom complet du client externe',
             }),
-
             'sexe': forms.Select(attrs={
                 'class': 'form-select',
             }),
-
             'poids': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ex. 65 kg',
             }),
-
             'age': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ex. 32 ans',
             }),
-
             'telephone': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ex. +243...',

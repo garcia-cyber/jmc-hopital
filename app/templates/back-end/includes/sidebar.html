@@ -463,6 +463,13 @@
                         </a>
                     </li>
 
+                    <li class="{% if request.resolver_match.url_name == 'creer_acte_medical' %}active{% endif %}">
+  <a href="{% url 'creer_acte_medical' %}">
+    <i class="fa fa-stethoscope"></i>
+    <span>Créer un Acte Médical</span>
+  </a>
+</li>
+
                     <li class="menu-title">
                         <span>SOINS INFIRMIERS</span>
                     </li>

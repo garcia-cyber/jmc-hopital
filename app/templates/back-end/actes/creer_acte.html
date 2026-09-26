@@ -1,0 +1,701 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=0"
+    >
+
+    <title>Créer un Acte Médical</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        .card {
+            border: none;
+            border-radius: 12px;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection {
+            border-radius: 8px;
+            min-height: 45px;
+            padding: 0.35rem 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+
+        #zone-prestations {
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+            padding: 1rem;
+        }
+
+        .prestation-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.75rem;
+            margin-bottom: 0.55rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .prestation-item:hover {
+            border-color: #0d6efd;
+            background: #f1f7ff;
+        }
+
+        .prestation-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .prestation-item input[type="checkbox"] {
+            width: 19px;
+            height: 19px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .prestation-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        .info-prestations {
+            border-left: 4px solid #0d6efd;
+            background: #eef6ff;
+            border-radius: 7px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+<div class="main-wrapper">
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h3 class="page-title font-weight-bold text-dark">
+                            Créer un Acte Médical
+                        </h3>
+
+                        <p class="text-muted mb-0">
+                            Hôpital assigné :
+                            <span class="badge bg-primary text-white fs-6">
+                                {{ hopital.nomH }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-10 offset-xl-1">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4 p-md-5">
+
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="bg-soft-primary p-3 rounded-circle text-primary me-3 bg-light">
+                                    <i class="fa fa-stethoscope fa-2x"></i>
+                                </div>
+
+                                <div>
+                                    <h5 class="card-title text-primary mb-1 fw-bold">
+                                        Formulaire de Saisie
+                                    </h5>
+
+                                    <p class="text-muted small mb-0">
+                                        Renseignez les informations de la personne et les prestations médicales.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <hr class="mb-4">
+
+                            {% if acte_form.errors or client_form.errors %}
+                                <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-exclamation-circle fa-2x me-3"></i>
+
+                                        <div>
+                                            <strong>Le formulaire contient des erreurs :</strong>
+
+                                            <ul class="mb-0 mt-1 small">
+                                                {% for field, errors in acte_form.errors.items %}
+                                                    {% for error in errors %}
+                                                        <li>
+                                                            {{ field|title }} : {{ error }}
+                                                        </li>
+                                                    {% endfor %}
+                                                {% endfor %}
+
+                                                {% for field, errors in client_form.errors.items %}
+                                                    {% for error in errors %}
+                                                        <li>
+                                                            Client externe ({{ field|title }}) : {{ error }}
+                                                        </li>
+                                                    {% endfor %}
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Fermer"
+                                    ></button>
+                                </div>
+                            {% endif %}
+
+                            <form method="post" novalidate id="form-acte">
+                                {% csrf_token %}
+
+                                <div class="row mb-4">
+                                    <div class="col-12 form-group">
+                                        <label
+                                            for="{{ acte_form.type_patient.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.type_patient.label }}
+                                            <span class="text-danger">*</span>
+                                        </label>
+
+                                        {{ acte_form.type_patient }}
+
+                                        {% if acte_form.type_patient.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.type_patient.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div id="bloc-interne" class="row mb-4" style="display: none;">
+                                    <div class="col-12 form-group">
+                                        <label
+                                            for="{{ acte_form.patient.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.patient.label }}
+                                            <span class="text-danger">*</span>
+                                        </label>
+
+                                        {{ acte_form.patient }}
+
+                                        {% if acte_form.patient.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.patient.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div id="bloc-externe" class="mb-4" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-12 form-group">
+                                            <label
+                                                for="{{ acte_form.client_externe.id_for_label }}"
+                                                class="form-label fw-bold"
+                                            >
+                                                {{ acte_form.client_externe.label }}
+
+                                                <span class="text-muted fw-normal">
+                                                    (client déjà enregistré)
+                                                </span>
+                                            </label>
+
+                                            {{ acte_form.client_externe }}
+
+                                            {% if acte_form.client_externe.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ acte_form.client_externe.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="text-start my-3">
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                            id="btn-nouveau-client"
+                                        >
+                                            <i class="fa fa-user-plus me-1"></i>
+                                            Nouveau client externe
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        id="bloc-nouveau-client"
+                                        class="p-3 border rounded bg-light mt-3"
+                                        style="display: none;"
+                                    >
+                                        <h6 class="text-secondary mb-3 fw-bold">
+                                            <i class="fa fa-id-card me-1"></i>
+                                            Informations du nouveau client
+                                        </h6>
+
+                                        <div class="row">
+                                            <div class="col-12 col-md-6 form-group mb-3">
+                                                <label
+                                                    for="{{ client_form.noms.id_for_label }}"
+                                                    class="form-label small fw-bold"
+                                                >
+                                                    {{ client_form.noms.label }}
+                                                </label>
+
+                                                {{ client_form.noms }}
+
+                                                {% if client_form.noms.errors %}
+                                                    <small class="text-danger">
+                                                        {{ client_form.noms.errors.0 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-12 col-md-6 form-group mb-3">
+                                                <label
+                                                    for="{{ client_form.sexe.id_for_label }}"
+                                                    class="form-label small fw-bold"
+                                                >
+                                                    {{ client_form.sexe.label }}
+                                                </label>
+
+                                                {{ client_form.sexe }}
+
+                                                {% if client_form.sexe.errors %}
+                                                    <small class="text-danger">
+                                                        {{ client_form.sexe.errors.0 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-12 col-md-4 form-group mb-0">
+                                                <label
+                                                    for="{{ client_form.poids.id_for_label }}"
+                                                    class="form-label small fw-bold"
+                                                >
+                                                    {{ client_form.poids.label }}
+                                                </label>
+
+                                                {{ client_form.poids }}
+
+                                                {% if client_form.poids.errors %}
+                                                    <small class="text-danger">
+                                                        {{ client_form.poids.errors.0 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-12 col-md-4 form-group mb-0">
+                                                <label
+                                                    for="{{ client_form.age.id_for_label }}"
+                                                    class="form-label small fw-bold"
+                                                >
+                                                    {{ client_form.age.label }}
+                                                </label>
+
+                                                {{ client_form.age }}
+
+                                                {% if client_form.age.errors %}
+                                                    <small class="text-danger">
+                                                        {{ client_form.age.errors.0 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-12 col-md-4 form-group mb-0">
+                                                <label
+                                                    for="{{ client_form.telephone.id_for_label }}"
+                                                    class="form-label small fw-bold"
+                                                >
+                                                    {{ client_form.telephone.label }}
+                                                </label>
+
+                                                {{ client_form.telephone }}
+
+                                                {% if client_form.telephone.errors %}
+                                                    <small class="text-danger">
+                                                        {{ client_form.telephone.errors.0 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <div class="section-title">
+                                    Détails de l'Acte Médical
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group mb-3">
+                                        <label
+                                            for="{{ acte_form.categorie.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.categorie.label }}
+                                            <span class="text-danger">*</span>
+                                        </label>
+
+                                        {{ acte_form.categorie }}
+
+                                        <small class="form-text text-muted">
+                                            Choisissez d'abord la catégorie des examens ou soins.
+                                        </small>
+
+                                        {% if acte_form.categorie.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.categorie.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-12 col-md-6 form-group mb-3">
+                                        <label
+                                            for="{{ acte_form.medecin.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.medecin.label }}
+                                        </label>
+
+                                        {{ acte_form.medecin }}
+
+                                        {% if acte_form.medecin.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.medecin.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 form-group mb-4">
+                                        <label class="form-label fw-bold">
+                                            Prestations à réaliser
+                                            <span class="text-danger">*</span>
+                                        </label>
+
+                                        <div class="info-prestations small p-3 mb-3">
+                                            <i class="fa fa-info-circle me-1"></i>
+
+                                            Sélectionnez une catégorie, puis cochez une ou plusieurs prestations.
+                                            Seules les prestations de la catégorie choisie seront affichées.
+                                        </div>
+
+                                        <div id="zone-prestations">
+                                            {% for checkbox in acte_form.prestations %}
+                                                <div class="prestation-item">
+                                                    {{ checkbox.tag }}
+
+                                                    <label for="{{ checkbox.id_for_label }}">
+                                                        {{ checkbox.choice_label }}
+                                                    </label>
+                                                </div>
+                                            {% empty %}
+                                                <p class="text-muted mb-0 text-center">
+                                                    <i class="fa fa-list me-1"></i>
+                                                    Sélectionnez une catégorie pour afficher les prestations.
+                                                </p>
+                                            {% endfor %}
+                                        </div>
+
+                                        {% if acte_form.prestations.errors %}
+                                            <div class="text-danger small mt-2">
+                                                {{ acte_form.prestations.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 col-md-6 form-group mb-3">
+                                        <label
+                                            for="{{ acte_form.date_acte.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.date_acte.label }}
+                                        </label>
+
+                                        {{ acte_form.date_acte }}
+
+                                        {% if acte_form.date_acte.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.date_acte.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-12 col-md-6 form-group mb-3">
+                                        <label
+                                            for="{{ acte_form.statut.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.statut.label }}
+                                        </label>
+
+                                        {{ acte_form.statut }}
+
+                                        {% if acte_form.statut.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.statut.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12 form-group mb-4">
+                                        <label
+                                            for="{{ acte_form.observation.id_for_label }}"
+                                            class="form-label fw-bold"
+                                        >
+                                            {{ acte_form.observation.label }}
+                                        </label>
+
+                                        {{ acte_form.observation }}
+
+                                        {% if acte_form.observation.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ acte_form.observation.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-end">
+                                    <a
+                                        href="{% url 'dashboard' %}"
+                                        class="btn btn-light btn-lg px-4 me-2 border"
+                                    >
+                                        <i class="fa fa-times me-1"></i>
+                                        Annuler
+                                    </a>
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary btn-lg px-5 shadow-sm"
+                                    >
+                                        <i class="fa fa-save me-1"></i>
+                                        Enregistrer l'acte
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const typePatient = document.getElementById(
+            '{{ acte_form.type_patient.id_for_label }}'
+        );
+
+        const categorie = document.getElementById(
+            '{{ acte_form.categorie.id_for_label }}'
+        );
+
+        const patient = document.getElementById(
+            '{{ acte_form.patient.id_for_label }}'
+        );
+
+        const clientExterne = document.getElementById(
+            '{{ acte_form.client_externe.id_for_label }}'
+        );
+
+        const medecin = document.getElementById(
+            '{{ acte_form.medecin.id_for_label }}'
+        );
+
+        const blocInterne = document.getElementById('bloc-interne');
+        const blocExterne = document.getElementById('bloc-externe');
+        const btnNouveauClient = document.getElementById('btn-nouveau-client');
+        const blocNouveauClient = document.getElementById('bloc-nouveau-client');
+
+        if (medecin) {
+            $(medecin).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Sélectionnez un médecin...',
+                allowClear: true
+            });
+        }
+
+        if (patient) {
+            $(patient).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Rechercher un patient interne...',
+                allowClear: true
+            });
+        }
+
+        if (clientExterne) {
+            $(clientExterne).select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Rechercher un client externe...',
+                allowClear: true
+            });
+        }
+
+        function viderPatientInterne() {
+            if (patient) {
+                $(patient).val(null).trigger('change');
+            }
+        }
+
+        function viderClientExterne() {
+            if (clientExterne) {
+                $(clientExterne).val(null).trigger('change');
+            }
+        }
+
+        function masquerNouveauClient() {
+            if (blocNouveauClient) {
+                blocNouveauClient.style.display = 'none';
+            }
+        }
+
+        function afficherNouveauClient() {
+            if (blocNouveauClient) {
+                blocNouveauClient.style.display = 'block';
+            }
+        }
+
+        function togglerType() {
+            if (!typePatient) {
+                return;
+            }
+
+            if (typePatient.value === 'INTERNE') {
+                blocInterne.style.display = 'block';
+                blocExterne.style.display = 'none';
+
+                viderClientExterne();
+                masquerNouveauClient();
+            } else if (typePatient.value === 'EXTERNE') {
+                blocInterne.style.display = 'none';
+                blocExterne.style.display = 'block';
+
+                viderPatientInterne();
+            } else {
+                blocInterne.style.display = 'none';
+                blocExterne.style.display = 'none';
+
+                viderPatientInterne();
+                viderClientExterne();
+                masquerNouveauClient();
+            }
+        }
+
+        if (typePatient) {
+            typePatient.addEventListener('change', togglerType);
+            togglerType();
+        }
+
+        if (btnNouveauClient && blocNouveauClient) {
+            btnNouveauClient.addEventListener('click', function () {
+                const estVisible = blocNouveauClient.style.display === 'block';
+
+                if (estVisible) {
+                    masquerNouveauClient();
+                } else {
+                    viderClientExterne();
+                    afficherNouveauClient();
+                }
+            });
+        }
+
+        /*
+         * Au changement de catégorie, la page est rechargée avec :
+         * ?categorie=LABORATOIRE
+         *
+         * La vue doit envoyer cette valeur dans le formulaire afin que
+         * seules les prestations de la catégorie soient affichées.
+         */
+        if (categorie) {
+            categorie.addEventListener('change', function () {
+                const categorieChoisie = this.value;
+
+                if (!categorieChoisie) {
+                    return;
+                }
+
+                const url = new URL(window.location.href);
+
+                url.searchParams.set(
+                    'categorie',
+                    categorieChoisie
+                );
+
+                window.location.href = url.toString();
+            });
+        }
+
+        /*
+         * Si les champs du nouveau client ont des erreurs, on ouvre
+         * automatiquement le bloc pour que l'utilisateur voie les erreurs.
+         */
+        {% if client_form.errors %}
+            if (typePatient && typePatient.value === 'EXTERNE') {
+                afficherNouveauClient();
+            }
+        {% endif %}
+    });
+</script>
+
+</body>
+</html> 

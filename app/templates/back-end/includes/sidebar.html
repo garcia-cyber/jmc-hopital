@@ -469,6 +469,13 @@
     <span>Créer un Acte Médical</span>
   </a>
 </li>
+<li class="{% if request.resolver_match.url_name == 'liste_actes_medicaux' %}active{% endif %}">
+  <a href="{% url 'liste_actes_medicaux' %}">
+    <i class="fa fa-list-alt"></i>
+    <span>Liste Actes Médicaux</span>
+  </a>
+</li>
+
 
                     <li class="menu-title">
                         <span>SOINS INFIRMIERS</span>

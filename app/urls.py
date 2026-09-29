@@ -373,17 +373,11 @@ urlpatterns =[
 ),
 
 # mise en jour le 25/09/2026
-path(
-  'actes/creer/',
-  views.creer_acte_medical,
-  name='creer_acte_medical'
-),
-
-path(
-  'actes/<int:pk>/',
-  views.detail_acte_medical,
-  name='detail_acte_medical'
-),
+# Acte Medical
+#
+path('actes/creer/',views.creer_acte_medical,name='creer_acte_medical'),
+path('actes/<int:pk>/',views.detail_acte_medical,name='detail_acte_medical'),
+path("actes/", liste_actes_medicaux, name="liste_actes_medicaux"),
 
 
  ]

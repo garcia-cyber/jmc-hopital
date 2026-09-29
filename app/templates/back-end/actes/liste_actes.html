@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Liste des Actes Médicaux</title>
+    {% include 'back-end/includes/css.html' %}
+
+    <!-- ==================================================== -->
+    <!-- STYLE DE LA PAGE (limité à cette page grâce au préfixe .acte-) -->
+    <!-- ==================================================== -->
+    <style>
+        :root {
+            --acte-ink: #16324f;
+            --acte-teal: #0e7c86;
+            --acte-teal-soft: #e6f3f4;
+            --acte-text: #2b3a4a;
+            --acte-muted: #6b7a8a;
+            --acte-line: #dfe5ec;
+            --acte-bg: #f4f7fa;
+        }
+
+        .acte-page { max-width: 1200px; margin: 0 auto; color: var(--acte-text); }
+
+        /* ---------- Barre du haut : titre + actions ---------- */
+        .acte-topbar {
+            display: flex; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; gap: 12px; margin-bottom: 20px;
+        }
+        .acte-topbar h3 { margin: 0; color: var(--acte-ink); font-weight: 700; }
+        .acte-topbar p { margin: 2px 0 0; color: var(--acte-muted); }
+        .acte-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .acte-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 6px; font-weight: 600;
+            font-size: 14px; border: 1px solid var(--acte-line);
+            background: #fff; color: var(--acte-ink); cursor: pointer;
+            text-decoration: none; transition: background .15s, border-color .15s;
+        }
+        .acte-btn:hover { background: var(--acte-bg); color: var(--acte-ink); text-decoration: none; }
+        .acte-btn--primary { background: var(--acte-teal); border-color: var(--acte-teal); color: #fff; }
+        .acte-btn--primary:hover { background: #0b6970; border-color: #0b6970; color: #fff; }
+        .acte-btn--small { padding: 6px 12px; font-size: 13px; }
+        .acte-btn:focus-visible { outline: 3px solid rgba(14, 124, 134, .35); outline-offset: 2px; }
+
+        /* ---------- Document principal ---------- */
+        .acte-doc {
+            background: #fff; border: 1px solid var(--acte-line);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(22, 50, 79, .06);
+        }
+
+        /* En-tête du document */
+        .acte-head {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            align-items: center; gap: 16px; padding: 24px 28px;
+            background: var(--acte-ink); color: #fff;
+        }
+        .acte-head h4 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
+        .acte-head small { color: rgba(255, 255, 255, .72); font-size: 13px; }
+
+        /* Recherche */
+        .acte-search {
+            width: 100%; max-width: 320px; padding: 9px 14px;
+            border: 1px solid transparent; border-radius: 6px;
+            font-size: 14px; background: #fff; color: var(--acte-text);
+        }
+        .acte-search:focus { outline: 3px solid rgba(255, 255, 255, .35); }
+
+        /* Statut */
+        .acte-statut {
+            display: inline-block; padding: 4px 12px; border-radius: 999px;
+            font-size: 12px; font-weight: 600; white-space: nowrap;
+        }
+        .acte-statut--termine { background: #e4f5ec; color: #1a7f4b; }
+        .acte-statut--annule { background: #fdeceb; color: #b42318; }
+        .acte-statut--en_cours { background: #e3f1fa; color: #0b6a99; }
+        .acte-statut--planifie { background: #eeeafb; color: #5b3fc4; }
+        .acte-statut--autre { background: var(--acte-bg); color: var(--acte-muted); }
+
+        /* Tableau */
+        .acte-table-wrap { overflow-x: auto; }
+        .acte-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .acte-table th {
+            padding: 14px 16px; text-align: left; font-weight: 600;
+            color: var(--acte-ink); background: var(--acte-bg);
+            border-bottom: 1px solid var(--acte-line); white-space: nowrap;
+        }
+        .acte-table td {
+            padding: 14px 16px; border-bottom: 1px solid var(--acte-line);
+            vertical-align: middle;
+        }
+        .acte-table tbody tr:hover { background: #fafcfd; }
+        .acte-table tbody tr:last-child td { border-bottom: 0; }
+        .acte-table .acte-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .acte-table .acte-center { text-align: center; }
+        .acte-nom { font-weight: 600; color: var(--acte-ink); }
+        .acte-sous { display: block; font-size: 12px; color: var(--acte-muted); margin-top: 2px; }
+        .acte-numero { font-weight: 700; color: var(--acte-teal); }
+        .acte-count {
+            display: inline-block; min-width: 28px; padding: 2px 8px; border-radius: 4px;
+            font-size: 12px; font-weight: 600; text-align: center;
+            background: var(--acte-teal-soft); color: var(--acte-teal);
+        }
+        .acte-empty { padding: 40px 16px !important; text-align: center; color: var(--acte-muted); }
+
+        /* Pied du document */
+        .acte-foot {
+            display: flex; flex-wrap: wrap; gap: 8px 32px; padding: 16px 28px;
+            background: var(--acte-bg); font-size: 13px; color: var(--acte-muted);
+            border-top: 1px solid var(--acte-line);
+        }
+        .acte-foot strong { color: var(--acte-text); font-weight: 600; }
+
+        /* Mobile */
+        @media (max-width: 640px) {
+            .acte-head { padding: 20px 18px; }
+            .acte-search { max-width: 100%; }
+            .acte-foot { padding: 14px 18px; }
+        }
+
+        /* Impression : on cache le menu et les boutons */
+        @media print {
+            .header, .sidebar, .acte-actions, .acte-search, .acte-col-action { display: none !important; }
+            .page-wrapper { margin: 0 !important; padding: 0 !important; }
+            .acte-doc { border: 0; box-shadow: none; }
+            .acte-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="acte-page">
+
+                <!-- ==================================================== -->
+                <!-- BARRE DU HAUT : titre + boutons -->
+                <!-- ==================================================== -->
+                <div class="acte-topbar">
+                    <div>
+                        <h3>Liste des actes médicaux</h3>
+                        <p>{{ hopital.nomH }}</p>
+                    </div>
+                    <div class="acte-actions">
+                        <button type="button" class="acte-btn" onclick="window.print()">
+                            <i class="fa fa-print"></i> Imprimer
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="acte-btn">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                        <a href="{% url 'creer_acte_medical' %}" class="acte-btn acte-btn--primary">
+                            <i class="fa fa-plus"></i> Nouvel acte
+                        </a>
+                    </div>
+                </div>
+
+                <div class="acte-doc">
+
+                    <!-- ==================================================== -->
+                    <!-- EN-TÊTE : titre + recherche -->
+                    <!-- ==================================================== -->
+                    <div class="acte-head">
+                        <div>
+                            <h4>Tous les actes enregistrés</h4>
+                            <small>{{ actes|length }} acte{{ actes|length|pluralize }}</small>
+                        </div>
+                        <input
+                            type="search"
+                            id="rechercheActe"
+                            class="acte-search"
+                            placeholder="Rechercher un nom, un médecin, un statut..."
+                            aria-label="Rechercher dans la liste des actes"
+                        >
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- TABLEAU DES ACTES -->
+                    <!-- ==================================================== -->
+                    <div class="acte-table-wrap">
+                        <table class="acte-table" id="tableActes">
+                            <thead>
+                                <tr>
+                                    <th>N°</th>
+                                    <th>Date</th>
+                                    <th>Personne</th>
+                                    <th>Type</th>
+                                    <th>Médecin</th>
+                                    <th class="acte-center">Prestations</th>
+                                    <th class="acte-num">Montant prévu</th>
+                                    <th>Statut</th>
+                                    <th class="acte-col-action acte-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for acte in actes %}
+                                <tr>
+                                    <td><span class="acte-numero">{{ acte.pk }}</span></td>
+                                    <td>{{ acte.date_acte|date:"d/m/Y" }}
+                                        <span class="acte-sous">{{ acte.date_acte|date:"H:i" }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="acte-nom">{{ acte.nom_personne }}</span>
+                                        <span class="acte-sous">{{ acte.telephone_personne|default:"—" }}</span>
+                                    </td>
+                                    <td>{{ acte.get_type_patient_display }}</td>
+                                    <td>{{ acte.medecin|default:"Non assigné" }}</td>
+                                    <td class="acte-center">
+                                        <span class="acte-count">{{ acte.prestations.all|length }}</span>
+                                    </td>
+                                    <td class="acte-num"><strong>{{ acte.montant_prevu }}</strong></td>
+                                    <td>
+                                        <span class="acte-statut
+                                            {% if acte.statut == 'TERMINE' %}acte-statut--termine
+                                            {% elif acte.statut == 'ANNULE' %}acte-statut--annule
+                                            {% elif acte.statut == 'EN_COURS' %}acte-statut--en_cours
+                                            {% elif acte.statut == 'PLANIFIE' %}acte-statut--planifie
+                                            {% else %}acte-statut--autre
+                                            {% endif %}">
+                                            {{ acte.get_statut_display }}
+                                        </span>
+                                    </td>
+                                    <td class="acte-col-action acte-center">
+                                        <a href="{% url 'detail_acte_medical' acte.pk %}" class="acte-btn acte-btn--small">
+                                            <i class="fa fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="acte-empty">
+                                        Aucun acte médical enregistré pour le moment.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- PIED : petit résumé -->
+                    <!-- ==================================================== -->
+                    <div class="acte-foot">
+                        <span>Hôpital : <strong>{{ hopital.nomH }}</strong></span>
+                        <span>Total des actes : <strong>{{ actes|length }}</strong></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+
+<!-- ==================================================== -->
+<!-- RECHERCHE SIMPLE : cache les lignes qui ne correspondent pas -->
+<!-- ==================================================== -->
+<script>
+  var champ = document.getElementById('rechercheActe');
+  var lignes = document.querySelectorAll('#tableActes tbody tr');
+
+  champ.addEventListener('input', function () {
+    // ---- Texte tapé, en minuscules ----
+    var texte = champ.value.toLowerCase();
+
+    // ---- Pour chaque ligne : on l'affiche ou on la cache ----
+    lignes.forEach(function (ligne) {
+      var contenu = ligne.textContent.toLowerCase();
+      ligne.style.display = contenu.indexOf(texte) !== -1 ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>

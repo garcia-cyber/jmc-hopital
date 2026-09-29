@@ -904,15 +904,22 @@ class DemandeExamenHospitalisationForm(forms.Form):
 #
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+
 class ActeMedicalForm(forms.ModelForm):
+    # Ce champ sert uniquement à filtrer visuellement les prestations
+    # dans le template avec JavaScript.
+    # Il ne bloque plus la sélection de plusieurs catégories.
     categorie = forms.ChoiceField(
-        required=True,
-        label="Catégorie de prestation",
+        required=False,
+        label="Filtrer les prestations par catégorie",
         choices=[],
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'id': 'id_categorie',
-        })
+        widget=forms.Select(
+            attrs={
+                'class': 'form-select',
+                'id': 'id_categorie',
+            }
+        )
     )
 
     prestations = forms.ModelMultipleChoiceField(
@@ -941,20 +948,26 @@ class ActeMedicalForm(forms.ModelForm):
         ]
 
         widgets = {
-            'type_patient': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_type_patient',
-            }),
+            'type_patient': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_type_patient',
+                }
+            ),
 
-            'patient': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_patient',
-            }),
+            'patient': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_patient',
+                }
+            ),
 
-            'client_externe': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_client_externe',
-            }),
+            'client_externe': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_client_externe',
+                }
+            ),
 
             'date_acte': forms.DateTimeInput(
                 attrs={
@@ -964,22 +977,27 @@ class ActeMedicalForm(forms.ModelForm):
                 format='%Y-%m-%dT%H:%M',
             ),
 
-            'medecin': forms.Select(attrs={
-                'class': 'form-select',
-            }),
+            'medecin': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_medecin',
+                }
+            ),
 
-            'statut': forms.Select(attrs={
-                'class': 'form-select',
-            }),
+            'statut': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                }
+            ),
 
-            'observation': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-            }),
+            'observation': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 4,
+                }
+            ),
         }
 
-    # Important : cette méthode doit être alignée avec "class Meta",
-    # mais toujours rester dans "class ActeMedicalForm".
     def __init__(self, *args, **kwargs):
         hopital = kwargs.pop('hopital', None)
         user = kwargs.pop('user', None)
@@ -994,6 +1012,7 @@ class ActeMedicalForm(forms.ModelForm):
         self.fields['medecin'].required = False
         self.fields['observation'].required = False
 
+        # Si aucun hôpital n'est disponible, on ne propose aucune donnée.
         if not hopital:
             self.fields['prestations'].queryset = Prestation.objects.none()
             self.fields['patient'].queryset = Patient.objects.none()
@@ -1001,6 +1020,9 @@ class ActeMedicalForm(forms.ModelForm):
             self.fields['medecin'].queryset = User.objects.none()
             return
 
+        # Important :
+        # Toutes les prestations de l'hôpital sont disponibles.
+        # Elles peuvent appartenir à plusieurs catégories différentes.
         prestations_hopital = Prestation.objects.filter(
             hopital=hopital
         ).order_by(
@@ -1008,7 +1030,13 @@ class ActeMedicalForm(forms.ModelForm):
             'libelle'
         )
 
-        categories = (
+        self.fields['prestations'].queryset = prestations_hopital
+
+        # Permet d'afficher les libellés : Consultation, Laboratoire, etc.
+        # au lieu des codes : CONS, LABO, RADIO, etc.
+        categories_dict = dict(Prestation.CATEGORIES)
+
+        categories_existantes = (
             prestations_hopital
             .exclude(categorie__isnull=True)
             .exclude(categorie__exact='')
@@ -1018,40 +1046,30 @@ class ActeMedicalForm(forms.ModelForm):
         )
 
         self.fields['categorie'].choices = [
-            ('', '--------- Sélectionnez une catégorie ---------')
+            ('', '--------- Toutes les catégories ---------')
         ] + [
-            (categorie, categorie)
-            for categorie in categories
+            (
+                categorie,
+                categories_dict.get(categorie, categorie)
+            )
+            for categorie in categories_existantes
         ]
 
-        categorie_selectionnee = (
-            self.data.get('categorie')
-            or self.initial.get('categorie')
-        )
-
-        if categorie_selectionnee:
-            self.fields['prestations'].queryset = (
-                prestations_hopital
-                .filter(categorie=categorie_selectionnee)
-                .order_by('libelle')
-            )
-        else:
-            self.fields['prestations'].queryset = (
-                Prestation.objects.none()
-            )
-
+        # Seuls les patients de l'hôpital connecté peuvent être choisis.
         self.fields['patient'].queryset = (
             Patient.objects
             .filter(hopital=hopital)
             .order_by('noms')
         )
 
+        # Seuls les clients externes de l'hôpital connecté peuvent être choisis.
         self.fields['client_externe'].queryset = (
             ClientExterne.objects
             .filter(hopital=hopital)
             .order_by('noms')
         )
 
+        # Recherche des utilisateurs ayant le rôle médecin dans l'hôpital.
         fonctions_medecins = (
             Fonction.objects
             .filter(
@@ -1067,6 +1085,8 @@ class ActeMedicalForm(forms.ModelForm):
             if fonction.userKey_id
         ]
 
+        # Si l'utilisateur connecté est médecin, il est automatiquement
+        # sélectionné dans le champ médecin.
         est_medecin = (
             fonction_key
             and 'medecin' in fonction_key.lower()
@@ -1079,6 +1099,7 @@ class ActeMedicalForm(forms.ModelForm):
             )
 
             self.initial['medecin'] = user
+
         else:
             self.fields['medecin'].queryset = (
                 User.objects
@@ -1089,35 +1110,23 @@ class ActeMedicalForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        categorie = cleaned_data.get('categorie')
         prestations = cleaned_data.get('prestations')
         type_patient = cleaned_data.get('type_patient')
         patient = cleaned_data.get('patient')
         client_externe = cleaned_data.get('client_externe')
 
-        if not categorie:
-            self.add_error(
-                'categorie',
-                "Veuillez sélectionner une catégorie."
-            )
-
+        # Au moins une prestation est obligatoire.
         if not prestations:
             self.add_error(
                 'prestations',
                 "Cochez au moins une prestation."
             )
 
-        if categorie and prestations:
-            prestations_hors_categorie = prestations.exclude(
-                categorie=categorie
-            )
-
-            if prestations_hors_categorie.exists():
-                self.add_error(
-                    'prestations',
-                    "Toutes les prestations doivent appartenir à la catégorie choisie."
-                )
-
+        # Sécurité : les prestations envoyées doivent appartenir
+        # à l'hôpital de l'utilisateur connecté.
+        #
+        # Elles peuvent cependant provenir de plusieurs catégories :
+        # consultation + laboratoire + radiologie + soins, etc.
         if prestations and self.hopital:
             prestations_autre_hopital = prestations.exclude(
                 hopital=self.hopital
@@ -1129,6 +1138,7 @@ class ActeMedicalForm(forms.ModelForm):
                     "Une ou plusieurs prestations ne sont pas liées à votre hôpital."
                 )
 
+        # Cas du patient interne.
         if type_patient == 'INTERNE':
             if not patient:
                 self.add_error(
@@ -1142,6 +1152,7 @@ class ActeMedicalForm(forms.ModelForm):
                     "Ne sélectionnez pas de client externe pour un patient interne."
                 )
 
+        # Cas du client externe.
         elif type_patient == 'EXTERNE':
             if patient:
                 self.add_error(
@@ -1152,9 +1163,15 @@ class ActeMedicalForm(forms.ModelForm):
         return cleaned_data
 
 
+# ================================================================
+# IMPORTANT :
+# Cette classe doit être en dehors de ActeMedicalForm.
+# Elle doit commencer totalement à gauche, sans espaces au début.
+# ================================================================
 class ClientExterneFormDeux(forms.ModelForm):
     class Meta:
         model = ClientExterne
+
         fields = [
             'noms',
             'sexe',
@@ -1164,23 +1181,37 @@ class ClientExterneFormDeux(forms.ModelForm):
         ]
 
         widgets = {
-            'noms': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Nom complet du client externe',
-            }),
-            'sexe': forms.Select(attrs={
-                'class': 'form-select',
-            }),
-            'poids': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex. 65 kg',
-            }),
-            'age': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex. 32 ans',
-            }),
-            'telephone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex. +243...',
-            }),
+            'noms': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Nom complet du client externe',
+                }
+            ),
+
+            'sexe': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                }
+            ),
+
+            'poids': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ex. 65 kg',
+                }
+            ),
+
+            'age': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ex. 32 ans',
+                }
+            ),
+
+            'telephone': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ex. +243...',
+                }
+            ),
         }

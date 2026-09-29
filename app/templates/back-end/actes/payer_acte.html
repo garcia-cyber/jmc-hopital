@@ -138,6 +138,13 @@
                         <a href="{% url 'detail_acte_medical' acte.pk %}" class="acte-btn">
                             <i class="fa fa-arrow-left"></i> Retour à l'acte
                         </a>
+
+                        <!-- BOUTON IMPRIMER (visible seulement s'il y a au moins un paiement) -->
+                        {% if paiements %}
+                        <a href="{% url 'imprimer_paiement_acte_medical' acte.pk %}" target="_blank" class="acte-btn">
+                            <i class="fa fa-print"></i> Imprimer le reçu
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
 

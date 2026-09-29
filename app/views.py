@@ -13935,3 +13935,58 @@ def payer_acte_medical(request, pk):
     "back-end/actes/payer_acte.html",
     context,
   )
+
+
+
+# ---------------------------------------------------------------------------------------------
+# IMPRIMER ACTE MEDICAL
+# ---------------------------------------------------------------------------------------------
+ 
+@login_required
+def imprimer_paiement_acte_medical(request, pk):
+  # ---- Récupère l'hôpital de l'utilisateur ----
+  hopital, fonction_key = get_hopital_et_fonction(request.user)
+ 
+  # ---- Vérifie que l'utilisateur est lié à un hôpital ----
+  if not hopital:
+    messages.error(
+      request,
+      "Votre compte n'est associé à aucun hôpital ou n'a pas l'autorisation requise."
+    )
+    return redirect("dashboard")
+ 
+  # ---- Récupère l'acte de cet hôpital uniquement ----
+  acte = get_object_or_404(
+    ActeMedical.objects.select_related(
+      "patient", "client_externe", "medecin"
+    ),
+    pk=pk,
+    hopital=hopital,
+  )
+ 
+  # ---- Les paiements déjà faits pour cet acte (du plus ancien au plus récent) ----
+  paiements = acte.paiements.select_related("caissier").order_by("date_paiement")
+ 
+  # ---- Rien à imprimer s'il n'y a aucun paiement ----
+  if not paiements.exists():
+    messages.info(request, "Aucun paiement n'a encore été enregistré pour cet acte.")
+    return redirect("detail_acte_medical", pk=acte.pk)
+ 
+  # ---- Les prestations de l'acte ----
+  prestations = acte.prestations.all().order_by("categorie", "libelle")
+ 
+  context = {
+    "acte": acte,
+    "paiements": paiements,
+    "prestations": prestations,
+    "hopital": hopital,
+    "fonctionKey": fonction_key,
+    "imprime_par": request.user,
+    "date_impression": timezone.now(),
+  }
+ 
+  return render(
+    request,
+    "back-end/actes/imprimer_paiement_acte.html",
+    context,
+  )

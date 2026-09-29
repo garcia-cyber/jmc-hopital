@@ -659,6 +659,14 @@ class Paiement(models.Model):
                     f"{self.id}"
                 )
             )
+    # ----------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------
+    #
+    #   -MISE EN JOUR 
+    #       - le 29/09/2026
+    # ----------------------------------------------------------------------------------
+    
+
 
 
 
@@ -2257,3 +2265,25 @@ class ActeMedical(models.Model):
             f"{self.nom_personne} - "
             f"{self.liste_prestations or 'Aucune prestation'}"
         )
+    @property
+    def total_verse(self):
+        total = self.paiements.aggregate(
+            total=Sum('montant_verse')
+        )['total']
+        return total or Decimal('0.00')
+
+    @property
+    def total_reduction(self):
+        total = self.paiements.aggregate(
+            total=Sum('montant_reduction')
+        )['total']
+        return total or Decimal('0.00')
+
+    @property
+    def reste_a_payer(self):
+        reste = self.montant_prevu - self.total_verse - self.total_reduction
+        return max(Decimal('0.00'), reste)
+
+    @property
+    def est_paye(self):
+        return self.reste_a_payer <= 0

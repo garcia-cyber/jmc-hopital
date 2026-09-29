@@ -378,6 +378,7 @@ urlpatterns =[
 path('actes/creer/',views.creer_acte_medical,name='creer_acte_medical'),
 path('actes/<int:pk>/',views.detail_acte_medical,name='detail_acte_medical'),
 path("actes/", liste_actes_medicaux, name="liste_actes_medicaux"),
+path("actes/<int:pk>/payer/", payer_acte_medical, name="payer_acte_medical"),
 
 
  ]

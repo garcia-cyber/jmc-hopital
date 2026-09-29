@@ -13832,3 +13832,106 @@ def liste_actes_medicaux(request):
     "back-end/actes/liste_actes.html",
     context,
   )
+
+
+# ---------------------------------------------------------------------------------------
+# PAIEMENT DES ACTES MEDICAUX
+# ---------------------------------------------------------------------------------------
+@login_required
+@transaction.atomic
+def payer_acte_medical(request, pk):
+  # ---- Récupère l'hôpital de l'utilisateur ----
+  hopital, fonction_key = get_hopital_et_fonction(request.user)
+
+  # ---- Vérifie que l'utilisateur est lié à un hôpital ----
+  if not hopital:
+    messages.error(
+      request,
+      "Votre compte n'est associé à aucun hôpital ou n'a pas l'autorisation requise."
+    )
+    return redirect("dashboard")
+
+  # ---- Récupère l'acte de cet hôpital ----
+  # select_for_update() bloque l'acte pendant le paiement :
+  # deux caissiers ne peuvent pas payer le même acte en même temps
+  acte = get_object_or_404(
+    ActeMedical.objects.select_for_update(),
+    pk=pk,
+    hopital=hopital,
+  )
+
+  # ---- Un acte annulé ne se paie pas ----
+  if acte.statut == "ANNULE":
+    messages.error(request, "Un acte annulé ne peut pas être payé.")
+    return redirect("detail_acte_medical", pk=acte.pk)
+
+  # ---- Si tout est déjà payé, on retourne au détail ----
+  if acte.est_paye:
+    messages.info(request, "Cet acte est déjà entièrement payé.")
+    return redirect("detail_acte_medical", pk=acte.pk)
+
+  if request.method == "POST":
+    form = PaiementActeForm(request.POST)
+
+    if form.is_valid():
+      # ---- Les montants saisis (0 si le champ est vide) ----
+      montant_verse = form.cleaned_data["montant_verse"] or Decimal("0.00")
+      montant_reduction = form.cleaned_data["montant_reduction"] or Decimal("0.00")
+      total_saisi = montant_verse + montant_reduction
+
+      # ---- Vérifications simples ----
+      if total_saisi <= 0:
+        form.add_error(None, "Saisissez un montant versé ou une réduction.")
+
+      elif total_saisi > acte.reste_a_payer:
+        form.add_error(
+          None,
+          f"Le total saisi dépasse le reste à payer ({acte.reste_a_payer})."
+        )
+
+      else:
+        # ---- Enregistre le paiement ----
+        # Le modèle Paiement calcule tout seul le reste_a_payer
+        # et crée la facture automatiquement
+        Paiement.objects.create(
+          acte_medical=acte,
+          service="ACTE_MEDICAL",
+          patient=acte.patient,
+          clientEx=acte.client_externe,
+          montant_verse=montant_verse,
+          montant_reduction=montant_reduction,
+          devise=form.cleaned_data["devise"],
+          caissier=request.user,
+          hopital=hopital,
+        )
+
+        messages.success(request, "Le paiement a été enregistré avec succès.")
+        return redirect("detail_acte_medical", pk=acte.pk)
+
+  else:
+    # ---- Au départ, on propose de payer tout le reste ----
+    # (le caissier peut baisser le montant pour un paiement partiel)
+    form = PaiementActeForm(
+      initial={
+        "montant_verse": acte.reste_a_payer,
+        "montant_reduction": 0,
+        "devise": "CDF",
+      }
+    )
+
+  # ---- Historique des paiements déjà faits pour cet acte ----
+  paiements = acte.paiements.select_related("caissier").order_by("-date_paiement")
+
+  context = {
+    "acte": acte,
+    "form": form,
+    "paiements": paiements,
+    "hopital": hopital,
+    "fonctionKey": fonction_key,
+  }
+
+  return render(
+    request,
+    "back-end/actes/payer_acte.html",
+    context,
+  )

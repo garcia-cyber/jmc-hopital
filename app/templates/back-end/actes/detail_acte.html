@@ -170,6 +170,11 @@
                         <a href="{% url 'dashboard' %}" class="acte-btn">
                             <i class="fa fa-arrow-left"></i> Retour
                         </a>
+                        {% if not acte.est_paye %}
+<a href="{% url 'payer_acte_medical' acte.pk %}" class="acte-btn acte-btn--primary">
+    <i class="fa fa-money"></i> Payer
+</a>
+{% endif %}
                         <a href="{% url 'creer_acte_medical' %}" class="acte-btn acte-btn--primary">
                             <i class="fa fa-plus"></i> Nouvel acte
                         </a>

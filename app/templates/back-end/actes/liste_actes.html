@@ -228,6 +228,10 @@
                                         <a href="{% url 'detail_acte_medical' acte.pk %}" class="acte-btn acte-btn--small">
                                             <i class="fa fa-eye"></i> Voir
                                         </a>
+
+                                        <a href="{% url 'payer_acte_medical' acte.pk %}" class="acte-btn acte-btn--small">
+    <i class="fa fa-money"></i> Payer
+</a>
                                     </td>
                                 </tr>
                                 {% empty %}

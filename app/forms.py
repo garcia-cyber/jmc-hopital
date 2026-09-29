@@ -1215,3 +1215,38 @@ class ClientExterneFormDeux(forms.ModelForm):
                 }
             ),
         }
+
+# -----------------------------------------------------------------------------------
+# 
+#   - formulaire pour le paiement des actes medicaux
+#   - le 29/09/2026
+#
+#
+class PaiementActeForm(forms.Form):
+  # ---- Montant que le client donne maintenant ----
+  montant_verse = forms.DecimalField(
+    label="Montant versé",
+    min_value=0,
+    max_digits=15,
+    decimal_places=2,
+    required=False,
+    widget=forms.NumberInput(attrs={"class": "acte-input", "step": "0.01"}),
+  )
+
+  # ---- Réduction accordée (facultatif) ----
+  montant_reduction = forms.DecimalField(
+    label="Réduction",
+    min_value=0,
+    max_digits=10,
+    decimal_places=2,
+    required=False,
+    widget=forms.NumberInput(attrs={"class": "acte-input", "step": "0.01"}),
+  )
+
+  # ---- Devise : CDF ou USD ----
+  devise = forms.ChoiceField(
+    label="Devise",
+    choices=Paiement.CURRENCY,
+    widget=forms.Select(attrs={"class": "acte-input"}),
+  )
+

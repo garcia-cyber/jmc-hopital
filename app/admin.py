@@ -652,3 +652,133 @@ class AvisMedecinAdmin(admin.ModelAdmin):
 
 # --------------------------------------------------------------------------------------------
 #   -mise en jour 
+# --------------------------------------------------------------------------------------------
+#
+#  -le 29/09/2026
+#
+# 
+
+@admin.register(ActeMedical)
+class ActeMedicalAdmin(admin.ModelAdmin):
+ 
+    # ---- Colonnes affichées dans la liste ----
+    list_display = (
+        'id',
+        'nom_personne',
+        'type_patient',
+        'statut',
+        'date_acte',
+        'montant_prevu',
+        'afficher_total_verse',
+        'afficher_reste_a_payer',
+        'afficher_est_paye',
+        'medecin',
+        'hopital',
+    )
+    list_display_links = ('id', 'nom_personne')
+ 
+    # ---- Filtres à droite ----
+    list_filter = (
+        'statut',
+        'type_patient',
+        'hopital',
+        'date_acte',
+    )
+ 
+    # ---- Recherche (par nom ou téléphone de la personne) ----
+    search_fields = (
+        'patient__noms',
+        'patient__telephone',
+        'client_externe__noms',
+        'client_externe__telephone',
+    )
+ 
+    date_hierarchy = 'date_acte'
+    ordering = ('-date_acte', '-date_creation')
+    list_per_page = 25
+ 
+    # ---- Optimisation : évite trop de requêtes dans la liste ----
+    list_select_related = ('patient', 'client_externe', 'medecin', 'hopital')
+ 
+    # ---- Champs de saisie ----
+    # Sélecteur à deux colonnes pour cocher plusieurs prestations
+    filter_horizontal = ('prestations',)
+    # Champ de recherche par ID au lieu d'une liste déroulante énorme
+    raw_id_fields = ('patient', 'client_externe')
+ 
+    # ---- Champs en lecture seule (calculés automatiquement) ----
+    readonly_fields = (
+        'montant_prevu',
+        'afficher_total_verse',
+        'afficher_total_reduction',
+        'afficher_reste_a_payer',
+        'afficher_est_paye',
+        'date_creation',
+        'date_modification',
+    )
+ 
+    fieldsets = (
+        ('Personne concernée', {
+            'fields': ('type_patient', 'patient', 'client_externe'),
+        }),
+        ('Acte médical', {
+            'fields': (
+                'prestations',
+                'date_acte',
+                'statut',
+                'medecin',
+                'hopital',
+                'observation',
+            ),
+        }),
+        ('Paiement (calculé automatiquement)', {
+            'fields': (
+                'montant_prevu',
+                'afficher_total_verse',
+                'afficher_total_reduction',
+                'afficher_reste_a_payer',
+                'afficher_est_paye',
+            ),
+        }),
+        ('Suivi', {
+            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'classes': ('collapse',),
+        }),
+    )
+ 
+    # ============================================================
+    # COLONNES CALCULEES
+    # ============================================================
+ 
+    @admin.display(description="Total versé")
+    def afficher_total_verse(self, obj):
+        return obj.total_verse if obj.pk else "-"
+ 
+    @admin.display(description="Total réduction")
+    def afficher_total_reduction(self, obj):
+        return obj.total_reduction if obj.pk else "-"
+ 
+    @admin.display(description="Reste à payer")
+    def afficher_reste_a_payer(self, obj):
+        return obj.reste_a_payer if obj.pk else "-"
+ 
+    @admin.display(boolean=True, description="Payé")
+    def afficher_est_paye(self, obj):
+        return obj.est_paye if obj.pk else False
+ 
+    # ============================================================
+    # LOGIQUE A L'ENREGISTREMENT
+    # ============================================================
+ 
+    def save_model(self, request, obj, form, change):
+        # Enregistre automatiquement qui a créé l'acte
+        if not change and not obj.cree_par:
+            obj.cree_par = request.user
+        super().save_model(request, obj, form, change)
+ 
+    def save_related(self, request, form, formsets, change):
+        # Les prestations (ManyToMany) sont enregistrées après l'acte.
+        # On recalcule donc le montant prévu une fois qu'elles sont en place.
+        super().save_related(request, form, formsets, change)
+        form.instance.recalculer_montant_prevu()
+ 

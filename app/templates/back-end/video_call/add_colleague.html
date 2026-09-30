@@ -3,65 +3,131 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ajouter des collègues - {{ room.name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Participants de la conférence</title>
     {% include 'back-end/includes/css.html' %}
+
+    <!-- ==================================================== -->
+    <!-- STYLE DE LA PAGE (limité à cette page grâce au préfixe .conf-) -->
+    <!-- ==================================================== -->
     <style>
-        body {
-            background: #f4f7fb;
+        :root {
+            --conf-ink: #16324f;
+            --conf-teal: #0e7c86;
+            --conf-teal-soft: #e6f3f4;
+            --conf-text: #2b3a4a;
+            --conf-muted: #6b7a8a;
+            --conf-line: #dfe5ec;
+            --conf-bg: #f4f7fa;
+            --conf-red: #b42318;
+            --conf-red-soft: #fdeceb;
         }
 
-        .page-shell {
-            min-height: 100vh;
-            padding: 20px 0;
+        .conf-page { max-width: 960px; margin: 0 auto; color: var(--conf-text); }
+
+        /* ---------- Barre du haut ---------- */
+        .conf-topbar {
+            display: flex; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; gap: 12px; margin-bottom: 20px;
+        }
+        .conf-topbar h3 { margin: 0; color: var(--conf-ink); font-weight: 700; }
+        .conf-topbar p { margin: 2px 0 0; color: var(--conf-muted); }
+        .conf-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 6px; font-weight: 600;
+            font-size: 14px; border: 1px solid var(--conf-line);
+            background: #fff; color: var(--conf-ink); cursor: pointer;
+            text-decoration: none; transition: background .15s, border-color .15s;
+        }
+        .conf-btn:hover { background: var(--conf-bg); color: var(--conf-ink); text-decoration: none; }
+        .conf-btn--primary { background: var(--conf-teal); border-color: var(--conf-teal); color: #fff; }
+        .conf-btn--primary:hover { background: #0b6970; border-color: #0b6970; color: #fff; }
+        .conf-btn--danger { color: var(--conf-red); border-color: #f5c6c2; background: #fff; }
+        .conf-btn--danger:hover { background: var(--conf-red-soft); color: var(--conf-red); }
+        .conf-btn--sm { padding: 6px 12px; font-size: 13px; }
+        .conf-btn:focus-visible { outline: 3px solid rgba(14, 124, 134, .35); outline-offset: 2px; }
+
+        /* ---------- Règle d'accès ---------- */
+        .conf-regle {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px; margin-bottom: 20px; border-radius: 6px;
+            background: var(--conf-teal-soft); color: var(--conf-ink);
+            border: 1px solid #b9dde0; font-size: 14px;
+        }
+        .conf-regle i { color: var(--conf-teal); margin-top: 3px; }
+
+        /* ---------- Document principal ---------- */
+        .conf-doc {
+            background: #fff; border: 1px solid var(--conf-line);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(22, 50, 79, .06);
+        }
+        .conf-head {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            align-items: center; gap: 16px; padding: 24px 28px;
+            background: var(--conf-ink); color: #fff;
+        }
+        .conf-head h4 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
+        .conf-head small { color: rgba(255, 255, 255, .72); font-size: 13px; }
+        .conf-head-count {
+            padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+            background: rgba(255, 255, 255, .15); color: #fff;
         }
 
-        .invite-card {
-            border: 0;
-            border-radius: 20px;
-            box-shadow: 0 18px 50px rgba(15, 23, 42, .12);
-            overflow: hidden;
-            background: #fff;
+        .conf-section { padding: 24px 28px; border-bottom: 1px solid var(--conf-line); }
+        .conf-section:last-child { border-bottom: 0; }
+        .conf-section-title {
+            display: flex; align-items: center; gap: 10px;
+            margin: 0 0 18px; font-size: 16px; font-weight: 700; color: var(--conf-ink);
+        }
+        .conf-section-title i { color: var(--conf-teal); }
+        .conf-section-title .conf-badge { margin-left: auto; }
+
+        .conf-badge {
+            display: inline-block; padding: 3px 12px; border-radius: 999px;
+            font-size: 12px; font-weight: 700;
+            background: var(--conf-teal-soft); color: var(--conf-teal);
         }
 
-        .invite-header {
-            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-            color: #fff;
-            padding: 16px 20px;
+        /* ---------- Recherche et filtre ---------- */
+        .conf-outils { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .conf-search { position: relative; flex: 1; min-width: 220px; }
+        .conf-search i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--conf-muted); pointer-events: none;
         }
-
-        .invite-body {
-            padding: 20px;
+        .conf-input {
+            width: 100%; padding: 11px 14px 11px 40px; font-size: 15px;
+            border: 1px solid var(--conf-line); border-radius: 6px;
+            background: #fff; color: var(--conf-text);
         }
-
-        .info-box {
-            border-radius: 14px;
-            background: #eef6ff;
-            border: 1px solid #d6e8ff;
-            padding: 14px 16px;
-            margin-bottom: 18px;
+        .conf-select {
+            padding: 11px 14px; font-size: 15px; min-width: 200px;
+            border: 1px solid var(--conf-line); border-radius: 6px;
+            background: #fff; color: var(--conf-text);
         }
+        .conf-input:focus, .conf-select:focus { outline: 3px solid rgba(14, 124, 134, .3); border-color: var(--conf-teal); }
 
-        .members-box {
-            border-radius: 14px;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            padding: 14px 16px;
+        /* ---------- Tableaux ---------- */
+        .conf-table-wrap { overflow-x: auto; border: 1px solid var(--conf-line); border-radius: 6px; }
+        .conf-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .conf-table th {
+            padding: 12px 16px; text-align: left; font-weight: 600;
+            color: var(--conf-ink); background: var(--conf-bg);
+            border-bottom: 1px solid var(--conf-line); white-space: nowrap;
         }
+        .conf-table td { padding: 11px 16px; border-bottom: 1px solid var(--conf-line); vertical-align: middle; }
+        .conf-table tbody tr:last-child td { border-bottom: 0; }
+        .conf-table .conf-action { text-align: right; white-space: nowrap; width: 1%; }
+        .conf-table form { margin: 0; }
+        .conf-muted { color: var(--conf-muted); font-size: 12.5px; }
+        .conf-empty { padding: 28px 16px !important; text-align: center; color: var(--conf-muted); }
+        .conf-scroll { max-height: 380px; overflow-y: auto; }
+        .conf-note { margin: 12px 0 0; font-size: 13px; color: var(--conf-muted); }
 
-        .members-list .list-group-item {
-            border-radius: 10px;
-            margin-bottom: 8px;
-        }
-
-        .form-select, .btn {
-            border-radius: 12px;
-        }
-
-        @media (max-width: 767.98px) {
-            .invite-body {
-                padding: 14px;
-            }
+        /* Mobile */
+        @media (max-width: 720px) {
+            .conf-head, .conf-section { padding: 20px 18px; }
         }
     </style>
 </head>
@@ -71,85 +137,173 @@
     {% include 'back-end/includes/sidebar.html' %}
 
     <div class="page-wrapper">
-        <div class="content container-fluid page-shell">
-            <div class="row justify-content-center">
-                <div class="col-12 col-xl-8 col-lg-9">
-                    <div class="card invite-card">
-                        <div class="invite-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <h4 class="mb-1">Ajouter des collègues</h4>
-                                <small>Room : {{ room.name }}</small>
+        <div class="content container-fluid">
+            <div class="conf-page">
+
+                <!-- ==================================================== -->
+                <!-- BARRE DU HAUT -->
+                <!-- ==================================================== -->
+                <div class="conf-topbar">
+                    <div>
+                        <h3>Participants de la conférence</h3>
+                        <p>Choisissez qui peut rejoindre cette salle.</p>
+                    </div>
+                    <div>
+                        <a href="{% url 'video_call_room' room.name %}" class="conf-btn">
+                            <i class="fa fa-arrow-left"></i> Retour à la salle
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ==================================================== -->
+                <!-- REGLE D'ACCES -->
+                <!-- ==================================================== -->
+                <div class="conf-regle">
+                    <i class="fa fa-info-circle"></i>
+                    <div>
+                        <strong>Règle d'accès :</strong>
+                        {% if tous_hopitaux %}
+                            en tant qu'administrateur, vous pouvez appeler <strong>tous les hôpitaux</strong>.
+                        {% else %}
+                            vous êtes limité à votre hôpital{% if hopital %} (<strong>{{ hopital }}</strong>){% endif %}.
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="conf-doc">
+
+                    <!-- ==================================================== -->
+                    <!-- EN-TÊTE -->
+                    <!-- ==================================================== -->
+                    <div class="conf-head">
+                        <div>
+                            <h4><i class="fa fa-video-camera"></i> {{ room.name }}</h4>
+                            <small>
+                                Créée par {{ room.created_by.get_full_name|default:room.created_by.username }}
+                                le {{ room.created_at|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                        <span class="conf-head-count">
+                            {{ membres|length }} participant{{ membres|length|pluralize }}
+                        </span>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 1 : PARTICIPANTS AUTORISÉS -->
+                    <!-- ==================================================== -->
+                    <div class="conf-section">
+                        <h5 class="conf-section-title">
+                            <i class="fa fa-users"></i> Participants autorisés
+                            <span class="conf-badge">{{ membres|length }}</span>
+                        </h5>
+
+                        <div class="conf-table-wrap">
+                            <table class="conf-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Identifiant</th>
+                                        {% if tous_hopitaux %}<th>Hôpital</th>{% endif %}
+                                        <th class="conf-action">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for membre in membres %}
+                                    <tr>
+                                        <td><strong>{{ membre.get_full_name|default:membre.username }}</strong></td>
+                                        <td class="conf-muted">{{ membre.username }}</td>
+                                        {% if tous_hopitaux %}<td>{{ membre.hopital_nom|default:"-" }}</td>{% endif %}
+                                        <td class="conf-action">
+                                            <form method="post"
+                                                  onsubmit="return confirm('Retirer cet utilisateur de la conférence ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="user_id" value="{{ membre.pk }}">
+                                                <input type="hidden" name="action" value="retirer">
+                                                <button type="submit" class="conf-btn conf-btn--danger conf-btn--sm">
+                                                    <i class="fa fa-times"></i> Retirer
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if tous_hopitaux %}4{% else %}3{% endif %}" class="conf-empty">Aucun participant ajouté pour le moment.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="conf-note">Le créateur de la salle et les gestionnaires y ont toujours accès.</p>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 2 : AJOUTER UN PARTICIPANT -->
+                    <!-- ==================================================== -->
+                    <div class="conf-section">
+                        <h5 class="conf-section-title">
+                            <i class="fa fa-user-plus"></i> Ajouter un participant
+                            <span class="conf-badge">{{ colleagues|length }} disponible{{ colleagues|length|pluralize }}</span>
+                        </h5>
+
+                        <!-- Recherche instantanée + filtre par hôpital (admin) -->
+                        <div class="conf-outils">
+                            <div class="conf-search">
+                                <i class="fa fa-search"></i>
+                                <input type="text" id="conf-recherche" class="conf-input"
+                                       placeholder="Rechercher un collègue par nom ou identifiant..." autocomplete="off">
                             </div>
-                            <div>
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    {{ room.room_id }}
-                                </span>
-                            </div>
+
+                            {% if tous_hopitaux %}
+                            <select id="conf-hopital" class="conf-select">
+                                <option value="">Tous les hôpitaux</option>
+                                {% for h in hopitaux %}
+                                    <option value="{{ h.nomH|lower }}">{{ h.nomH }}</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
                         </div>
 
-                        <div class="invite-body">
-                            <div class="info-box">
-                                <strong>Créée par :</strong> {{ room.created_by.username }}<br>
-                                <strong>Statut :</strong>
-                                {% if room.is_active %}
-                                    active
-                                {% else %}
-                                    inactive
-                                {% endif %}
-                            </div>
-
-                            {% if colleagues %}
-                                <form method="post" class="mb-4">
-                                    {% csrf_token %}
-
-                                    <div class="mb-3">
-                                        <label for="user_id" class="form-label">Choisir un collègue</label>
-                                        <select name="user_id" id="user_id" class="form-select" required>
-                                            <option value="">-- Sélectionner --</option>
-                                            {% for user in colleagues %}
-                                                {% if user.id not in existing_member_ids %}
-                                                    <option value="{{ user.id }}">
-                                                        {{ user.username }}
-                                                    </option>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success">
-                                        Ajouter
-                                    </button>
-                                    <a href="{% url 'video_call_room' room.room_id %}" class="btn btn-secondary">
-                                        Retour à l'appel
-                                    </a>
-                                </form>
-                            {% else %}
-                                <div class="alert alert-warning">
-                                    Aucun collègue disponible pour le moment.
-                                </div>
-
-                                <a href="{% url 'video_call_room' room.room_id %}" class="btn btn-secondary">
-                                    Retour à l'appel
-                                </a>
-                            {% endif %}
-
-                            <div class="members-box">
-                                <h5 class="mb-3">Collègues déjà autorisés</h5>
-
-                                <ul class="list-group members-list">
-                                    {% for member in room.allowed_users.all %}
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <span>{{ member.username }}</span>
-                                        </li>
+                        <div class="conf-table-wrap conf-scroll">
+                            <table class="conf-table" id="conf-liste">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Identifiant</th>
+                                        {% if tous_hopitaux %}<th>Hôpital</th>{% endif %}
+                                        <th class="conf-action">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for collegue in colleagues %}
+                                    <tr data-nom="{{ collegue.username|lower }} {{ collegue.get_full_name|lower }}"
+                                        data-hopital="{{ collegue.hopital_nom|default:''|lower }}">
+                                        <td><strong>{{ collegue.get_full_name|default:collegue.username }}</strong></td>
+                                        <td class="conf-muted">{{ collegue.username }}</td>
+                                        {% if tous_hopitaux %}<td>{{ collegue.hopital_nom|default:"-" }}</td>{% endif %}
+                                        <td class="conf-action">
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="user_id" value="{{ collegue.pk }}">
+                                                <input type="hidden" name="action" value="ajouter">
+                                                <button type="submit" class="conf-btn conf-btn--primary conf-btn--sm">
+                                                    <i class="fa fa-plus"></i> Ajouter
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
                                     {% empty %}
-                                        <li class="list-group-item">Aucun collègue ajouté.</li>
+                                    <tr>
+                                        <td colspan="{% if tous_hopitaux %}4{% else %}3{% endif %}" class="conf-empty">Aucun collègue disponible à ajouter.</td>
+                                    </tr>
                                     {% endfor %}
-                                </ul>
-                            </div>
-
-                            <input type="hidden" id="roomId" value="{{ room.room_id }}">
+                                    <tr id="conf-aucun" style="display:none;">
+                                        <td colspan="{% if tous_hopitaux %}4{% else %}3{% endif %}" class="conf-empty">Aucun résultat pour cette recherche.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -157,5 +311,35 @@
 </div>
 
 {% include 'back-end/includes/js.html' %}
+
+<script>
+    // Recherche instantanée + filtre par hôpital dans la liste des collègues
+    (function () {
+        var champ = document.getElementById('conf-recherche');
+        var choixHopital = document.getElementById('conf-hopital');
+        var aucun = document.getElementById('conf-aucun');
+        if (!champ) return;
+
+        function filtrer() {
+            var q = champ.value.trim().toLowerCase();
+            var h = choixHopital ? choixHopital.value : '';
+            var lignes = document.querySelectorAll('#conf-liste tbody tr[data-nom]');
+            var visibles = 0;
+
+            lignes.forEach(function (tr) {
+                var okNom = tr.getAttribute('data-nom').indexOf(q) !== -1;
+                var okHop = !h || tr.getAttribute('data-hopital') === h;
+                var ok = okNom && okHop;
+                tr.style.display = ok ? '' : 'none';
+                if (ok) visibles++;
+            });
+
+            aucun.style.display = (lignes.length > 0 && visibles === 0) ? '' : 'none';
+        }
+
+        champ.addEventListener('input', filtrer);
+        if (choixHopital) choixHopital.addEventListener('change', filtrer);
+    })();
+</script>
 </body>
 </html>

@@ -1,0 +1,368 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Journal d'audit</title>
+    {% include 'back-end/includes/css.html' %}
+
+    <!-- ==================================================== -->
+    <!-- STYLE DE LA PAGE (limité à cette page grâce au préfixe .aud-) -->
+    <!-- ==================================================== -->
+    <style>
+        :root {
+            --aud-ink: #16324f;
+            --aud-teal: #0e7c86;
+            --aud-text: #2b3a4a;
+            --aud-muted: #6b7a8a;
+            --aud-line: #dfe5ec;
+            --aud-bg: #f4f7fa;
+            --aud-red: #b42318;
+            --aud-red-soft: #fdeceb;
+            --aud-green: #067647;
+            --aud-green-soft: #e7f6ee;
+            --aud-amber: #b35c00;
+            --aud-amber-soft: #fff4e5;
+        }
+
+        .aud-page { max-width: 1200px; margin: 0 auto; color: var(--aud-text); }
+        .aud-topbar { margin-bottom: 20px; }
+        .aud-topbar h3 { margin: 0; color: var(--aud-ink); font-weight: 700; }
+        .aud-topbar p { margin: 2px 0 0; color: var(--aud-muted); }
+
+        .aud-card {
+            background: #fff; border: 1px solid var(--aud-line);
+            border-radius: 8px; padding: 20px 24px; margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(22, 50, 79, .06);
+        }
+
+        /* ---------- Barre de recherche ---------- */
+        .aud-search { display: flex; gap: 8px; margin-bottom: 18px; }
+        .aud-search-box { position: relative; flex: 1; }
+        .aud-search-box i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--aud-muted); pointer-events: none;
+        }
+        .aud-search-box .aud-input { padding: 12px 14px 12px 40px; font-size: 15px; }
+
+        /* ---------- Filtres ---------- */
+        .aud-filtres { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .aud-field label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; color: var(--aud-ink); }
+        .aud-input {
+            width: 100%; padding: 9px 12px; font-size: 14px;
+            border: 1px solid var(--aud-line); border-radius: 6px;
+            background: #fff; color: var(--aud-text);
+        }
+        .aud-input:focus { outline: 3px solid rgba(14, 124, 134, .3); border-color: var(--aud-teal); }
+        .aud-filtres-actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .aud-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 14px;
+            border: 1px solid var(--aud-line); background: #fff; color: var(--aud-ink);
+            cursor: pointer; text-decoration: none;
+        }
+        .aud-btn:hover { background: var(--aud-bg); color: var(--aud-ink); text-decoration: none; }
+        .aud-btn--primary { background: var(--aud-teal); border-color: var(--aud-teal); color: #fff; }
+        .aud-btn--primary:hover { background: #0b6970; border-color: #0b6970; color: #fff; }
+
+        /* ---------- Résumé des résultats ---------- */
+        .aud-resultats {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--aud-muted);
+        }
+        .aud-resultats strong { color: var(--aud-ink); }
+
+        /* ---------- Tableau ---------- */
+        .aud-table-wrap { overflow-x: auto; border: 1px solid var(--aud-line); border-radius: 6px; }
+        .aud-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        .aud-table th {
+            padding: 11px 14px; text-align: left; font-weight: 600; color: var(--aud-ink);
+            background: var(--aud-bg); border-bottom: 1px solid var(--aud-line); white-space: nowrap;
+        }
+        .aud-table td { padding: 11px 14px; border-bottom: 1px solid var(--aud-line); vertical-align: top; }
+        .aud-table tbody tr:last-child td { border-bottom: 0; }
+        .aud-nowrap { white-space: nowrap; }
+        .aud-muted { color: var(--aud-muted); font-size: 12px; }
+        .aud-empty { padding: 30px 16px !important; text-align: center; color: var(--aud-muted); }
+
+        /* ---------- Badges d'action ---------- */
+        .aud-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 12px; font-weight: 700; white-space: nowrap;
+            background: var(--aud-bg); color: var(--aud-muted);
+        }
+        .aud-badge--CREATION { background: var(--aud-green-soft); color: var(--aud-green); }
+        .aud-badge--MODIFICATION { background: var(--aud-amber-soft); color: var(--aud-amber); }
+        .aud-badge--SUPPRESSION { background: var(--aud-red-soft); color: var(--aud-red); }
+        .aud-badge--ECHEC_CONNEXION { background: var(--aud-red-soft); color: var(--aud-red); }
+        .aud-badge--CONNEXION { background: #e6f3f4; color: var(--aud-teal); }
+
+        /* ---------- Détails des changements ---------- */
+        .aud-details summary { cursor: pointer; color: var(--aud-teal); font-weight: 600; }
+        .aud-change { margin-top: 6px; font-size: 12.5px; word-break: break-word; }
+        .aud-change strong { color: var(--aud-ink); }
+        .aud-avant { color: var(--aud-red); text-decoration: line-through; }
+        .aud-apres { color: var(--aud-green); }
+
+        /* ---------- Pagination numérotée ---------- */
+        .aud-pagination {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; margin-top: 18px; flex-wrap: wrap;
+        }
+        .aud-pages { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .aud-page-num {
+            min-width: 38px; height: 38px; padding: 0 10px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--aud-line); border-radius: 6px;
+            background: #fff; color: var(--aud-ink);
+            font-size: 14px; font-weight: 600; text-decoration: none;
+        }
+        a.aud-page-num:hover { background: var(--aud-bg); color: var(--aud-ink); text-decoration: none; }
+        .aud-page-num--active { background: var(--aud-teal); border-color: var(--aud-teal); color: #fff; }
+        .aud-page-num--off { opacity: .4; cursor: not-allowed; }
+        .aud-page-dots { color: var(--aud-muted); padding: 0 4px; }
+
+        @media (max-width: 900px) {
+            .aud-filtres { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 560px) {
+            .aud-filtres { grid-template-columns: 1fr; }
+            .aud-search { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="aud-page">
+
+                <!-- ==================================================== -->
+                <!-- TITRE -->
+                <!-- ==================================================== -->
+                <div class="aud-topbar">
+                    <h3>Journal d'audit</h3>
+                    <p>Qui a fait quoi, quand et depuis quelle adresse IP. Ce journal ne peut pas être modifié.</p>
+                </div>
+
+                <!-- ==================================================== -->
+                <!-- RECHERCHE ET FILTRES -->
+                <!-- ==================================================== -->
+                <div class="aud-card">
+                    <form method="get">
+
+                        <!-- Barre de recherche -->
+                        <div class="aud-search">
+                            <div class="aud-search-box">
+                                <i class="fa fa-search"></i>
+                                <input class="aud-input" type="text" id="f-q" name="q"
+                                       value="{{ filtres.q }}"
+                                       placeholder="Rechercher : nom du patient, objet, numéro...">
+                            </div>
+                            <button type="submit" class="aud-btn aud-btn--primary">
+                                <i class="fa fa-search"></i> Rechercher
+                            </button>
+                        </div>
+
+                        <!-- Filtres -->
+                        <div class="aud-filtres">
+                            <div class="aud-field">
+                                <label for="f-utilisateur">Utilisateur</label>
+                                <input class="aud-input" type="text" id="f-utilisateur" name="utilisateur"
+                                       value="{{ filtres.utilisateur }}" placeholder="Nom d'utilisateur">
+                            </div>
+
+                            <div class="aud-field">
+                                <label for="f-action">Action</label>
+                                <select class="aud-input" id="f-action" name="action">
+                                    <option value="">Toutes</option>
+                                    {% for code, libelle in actions %}
+                                        <option value="{{ code }}" {% if filtres.action == code %}selected{% endif %}>{{ libelle }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="aud-field">
+                                <label for="f-modele">Type d'objet</label>
+                                <select class="aud-input" id="f-modele" name="modele">
+                                    <option value="">Tous</option>
+                                    {% for nom in modeles %}
+                                        <option value="{{ nom }}" {% if filtres.modele == nom %}selected{% endif %}>{{ nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="aud-field">
+                                <label for="f-hopital">Hôpital</label>
+                                <select class="aud-input" id="f-hopital" name="hopital">
+                                    <option value="">Tous</option>
+                                    {% for h in hopitaux %}
+                                        <option value="{{ h.pk }}" {% if filtres.hopital == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.nomH }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="aud-field">
+                                <label for="f-debut">Du</label>
+                                <input class="aud-input" type="date" id="f-debut" name="date_debut" value="{{ filtres.date_debut }}">
+                            </div>
+
+                            <div class="aud-field">
+                                <label for="f-fin">Au</label>
+                                <input class="aud-input" type="date" id="f-fin" name="date_fin" value="{{ filtres.date_fin }}">
+                            </div>
+                        </div>
+
+                        <div class="aud-filtres-actions">
+                            <button type="submit" class="aud-btn aud-btn--primary"><i class="fa fa-filter"></i> Filtrer</button>
+                            <a href="{% url 'liste_audit' %}" class="aud-btn">Réinitialiser</a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ==================================================== -->
+                <!-- TABLEAU DU JOURNAL -->
+                <!-- ==================================================== -->
+                <div class="aud-card">
+
+                    <!-- Résumé des résultats -->
+                    <div class="aud-resultats">
+                        <span>
+                            <strong>{{ page_obj.paginator.count }}</strong>
+                            ligne{{ page_obj.paginator.count|pluralize }} dans le journal
+                        </span>
+                        {% if page_obj.paginator.count %}
+                        <span>
+                            Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="aud-table-wrap">
+                        <table class="aud-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Utilisateur</th>
+                                    <th>Action</th>
+                                    <th>Objet</th>
+                                    <th>Détails</th>
+                                    <th>IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in page_obj %}
+                                <tr>
+                                    <td class="aud-nowrap">{{ log.date|date:"d/m/Y H:i:s" }}</td>
+                                    <td>
+                                        <strong>{{ log.nom_utilisateur|default:"-" }}</strong>
+                                        {% if log.hopital %}<div class="aud-muted">{{ log.hopital.nomH }}</div>{% endif %}
+                                    </td>
+                                    <td><span class="aud-badge aud-badge--{{ log.action }}">{{ log.get_action_display }}</span></td>
+                                    <td>
+                                        {% if log.modele %}<strong>{{ log.modele }}</strong> #{{ log.objet_id }}<br>{% endif %}
+                                        <span class="aud-muted">{{ log.objet_repr }}</span>
+                                    </td>
+                                    <td>
+                                        {% if log.changements %}
+                                        <details class="aud-details">
+                                            <summary>{{ log.changements|length }} champ{{ log.changements|length|pluralize }}</summary>
+                                            {% for champ, valeurs in log.changements.items %}
+                                                <div class="aud-change">
+                                                    <strong>{{ champ }}</strong> :
+                                                    <span class="aud-avant">{{ valeurs.0|default_if_none:"vide" }}</span>
+                                                    &rarr;
+                                                    <span class="aud-apres">{{ valeurs.1|default_if_none:"vide" }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </details>
+                                        {% else %}
+                                            <span class="aud-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="aud-nowrap">{{ log.adresse_ip|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="aud-empty">Aucune ligne dans le journal pour ces filtres.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- PAGINATION NUMEROTEE -->
+                    <!-- ==================================================== -->
+                    {% if page_obj.paginator.num_pages > 1 %}
+                    <div class="aud-pagination">
+                        <span class="aud-muted">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        </span>
+
+                        <div class="aud-pages">
+
+                            <!-- Première page et page précédente -->
+                            {% if page_obj.has_previous %}
+                                <a class="aud-page-num" title="Première page"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page=1">&laquo;</a>
+                                <a class="aud-page-num" title="Page précédente"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+                            {% else %}
+                                <span class="aud-page-num aud-page-num--off">&laquo;</span>
+                                <span class="aud-page-num aud-page-num--off">&lsaquo;</span>
+                            {% endif %}
+
+                            <!-- Lien vers la page 1 si on est loin du début -->
+                            {% if page_obj.number > 3 %}
+                                <a class="aud-page-num"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page=1">1</a>
+                                {% if page_obj.number > 4 %}<span class="aud-page-dots">&hellip;</span>{% endif %}
+                            {% endif %}
+
+                            <!-- Pages autour de la page actuelle (2 avant, 2 après) -->
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if num == page_obj.number %}
+                                    <span class="aud-page-num aud-page-num--active">{{ num }}</span>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <a class="aud-page-num"
+                                       href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Lien vers la dernière page si on est loin de la fin -->
+                            {% if page_obj.number < page_obj.paginator.num_pages|add:'-2' %}
+                                {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}<span class="aud-page-dots">&hellip;</span>{% endif %}
+                                <a class="aud-page-num"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+                            {% endif %}
+
+                            <!-- Page suivante et dernière page -->
+                            {% if page_obj.has_next %}
+                                <a class="aud-page-num" title="Page suivante"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+                                <a class="aud-page-num" title="Dernière page"
+                                   href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+                            {% else %}
+                                <span class="aud-page-num aud-page-num--off">&rsaquo;</span>
+                                <span class="aud-page-num aud-page-num--off">&raquo;</span>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

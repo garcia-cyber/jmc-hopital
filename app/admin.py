@@ -781,4 +781,30 @@ class ActeMedicalAdmin(admin.ModelAdmin):
         # On recalcule donc le montant prévu une fois qu'elles sont en place.
         super().save_related(request, form, formsets, change)
         form.instance.recalculer_montant_prevu()
- 
+
+# -----------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------
+#
+# appel video
+
+
+from .models import VideoRoom
+
+
+@admin.register(VideoRoom)
+class VideoRoomAdmin(admin.ModelAdmin):
+    list_display = ('name', 'created_by', 'nombre_participants', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'created_by__username')
+
+    # Sélecteur à deux colonnes pour choisir les utilisateurs autorisés
+    filter_horizontal = ('allowed_users',)
+    readonly_fields = ('room_id', 'created_at')
+
+    @admin.display(description="Participants")
+    def nombre_participants(self, obj):
+        return obj.allowed_users.count()
+
+    def get_changeform_initial_data(self, request):
+        # Le créateur est rempli automatiquement avec l'utilisateur connecté
+        return {'created_by': request.user.pk}

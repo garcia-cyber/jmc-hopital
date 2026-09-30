@@ -13990,3 +13990,245 @@ def imprimer_paiement_acte_medical(request, pk):
     "back-end/actes/imprimer_paiement_acte.html",
     context,
   )
+
+
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+#
+#   le 30/09/2026 04h34
+from django.utils.dateparse import parse_date
+
+
+# ==========================================================================================================================
+# JOURNAL D'AUDIT
+# ==========================================================================================================================
+@login_required
+def liste_audit(request):
+  # ---- Rôle et hôpital de l'utilisateur ----
+  hopital_user, fonction_key = get_hopital_et_fonction(request.user)
+  role = (fonction_key or "").lower()
+
+  # ---- Seule la direction peut consulter le journal d'audit ----
+  if not (request.user.is_superuser or role in ["admin", "super_admin", "directeur"]):
+    messages.error(request, "Vous n'avez pas l'autorisation de consulter le journal d'audit.")
+    return redirect("dashboard")
+
+  logs = AuditLog.objects.select_related("utilisateur", "hopital")
+
+  # ---- Les filtres saisis dans la page ----
+  hopital_id = request.GET.get("hopital", "").strip()
+  utilisateur = request.GET.get("utilisateur", "").strip()
+  action = request.GET.get("action", "").strip()
+  modele = request.GET.get("modele", "").strip()
+  recherche = request.GET.get("q", "").strip()
+  date_debut_txt = request.GET.get("date_debut", "").strip()
+  date_fin_txt = request.GET.get("date_fin", "").strip()
+
+  if hopital_id.isdigit():
+    logs = logs.filter(hopital_id=hopital_id)
+
+  if utilisateur:
+    logs = logs.filter(nom_utilisateur__icontains=utilisateur)
+
+  if action:
+    logs = logs.filter(action=action)
+
+  if modele:
+    logs = logs.filter(modele=modele)
+
+  if recherche:
+    logs = logs.filter(Q(objet_repr__icontains=recherche) | Q(objet_id=recherche))
+
+  date_debut = parse_date(date_debut_txt) if date_debut_txt else None
+  date_fin = parse_date(date_fin_txt) if date_fin_txt else None
+
+  if date_debut:
+    logs = logs.filter(date__date__gte=date_debut)
+
+  if date_fin:
+    logs = logs.filter(date__date__lte=date_fin)
+
+  # ---- Pagination : 50 lignes par page ----
+  page_obj = Paginator(logs, 50).get_page(request.GET.get("page"))
+
+  # ---- Garde les filtres dans les liens de pagination ----
+  params = request.GET.copy()
+  params.pop("page", None)
+
+  context = {
+    "page_obj": page_obj,
+    "querystring": params.urlencode(),
+    "hopitaux": Hopital.objects.all().order_by("nomH"),
+    "actions": AuditLog.ACTIONS,
+    "modeles": (
+      AuditLog.objects.exclude(modele="")
+      .values_list("modele", flat=True)
+      .distinct()
+      .order_by("modele")
+    ),
+    "filtres": {
+      "hopital": hopital_id,
+      "utilisateur": utilisateur,
+      "action": action,
+      "modele": modele,
+      "q": recherche,
+      "date_debut": date_debut_txt,
+      "date_fin": date_fin_txt,
+    },
+    "hopital": hopital_user,
+    "fonctionKey": fonction_key,
+  }
+
+  return render(request, "back-end/audit/journal_audit.html", context)
+
+
+# ==========================================================================================================================
+# APPEL VIDEO
+# ==========================================================================================================================
+
+# Rôles qui peuvent appeler TOUS les hôpitaux (les autres sont limités au leur)
+ROLES_MULTI_HOPITAUX = ["admin", "super_admin"]
+
+
+def _conference_tous_hopitaux(user):
+  if user.is_superuser:
+    return True
+  _, role = get_hopital_et_fonction(user)
+  return (role or "").lower() in ROLES_MULTI_HOPITAUX
+
+
+@login_required
+def video_call_room(request, room_name):
+  room = get_object_or_404(VideoRoom, name=room_name)
+  peut_gerer = _conference_tous_hopitaux(request.user)
+
+  # Accès : créateur, participant autorisé ou gestionnaire
+  if (
+    request.user != room.created_by
+    and not room.allowed_users.filter(id=request.user.id).exists()
+    and not peut_gerer
+  ):
+    return HttpResponseForbidden("Vous n'avez pas accès à cette salle.")
+
+  role_obj = Fonction.objects.filter(userKey=request.user).first()
+  fonction_key = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else "Utilisateur"
+
+  return render(request, "back-end/video_call/room.html", {
+    "room": room,
+    "room_name": room.name,
+    "fonctionKey": fonction_key,
+    "peut_gerer": peut_gerer,
+  })
+
+
+@login_required
+def create_video_room(request):
+  room_name = "salle-generale"
+  room = VideoRoom.objects.filter(name=room_name).first()
+
+  # Seul un gestionnaire crée la salle, sinon le premier qui clique en devient le créateur
+  if room is None:
+    if not _conference_tous_hopitaux(request.user):
+      messages.error(request, "La salle n'existe pas encore. Demandez à un gestionnaire de l'ouvrir.")
+      return redirect("dashboard")
+    room = VideoRoom.objects.create(name=room_name, created_by=request.user)
+
+  return redirect("video_call_room", room_name=room.name)
+
+
+@login_required
+def add_colleague_to_room(request, room_id):
+  # room_id est le champ UUID du modèle (et non l'id numérique)
+  room = get_object_or_404(VideoRoom, room_id=room_id)
+
+  if not (request.user == room.created_by or _conference_tous_hopitaux(request.user)):
+    return HttpResponseForbidden("Seul un gestionnaire peut ajouter des participants.")
+
+  hopital, _ = get_hopital_et_fonction(request.user)
+  tous_hopitaux = _conference_tous_hopitaux(request.user)
+
+  # Nom de l'hôpital de chaque utilisateur (affiché dans les tableaux)
+  nom_hopital = Subquery(
+    Fonction.objects.filter(userKey=OuterRef("pk"), autorisation="oui")
+    .values("hopital__nomH")[:1]
+  )
+
+  possibles = User.objects.filter(is_active=True).exclude(id=request.user.id)
+
+  # Règle d'accès : limité à son hôpital, sauf l'admin qui voit tous les hôpitaux
+  if not tous_hopitaux:
+    if hopital:
+      possibles = possibles.filter(
+        user_fonction__hopital=hopital,
+        user_fonction__autorisation="oui",
+      )
+    else:
+      possibles = possibles.none()
+
+  possibles = possibles.annotate(hopital_nom=nom_hopital)
+
+  if request.method == "POST":
+    action = request.POST.get("action", "ajouter")
+
+    if action == "retirer":
+      participant = get_object_or_404(room.allowed_users, id=request.POST.get("user_id"))
+      room.allowed_users.remove(participant)
+      messages.success(request, f"{participant.username} a été retiré de la conférence.")
+    else:
+      participant = get_object_or_404(possibles, id=request.POST.get("user_id"))
+      room.allowed_users.add(participant)
+      messages.success(request, f"{participant.username} a été ajouté à la conférence.")
+
+    return redirect("add_colleague_to_room", room_id=room.room_id)
+
+  colleagues = (
+    possibles
+    .exclude(id__in=room.allowed_users.values_list("id", flat=True))
+    .distinct()
+    .order_by("username")
+  )
+
+  return render(request, "back-end/video_call/add_colleague.html", {
+    "room": room,
+    "colleagues": colleagues,
+    "membres": room.allowed_users.annotate(hopital_nom=nom_hopital).order_by("username"),
+    "tous_hopitaux": tous_hopitaux,
+    "hopital": hopital,
+    "hopitaux": Hopital.objects.order_by("nomH") if tous_hopitaux else [],
+  })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

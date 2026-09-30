@@ -379,11 +379,18 @@ path('actes/creer/',views.creer_acte_medical,name='creer_acte_medical'),
 path('actes/<int:pk>/',views.detail_acte_medical,name='detail_acte_medical'),
 path("actes/", liste_actes_medicaux, name="liste_actes_medicaux"),
 path("actes/<int:pk>/payer/", payer_acte_medical, name="payer_acte_medical"),
-path(
-     "actes/<int:pk>/imprimer/",
-     views.imprimer_paiement_acte_medical,
-     name="imprimer_paiement_acte_medical",
- ),
+path("actes/<int:pk>/imprimer/",views.imprimer_paiement_acte_medical,name="imprimer_paiement_acte_medical"),
+# le 30/09/2026
+path('audit/', views.liste_audit, name='liste_audit'),
 
+
+
+# --------------------------
+# --------------------------
+#
+#
+    path("conference/ouvrir/", views.create_video_room, name="create_video_room"),
+    path("video/<str:room_name>/", views.video_call_room, name="video_call_room"),
+    path("video-room/<uuid:room_id>/add-colleague/", views.add_colleague_to_room, name="add_colleague_to_room"),
 
  ]

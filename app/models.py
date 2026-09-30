@@ -2287,3 +2287,122 @@ class ActeMedical(models.Model):
     @property
     def est_paye(self):
         return self.reste_a_payer <= 0
+
+
+
+
+
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------
+# AUDIT 
+#
+# ==============================================================
+# A COLLER TOUT A LA FIN DE TON models.py
+# (après le modèle ActeMedical, rien après ce bloc)
+# ==============================================================
+
+# 20. JOURNAL D'AUDIT ==============================================
+
+# 20. JOURNAL D'AUDIT ==============================================
+
+class AuditLog(models.Model):
+    ACTIONS = [
+        ('CREATION', 'Création'),
+        ('MODIFICATION', 'Modification'),
+        ('SUPPRESSION', 'Suppression'),
+        ('CONNEXION', 'Connexion'),
+        ('DECONNEXION', 'Déconnexion'),
+        ('ECHEC_CONNEXION', 'Échec de connexion'),
+    ]
+
+    utilisateur = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audits',
+        verbose_name="Utilisateur"
+    )
+
+    nom_utilisateur = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name="Nom d'utilisateur"
+    )
+
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audits',
+        verbose_name="Hôpital"
+    )
+
+    action = models.CharField(
+        max_length=20,
+        choices=ACTIONS,
+        db_index=True
+    )
+
+    modele = models.CharField(
+        max_length=60,
+        blank=True,
+        db_index=True,
+        verbose_name="Type d'objet"
+    )
+
+    objet_id = models.CharField(max_length=40, blank=True)
+
+    objet_repr = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Objet concerné"
+    )
+
+    changements = models.JSONField(default=dict, blank=True)
+
+    adresse_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    chemin = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Page utilisée"
+    )
+
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-date', '-id']
+        verbose_name = "Journal d'audit"
+        verbose_name_plural = "Journal d'audit"
+
+    def save(self, *args, **kwargs):
+        if self.pk and not self._state.adding:
+            raise ValidationError("Le journal d'audit est en lecture seule.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Le journal d'audit ne peut pas être supprimé.")
+
+    def __str__(self):
+        return (
+            f"{self.date:%d/%m/%Y %H:%M} - "
+            f"{self.nom_utilisateur or 'Inconnu'} - "
+            f"{self.get_action_display()} {self.modele}"
+        )
+
+
+# ==============================================================
+# ACTIVATION DE L'AUDIT (toute dernière ligne de models.py)
+# ==============================================================
+from .audit import connecter_audit  # noqa: E402
+
+connecter_audit(globals())

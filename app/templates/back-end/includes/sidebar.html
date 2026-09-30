@@ -25,6 +25,14 @@
                                 home
                             </a>
                         </li>
+
+                        <li>
+                            <a class="" href="{% url 'liste_audit' %}">
+                                Audit
+                            </a>
+                        </li>
+
+                        
                     </ul>
                 </li>
 
@@ -1136,6 +1144,12 @@
                 <li class="menu-title">
                     <span>SESSION</span>
                 </li>
+
+                <li class="{% if request.resolver_match.url_name == 'video_call_room' or request.resolver_match.url_name == 'create_video_room' or request.resolver_match.url_name == 'add_colleague_to_room' %}active{% endif %}">
+    <a href="{% url 'create_video_room' %}">
+        <i class="fa fa-video-camera"></i> <span>Conférence</span>
+    </a>
+</li>
 
                 <li>
                     <a href="{% url 'deco' %}" class="text-danger">

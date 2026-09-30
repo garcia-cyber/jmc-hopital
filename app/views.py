@@ -14088,7 +14088,7 @@ def liste_audit(request):
 # ==========================================================================================================================
 
 # Rôles qui peuvent appeler TOUS les hôpitaux (les autres sont limités au leur)
-ROLES_MULTI_HOPITAUX = ["admin", "super_admin"]
+ROLES_MULTI_HOPITAUX = ["admin", "super_admin","gestionnaire","receptionniste","medecin","infirmier","pharmacien","laborantin"]
 
 
 def _conference_tous_hopitaux(user):

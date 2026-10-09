@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détail Fiche Accouchement | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        /* Ajustement responsive pour la table */
+        .table-custom th { width: 40%; background-color: #f8f9fa; }
+        @media (max-width: 768px) {
+            .table-custom th { width: 50%; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+    
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            
+            <div class="page-header mb-4">
+                <h3><i class="fa fa-file-medical"></i> Détails de la Fiche</h3>
+            </div>
+
+            <div class="card p-3 p-md-4 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-primary m-0">Accouchement de : <strong>{{ fiche.consultation.triage.patient.noms }}</strong></h5>
+                    <button onclick="window.print()" class="btn btn-sm btn-outline-primary">
+                        <i class="fa fa-print"></i> Imprimer
+                    </button>
+                </div>
+                <hr>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-custom">
+                        <tbody>
+                            <tr><th>Patient</th><td>{{ fiche.consultation.triage.patient.noms }}</td></tr>
+                            <tr><th>Prestation</th><td>{{ fiche.prestation.libelle }}</td></tr>
+                            <tr><th>Type d'accouchement</th><td>{{ fiche.get_type_accouchement_display }}</td></tr>
+                            <tr><th>Sexe bébé</th><td>{{ fiche.get_sexe_bebe_display }}</td></tr>
+                            <tr><th>Poids bébé</th><td>{{ fiche.poids_bebe }} kg</td></tr>
+                            <tr><th>Score Apgar</th><td>{{ fiche.score_apgar|default:"-" }}</td></tr>
+                            <tr><th>Notes</th><td>{{ fiche.notes|default:"-" }}</td></tr>
+                            <tr><th>Auteur</th><td>{{ fiche.auteur }}</td></tr>
+                            <tr><th>Date</th><td>{{ fiche.date_creation|date:"d/m/Y H:i" }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <a href="{% url 'liste_fiches_accouchement' %}" class="btn btn-secondary">
+                        <i class="fa fa-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

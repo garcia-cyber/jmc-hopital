@@ -1,0 +1,395 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste d'Attente - Ordonnances | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .badge-labo { background-color: #e6f7ed; color: #1f7a42; border: 1px solid #c2eed4; }
+        .badge-echo { background-color: #fff9db; color: #926c00; border: 1px solid #ffe8cc; }
+        .badge-radio { background-color: #fff0f1; color: #b82c39; border: 1px solid #ffccd1; }
+
+        .exam-card {
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .exam-info { flex: 1; }
+
+        .btn-exam {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        .result-text {
+            display: block;
+            margin-top: 4px;
+            color: #212529;
+            font-size: 0.82rem;
+        }
+
+        .image-link {
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .empty-result {
+            color: #6c757d;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .orientation-cell {
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+
+        .orientation-destination {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .orientation-observation {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+
+        .action-btn {
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            #searchInput {
+                width: 100% !important;
+                margin-top: 10px;
+            }
+            #tablePatients {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="mb-1">Ordonnances en Attente</h3>
+                        <small class="text-muted">Liste des consultations dont les examens sont terminés</small>
+                    </div>
+                    <input type="text" id="searchInput" class="form-control w-25" placeholder="🔍 Rechercher un patient...">
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="tablePatients">
+                                <thead style="background: #2c3e50; color: white;">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Résultats</th>
+                                        <th>Orientation</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for c in consultations_en_attente %}
+                                    <tr>
+                                        <td class="align-middle">
+                                            <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
+                                            <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
+                                        </td>
+
+                                        <td class="align-middle">
+                                            <strong>{{ c.triage.patient.noms }}</strong><br>
+                                            <small class="text-muted">{{ c.triage.patient.code_patient }}</small>
+                                        </td>
+
+                                        <td class="align-middle">
+                                            {% if c.examens_termines %}
+                                                {% for exam in c.examens_termines %}
+                                                <div class="exam-card">
+                                                    <div class="exam-info">
+                                                        <span class="badge
+                                                            {% if exam.prestation.categorie == 'LABO' %}badge-labo
+                                                            {% elif exam.prestation.categorie == 'RADIO' %}badge-radio
+                                                            {% else %}badge-echo{% endif %}">
+                                                            {{ exam.prestation.categorie }}
+                                                        </span>
+                                                        <strong>{{ exam.prestation.libelle }}</strong>
+
+                                                        {% if exam.resultat %}
+                                                            <span class="result-text">
+                                                                <strong>Résultat :</strong> {{ exam.resultat }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="empty-result">Aucun résultat texte saisi</span>
+                                                        {% endif %}
+
+                                                        {% if exam.image_resultat %}
+                                                            <a href="{{ exam.image_resultat.url }}" target="_blank" class="btn btn-outline-secondary btn-exam image-link">
+                                                                <i class="fa fa-image"></i> Voir image
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <a href="{% url 'imprimer_resultat' exam.id %}" target="_blank" class="btn btn-outline-info btn-exam">
+                                                        <i class="fa fa-print"></i>
+                                                    </a>
+                                                </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <small class="text-muted">Aucun résultat disponible</small>
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="align-middle orientation-cell">
+                                            {% if c.orientations.all %}
+                                                {% for o in c.orientations.all %}
+                                                    <div class="orientation-destination">
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.get_destination_display }}
+                                                    </div>
+                                                    {% if o.observation %}
+                                                        <div class="orientation-observation">
+                                                            {{ o.observation }}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% elif c.orientation_set.all %}
+                                                {% for o in c.orientation_set.all %}
+                                                    <div class="orientation-destination">
+                                                        <i class="fa fa-map-signs text-success"></i> {{ o.get_destination_display }}
+                                                    </div>
+                                                    {% if o.observation %}
+                                                        <div class="orientation-observation">
+                                                            {{ o.observation }}
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="text-center align-middle">
+                                            {% if c.ordonnance_existante %}
+                                                <!-- Lien vers la page de modification -->
+                                                <a href="{% url 'modifier_ordonnance_med' c.id %}"
+                                                   class="btn btn-warning btn-sm action-btn">
+                                                    <i class="fa fa-edit"></i> Modifier le traitement
+                                                </a>
+                                                <br>
+                                                <a href="{% url 'imprimer_consultation' c.id %}"
+                                                   target="_blank"
+                                                   class="btn btn-success btn-sm action-btn mt-1">
+                                                    <i class="fa fa-print"></i> Imprimer
+                                                </a>
+                                            {% else %}
+                                                <!-- Modal pour créer une nouvelle ordonnance -->
+                                                <button type="button"
+                                                        class="btn btn-primary btn-sm action-btn"
+                                                        data-toggle="modal"
+                                                        data-target="#modal{{ c.id }}">
+                                                    <i class="fa fa-pencil-alt"></i> Traiter
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center p-4 text-muted">
+                                            Aucune consultation en attente.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals UNIQUEMENT pour création (pas d'ordonnance existante) -->
+    {% for c in consultations_en_attente %}
+        {% if not c.ordonnance_existante %}
+        <div class="modal fade" id="modal{{ c.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form method="POST" action="{% url 'liste_attente_medecin' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="enregistrer_ordonnance">
+                        <input type="hidden" name="consultation_id" value="{{ c.id }}">
+
+                        <div class="modal-header" style="background: #2c3e50; color: white;">
+                            <h5 class="modal-title">
+                                Traiter : {{ c.triage.patient.noms }}
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6 form-group">
+                                    <label>Type d'ordonnance</label>
+                                    <select name="type_ordonnance" class="form-control" required>
+                                        <option value="URGENCE">Urgence</option>
+                                        <option value="DEFINITIVE" selected>Définitive</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Diagnostic Final</label>
+                                    <input type="text" name="diagnostic_final" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold">Note</label>
+                                <textarea name="note" class="form-control" rows="2" placeholder="Note complémentaire (facultatif)"></textarea>
+                            </div>
+
+                            <div class="form-group mb-3 p-3" style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 5px solid #28a745;">
+                                <label class="font-weight-bold text-success">
+                                    <i class="fa fa-map-signs"></i> Orientation
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <select name="destination" class="form-control" onchange="toggleLit(this, '{{ c.id }}')">
+                                            <option value="">-- Choisir une destination --</option>
+                                            <option value="PHARMACIE">Pharmacie</option>
+                                            <option value="HOSPITALISATION">Hospitalisation</option>
+                                            <option value="ACCOUCHEMENT">Accouchement</option>
+                                            <option value="BLOC_OPERATOIRE">Bloc Opératoire</option>
+                                            <option value="SALLE_SOINS">Salle de Soins</option>
+                                            <option value="SORTIE">Sortie</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" name="observation_orientation" class="form-control" placeholder="Observations">
+                                    </div>
+                                </div>
+
+                                <div class="row mt-3" id="zone-lit-{{ c.id }}" style="display:none;">
+                                    <div class="col-md-6">
+                                        <label class="font-weight-bold">Date d'entrée</label>
+                                        <input type="datetime-local" name="date_entree" class="form-control" value="{{ now|date:'Y-m-d\\TH:i' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="font-weight-bold">Lit disponible</label>
+                                        <select name="lit_id" class="form-control">
+                                            {% for lit in lits_disponibles %}
+                                                <option value="{{ lit.id }}">{{ lit.nom_lit }} ({{ lit.chambre.nom_chambre }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mt-2">
+                                        <label class="font-weight-bold">Motif d'admission</label>
+                                        <textarea name="motif_admission" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="font-weight-bold">Prescription</label>
+                            <div id="zone-medicaments-{{ c.id }}">
+                                <div class="row mb-2">
+                                    <div class="col">
+                                        <input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required>
+                                    </div>
+                                    <div class="col">
+                                        <input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required>
+                                    </div>
+                                    <div class="col">
+                                        <input type="text" name="duree[]" class="form-control" placeholder="Durée" required>
+                                    </div>
+                                    <div class="col">
+                                        <input type="number" name="quantite[]" class="form-control" placeholder="Qté" value="1" min="1">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-info btn-sm mt-2" onclick="ajouterLigne('{{ c.id }}')">
+                                + Ajouter médicament
+                            </button>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                            <button type="submit" class="btn btn-success">
+                                Valider le traitement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toUpperCase();
+            let rows = document.querySelector("#tablePatients tbody").rows;
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = rows[i].cells[1].innerText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        });
+
+        function toggleLit(select, id) {
+            const zone = document.getElementById('zone-lit-' + id);
+            zone.style.display = (select.value === 'HOSPITALISATION') ? 'flex' : 'none';
+        }
+
+        function ajouterLigne(id) {
+            const zone = document.getElementById('zone-medicaments-' + id);
+            const div = document.createElement('div');
+            div.className = 'row mb-2';
+            div.innerHTML = `
+                <div class="col">
+                    <input type="text" name="nom_medicament[]" class="form-control" placeholder="Médicament" required>
+                </div>
+                <div class="col">
+                    <input type="text" name="posologie[]" class="form-control" placeholder="Posologie" required>
+                </div>
+                <div class="col">
+                    <input type="text" name="duree[]" class="form-control" placeholder="Durée" required>
+                </div>
+                <div class="col">
+                    <input type="number" name="quantite[]" class="form-control" placeholder="Qté" value="1" min="1">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.row').remove()">✕</button>
+                </div>
+            `;
+            zone.appendChild(div);
+        }
+    </script>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

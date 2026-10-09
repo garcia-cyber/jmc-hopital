@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JMC - Encaissement</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        body { background-color: #f4f7f6; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card-header { background-color: #fff; border-bottom: 1px solid #eee; font-weight: bold; padding: 1.5rem; }
+        .input-group-text { background-color: #f8f9fa; border: 1px solid #ced4da; }
+        .summary-box { background: #eef2f7; border-left: 5px solid #0d6efd; padding: 15px; border-radius: 8px; }
+        .result-highlight { background: #f0f4ff; border: 2px dashed #0d6efd; padding: 20px; border-radius: 12px; }
+        .exam-line { font-size: 14px; }
+        .exam-sub { color: #6c757d; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="page-title text-primary">Validation du Paiement</h3>
+                        <p class="text-muted">Gestion des encaissements examens - Patient : {{ consultation.triage.patient.noms }}</p>
+                    </div>
+                    <a href="{% url 'historique_paiements' consultation.triage.patient.id %}" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left"></i> Retour
+                    </a>
+                </div>
+
+                <form method="POST" id="formEncaissement">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card h-100">
+                                <div class="card-header">Détails de la Prescription</div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Examen</th>
+                                                    <th class="text-end">Qté</th>
+                                                    <th class="text-end">Prix unitaire</th>
+                                                    <th class="text-end">Sous-total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for exam in examens %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="exam-line">{{ exam.prestation.libelle }}</div>
+                                                        <span class="exam-sub">{{ exam.prestation.get_categorie_display }}</span>
+                                                    </td>
+                                                    <td class="text-end">{{ exam.quantite }}</td>
+                                                    <td class="text-end">
+                                                        {{ exam.prestation.prix|floatformat:0 }} FC
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            ~ {{ exam.prestation.prix_usd|floatformat:2 }} USD
+                                                        </small>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        {{ exam.sous_total_cdf|floatformat:0 }} FC
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            ~ {{ exam.sous_total_usd|floatformat:2 }} USD
+                                                        </small>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted py-4">
+                                                        Aucun examen trouvé.
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="summary-box mt-4">
+                                        <h5 class="m-0 text-primary">
+                                            Reste à payer :
+                                            <span id="total_du_cdf">{{ reste_a_payer_cdf|floatformat:0 }}</span> FC
+                                            <br>
+                                            <small class="text-muted">
+                                                (~ <span id="total_du_usd">{{ reste_a_payer_usd|floatformat:2 }}</span> USD)
+                                            </small>
+                                        </h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body p-4">
+                                    <h5 class="mb-4 text-dark">
+                                        <i class="fa fa-cash-register me-2 text-success"></i> Saisie Caisse
+                                    </h5>
+
+                                    <!-- Dette globale en CDF -->
+                                    <input type="hidden" id="dette_globale_cdf" value="{{ reste_a_payer_cdf|floatformat:2 }}">
+                                    <input type="hidden" id="taux_du_jour" value="{{ taux }}">
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-uppercase">Devise</label>
+                                        <select name="devise" id="select_devise" class="form-select form-select-lg" onchange="calculerReste()">
+                                            <option value="CDF" selected>CDF (FC)</option>
+                                            <option value="USD">USD ($)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-uppercase">Montant versé</label>
+                                        <input type="number" id="mt_input" name="montant_verse" class="form-control form-control-lg" step="0.01" value="0" required oninput="calculerReste()">
+                                        <small class="form-text text-muted" id="max_helper"></small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-uppercase">Réduction (FC)</label>
+                                        <input type="number" name="montant_reduction" id="mt_reduction" class="form-control form-control-lg" step="0.01" value="0" oninput="calculerReste()">
+                                    </div>
+
+                                    <div class="result-highlight text-center my-4">
+                                        <small class="text-muted d-block mb-1">Nouveau solde à payer</small>
+                                        <h2 class="m-0 text-primary fw-bold">
+                                            <span id="nouveau_reste_cdf">{{ reste_a_payer_cdf|floatformat:0 }}</span> FC
+                                            <br>
+                                            <small class="text-muted" style="font-size: 0.6em;">
+                                                (~ <span id="nouveau_reste_usd">{{ reste_a_payer_usd|floatformat:2 }}</span> USD)
+                                            </small>
+                                        </h2>
+                                    </div>
+
+                                    <button type="submit" id="btn_submit" class="btn btn-success btn-lg w-100 py-3">
+                                        <i class="fa fa-check-circle me-2"></i> Encaisser le paiement
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+
+    <script>
+        function calculerReste() {
+            const detteInitialeCdf = parseFloat(document.getElementById('dette_globale_cdf').value) || 0;
+            const taux = parseFloat(document.getElementById('taux_du_jour').value) || 1;
+
+            const devise = document.getElementById('select_devise').value;
+            const inputVal = parseFloat(document.getElementById('mt_input').value) || 0;
+            const reduction = parseFloat(document.getElementById('mt_reduction').value) || 0;
+
+            // Montant versé et réduction en CDF
+            let montantVerseCdf = (devise === 'CDF') ? inputVal : (inputVal * taux);
+            let reductionCdf = reduction; // réduction saisie en FC
+
+            const totalEncaisseCdf = montantVerseCdf + reductionCdf;
+            const resteCdf = Math.max(0, detteInitialeCdf - totalEncaisseCdf);
+            const resteUsd = resteCdf / taux;
+
+            const affichageCdf = document.getElementById('nouveau_reste_cdf');
+            const affichageUsd = document.getElementById('nouveau_reste_usd');
+            const btn = document.getElementById('btn_submit');
+            const maxHelper = document.getElementById('max_helper');
+
+            affichageCdf.innerText = resteCdf.toFixed(0);
+            affichageUsd.innerText = resteUsd.toFixed(2);
+
+            // Aide pour le montant max
+            if (devise === 'CDF') {
+                maxHelper.innerText = `Maximum conseillé : ${detteInitialeCdf.toFixed(0)} FC`;
+            } else {
+                const maxUsd = detteInitialeCdf / taux;
+                maxHelper.innerText = `Maximum conseillé : ${maxUsd.toFixed(2)} USD`;
+            }
+
+            // Désactiver si on dépasse un peu (tolérance 1 FC)
+            if (totalEncaisseCdf > detteInitialeCdf + 1) {
+                btn.disabled = true;
+                affichageCdf.style.color = "red";
+            } else {
+                btn.disabled = false;
+                affichageCdf.style.color = "inherit";
+            }
+        }
+
+        // Initialiser au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            calculerReste();
+        });
+    </script>
+</body>
+</html>

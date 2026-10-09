@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modifier Ordonnance - {{ ord.consultation.triage.patient.noms }} | JMC</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        :root {
+            --primary-color: #006064;
+            --primary-light: #00838f;
+            --danger-color: #dc3545;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-muted: #718096;
+            --input-bg: #ffffff;
+        }
+
+        body {
+            background: var(--bg-color);
+            font-family: inherit;
+        }
+
+        .page-wrapper {
+            background: var(--bg-color);
+            padding: 24px 16px;
+            min-height: 100vh;
+        }
+
+        .form-container {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 28px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+            border-top: 6px solid var(--primary-color);
+        }
+
+        .header-form {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-form h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .patient-info {
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        h3 {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 10px;
+            color: #1e293b;
+            margin-top: 28px;
+            margin-bottom: 16px;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .row {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .col-small {
+            flex: 0 0 110px;
+            min-width: 110px;
+        }
+
+        .col-auto {
+            flex: 0 0 46px;
+            width: 46px;
+            text-align: center;
+            align-self: flex-end;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: #0f172a;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 96, 100, 0.08);
+        }
+
+        input[readonly] {
+            background: #f8fafc;
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .btn-add {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+            font-weight: 600;
+            transition: background 0.15s, transform 0.05s;
+        }
+
+        .btn-add:hover {
+            background: #0284c7;
+        }
+
+        .btn-add:active {
+            transform: translateY(1px);
+        }
+
+        .btn-save {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            font-weight: 700;
+            transition: background 0.15s, transform 0.05s;
+        }
+
+        .btn-save:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-save:active {
+            transform: translateY(1px);
+        }
+
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 11px;
+            border-radius: 8px;
+            cursor: pointer;
+            height: 46px;
+            width: 100%;
+            font-size: 1rem;
+            transition: background 0.15s, transform 0.05s;
+        }
+
+        .btn-delete:hover {
+            background: #b91c1c;
+        }
+
+        .btn-delete:active {
+            transform: translateY(1px);
+        }
+
+        .med-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 10px;
+            background: #f8fafc;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .med-line {
+            background: #ffffff;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .actions-bar {
+            margin-top: 28px;
+        }
+
+        .cancel-link {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .cancel-link:hover {
+            color: #334155;
+        }
+
+        @media (max-width: 768px) {
+            .page-wrapper {
+                padding: 16px 10px;
+            }
+
+            .form-container {
+                padding: 20px 14px;
+            }
+
+            .header-form {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .col-small {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .col-auto {
+                flex: 0 0 42px;
+                width: 42px;
+            }
+
+            .med-header {
+                display: none;
+            }
+
+            .med-line {
+                padding: 10px;
+            }
+
+            .med-line .row {
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .med-line .col {
+                min-width: 120px;
+            }
+
+            .med-line .col-small {
+                min-width: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="form-container">
+                <div class="header-form">
+                    <h2>Modification Ordonnance Urgence</h2>
+                    <div class="patient-info">
+                        <strong>Patient :</strong> {{ ord.consultation.triage.patient.noms }}
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="row">
+                        <div class="col">
+                            <label for="type_ordonnance">Type d'ordonnance</label>
+                            <select name="type_ordonnance" id="type_ordonnance" required>
+                                <option value="URGENCE" {% if ord.type_ordonnance == 'URGENCE' %}selected{% endif %}>Urgence</option>
+                                <option value="DEFINITIVE" {% if ord.type_ordonnance == 'DEFINITIVE' %}selected{% endif %}>Définitive</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="date_creation">Date</label>
+                            <input type="text" id="date_creation" value="{{ ord.consultation.date_creation|date:'d/m/Y' }}" readonly>
+                        </div>
+                    </div>
+
+                    <h3>Médicaments</h3>
+
+                    <div class="med-header">
+                        <div class="row" style="margin-bottom: 0;">
+                            <div class="col">Nom médicament</div>
+                            <div class="col">Posologie</div>
+                            <div class="col-small">Durée</div>
+                            <div class="col-small">Quantité</div>
+                            <div class="col-auto"></div>
+                        </div>
+                    </div>
+
+                    <div id="zone-medicaments">
+                        {% for ligne in ord.lignes_medicaments.all %}
+                        <div class="med-line row">
+                            <div class="col">
+                                <input type="text" name="nom_medicament[]" value="{{ ligne.nom_medicament }}" placeholder="Nom médicament" required>
+                            </div>
+                            <div class="col">
+                                <input type="text" name="posologie[]" value="{{ ligne.posologie }}" placeholder="Posologie" required>
+                            </div>
+                            <div class="col-small">
+                                <input type="text" name="duree[]" value="{{ ligne.duree }}" placeholder="Durée" required>
+                            </div>
+                            <div class="col-small">
+                                <input type="number" name="quantite[]" value="{{ ligne.quantite|default:'' }}" placeholder="Qté" min="0">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn-delete" onclick="this.closest('.row').remove()" title="Supprimer">✕</button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="med-line row">
+                            <div class="col">
+                                <input type="text" name="nom_medicament[]" placeholder="Nom médicament" required>
+                            </div>
+                            <div class="col">
+                                <input type="text" name="posologie[]" placeholder="Posologie" required>
+                            </div>
+                            <div class="col-small">
+                                <input type="text" name="duree[]" placeholder="Durée" required>
+                            </div>
+                            <div class="col-small">
+                                <input type="number" name="quantite[]" placeholder="Qté" min="0">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn-delete" onclick="this.closest('.row').remove()" title="Supprimer">✕</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn-add" onclick="ajouterLigne()">+ Ajouter un médicament</button>
+
+                    <h3>Observation</h3>
+                    <textarea name="observation" rows="3" placeholder="Observations complémentaires...">{{ ord.observation }}</textarea>
+
+                    <div class="actions-bar">
+                        <button type="submit" class="btn-save">Enregistrer les modifications</button>
+                        <a href="javascript:history.back()" class="cancel-link">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function ajouterLigne() {
+            const zone = document.getElementById('zone-medicaments');
+            const div = document.createElement('div');
+            div.className = 'med-line row';
+            div.innerHTML = `
+                <div class="col">
+                    <input type="text" name="nom_medicament[]" placeholder="Nom médicament" required>
+                </div>
+                <div class="col">
+                    <input type="text" name="posologie[]" placeholder="Posologie" required>
+                </div>
+                <div class="col-small">
+                    <input type="text" name="duree[]" placeholder="Durée" required>
+                </div>
+                <div class="col-small">
+                    <input type="number" name="quantite[]" placeholder="Qté" min="0">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn-delete" onclick="this.closest('.row').remove()" title="Supprimer">✕</button>
+                </div>
+            `;
+            zone.appendChild(div);
+        }
+    </script>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

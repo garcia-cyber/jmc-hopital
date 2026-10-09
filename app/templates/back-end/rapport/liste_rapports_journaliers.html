@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapports journaliers | JMC</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        .card { border: none; border-top: 4px solid #28a745; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .page-header h3 { color: #2d3436; }
+        .table thead th { background: #f8f9fc; }
+        .badge-role { font-size: 12px; padding: 6px 10px; }
+        .filter-card { border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header mb-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="fa fa-file-alt text-success mr-2"></i>Rapports journaliers</h3>
+                        <p class="text-muted mb-0">
+                            {% if fonctionKey == "Utilisateur" %}
+                                Liste des rapports
+                            {% else %}
+                                Liste des rapports - {{ fonctionKey }}
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <a href="{% url 'creer_rapport_journalier' %}" class="btn btn-success">
+                        <i class="fa fa-plus-circle mr-2"></i>Créer un rapport
+                    </a>
+                </div>
+
+                <div class="card filter-card mb-3">
+                    <div class="card-body">
+                        <form method="get">
+                            <div class="row">
+                                <div class="col-md-3 mb-2">
+                                    <label class="small text-muted">Date début</label>
+                                    <input type="date" name="date_debut" class="form-control" value="{{ request.GET.date_debut }}">
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="small text-muted">Date fin</label>
+                                    <input type="date" name="date_fin" class="form-control" value="{{ request.GET.date_fin }}">
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="small text-muted">Type de rapport</label>
+                                    <select name="type_rapport" class="form-control">
+                                        <option value="">Tous les types</option>
+                                        <option value="personnel" {% if request.GET.type_rapport == "personnel" %}selected{% endif %}>Rapport du personnel</option>
+                                        <option value="service" {% if request.GET.type_rapport == "service" %}selected{% endif %}>Rapport de service</option>
+                                        <option value="direction" {% if request.GET.type_rapport == "direction" %}selected{% endif %}>Rapport de direction</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-success mr-2">Filtrer</button>
+                                    <a href="{% url 'liste_rapports_journaliers' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Hôpital</th>
+                                                <th>Service</th>
+                                                <th>Titre</th>
+                                                <th>Type</th>
+                                                <th>Présent</th>
+                                                <th>Absent</th>
+                                                <th>Incidents</th>
+                                                <th>Auteur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for rapport in rapports %}
+                                                <tr>
+                                                    <td>{{ rapport.date_rapport }}</td>
+                                                    <td>{{ rapport.hopital }}</td>
+                                                    <td>{{ rapport.service }}</td>
+                                                    <td>{{ rapport.titre }}</td>
+                                                    <td>{{ rapport.get_type_rapport_display }}</td>
+                                                    <td>{{ rapport.nombre_personnel_present }}</td>
+                                                    <td>{{ rapport.nombre_personnel_absent }}</td>
+                                                    <td>{{ rapport.incidents_signales }}</td>
+                                                    <td>{{ rapport.auteur }}</td>
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="9" class="text-center text-muted">
+                                                        Aucun rapport trouvé.
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

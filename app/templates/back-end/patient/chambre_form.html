@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Modifier la Chambre | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body { background: #f8fafc; }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i { color: var(--primary); }
+
+        .breadcrumb { margin: 0; font-size: 0.875rem; }
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--gray-600); }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body { padding: 1.5rem; }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover { background: var(--primary-dark); color: white; }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        /* Styles automatiques pour les formulaires Django */
+        form p {
+            margin-bottom: 1.25rem;
+        }
+        form label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        form input[type="text"],
+        form input[type="number"],
+        form select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            background: #f8fafc;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+        form input[type="checkbox"] {
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-edit"></i>
+                                Modification de la Chambre
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'chambre_list' %}">Chambres</a></li>
+                                <li class="breadcrumb-item active">Modifier #{{ objet.id }}</li>
+                            </ul>
+                        </div>
+                        <a href="{% url 'chambre_list' %}" class="btn-action btn-view">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Formulaire de Modification -->
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-pen-to-square text-primary"></i>
+                            Formulaire de modification (Rôle : {{ fonctionKey }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <div class="d-flex justify-content-end gap-2 mt-4">
+                                <a href="{% url 'chambre_list' %}" class="btn-action btn-view">Annuler</a>
+                                <button type="submit" class="btn-action btn-primary">
+                                    <i class="fa fa-save"></i> Enregistrer les modifications
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

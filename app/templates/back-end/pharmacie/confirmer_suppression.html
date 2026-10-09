@@ -1,0 +1,278 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supprimer Produit | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body {
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .confirmation-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .confirmation-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .confirmation-header {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .confirmation-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: var(--danger);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .confirmation-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0 0 0.5rem;
+        }
+
+        .confirmation-subtitle {
+            font-size: 0.9375rem;
+            color: var(--gray-600);
+            margin: 0;
+        }
+
+        .confirmation-body {
+            padding: 2rem;
+        }
+
+        .product-info {
+            background: var(--gray-100);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .product-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .product-name i {
+            color: var(--primary);
+        }
+
+        .product-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .detail-value {
+            font-size: 0.9375rem;
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .warning-box i {
+            color: var(--warning);
+            font-size: 1.25rem;
+            margin-top: 0.125rem;
+        }
+
+        .warning-text {
+            color: #92400e;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .warning-text strong {
+            color: #78350f;
+        }
+
+        .confirmation-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+        }
+
+        .btn-cancel:hover {
+            background: white;
+            border-color: var(--gray-300);
+            color: var(--dark);
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 576px) {
+            .confirmation-actions {
+                flex-direction: column;
+            }
+            .product-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-wrapper">
+        <div class="confirmation-card">
+            <div class="confirmation-header">
+                <div class="confirmation-icon">
+                    <i class="fa fa-exclamation-triangle"></i>
+                </div>
+                <h1 class="confirmation-title">Supprimer ce produit ?</h1>
+                <p class="confirmation-subtitle">Cette action est irréversible</p>
+            </div>
+
+            <div class="confirmation-body">
+                <div class="product-info">
+                    <h2 class="product-name">
+                        <i class="fa fa-pills"></i>
+                        {{ produit.nom }}
+                    </h2>
+                    <div class="product-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Forme</span>
+                            <span class="detail-value">{{ produit.forme|default:"-" }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Dosage</span>
+                            <span class="detail-value">{{ produit.dosage|default:"-" }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Catégorie</span>
+                            <span class="detail-value">{{ produit.categorie|default:"-" }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stock actuel</span>
+                            <span class="detail-value" style="color: {% if stock_reel <= 0 %}var(--danger){% elif stock_reel < 10 %}var(--warning){% else %}var(--success){% endif %}; font-weight: 700;">
+                                {{ stock_reel }} unités
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <i class="fa fa-exclamation-circle"></i>
+                    <div class="warning-text">
+                        <strong>Attention:</strong> La suppression de ce produit est définitive. 
+                        Tous les lots et mouvements de stock associés seront également supprimés.
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="confirmation-actions">
+                        <a href="{% url 'gestion_pharmacie' %}" class="btn btn-cancel">
+                            <i class="fa fa-times"></i>
+                            Annuler
+                        </a>
+                        <button type="submit" class="btn btn-delete">
+                            <i class="fa fa-trash"></i>
+                            Oui, supprimer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

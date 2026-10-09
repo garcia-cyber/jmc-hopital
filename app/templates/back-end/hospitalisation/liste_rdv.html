@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des rendez-vous</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">Planning des Rendez-vous</h3>
+                    <a href="{% url 'liste_hospitalisations' %}" class="btn btn-secondary">Retour</a>
+                </div>
+
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Date & Heure</th>
+                                        <th>Motif</th>
+                                        <th>Statut / Alerte</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rdv in rendez_vous %}
+                                    <tr class="{% if rdv.date_rdv < maintenant %}table-danger{% elif rdv.est_urgent %}table-warning{% endif %}">
+                                        <td><strong>{{ rdv.hospitalisation.patient.noms }}</strong></td>
+                                        <td>{{ rdv.date_rdv|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ rdv.motif }}</td>
+                                        <td>
+                                            {% if rdv.date_rdv < maintenant %}
+                                                <span class="badge bg-danger">Dépassé</span>
+                                            {% elif rdv.est_urgent %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fa fa-exclamation-triangle"></i> Urgent (< 24h)
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-success">À venir</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="#" class="btn btn-sm btn-info text-white">Dossier</a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">Aucun rendez-vous planifié.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

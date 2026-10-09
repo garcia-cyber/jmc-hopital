@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Maternité - {{ patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .form-container { background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .patient-info-card { background: #f8f9fe; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header">
+                    <h3 class="page-title">Admission en Maternité</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 offset-md-2">
+                        <div class="patient-info-card">
+                            <h5 class="mb-0">Patiente : <strong>{{ patient.noms }}</strong></h5>
+                            <small class="text-muted">Matricule : {{ patient.code_patient }} | Âge : {{ patient.age }} ans</small>
+                        </div>
+
+                        <div class="form-container">
+                            <form method="POST">
+                                {% csrf_token %}
+                                
+                                {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                                {% endif %}
+
+                                {% for field in form %}
+                                    <div class="form-group">
+                                        <label>{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}
+                                            <small class="text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                        {% if field.errors %}
+                                            <div class="text-danger small">{{ field.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+
+                                <div class="text-right mt-4">
+                                    <a href="{% url 'liste_patients' %}" class="btn btn-secondary">Annuler</a>
+                                    <button type="submit" class="btn btn-primary">Valider l'admission</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+    <script>
+        // Optionnel : Ajoute la classe 'form-control' à tous les champs du formulaire pour le style Bootstrap
+        $(document).ready(function() {
+            $('input, select, textarea').addClass('form-control');
+        });
+    </script>
+</body>
+</html>

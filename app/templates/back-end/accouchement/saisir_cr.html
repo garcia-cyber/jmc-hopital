@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte-rendu Accouchement | {{ consultation.triage.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="card p-4 shadow-sm">
+                    <h3 class="text-primary mb-4">
+                        <i class="fa fa-file-medical"></i> Compte-rendu d'Accouchement
+                    </h3>
+                    <hr>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Patient :</strong> {{ consultation.triage.patient.noms }}</p>
+                            <p class="mb-1"><strong>Date Consultation :</strong> {{ consultation.triage.date_prelevement|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">Forfait Maternité</label>
+                                <select name="prestation_id" class="form-control" required>
+                                    <option value="">-- Sélectionner le forfait --</option>
+                                    {% for p in prestations %}
+                                        <option value="{{ p.id }}">{{ p.libelle }} - {{ p.prix }} USD</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 form-group">
+                                <label class="font-weight-bold">Type d'accouchement</label>
+                                <select name="type_accouchement" class="form-control" required>
+                                    <option value="NATUREL">Accouchement Simple (Voie basse)</option>
+                                    <option value="CESARIENNE">Accouchement par Césarienne</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="font-weight-bold">Détails de l'intervention / Rapport</label>
+                            <textarea name="details_acte" class="form-control" rows="8" placeholder="Saisissez ici les détails complets de l'accouchement..." required></textarea>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="fa fa-check-circle"></i> Enregistrer et Terminer
+                            </button>
+                            <a href="{% url 'service_liste_attente' %}" class="btn btn-secondary">
+                                <i class="fa fa-arrow-left"></i> Retour
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

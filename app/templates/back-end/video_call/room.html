@@ -1,0 +1,310 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Appel vidéo - {{ room_name }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        body {
+            background: #f4f7fb;
+        }
+
+        .video-page {
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .video-card {
+            border: 0;
+            border-radius: 20px;
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .12);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .video-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: #fff;
+            padding: 16px 20px;
+        }
+
+        .video-body {
+            padding: 20px;
+        }
+
+        .video-box {
+            border-radius: 16px;
+            background: #0f172a;
+            position: relative;
+            overflow: hidden;
+            min-height: 260px;
+        }
+
+        .video-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            background: #111827;
+        }
+
+        .video-label {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            background: rgba(15, 23, 42, .75);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: .85rem;
+            z-index: 2;
+        }
+
+        .local-video {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            width: 160px;
+            height: 110px;
+            border: 3px solid rgba(255,255,255,.9);
+            box-shadow: 0 8px 20px rgba(0,0,0,.25);
+            border-radius: 12px;
+            z-index: 3;
+            background: #000;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .controls .btn {
+            min-width: 150px;
+            border-radius: 12px;
+        }
+
+        .info-box {
+            border-radius: 14px;
+            background: #eef6ff;
+            border: 1px solid #d6e8ff;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+        }
+
+        .badge-role {
+            background: rgba(255,255,255,.18);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.25);
+        }
+
+        @media (max-width: 767.98px) {
+            .video-body {
+                padding: 14px;
+            }
+
+            .local-video {
+                width: 110px;
+                height: 80px;
+            }
+
+            .controls .btn {
+                flex: 1 1 100%;
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid video-page">
+            <div class="row justify-content-center">
+                <div class="col-12 col-xl-9 col-lg-10">
+                    <div class="card video-card">
+                        <div class="video-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h4 class="mb-1">Salle d'appel vidéo</h4>
+                                <small>Room : {{ room_name }}</small>
+                            </div>
+                            <div>
+                                <span class="badge badge-role px-3 py-2">
+                                    {{ fonctionKey|default:"Utilisateur" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="video-body">
+                            <div class="info-box">
+                                <strong>Règle d’accès :</strong>
+                                {% if is_admin %}
+                                    vous pouvez accéder à toutes les salles.
+                                {% else %}
+                                    vous êtes limité à votre hôpital.
+                                {% endif %}
+                            </div>
+
+                            <div class="video-box">
+                                <div class="video-label">Remote</div>
+                                <video id="remoteVideo" autoplay playsinline></video>
+
+                                <div class="video-label local-video-label">Local</div>
+                                <video id="localVideo" class="local-video" autoplay muted playsinline></video>
+                            </div>
+
+                            <div class="controls">
+                                <button class="btn btn-primary" id="btnStart">
+                                    Démarrer la caméra
+                                </button>
+                                <button class="btn btn-success" id="btnCall">
+                                    Appeler
+                                </button>
+                                <button class="btn btn-warning text-white" id="btnAnswer">
+                                    Répondre
+                                </button>
+                                <button class="btn btn-danger" id="btnHangup">
+                                    Raccrocher
+                                </button>
+                            </div>
+
+                            <input type="hidden" id="roomName" value="{{ room_name }}">
+                            <input type="hidden" id="currentUserRole" value="{{ fonctionKey|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+<script>
+    const roomName = document.getElementById('roomName').value;
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    let localStream = null;
+    let peerConnection = null;
+    let websocket = null;
+
+    const iceServers = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' }
+        ]
+    };
+
+    function connectWebSocket() {
+        websocket = new WebSocket(
+            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+            window.location.host +
+            '/ws/video/' + roomName + '/'
+        );
+
+        websocket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'offer') {
+                await createPeerConnection();
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                document.getElementById('btnAnswer').style.display = 'inline-block';
+            }
+
+            if (data.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+
+            if (data.type === 'candidate' && peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        };
+    }
+
+    async function startCamera() {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        connectWebSocket();
+        await createPeerConnection();
+    }
+
+    async function createPeerConnection() {
+        if (peerConnection) return;
+
+        peerConnection = new RTCPeerConnection(iceServers);
+
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+        };
+
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate && websocket) {
+                websocket.send(JSON.stringify({
+                    type: 'candidate',
+                    candidate: event.candidate
+                }));
+            }
+        };
+    }
+
+    async function callUser() {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        websocket.send(JSON.stringify({
+            type: 'offer',
+            offer: offer
+        }));
+    }
+
+    async function answerCall() {
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        websocket.send(JSON.stringify({
+            type: 'answer',
+            answer: answer
+        }));
+    }
+
+    function hangupCall() {
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+
+        if (websocket) {
+            websocket.close();
+            websocket = null;
+        }
+
+        localVideo.srcObject = null;
+        remoteVideo.srcObject = null;
+    }
+
+    document.getElementById('btnStart').addEventListener('click', startCamera);
+    document.getElementById('btnCall').addEventListener('click', callUser);
+    document.getElementById('btnAnswer').addEventListener('click', answerCall);
+    document.getElementById('btnHangup').addEventListener('click', hangupCall);
+
+    document.getElementById('btnAnswer').style.display = 'none';
+</script>
+</body>
+</html>

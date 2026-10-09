@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>   
+    <meta charset="UTF-8">
+    <title>Résultats d'Examens - {{ patient.noms }}</title>
+    <style>
+        :root { --primary-color: #006064; --bg-light: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; color: #2d3436; max-width: 750px; margin: 40px auto; padding: 40px; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.05); border-top: 8px solid var(--primary-color); }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { max-width: 120px; }
+        .hospital-info { text-align: right; }
+        .hospital-info h1 { margin: 0; color: var(--primary-color); font-size: 24px; text-transform: uppercase; }
+        
+        .patient-card { background: var(--bg-light); padding: 15px 20px; border-radius: 8px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .patient-card div strong { color: var(--primary-color); display: block; font-size: 0.8rem; text-transform: uppercase; }
+        
+        h3 { border-left: 4px solid var(--primary-color); padding-left: 10px; color: var(--primary-color); margin-top: 30px; font-size: 1.1rem; }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; }
+        th { background: #f8f9fa; color: #636e72; padding: 12px; text-align: left; font-size: 0.9rem; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #f1f1f1; vertical-align: top; }
+        
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .badge-attente { background: #ffeaa7; color: #d63031; }
+        .badge-termine { background: #55efc4; color: #00b894; }
+
+        .signature-box { margin-top: 50px; display: flex; justify-content: space-between; }
+        .note-area { flex: 1; margin-right: 20px; font-size: 0.9rem; }
+        .stamp-area { width: 250px; text-align: center; }
+        
+        @media print { 
+            body { box-shadow: none; border-top: none; margin: 0; }
+            .no-print { display: none; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo" class="logo">
+        <div class="hospital-info">
+            <h1>{{ hopital.nomH|default:"JMC" }}</h1>
+            <p style="margin:0; font-size: 0.9rem;">Votre santé, notre priorité</p>
+        </div>
+    </div>
+
+    <div class="patient-card">
+        <div><strong>Patient</strong> {{ patient.noms }}</div>
+        <div><strong>Date de demande</strong> {{ demande.date_demande|date:"d/m/Y H:i" }}</div>
+        <div><strong>Médecin demandeur</strong> {{ demande.medecin_demandeur|default:"Non spécifié" }}</div>
+        <div><strong>Urgence</strong> {{ demande.urgence|default:"Standard" }}</div>
+    </div>
+
+    <h3>Rapports des Examens Demandés</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Examen / Prestation</th>
+                <th>Catégorie</th>
+                <th>Statut</th>
+                <th>Rapport / Résultat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in details_examens %}
+            <tr>
+                <td><strong>{{ item.prestation.nom }}</strong></td>
+                <td>{{ item.prestation.categorie }}</td>
+                <td>
+                    {% if item.statut == 'TERMINE' or item.statut == 'VALIDÉ' %}
+                        <span class="badge badge-termine">{{ item.statut }}</span>
+                    {% else %}
+                        <span class="badge badge-attente">{{ item.statut }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.rapport|safe }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color: #999; text-align: center;">Aucun examen enregistré.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="signature-box">
+        <div class="note-area">
+            <strong>Informations :</strong><br>
+            Demande d'examen externe #{{ demande.id }}
+        </div>
+        <div class="stamp-area">
+            <p>Signature et Cachet</p>
+            <br><br>
+            <div style="border-top: 1px solid #333; width: 100%;"></div>
+        </div>
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <button class="no-print" onclick="window.print()" style="padding: 10px 25px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Imprimer le résultat
+        </button>
+    </div>
+
+    <script>
+        window.onload = function() { setTimeout(window.print, 500); }
+    </script>
+</body>
+</html>

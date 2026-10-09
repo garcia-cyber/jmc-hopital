@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Dossier Médical | {{ patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --info: #0284c7;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --border-radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .patient-header {
+            background: white;
+            border-top: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (max-width: 768px) {
+            .patient-header {
+                padding: 1rem;
+                text-align: center;
+            }
+
+            .patient-info-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .patient-info-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        .patient-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .patient-header h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .patient-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .info-badge {
+            background: var(--gray-100);
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--gray-200);
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .nav-tabs-custom {
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            background: white;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            padding: 0 0.5rem;
+        }
+
+        .nav-tabs-custom .nav-item {
+            margin-bottom: -2px;
+        }
+
+        .nav-tabs-custom .nav-link {
+            border: none;
+            font-weight: 600;
+            color: var(--gray-600);
+            padding: 1rem 1rem;
+            background: transparent;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        .nav-tabs-custom .nav-link:hover {
+            color: var(--primary);
+            background: var(--gray-100);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .nav-tabs-custom .nav-link.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: transparent;
+        }
+
+        .card-custom {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+            background: white;
+        }
+
+        .card-header-custom {
+            background: var(--gray-100);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.875rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        @media (max-width: 576px) {
+            .card-body {
+                padding: 0.75rem;
+            }
+        }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-action:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+        }
+
+        .btn-outline:hover {
+            background: var(--gray-100);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        .btn-back {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+
+        .btn-back:hover {
+            background: var(--gray-100);
+        }
+
+        .badge-custom {
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        .badge-success { background: #d1fae5; color: var(--success); }
+        .badge-warning { background: #fef3c7; color: var(--warning); }
+        .badge-danger { background: #fee2e2; color: var(--danger); }
+        .badge-primary { background: #dbeafe; color: var(--primary); }
+        .badge-info { background: #e0f2fe; color: var(--info); }
+
+        .info-box {
+            background: var(--gray-100);
+            border-left: 3px solid var(--primary);
+            padding: 0.875rem;
+            border-radius: 6px;
+            margin-bottom: 0.875rem;
+        }
+
+        .info-box-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            margin-bottom: 0.375rem;
+        }
+
+        .info-box-content {
+            color: var(--dark);
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 1.25rem 0 0.875rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .section-title i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .table-responsive {
+            border-radius: 6px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--gray-200);
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .table-custom th,
+        .table-custom td {
+            padding: 0.625rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table-custom th {
+            background: var(--gray-100);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--gray-700);
+            white-space: nowrap;
+        }
+
+        .table-custom tr:hover {
+            background: var(--gray-100);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--gray-600);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .d-flex { display: flex; }
+        .gap-2 { gap: 0.5rem; }
+        .flex-wrap { flex-wrap: wrap; }
+        .justify-content-between { justify-content: space-between; }
+        .align-items-center { align-items: center; }
+        .align-items-start { align-items: flex-start; }
+        .flex-grow-1 { flex-grow: 1; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-3 { margin-top: 0.75rem; }
+        .p-0 { padding: 0; }
+        .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+        .text-primary { color: var(--primary); }
+        .text-secondary { color: var(--gray-600); }
+        .text-muted { color: var(--gray-600); opacity: 0.7; }
+        .text-center { text-align: center; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -0.5rem; }
+        .col-md-3, .col-md-4, .col-md-6, .col-sm-6, .col-sm-12 { flex: 1; padding: 0 0.5rem; min-width: 0; }
+
+        @media (max-width: 768px) {
+            .col-md-3, .col-md-4, .col-md-6, .col-sm-6, .col-sm-12 { flex: 100%; }
+        }
+
+        .d-none { display: none; }
+
+        @media (min-width: 768px) {
+            .d-md-inline { display: inline; }
+        }
+
+        /* Filtre par date */
+        .filter-box {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-box .row {
+            align-items: flex-end;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.25rem;
+        }
+
+        .resultat-box {
+            background: #ecfdf5;
+            border-left: 3px solid var(--success);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        .resultat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #065f46;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .resultat-content {
+            color: #064e3b;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .resultat-image {
+            max-width: 100%;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+
+                <div class="patient-header">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div class="flex-grow-1">
+                            <h2 class="mb-2">
+                                <i class="fa fa-file-medical"></i> DOSSIER MÉDICAL
+                            </h2>
+                            <h3 class="mb-3">{{ patient.noms }}</h3>
+                        </div>
+                        <a href="{% url 'liste_patients_urgence' %}" class="btn-action btn-back">
+                            <i class="fa fa-arrow-left"></i>
+                            <span class="d-none d-md-inline">Retour</span>
+                        </a>
+                    </div>
+
+                    <div class="patient-info-grid">
+                        <div class="info-badge">
+                            <div class="info-label">Matricule</div>
+                            <div class="info-value">{{ patient.code_patient }}</div>
+                        </div>
+                        <div class="info-badge">
+                            <div class="info-label">Âge</div>
+                            <div class="info-value">{{ patient.age }}</div>
+                        </div>
+                        <div class="info-badge">
+                            <div class="info-label">Sexe</div>
+                            <div class="info-value">{{ patient.get_sexe_display }}</div>
+                        </div>
+                        <div class="info-badge">
+                            <div class="info-label">Téléphone</div>
+                            <div class="info-value">{{ patient.telephone }}</div>
+                        </div>
+                        <div class="info-badge">
+                            <div class="info-label">Type</div>
+                            <div class="info-value">
+                                <span class="badge-custom badge-primary">{{ patient.get_type_patient_display }}</span>
+                            </div>
+                        </div>
+                        {% if patient.entreprise %}
+                        <div class="info-badge">
+                            <div class="info-label">Entreprise</div>
+                            <div class="info-value">{{ patient.entreprise.nom }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#cons_tab">
+                            <i class="fa fa-stethoscope"></i> Consultations ({{ total_consultations }})
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#hosp_tab">
+                            <i class="fa fa-bed"></i> Hospitalisations ({{ total_hospitalisations }})
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#sv_tab">
+                            <i class="fa fa-heartbeat"></i> Signes vitaux
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#mat_tab">
+                            <i class="fa fa-baby-carriage"></i> Maternité
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#sess_tab">
+                            <i class="fa fa-procedures"></i> Sessions de soins
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#avis_tab">
+                            <i class="fa fa-user-md"></i> Avis médecins ({{ total_avis }})
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ===== FILTRE PAR DATE (CONSULTATIONS) ===== -->
+                    <div class="filter-box">
+                        <form method="get">
+                            <div class="row">
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <label class="form-label">Date de début</label>
+                                    <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <label class="form-label">Date de fin</label>
+                                    <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn-action btn-sm" style="width: 100%;">
+                                        <i class="fa fa-filter"></i> Filtrer
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ===== CONSULTATIONS ===== -->
+                    <div class="tab-pane fade show active" id="cons_tab">
+                        {% for cons in consultations %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h5 class="mb-0 text-primary">
+                                        <i class="fa fa-calendar"></i> {{ cons.date_creation|date:"d/m/Y H:i" }}
+                                    </h5>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        {% if cons.medecin %}
+                                        <span class="badge-custom badge-primary">
+                                            <i class="fa fa-user-md"></i> {{ cons.medecin.username }}
+                                        </span>
+                                        {% endif %}
+                                        <span class="badge-custom {% if cons.consultation_payee %}badge-success{% else %}badge-danger{% endif %}">
+                                            {% if cons.consultation_payee %}Payée{% else %}Non payée{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+
+                                <!-- ===== SIGNES VITAUX LIÉS (TRIAGE) ===== -->
+                                {% if cons.triage %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-heartbeat"></i> Signes vitaux (triage)</strong>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Température:</strong> {{ cons.triage.temperature }} °C
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Poids:</strong> {{ cons.triage.poids }} kg
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>TA:</strong> {{ cons.triage.tension_arterielle }}
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Pouls:</strong> {{ cons.triage.frequence_cardiaque }} bpm
+                                    </div>
+                                    {% if cons.triage.frequence_respiratoire %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>FR:</strong> {{ cons.triage.frequence_respiratoire }} /min
+                                    </div>
+                                    {% endif %}
+                                    {% if cons.triage.saturation_oxygene %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>SpO2:</strong> {{ cons.triage.saturation_oxygene }} %
+                                    </div>
+                                    {% endif %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Date:</strong> {{ cons.triage.date_prelevement|date:"d/m/Y H:i" }}
+                                    </div>
+                                    {% if cons.triage.infirmier %}
+                                    <div class="col-md-3 col-sm-6 mb-2">
+                                        <strong>Infirmier:</strong> {{ cons.triage.infirmier.username }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Motif -->
+                                <div class="info-box">
+                                    <div class="info-box-label"><i class="fa fa-exclamation-circle"></i> Motif de consultation</div>
+                                    <div class="info-box-content">{{ cons.motif_consultation|default:"N/A" }}</div>
+                                </div>
+
+                                <!-- Histoire de la maladie -->
+                                {% if cons.histoire_maladie %}
+                                <div class="info-box" style="border-left-color: var(--info);">
+                                    <div class="info-box-label"><i class="fa fa-history"></i> Histoire de la maladie</div>
+                                    <div class="info-box-content">{{ cons.histoire_maladie }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Antécédents -->
+                                {% if cons.antecedent %}
+                                <div class="info-box" style="border-left-color: var(--warning);">
+                                    <div class="info-box-label"><i class="fa fa-clipboard-list"></i> Antécédents</div>
+                                    <div class="info-box-content">{{ cons.antecedent }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Examen physique -->
+                                {% if cons.examen_physique %}
+                                <div class="info-box" style="border-left-color: var(--success);">
+                                    <div class="info-box-label"><i class="fa fa-user-md"></i> Examen physique</div>
+                                    <div class="info-box-content">{{ cons.examen_physique }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Complément d'anamnèse -->
+                                {% if cons.complement_d_anamnese %}
+                                <div class="info-box" style="border-left-color: var(--primary);">
+                                    <div class="info-box-label"><i class="fa fa-notes-medical"></i> Complément d'anamnèse</div>
+                                    <div class="info-box-content">{{ cons.complement_d_anamnese }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Hypothèse diagnostique -->
+                                {% if cons.hypothese_diagnostique %}
+                                <div class="info-box" style="border-left-color: var(--info);">
+                                    <div class="info-box-label"><i class="fa fa-book-medical"></i> Hypothèse diagnostique</div>
+                                    <div class="info-box-content">{{ cons.hypothese_diagnostique }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Diagnostic final -->
+                                {% if cons.diagnostic_final %}
+                                <div class="info-box" style="border-left-color: var(--success);">
+                                    <div class="info-box-label"><i class="fa fa-diagnoses"></i> Diagnostic final</div>
+                                    <div class="info-box-content">{{ cons.diagnostic_final }}</div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Examens + résultats -->
+                                {% if cons.examens.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-flask"></i> Examens ({{ cons.examens.count }})</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Examen</th>
+                                                <th>Qté</th>
+                                                <th>Statut</th>
+                                                <th>Date</th>
+                                                <th>Indication</th>
+                                                <th>Résultat</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ex in cons.examens.all %}
+                                            <tr>
+                                                <td><strong>{{ ex.prestation.libelle }}</strong></td>
+                                                <td>{{ ex.quantite }}</td>
+                                                <td>
+                                                    <span class="badge-custom {% if ex.statut == 'TERMINE' %}badge-success{% elif ex.statut == 'EN_ATTENTE' %}badge-warning{% else %}badge-danger{% endif %}">
+                                                        {{ ex.get_statut_display }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ ex.date_demande|date:"d/m/Y" }}</td>
+                                                <td>{{ ex.indication|default:"N/A" }}</td>
+                                                <td>
+                                                    {% if ex.resultat %}
+                                                    <div class="resultat-box">
+                                                        <div class="resultat-label">Résultat</div>
+                                                        <div class="resultat-content">{{ ex.resultat|linebreaks }}</div>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if ex.image_resultat %}
+                                                    <div class="mt-2">
+                                                        <img src="{{ ex.image_resultat.url }}" alt="Résultat" class="resultat-image">
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if not ex.resultat and not ex.image_resultat %}
+                                                    <span class="text-muted">En attente</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+
+                                <!-- Ordonnances complètes -->
+                                {% if cons.ordonnance_set.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-file-prescription"></i> Ordonnances ({{ cons.ordonnance_set.count }})</strong>
+                                </div>
+                                {% for ord in cons.ordonnance_set.all %}
+                                <div class="card card-custom mb-3">
+                                    <div class="card-header-custom" style="background: var(--danger); color: white;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ ord.get_type_ordonnance_display }}</strong>
+                                                {% if ord.note %}
+                                                <span class="badge-custom badge-info ms-2">
+                                                    <i class="fa fa-sticky-note"></i> Note
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            <small>{{ ord.date_prescrite|date:"d/m/Y H:i" }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if ord.diagnostic %}
+                                        <div class="mb-3">
+                                            <strong><i class="fa fa-diagnoses"></i> Diagnostic:</strong>
+                                            <p class="mb-0 text-secondary">{{ ord.diagnostic }}</p>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if ord.observation %}
+                                        <div class="mb-3">
+                                            <strong><i class="fa fa-comment-medical"></i> Observation:</strong>
+                                            <p class="mb-0 text-secondary">{{ ord.observation|linebreaks }}</p>
+                                        </div>
+                                        {% endif %}
+
+                                        {% if ord.note %}
+                                        <div class="mb-3">
+                                            <strong><i class="fa fa-sticky-note"></i> Note:</strong>
+                                            <p class="mb-0 text-secondary">{{ ord.note|linebreaks }}</p>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Médicaments (modèle Medicament) -->
+                                        {% if ord.medicaments.all %}
+                                        <h6 class="mb-2">Médicaments ({{ ord.medicaments.count }})</h6>
+                                        <div class="table-responsive">
+                                            <table class="table-custom">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Médicament</th>
+                                                        <th>Posologie</th>
+                                                        <th>Durée</th>
+                                                        <th>Qté</th>
+                                                        <th>Statut</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for med in ord.medicaments.all %}
+                                                    <tr>
+                                                        <td><strong>{{ med.nom }}</strong></td>
+                                                        <td>{{ med.posologie }}</td>
+                                                        <td>{{ med.duree }}</td>
+                                                        <td>{{ med.quantite|default:1 }}</td>
+                                                        <td>
+                                                            <span class="badge-custom {% if med.statut == 'EN_COURS' %}badge-success{% else %}badge-danger{% endif %}">
+                                                                {{ med.get_statut_display }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Lignes médicaments (modèle LigneMedicament) -->
+                                        {% if ord.lignes_medicaments.all %}
+                                        <h6 class="mb-2 mt-3">Lignes de médicaments ({{ ord.lignes_medicaments.count }})</h6>
+                                        <div class="table-responsive">
+                                            <table class="table-custom">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Médicament</th>
+                                                        <th>Posologie</th>
+                                                        <th>Durée</th>
+                                                        <th>Statut</th>
+                                                        <th>Motif arrêt</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for ligne in ord.lignes_medicaments.all %}
+                                                    <tr>
+                                                        <td><strong>{{ ligne.nom_medicament }}</strong></td>
+                                                        <td>{{ ligne.posologie }}</td>
+                                                        <td>{{ ligne.duree }}</td>
+                                                        <td>
+                                                            <span class="badge-custom {% if ligne.statut == 'EN_COURS' %}badge-success{% else %}badge-danger{% endif %}">
+                                                                {{ ligne.get_statut_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td>{{ ligne.motif_arret|default:"N/A" }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% endif %}
+
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+
+                            </div>
+                        </div>
+
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-inbox"></i>
+                            <p>Aucune consultation</p>
+                        </div>
+                        {% endfor %}
+                    </div>                    <!-- ===== HOSPITALISATIONS ===== -->
+                    <div class="tab-pane fade" id="hosp_tab">
+                        {% for hosp in hospitalisations %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h5 class="mb-0 text-primary">
+                                        <i class="fa fa-bed"></i> Hospitalisation #{{ hosp.id }}
+                                    </h5>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <span class="badge-custom {% if hosp.statut == 'EN_COURS' %}badge-warning{% else %}badge-success{% endif %}">
+                                            {{ hosp.get_statut_display }}
+                                        </span>
+                                        <span class="badge-custom badge-info">
+                                            <i class="fa fa-door-open"></i> {{ hosp.lit.nom_lit }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong><i class="fa fa-calendar"></i> Période:</strong>
+                                    <p class="mb-0">
+                                        Du {{ hosp.date_entree|date:"d/m/Y" }}
+                                        {% if hosp.date_sortie %}
+                                        au {{ hosp.date_sortie|date:"d/m/Y" }}
+                                        {% else %}
+                                        <span class="badge-custom badge-warning">En cours</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+
+                                <div class="info-box">
+                                    <div class="info-box-label">Motif</div>
+                                    <div class="info-box-content">{{ hosp.motif_admission }}</div>
+                                </div>
+
+                                {% if hosp.kardex_items.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-pills"></i> Kardex ({{ hosp.kardex_items.count }})</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Médicament</th>
+                                                <th>Posologie</th>
+                                                <th>Voie</th>
+                                                <th>Date</th>
+                                                <th>Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for kardex in hosp.kardex_items.all %}
+                                            <tr>
+                                                <td>{{ kardex.medicament }}</td>
+                                                <td>{{ kardex.posologie }}</td>
+                                                <td>{{ kardex.voie_administration }}</td>
+                                                <td>{{ kardex.date_prescription|date:"d/m/Y" }}</td>
+                                                <td>
+                                                    {% if kardex.est_actif %}
+                                                    <span class="badge-custom badge-success">Actif</span>
+                                                    {% else %}
+                                                    <span class="badge-custom badge-danger">Stoppé</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+
+                                {% if hosp.ordonnance_sortie %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-file-medical-alt"></i> Ordonnance de sortie</strong>
+                                </div>
+                                <div class="info-box" style="border-left-color: var(--success);">
+                                    <div class="info-box-label">Prescriptions</div>
+                                    <div class="info-box-content">{{ hosp.ordonnance_sortie.prescriptions|linebreaks }}</div>
+                                </div>
+                                {% if hosp.ordonnance_sortie.recommandations %}
+                                <div class="info-box" style="border-left-color: var(--warning);">
+                                    <div class="info-box-label">Recommandations</div>
+                                    <div class="info-box-content">{{ hosp.ordonnance_sortie.recommandations|linebreaks }}</div>
+                                </div>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-bed"></i>
+                            <p>Aucune hospitalisation</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ===== SIGNES VITAUX ===== -->
+                    <div class="tab-pane fade" id="sv_tab">
+                        <div class="card card-custom">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Temp (°C)</th>
+                                                <th>TA</th>
+                                                <th>Pouls</th>
+                                                <th>Poids (kg)</th>
+                                                <th>SpO2</th>
+                                                <th>FR</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for sv in signes_vitaux %}
+                                            <tr>
+                                                <td>{{ sv.date_prelevement|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ sv.temperature }}</td>
+                                                <td>{{ sv.tension_arterielle }}</td>
+                                                <td>{{ sv.frequence_cardiaque }}</td>
+                                                <td>{{ sv.poids }}</td>
+                                                <td>{{ sv.saturation_oxygene|default:"N/A" }}</td>
+                                                <td>{{ sv.frequence_respiratoire|default:"N/A" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4">
+                                                    <i class="fa fa-heartbeat fa-2x mb-2" style="opacity: 0.3;"></i>
+                                                    <p class="mb-0">Aucun signe vital</p>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>                    <!-- ===== MATERNITÉ ===== -->
+                    <div class="tab-pane fade" id="mat_tab">
+                        {% for mat in maternites %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="fa fa-baby-carriage"></i> Dossier Maternité #{{ mat.id }}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Admission:</strong> {{ mat.date_admission|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Terme:</strong> {{ mat.terme_prevu|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-md-4 col-sm-12">
+                                        <strong>Statut:</strong> {{ mat.statut|default:"N/A" }}
+                                    </div>
+                                </div>
+
+                                {% if mat.observations %}
+                                <div class="info-box">
+                                    <div class="info-box-label">Observations</div>
+                                    <div class="info-box-content">{{ mat.observations|linebreaks }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if mat.consultations.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-notes-medical"></i> Consultations maternité</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Effectué par</th>
+                                                <th>Observation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for c in mat.consultations.all %}
+                                            <tr>
+                                                <td>{{ c.date_consultation|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ c.effectue_par.get_full_name|default:c.effectue_par.username|default:"N/A" }}</td>
+                                                <td>{{ c.observation|truncatechars:100|default:"N/A" }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-baby-carriage"></i>
+                            <p>Aucun dossier maternité</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ===== SESSIONS DE SOINS ===== -->
+                    <div class="tab-pane fade" id="sess_tab">
+                        {% for session in sessions %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h5 class="mb-0 text-primary">
+                                        <i class="fa fa-procedures"></i> Session de soins du {{ session.date_creation|date:"d/m/Y H:i" }}
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                {% if session.items.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-list"></i> Prestations / soins</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Prestation</th>
+                                                <th>Quantité</th>
+                                                <th>Prix unitaire</th>
+                                                <th>Montant</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in session.items.all %}
+                                            <tr>
+                                                <td>{{ item.prestation.libelle|default:"N/A" }}</td>
+                                                <td>{{ item.quantite|default:"1" }}</td>
+                                                <td>{{ item.prix_unitaire|default:"0" }}</td>
+                                                <td>{{ item.montant|default:"0" }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+
+                                {% if session.signes_vitaux.all %}
+                                <div class="section-title">
+                                    <strong><i class="fa fa-heartbeat"></i> Signes vitaux liés</strong>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Température</th>
+                                                <th>TA</th>
+                                                <th>Pouls</th>
+                                                <th>SpO2</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for sv in session.signes_vitaux.all %}
+                                            <tr>
+                                                <td>{{ sv.date_prelevement|date:"d/m/Y H:i" }}</td>
+                                                <td>{{ sv.temperature|default:"N/A" }}</td>
+                                                <td>{{ sv.tension_arterielle|default:"N/A" }}</td>
+                                                <td>{{ sv.frequence_cardiaque|default:"N/A" }}</td>
+                                                <td>{{ sv.saturation_oxygene|default:"N/A" }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-procedures"></i>
+                            <p>Aucune session de soins</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ===== AVIS MEDECINS ===== -->
+                    <div class="tab-pane fade" id="avis_tab">
+                        {% if fonctionKey == 'medecin' or fonctionKey == 'admin' %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="fa fa-plus-circle"></i> Nouvel avis médecin
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="avis_medecin">
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 col-sm-12">
+                                            <label><strong>Type d'avis</strong></label>
+                                            <select name="type_avis" class="form-control" required>
+                                                <option value="DIAGNOSTIC">Diagnostic / Synthèse</option>
+                                                <option value="EVOLUTION">Évolution clinique</option>
+                                                <option value="COMMENTAIRE" selected>Commentaire / Note</option>
+                                                <option value="CONSEIL">Conseil / Recommandation</option>
+                                                <option value="AUTRE">Autre</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 col-sm-12">
+                                            <label><strong>Titre</strong></label>
+                                            <input type="text" name="titre" class="form-control" placeholder="Titre optionnel">
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 col-sm-12">
+                                            <label><strong>Consultation liée</strong></label>
+                                            <select name="consultation" class="form-control">
+                                                <option value="">---------</option>
+                                                {% for cons in consultations %}
+                                                <option value="{{ cons.id }}">
+                                                    Consultation du {{ cons.date_creation|date:"d/m/Y H:i" }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 col-sm-12">
+                                            <label><strong>Hospitalisation liée</strong></label>
+                                            <select name="hospitalisation" class="form-control">
+                                                <option value="">---------</option>
+                                                {% for hosp in hospitalisations %}
+                                                <option value="{{ hosp.id }}">
+                                                    Hospitalisation #{{ hosp.id }} - {{ hosp.date_entree|date:"d/m/Y" }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label><strong>Contenu</strong></label>
+                                        <textarea name="contenu" rows="5" class="form-control" placeholder="Saisir l'avis du médecin..." required></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn-action btn-success">
+                                        <i class="fa fa-save"></i> Enregistrer l'avis
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% for avis in avis_medecin %}
+                        <div class="card card-custom mb-4">
+                            <div class="card-header-custom">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="mb-0 text-primary">
+                                            <i class="fa fa-user-md"></i>
+                                            {{ avis.titre|default:"Avis médical" }}
+                                        </h5>
+                                        <small class="text-secondary">
+                                            Par {{ avis.medecin.get_full_name|default:avis.medecin.username|default:"Inconnu" }}
+                                            le {{ avis.date_avis|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </div>
+                                    <span class="badge-custom badge-info">
+                                        {{ avis.get_type_avis_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-box">
+                                    <div class="info-box-label">Contenu de l'avis</div>
+                                    <div class="info-box-content">{{ avis.contenu|linebreaks }}</div>
+                                </div>
+
+                                <div class="row">
+                                    {% if avis.consultation %}
+                                    <div class="col-md-6 col-sm-12 mb-2">
+                                        <strong>Consultation liée:</strong>
+                                        #{{ avis.consultation.id }} - {{ avis.consultation.date_creation|date:"d/m/Y H:i" }}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if avis.hospitalisation %}
+                                    <div class="col-md-6 col-sm-12 mb-2">
+                                        <strong>Hospitalisation liée:</strong>
+                                        #{{ avis.hospitalisation.id }} - {{ avis.hospitalisation.date_entree|date:"d/m/Y" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fa fa-user-md"></i>
+                            <p>Aucun avis médecin</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

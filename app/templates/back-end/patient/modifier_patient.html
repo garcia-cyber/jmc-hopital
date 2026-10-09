@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Modifier Patient - {{ patient.noms }}</title>
+        
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+        
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+            
+                <div class="content container-fluid">
+                
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">Modifier la fiche Patient</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'enregistrement_patient' %}">Patients</a></li>
+                                    <li class="breadcrumb-item active">Modification : {{ patient.noms }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /Page Header -->
+
+                    <!-- Alertes -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title mb-0">Informations de {{ patient.noms }} (Code: {{ patient.code_patient }})</h4>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Le formulaire pointe vers la même URL (pk) via POST -->
+                                    <form method="POST">
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            {% for field in form %}
+                                                <div class="col-sm-6">
+                                                    <div class="form-group">
+                                                        <label>{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                                        {{ field }}
+                                                        {% if field.errors %}
+                                                            {% for error in field.errors %}
+                                                                <div class="text-danger small">{{ error }}</div>
+                                                            {% endfor %}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="submit-section">
+                                            <button type="submit" class="btn btn-primary submit-btn">Enregistrer les modifications</button>
+                                            <a href="{% url 'enregistrement_patient' %}" class="btn btn-secondary submit-btn">Annuler</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            $(document).ready(function(){
+                // On applique les classes Bootstrap aux champs générés par Django
+                $('form input, form select, form textarea').addClass('form-control');
+            });
+        </script>
+    </body>
+</html>

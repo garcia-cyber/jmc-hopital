@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Rapport & Fin d'Opération</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+    
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header">
+                <h3>Finalisation de l'opération : {{ bloc.consultation.triage.patient.noms }}</h3>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card p-3">
+                        <h5 class="text-primary">Détails de l'intervention</h5>
+                        <hr>
+                        <p><strong>Patient :</strong> {{ bloc.consultation.triage.patient.noms }}</p>
+                        <p><strong>Type :</strong> {{ bloc.prestation.libelle }}</p>
+                        <p><strong>Date prévue :</strong> {{ bloc.date_programmee|date:"d/m/Y H:i" }}</p>
+                        <hr>
+                        <p><strong>Constantes pré-op :</strong><br> {{ bloc.constantes_pre_op|linebreaks }}</p>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card p-4">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label><strong>Compte-rendu opératoire (Détails) :</strong></label>
+                                <textarea name="acte_realise" class="form-control" rows="10" required>{{ bloc.acte_realise|default:'' }}</textarea>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fa fa-exclamation-triangle"></i> 
+                                En cliquant sur le bouton ci-dessous, vous confirmez que <strong>l'opération est officiellement terminée</strong> et que le rapport est finalisé.
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-block">
+                                <i class="fa fa-check"></i> Enregistrer et Terminer l'Opération
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

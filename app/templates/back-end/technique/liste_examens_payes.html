@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{{ titre_page }} | Console Technique</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+        }
+
+        .card-header {
+            background: #ffffff;
+            border-bottom: 1px solid #f0f0f0;
+            padding: 20px;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .table thead {
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .avatar-medical {
+            background: #e3f2fd;
+            color: #1976d2;
+            font-weight: bold;
+            border-radius: 8px;
+            width: 45px;
+            height: 45px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-medical {
+            background: #28a745;
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 6px 15px;
+            border: none;
+        }
+
+        .btn-medical:hover {
+            background: #218838;
+            color: #ffffff;
+        }
+
+        .btn-edit {
+            background: #17a2b8;
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 6px 15px;
+            border: none;
+        }
+
+        .btn-edit:hover {
+            background: #138496;
+            color: #ffffff;
+        }
+
+        .btn-finished {
+            background: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            border-radius: 6px;
+            padding: 6px 15px;
+            border: none;
+        }
+
+        .badge-type {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .info-financiere {
+            font-size: 11px;
+            font-weight: 600;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .info-financiere.simple {
+            color: #dc3545;
+        }
+
+        .info-financiere.fidele {
+            color: #28a745;
+        }
+
+        .info-financiere.conventionne {
+            color: #17a2b8;
+        }
+
+        .info-financiere-technique {
+            font-size: 10px;
+            font-weight: 600;
+            display: block;
+            margin-top: 4px;
+            line-height: 1.35;
+        }
+
+        .info-financiere-technique .label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .info-financiere-technique .valeur {
+            font-weight: 700;
+        }
+
+        .info-financiere-technique .paye {
+            color: #28a745;
+        }
+
+        .info-financiere-technique .reste {
+            color: #dc3545;
+        }
+
+        .hopital-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .hopital-banner h3 {
+            color: #ffffff;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .hopital-banner p {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0;
+        }
+
+        .exam-badge {
+            display: inline-block;
+            margin-bottom: 5px;
+            margin-right: 3px;
+            white-space: normal;
+            text-align: left;
+        }
+
+        @media (max-width: 768px) {
+            .table thead {
+                display: none;
+            }
+
+            .table,
+            .table tbody,
+            .table tr,
+            .table td {
+                display: block;
+                width: 100%;
+            }
+
+            .table tr {
+                margin-bottom: 15px;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            .table td {
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+                min-height: 48px;
+            }
+
+            .table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 15px;
+                width: 45%;
+                text-align: left;
+                font-weight: bold;
+                color: #6c757d;
+            }
+
+            .table td[data-label="Patient"] {
+                text-align: left;
+                padding-left: 15px;
+            }
+
+            .table td[data-label="Patient"]::before {
+                display: none;
+            }
+
+            .table td[data-label="Action"] {
+                text-align: left;
+                padding-left: 15px;
+            }
+
+            .table td[data-label="Action"]::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+
+                {% if hopital_user %}
+                    <div class="hopital-banner">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3>
+                                    <i class="fa fa-hospital-o mr-2"></i>
+                                    {{ hopital_user.nom|default:"Hôpital" }}
+                                </h3>
+
+                                <p>
+                                    <i class="fa fa-map-marker-alt mr-1"></i>
+                                    Console de suivi technique - {{ titre_page }}
+                                </p>
+                            </div>
+
+                            <div class="col-auto text-right">
+                                <span class="badge badge-light" style="font-size: 12px; padding: 8px 15px;">
+                                    <i class="fa fa-users mr-1"></i>
+                                    {{ historique_technique|length }} patient(s)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="page-header" style="margin-bottom: 25px;">
+                        <h3 style="color: #34495e; font-weight: 700;">
+                            {{ titre_page }}
+                        </h3>
+
+                        <p class="text-muted">
+                            Console de suivi technique
+                        </p>
+                    </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <input
+                                type="text"
+                                id="searchPatient"
+                                class="form-control"
+                                placeholder="Rechercher par nom ou code..."
+                            >
+
+                            <div class="input-group-append">
+                                <span class="input-group-text">
+                                    <i class="fa fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+
+                            <div class="card-header">
+                                <h4 class="card-title mb-0">
+                                    <i class="fa fa-list-ul mr-2"></i>
+                                    File d'attente des patients
+                                </h4>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+
+                                    <table class="table table-hover mb-0" id="tablePatients">
+                                        <thead>
+                                            <tr>
+                                                <th>Patient</th>
+                                                <th>Bio</th>
+                                                <th>Examens</th>
+                                                <th>Prescripteur</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {% for item in historique_technique %}
+                                                <tr>
+
+                                                    <td data-label="Patient">
+                                                        <div class="d-flex align-items-center">
+
+                                                            <div class="avatar-medical mr-3">
+                                                                {{ item.patient.nom|default:"?"|slice:":1"|upper }}
+                                                            </div>
+
+                                                            <div>
+                                                                <div class="font-weight-bold">
+                                                                    {{ item.patient.nom }}
+                                                                </div>
+
+                                                                <small class="text-muted">
+                                                                    Code : {{ item.patient.code }}
+                                                                </small>
+
+                                                                <div>
+                                                                    <span class="badge badge-secondary badge-type">
+                                                                        {{ item.patient.type }}
+                                                                    </span>
+
+                                                                    {% if item.patient.info_financiere %}
+                                                                        <span class="info-financiere
+                                                                            {% if item.patient.type_code == 'SIMPLE' %}
+                                                                                simple
+                                                                            {% elif item.patient.type_code == 'FIDELE' %}
+                                                                                fidele
+                                                                            {% else %}
+                                                                                conventionne
+                                                                            {% endif %}
+                                                                        ">
+                                                                            <i class="fa fa-info-circle"></i>
+                                                                            {{ item.patient.info_financiere }}
+                                                                        </span>
+                                                                    {% endif %}
+
+                                                                    {% if item.total_prescrit_cdf is not None %}
+                                                                        <span class="info-financiere-technique">
+                                                                            <span class="label">
+                                                                                Total de ce service :
+                                                                            </span>
+
+                                                                            <span class="valeur">
+                                                                                {{ item.total_prescrit_cdf|floatformat:0 }} CDF
+                                                                            </span>
+
+                                                                            <span class="text-muted">
+                                                                                (~ {{ item.total_prescrit_usd|floatformat:2 }} USD)
+                                                                            </span>
+                                                                        </span>
+
+                                                                        <span class="info-financiere-technique">
+                                                                            <span class="label">
+                                                                                Payé pour ce service :
+                                                                            </span>
+
+                                                                            <span class="valeur paye">
+                                                                                {{ item.total_paye_cdf|floatformat:0 }} CDF
+                                                                            </span>
+                                                                        </span>
+
+                                                                        <span class="info-financiere-technique">
+                                                                            <span class="label">
+                                                                                Reste pour ce service :
+                                                                            </span>
+
+                                                                            {% if item.reste_a_payer_cdf > 0 %}
+                                                                                <span class="valeur reste">
+                                                                                    {{ item.reste_a_payer_cdf|floatformat:0 }} CDF
+                                                                                </span>
+
+                                                                                <span class="text-muted">
+                                                                                    (~ {{ item.reste_a_payer_usd|floatformat:2 }} USD)
+                                                                                </span>
+                                                                            {% else %}
+                                                                                <span class="valeur paye">
+                                                                                    Payé
+                                                                                </span>
+                                                                            {% endif %}
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    <td data-label="Bio">
+                                                        {{ item.patient.genre|default:"N/A" }}
+
+                                                        <br>
+
+                                                        {% if item.patient.age %}
+                                                            <small class="text-muted">
+                                                                {{ item.patient.age }} ans
+                                                            </small>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    <td data-label="Examens">
+                                                        {% for ex in item.examens %}
+                                                            <span class="badge exam-badge
+                                                                {% if ex.est_deja_fait %}
+                                                                    badge-light text-muted
+                                                                {% else %}
+                                                                    badge-info
+                                                                {% endif %}
+                                                            ">
+                                                                {% if ex.est_deja_fait %}
+                                                                    <i class="fa fa-check-circle mr-1"></i>
+                                                                {% else %}
+                                                                    <i class="fa fa-clock-o mr-1"></i>
+                                                                {% endif %}
+
+                                                                {{ ex.libelle }}
+                                                            </span>
+                                                        {% empty %}
+                                                            <small class="text-muted">
+                                                                Aucun examen pour ce service.
+                                                            </small>
+                                                        {% endfor %}
+                                                    </td>
+
+                                                    <td data-label="Prescripteur">
+                                                        <small class="text-primary font-weight-bold">
+                                                            <i class="fa fa-user-md mr-1"></i>
+                                                            Dr. {{ item.medecin }}
+                                                        </small>
+                                                    </td>
+
+                                                    <td data-label="Action" class="text-center">
+                                                        {% if item.tout_traite %}
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-finished btn-sm"
+                                                                disabled
+                                                            >
+                                                                <i class="fa fa-check-circle mr-1"></i>
+                                                                Terminé
+                                                            </button>
+
+                                                            <a
+                                                                href="{% url 'modifier_resultats_examens' item.consultation_id %}"
+                                                                class="btn btn-edit btn-sm ml-1"
+                                                            >
+                                                                <i class="fa fa-edit mr-1"></i>
+                                                                Modifier
+                                                            </a>
+                                                        {% else %}
+                                                            <a
+                                                                href="{% url 'saisir_resultats_examens' item.consultation_id %}"
+                                                                class="btn btn-medical btn-sm"
+                                                            >
+                                                                <i class="fa fa-flask mr-1"></i>
+                                                                Saisir résultats
+                                                            </a>
+                                                        {% endif %}
+                                                    </td>
+
+                                                </tr>
+                                            {% empty %}
+                                                <tr>
+                                                    <td colspan="5" class="text-center p-5 text-muted">
+                                                        <i
+                                                            class="fa fa-hospital-o fa-3x mb-3"
+                                                            style="color: #dee2e6;"
+                                                        ></i>
+
+                                                        <br>
+
+                                                        Aucun examen disponible pour votre service.
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('searchPatient');
+            const rows = document.querySelectorAll('#tablePatients tbody tr');
+
+            if (!searchInput) {
+                return;
+            }
+
+            searchInput.addEventListener('keyup', function () {
+                const filter = this.value.toLowerCase().trim();
+
+                rows.forEach(function (row) {
+                    const contenu = row.innerText.toLowerCase();
+
+                    if (contenu.includes(filter)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>Moyanoli - Encaissement Bloc</title>
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    <div class="page-header d-flex justify-content-between align-items-center">
+                        <h3 class="page-title">Paiement : {{ bloc.prestation.libelle }}</h3>
+                        <a href="{% url 'historique_paiements' bloc.consultation.triage.patient.id %}" class="btn btn-secondary">
+                            <i class="fa fa-arrow-left"></i> Retour à l'historique
+                        </a>
+                    </div>
+
+                    <form method="POST" id="formEncaissement">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card shadow-sm border-0">
+                                    <div class="card-header bg-danger text-white">Détails de l'intervention</div>
+                                    <div class="card-body">
+                                        <table class="table table-bordered">
+                                            <tbody>
+                                                <tr>
+                                                    <th>Patient</th>
+                                                    <td>{{ bloc.consultation.triage.patient.noms }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Intervention</th>
+                                                    <td>{{ bloc.prestation.libelle }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Prix Total</th>
+                                                    <td><strong>{{ prix_chirurgie }} USD</strong></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <div class="alert alert-info mt-3">
+                                            <strong>Reste à payer : {{ reste_a_payer|floatformat:2 }} USD</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-4">
+                                <div class="card shadow-sm border-danger">
+                                    <div class="card-body">
+                                        <h5 class="text-danger mb-3">Encaisser le Bloc</h5>
+                                        
+                                        <input type="hidden" id="dette_globale" value="{{ reste_a_payer }}">
+                                        <input type="hidden" id="taux_du_jour" value="{{ taux }}">
+
+                                        <div class="form-group">
+                                            <label>Devise</label>
+                                            <select name="devise" id="select_devise" class="form-control" onchange="calculerReste()">
+                                                <option value="USD">USD</option>
+                                                <option value="CDF">CDF (Taux: {{ taux }})</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Montant versé</label>
+                                            <input type="number" id="mt_input" name="montant_verse" class="form-control" step="0.01" required oninput="calculerReste()">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Réduction (USD)</label>
+                                            <input type="number" name="montant_reduction" id="mt_reduction" class="form-control" step="0.01" value="0" oninput="calculerReste()">
+                                        </div>
+
+                                        <div class="alert alert-warning">
+                                            <strong>Nouveau reste :</strong> <span id="nouveau_reste">{{ reste_a_payer|floatformat:2 }}</span> USD
+                                        </div>
+
+                                        <button type="submit" id="btn_submit" class="btn btn-danger btn-block">
+                                            <i class="fa fa-check"></i> Enregistrer le paiement
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+        
+        <script>
+        function calculerReste() {
+            const detteInitiale = parseFloat(document.getElementById('dette_globale').value) || 0;
+            const taux = parseFloat(document.getElementById('taux_du_jour').value) || 1;
+            const devise = document.getElementById('select_devise').value;
+            const inputVal = parseFloat(document.getElementById('mt_input').value) || 0;
+            const reduction = parseFloat(document.getElementById('mt_reduction').value) || 0;
+            const btnSubmit = document.getElementById('btn_submit');
+            
+            let montantVerseUsd = (devise === 'CDF') ? (inputVal / taux) : inputVal;
+            const totalAColler = montantVerseUsd + reduction;
+            const reste = detteInitiale - totalAColler;
+            
+            // Mise à jour de l'affichage
+            document.getElementById('nouveau_reste').innerText = Math.max(0, reste).toFixed(2);
+
+            // SÉCURITÉ : Désactiver le bouton si le montant dépasse la dette
+            if (totalAColler > (detteInitiale + 0.001)) {
+                btnSubmit.disabled = true;
+                btnSubmit.classList.replace('btn-danger', 'btn-secondary');
+                btnSubmit.innerText = "Montant invalide";
+            } else {
+                btnSubmit.disabled = false;
+                btnSubmit.classList.replace('btn-secondary', 'btn-danger');
+                btnSubmit.innerText = "Enregistrer le paiement";
+            }
+        }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer Rendez-vous - {{ hosp.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card shadow">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">Nouveau rendez-vous pour : {{ hosp.patient.noms }}</h4>
+                            </div>
+                            <div class="card-body">
+                                
+                                {% if messages %}
+                                    {% for message in messages %}
+                                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Date et heure du rendez-vous</label>
+                                        <input type="datetime-local" name="date_rdv" class="form-control" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Motif du rendez-vous</label>
+                                        <input type="text" name="motif" class="form-control" placeholder="Ex: Suivi post-hospitalisation" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Notes médicales</label>
+                                        <textarea name="note" class="form-control" rows="4" placeholder="Détails supplémentaires..."></textarea>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <a href="{% url 'detail_hospitalisation' hosp.id %}" class="btn btn-secondary me-2">Annuler</a>
+                                        <button type="submit" class="btn btn-success">Enregistrer le Rendez-vous</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails Consultation</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; }
+        .card-header { font-weight: bold; text-transform: uppercase; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            
+            <div class="page-header d-flex justify-content-between align-items-center">
+                <h3 class="page-title">Détails de la Consultation</h3>
+                <button onclick="window.print()" class="btn btn-primary no-print"><i class="fa fa-print"></i> Imprimer</button>
+            </div>
+
+            <div class="row">
+                <div class="col-12 col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-danger text-white">Patient</div>
+                        <div class="card-body">
+                            <p><strong>Nom :</strong> {{ c.triage.patient.noms }}</p>
+                            <p><strong>Code :</strong> {{ c.triage.patient.code_patient }}</p>
+                            <p><strong>Âge :</strong> {{ c.triage.patient.age }} ans</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">Examens demandés</div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for ex in c.examens.all %}
+                                    <li class="list-group-item px-0">
+                                        <strong>{{ ex.prestation.libelle }}</strong> 
+                                        <span class="badge badge-info">{{ ex.get_statut_display }}</span>
+                                        {% if ex.resultat %}<br><small class="text-muted">Résultat : {{ ex.resultat }}</small>{% endif %}
+                                    </li>
+                                {% empty %}
+                                    <li class="text-muted">Aucun examen demandé</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">Consultation</div>
+                        <div class="card-body">
+                            <p><strong>Date :</strong> {{ c.date_creation|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Médecin :</strong> Dr. {{ c.medecin.get_full_name|default:c.medecin.username }}</p>
+                            <hr>
+                            <p><strong>Motif :</strong><br> {{ c.motif_consultation }}</p>
+                            <p><strong>Histoire :</strong><br> {{ c.histoire_maladie }}</p>
+                            <p><strong>Examen physique :</strong><br> {{ c.examen_physique }}</p>
+                            <p><strong>Hypothèse diag. :</strong><br> {{ c.hypothese_diagnostique }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

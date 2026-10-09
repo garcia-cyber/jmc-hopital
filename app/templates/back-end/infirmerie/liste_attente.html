@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <title>JMC - File d'attente Triage</title>
+        {% include 'back-end/includes/css.html' %}
+    </head>
+    <body>
+        <div class="main-wrapper">
+            {% include 'back-end/includes/header.html' %}
+            {% include 'back-end/includes/sidebar.html' %}
+            
+            <div class="page-wrapper">
+                <div class="content container-fluid">
+                    
+                    <div class="page-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h3 class="page-title">File d'Attente - Triage</h3>
+                                <ul class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Infirmerie</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row filter-row">
+                        <div class="col-sm-9 col-md-9">  
+                            <div class="form-group form-focus">
+                                <input type="text" id="searchPatient" class="form-control floating" onkeyup="filterTable()">
+                                <label class="focus-label">Rechercher un patient par nom...</label>
+                            </div>
+                        </div>
+                        <div class="col-sm-3 col-md-3">  
+                            <button class="btn btn-success btn-block" onclick="window.location.reload();"> <i class="fa fa-sync"></i> Actualiser </button>   
+                        </div>   
+                    </div>
+
+                    <div class="card card-table mt-3">
+                        <div class="card-header">
+                            <h4 class="card-title mb-0">
+                                Patients en attente
+                                <small class="text-muted d-block mt-1" style="font-size: 0.85rem;">
+                                    Taux : 1 USD = {{ taux|floatformat:0 }} FC |
+                                    Fiche : {{ libelle_cible }} ({{ heure_actuelle }}h) |
+                                    Prix : {{ prix_fiche_cdf|floatformat:0 }} FC (~ {{ prix_fiche|floatformat:2 }} USD)
+                                </small>
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-center mb-0" id="patientTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient</th>
+                                            <th>Type</th>
+                                            <th>Heure arrivée</th>
+                                            <th class="text-center">Total payé (Fiche)</th>
+                                            <th class="text-center">Statut fiche</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for patient in patients %}
+                                        <tr>
+                                            <td>
+                                                <h2 class="table-avatar">
+                                                    <a href="#" class="avatar avatar-sm mr-2">
+                                                        <img class="avatar-img rounded-circle" src="{% static 'back-end/assets/img/user.jpg' %}" alt="User">
+                                                    </a>
+                                                    <a href="#">{{ patient.noms }} <span>ID: {{ patient.code_patient }}</span></a>
+                                                </h2>
+                                            </td>
+                                            <td><span class="badge badge-primary">{{ patient.get_type_patient_display }}</span></td>
+                                            <td>{{ patient.date_creation|date:"H:i" }}</td>
+                                            <td class="text-center">
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    <span class="badge badge-secondary">Exonéré</span>
+                                                {% else %}
+                                                    <span class="badge {% if patient.a_solde_fiche %}badge-success{% else %}badge-warning{% endif %}">
+                                                        {{ patient.total_fiche_cdf|floatformat:0 }} FC
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Exonéré</span>
+                                                {% elif patient.a_solde_fiche %}
+                                                    <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Prêt</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger-border"><i class="fa fa-clock"></i> Paiement requis</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-right">
+                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                    {# Patients exonérés : toujours accessibles #}
+                                                    {% if patient.a_signes_vitaux_deja_pris %}
+                                                        <button class="btn btn-warning btn-sm" disabled>
+                                                            <i class="fa fa-check-square"></i> Déjà prélevé
+                                                        </button>
+                                                    {% else %}
+                                                        <a href="{% url 'saisir_signes' patient.id %}" class="btn btn-primary btn-sm">
+                                                            <i class="fa fa-stethoscope"></i> Signes Vitaux
+                                                        </a>
+                                                    {% endif %}
+
+                                                {% elif not patient.a_solde_fiche and patient.doit_payer_fiche %}
+                                                    <button class="btn btn-secondary btn-sm" disabled title="Le patient doit solder la fiche">
+                                                        <i class="fa fa-lock"></i> Bloqué
+                                                    </button>
+
+                                                {% elif patient.a_signes_vitaux_deja_pris %}
+                                                    <button class="btn btn-warning btn-sm" disabled>
+                                                        <i class="fa fa-check-square"></i> Déjà prélevé
+                                                    </button>
+
+                                                {% else %}
+                                                    <a href="{% url 'saisir_signes' patient.id %}" class="btn btn-primary btn-sm">
+                                                        <i class="fa fa-stethoscope"></i> Signes Vitaux
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">Aucun patient en attente.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'back-end/includes/js.html' %}
+
+        <script>
+            function filterTable() {
+                let input = document.getElementById("searchPatient");
+                let filter = input.value.toUpperCase();
+                let table = document.getElementById("patientTable");
+                let tr = table.getElementsByTagName("tr");
+                for (let i = 1; i < tr.length; i++) {
+                    let td = tr[i].getElementsByTagName("td")[0];
+                    if (td) {
+                        let txtValue = td.textContent || td.innerText;
+                        tr[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>

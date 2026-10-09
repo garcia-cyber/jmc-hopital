@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Ajouter une catégorie</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="page-header">
+                <h3 class="page-title">Gestion Matériel</h3>
+                <p>Connecté en tant que : <strong>{{ fonctionKey }}</strong></p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Ajouter une nouvelle catégorie</h5>
+                            <hr>
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label>Nom de la catégorie</label>
+                                    {{ form.nom }}
+                                    {% if form.nom.errors %}
+                                        <div class="text-danger">{{ form.nom.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                    <a href="{% url 'liste_categories' %}" class="btn btn-secondary">Annuler</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

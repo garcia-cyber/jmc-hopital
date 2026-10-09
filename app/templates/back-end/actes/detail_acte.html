@@ -1,0 +1,303 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Détail de l'Acte Médical</title>
+    {% include 'back-end/includes/css.html' %}
+
+    <!-- ==================================================== -->
+    <!-- STYLE DE LA PAGE (limité à cette page grâce au préfixe .acte-) -->
+    <!-- ==================================================== -->
+    <style>
+        :root {
+            --acte-ink: #16324f;
+            --acte-teal: #0e7c86;
+            --acte-teal-soft: #e6f3f4;
+            --acte-text: #2b3a4a;
+            --acte-muted: #6b7a8a;
+            --acte-line: #dfe5ec;
+            --acte-bg: #f4f7fa;
+        }
+
+        .acte-page { max-width: 960px; margin: 0 auto; color: var(--acte-text); }
+
+        /* ---------- Barre du haut : titre + actions ---------- */
+        .acte-topbar {
+            display: flex; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; gap: 12px; margin-bottom: 20px;
+        }
+        .acte-topbar h3 { margin: 0; color: var(--acte-ink); font-weight: 700; }
+        .acte-topbar p { margin: 2px 0 0; color: var(--acte-muted); }
+        .acte-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .acte-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 6px; font-weight: 600;
+            font-size: 14px; border: 1px solid var(--acte-line);
+            background: #fff; color: var(--acte-ink); cursor: pointer;
+            text-decoration: none; transition: background .15s, border-color .15s;
+        }
+        .acte-btn:hover { background: var(--acte-bg); color: var(--acte-ink); text-decoration: none; }
+        .acte-btn--primary { background: var(--acte-teal); border-color: var(--acte-teal); color: #fff; }
+        .acte-btn--primary:hover { background: #0b6970; border-color: #0b6970; color: #fff; }
+        .acte-btn:focus-visible { outline: 3px solid rgba(14, 124, 134, .35); outline-offset: 2px; }
+
+        /* ---------- Document principal ---------- */
+        .acte-doc {
+            background: #fff; border: 1px solid var(--acte-line);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(22, 50, 79, .06);
+        }
+
+        /* En-tête du document */
+        .acte-head {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            align-items: center; gap: 16px; padding: 24px 28px;
+            background: var(--acte-ink); color: #fff;
+        }
+        .acte-head h4 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
+        .acte-head small { color: rgba(255, 255, 255, .72); font-size: 13px; }
+        .acte-head-right { text-align: right; }
+        .acte-head-right .acte-date { display: block; margin-top: 6px; font-size: 13px; color: rgba(255, 255, 255, .8); }
+
+        /* Statut */
+        .acte-statut {
+            display: inline-block; padding: 5px 14px; border-radius: 999px;
+            font-size: 13px; font-weight: 600; background: #fff;
+        }
+        .acte-statut--termine { color: #1a7f4b; }
+        .acte-statut--annule { color: #b42318; }
+        .acte-statut--en_cours { color: #0b6a99; }
+        .acte-statut--planifie { color: #5b3fc4; }
+        .acte-statut--autre { color: var(--acte-muted); }
+
+        /* Sections */
+        .acte-section { padding: 24px 28px; border-bottom: 1px solid var(--acte-line); }
+        .acte-section:last-child { border-bottom: 0; }
+        .acte-section-title {
+            display: flex; align-items: center; gap: 10px;
+            margin: 0 0 18px; font-size: 16px; font-weight: 700; color: var(--acte-ink);
+        }
+        .acte-section-title i { color: var(--acte-teal); }
+
+        /* Grille d'informations */
+        .acte-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 32px; }
+        .acte-field .acte-label { display: block; margin-bottom: 3px; font-size: 13px; color: var(--acte-muted); }
+        .acte-field .acte-value { margin: 0; font-size: 15px; font-weight: 600; color: var(--acte-ink); }
+        .acte-field--full { grid-column: 1 / -1; }
+
+        /* Tableau des prestations */
+        .acte-table-wrap { overflow-x: auto; border: 1px solid var(--acte-line); border-radius: 6px; }
+        .acte-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .acte-table th {
+            padding: 12px 16px; text-align: left; font-weight: 600;
+            color: var(--acte-ink); background: var(--acte-bg);
+            border-bottom: 1px solid var(--acte-line);
+        }
+        .acte-table td { padding: 12px 16px; border-bottom: 1px solid var(--acte-line); }
+        .acte-table tbody tr:last-child td { border-bottom: 0; }
+        .acte-table .acte-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .acte-table .acte-index { width: 48px; color: var(--acte-muted); }
+        .acte-cat {
+            display: inline-block; padding: 2px 10px; border-radius: 4px;
+            font-size: 12px; font-weight: 600;
+            background: var(--acte-teal-soft); color: var(--acte-teal);
+        }
+        .acte-empty { padding: 28px 16px !important; text-align: center; color: var(--acte-muted); }
+
+        /* Bloc total */
+        .acte-total {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 16px; padding: 16px 20px; border-radius: 6px;
+            background: var(--acte-teal-soft); border-left: 4px solid var(--acte-teal);
+        }
+        .acte-total span { font-weight: 600; color: var(--acte-ink); }
+        .acte-total strong { font-size: 22px; color: var(--acte-teal); font-variant-numeric: tabular-nums; }
+
+        /* Observation */
+        .acte-note {
+            margin: 0; padding: 14px 16px; border-radius: 6px;
+            background: var(--acte-bg); border: 1px solid var(--acte-line);
+            line-height: 1.6; white-space: pre-line;
+        }
+
+        /* Pied du document */
+        .acte-foot {
+            display: flex; flex-wrap: wrap; gap: 8px 32px; padding: 16px 28px;
+            background: var(--acte-bg); font-size: 13px; color: var(--acte-muted);
+        }
+        .acte-foot strong { color: var(--acte-text); font-weight: 600; }
+
+        /* Mobile */
+        @media (max-width: 640px) {
+            .acte-grid { grid-template-columns: 1fr; }
+            .acte-head, .acte-section { padding: 20px 18px; }
+            .acte-head-right { text-align: left; }
+            .acte-foot { padding: 14px 18px; }
+        }
+
+        /* Impression : on cache le menu et les boutons */
+        @media print {
+            .header, .sidebar, .acte-topbar .acte-actions { display: none !important; }
+            .page-wrapper { margin: 0 !important; padding: 0 !important; }
+            .acte-doc { border: 0; box-shadow: none; }
+            .acte-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="acte-page">
+
+                <!-- ==================================================== -->
+                <!-- BARRE DU HAUT : titre + boutons -->
+                <!-- ==================================================== -->
+                <div class="acte-topbar">
+                    <div>
+                        <h3>Détail de l'acte médical</h3>
+                        <p>{{ hopital.nomH }}</p>
+                    </div>
+                    <div class="acte-actions">
+                        <button type="button" class="acte-btn" onclick="window.print()">
+                            <i class="fa fa-print"></i> Imprimer
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="acte-btn">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                        {% if not acte.est_paye %}
+<a href="{% url 'payer_acte_medical' acte.pk %}" class="acte-btn acte-btn--primary">
+    <i class="fa fa-money"></i> Payer
+</a>
+{% endif %}
+                        <a href="{% url 'creer_acte_medical' %}" class="acte-btn acte-btn--primary">
+                            <i class="fa fa-plus"></i> Nouvel acte
+                        </a>
+                    </div>
+                </div>
+
+                <div class="acte-doc">
+
+                    <!-- ==================================================== -->
+                    <!-- EN-TÊTE : numéro de l'acte, date et statut -->
+                    <!-- ==================================================== -->
+                    <div class="acte-head">
+                        <div>
+                            <h4>Acte médical n° {{ acte.pk }}</h4>
+                            <small>{{ acte.get_type_patient_display }}</small>
+                        </div>
+                        <div class="acte-head-right">
+                            <span class="acte-statut
+                                {% if acte.statut == 'TERMINE' %}acte-statut--termine
+                                {% elif acte.statut == 'ANNULE' %}acte-statut--annule
+                                {% elif acte.statut == 'EN_COURS' %}acte-statut--en_cours
+                                {% elif acte.statut == 'PLANIFIE' %}acte-statut--planifie
+                                {% else %}acte-statut--autre
+                                {% endif %}">
+                                {{ acte.get_statut_display }}
+                            </span>
+                            <span class="acte-date">{{ acte.date_acte|date:"d/m/Y à H:i" }}</span>
+                        </div>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 1 : PERSONNE CONCERNÉE -->
+                    <!-- ==================================================== -->
+                    <div class="acte-section">
+                        <h5 class="acte-section-title"><i class="fa fa-user"></i> Personne concernée</h5>
+                        <div class="acte-grid">
+                            <div class="acte-field">
+                                <span class="acte-label">Nom</span>
+                                <p class="acte-value">{{ acte.nom_personne }}</p>
+                            </div>
+                            <div class="acte-field">
+                                <span class="acte-label">Téléphone</span>
+                                <p class="acte-value">{{ acte.telephone_personne|default:"—" }}</p>
+                            </div>
+                            <div class="acte-field">
+                                <span class="acte-label">Type de patient</span>
+                                <p class="acte-value">{{ acte.get_type_patient_display }}</p>
+                            </div>
+                            <div class="acte-field">
+                                <span class="acte-label">Médecin</span>
+                                <p class="acte-value">{{ acte.medecin|default:"Non assigné" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 2 : PRESTATIONS CHOISIES -->
+                    <!-- ==================================================== -->
+                    <div class="acte-section">
+                        <h5 class="acte-section-title">
+                            <i class="fa fa-stethoscope"></i>
+                            Prestations choisies ({{ prestations|length }})
+                        </h5>
+
+                        <div class="acte-table-wrap">
+                            <table class="acte-table">
+                                <thead>
+                                    <tr>
+                                        <th class="acte-index">#</th>
+                                        <th>Catégorie</th>
+                                        <th>Prestation</th>
+                                        <th class="acte-num">Prix</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for prestation in prestations %}
+                                    <tr>
+                                        <td class="acte-index">{{ forloop.counter }}</td>
+                                        <td><span class="acte-cat">{{ prestation.get_categorie_display }}</span></td>
+                                        <td>{{ prestation.libelle }}</td>
+                                        <td class="acte-num">{{ prestation.prix }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="acte-empty">Aucune prestation enregistrée pour cet acte.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Total -->
+                        <div class="acte-total">
+                            <span>Montant prévu (total)</span>
+                            <strong>{{ acte.montant_prevu }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 3 : OBSERVATION (seulement s'il y en a une) -->
+                    <!-- ==================================================== -->
+                    {% if acte.observation %}
+                    <div class="acte-section">
+                        <h5 class="acte-section-title"><i class="fa fa-file-text-o"></i> Observation</h5>
+                        <p class="acte-note">{{ acte.observation }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- ==================================================== -->
+                    <!-- PIED : traçabilité de l'acte -->
+                    <!-- ==================================================== -->
+                    <div class="acte-foot">
+                        <span>Créé par : <strong>{{ acte.cree_par|default:"—" }}</strong></span>
+                        <span>Créé le : <strong>{{ acte.date_creation|date:"d/m/Y H:i" }}</strong></span>
+                        <span>Dernière modification : <strong>{{ acte.date_modification|date:"d/m/Y H:i" }}</strong></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

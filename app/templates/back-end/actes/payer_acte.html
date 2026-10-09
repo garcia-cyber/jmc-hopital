@@ -1,0 +1,289 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Paiement de l'Acte Médical</title>
+    {% include 'back-end/includes/css.html' %}
+
+    <!-- ==================================================== -->
+    <!-- STYLE DE LA PAGE (limité à cette page grâce au préfixe .acte-) -->
+    <!-- ==================================================== -->
+    <style>
+        :root {
+            --acte-ink: #16324f;
+            --acte-teal: #0e7c86;
+            --acte-teal-soft: #e6f3f4;
+            --acte-text: #2b3a4a;
+            --acte-muted: #6b7a8a;
+            --acte-line: #dfe5ec;
+            --acte-bg: #f4f7fa;
+            --acte-red: #b42318;
+            --acte-red-soft: #fdeceb;
+        }
+
+        .acte-page { max-width: 960px; margin: 0 auto; color: var(--acte-text); }
+
+        /* ---------- Barre du haut ---------- */
+        .acte-topbar {
+            display: flex; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; gap: 12px; margin-bottom: 20px;
+        }
+        .acte-topbar h3 { margin: 0; color: var(--acte-ink); font-weight: 700; }
+        .acte-topbar p { margin: 2px 0 0; color: var(--acte-muted); }
+        .acte-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .acte-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 6px; font-weight: 600;
+            font-size: 14px; border: 1px solid var(--acte-line);
+            background: #fff; color: var(--acte-ink); cursor: pointer;
+            text-decoration: none; transition: background .15s, border-color .15s;
+        }
+        .acte-btn:hover { background: var(--acte-bg); color: var(--acte-ink); text-decoration: none; }
+        .acte-btn--primary { background: var(--acte-teal); border-color: var(--acte-teal); color: #fff; }
+        .acte-btn--primary:hover { background: #0b6970; border-color: #0b6970; color: #fff; }
+        .acte-btn:focus-visible { outline: 3px solid rgba(14, 124, 134, .35); outline-offset: 2px; }
+
+        /* ---------- Document principal ---------- */
+        .acte-doc {
+            background: #fff; border: 1px solid var(--acte-line);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(22, 50, 79, .06);
+        }
+        .acte-head {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            align-items: center; gap: 16px; padding: 24px 28px;
+            background: var(--acte-ink); color: #fff;
+        }
+        .acte-head h4 { margin: 0; font-size: 20px; font-weight: 700; color: #fff; }
+        .acte-head small { color: rgba(255, 255, 255, .72); font-size: 13px; }
+
+        .acte-section { padding: 24px 28px; border-bottom: 1px solid var(--acte-line); }
+        .acte-section:last-child { border-bottom: 0; }
+        .acte-section-title {
+            display: flex; align-items: center; gap: 10px;
+            margin: 0 0 18px; font-size: 16px; font-weight: 700; color: var(--acte-ink);
+        }
+        .acte-section-title i { color: var(--acte-teal); }
+
+        /* ---------- Résumé des montants ---------- */
+        .acte-resume { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .acte-case {
+            padding: 14px 16px; border-radius: 6px;
+            background: var(--acte-bg); border: 1px solid var(--acte-line);
+        }
+        .acte-case .acte-label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--acte-muted); }
+        .acte-case strong { font-size: 18px; color: var(--acte-ink); font-variant-numeric: tabular-nums; }
+        .acte-case--reste { background: var(--acte-red-soft); border-color: #f5c6c2; }
+        .acte-case--reste strong { color: var(--acte-red); }
+
+        /* ---------- Formulaire ---------- */
+        .acte-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+        .acte-field .acte-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--acte-ink); }
+        .acte-input {
+            width: 100%; padding: 10px 12px; font-size: 15px;
+            border: 1px solid var(--acte-line); border-radius: 6px;
+            background: #fff; color: var(--acte-text);
+        }
+        .acte-input:focus { outline: 3px solid rgba(14, 124, 134, .3); border-color: var(--acte-teal); }
+        .acte-help { display: block; margin-top: 4px; font-size: 12px; color: var(--acte-muted); }
+        .acte-erreur {
+            margin-bottom: 16px; padding: 12px 16px; border-radius: 6px;
+            background: var(--acte-red-soft); color: var(--acte-red);
+            border: 1px solid #f5c6c2; font-size: 14px;
+        }
+        .acte-erreur-champ { display: block; margin-top: 4px; font-size: 12px; color: var(--acte-red); }
+        .acte-form-actions { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+        /* ---------- Tableau historique ---------- */
+        .acte-table-wrap { overflow-x: auto; border: 1px solid var(--acte-line); border-radius: 6px; }
+        .acte-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .acte-table th {
+            padding: 12px 16px; text-align: left; font-weight: 600;
+            color: var(--acte-ink); background: var(--acte-bg);
+            border-bottom: 1px solid var(--acte-line); white-space: nowrap;
+        }
+        .acte-table td { padding: 12px 16px; border-bottom: 1px solid var(--acte-line); }
+        .acte-table tbody tr:last-child td { border-bottom: 0; }
+        .acte-table .acte-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .acte-empty { padding: 28px 16px !important; text-align: center; color: var(--acte-muted); }
+
+        /* Mobile */
+        @media (max-width: 720px) {
+            .acte-resume { grid-template-columns: repeat(2, 1fr); }
+            .acte-form-grid { grid-template-columns: 1fr; }
+            .acte-head, .acte-section { padding: 20px 18px; }
+        }
+    </style>
+</head>
+<body>
+<div class="main-wrapper">
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+            <div class="acte-page">
+
+                <!-- ==================================================== -->
+                <!-- BARRE DU HAUT -->
+                <!-- ==================================================== -->
+                <div class="acte-topbar">
+                    <div>
+                        <h3>Paiement de l'acte médical</h3>
+                        <p>{{ hopital.nomH }}</p>
+                    </div>
+                    <div class="acte-actions">
+                        <a href="{% url 'detail_acte_medical' acte.pk %}" class="acte-btn">
+                            <i class="fa fa-arrow-left"></i> Retour à l'acte
+                        </a>
+
+                        <!-- BOUTON IMPRIMER (visible seulement s'il y a au moins un paiement) -->
+                        {% if paiements %}
+                        <a href="{% url 'imprimer_paiement_acte_medical' acte.pk %}" target="_blank" class="acte-btn">
+                            <i class="fa fa-print"></i> Imprimer le reçu
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="acte-doc">
+
+                    <!-- ==================================================== -->
+                    <!-- EN-TÊTE -->
+                    <!-- ==================================================== -->
+                    <div class="acte-head">
+                        <div>
+                            <h4>Acte médical n° {{ acte.pk }}</h4>
+                            <small>{{ acte.nom_personne }} — {{ acte.get_type_patient_display }}</small>
+                        </div>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 1 : RÉSUMÉ DES MONTANTS -->
+                    <!-- ==================================================== -->
+                    <div class="acte-section">
+                        <h5 class="acte-section-title"><i class="fa fa-money"></i> Situation du paiement</h5>
+                        <div class="acte-resume">
+                            <div class="acte-case">
+                                <span class="acte-label">Montant prévu</span>
+                                <strong>{{ acte.montant_prevu }}</strong>
+                            </div>
+                            <div class="acte-case">
+                                <span class="acte-label">Déjà versé</span>
+                                <strong>{{ acte.total_verse }}</strong>
+                            </div>
+                            <div class="acte-case">
+                                <span class="acte-label">Réductions</span>
+                                <strong>{{ acte.total_reduction }}</strong>
+                            </div>
+                            <div class="acte-case acte-case--reste">
+                                <span class="acte-label">Reste à payer</span>
+                                <strong>{{ acte.reste_a_payer }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 2 : FORMULAIRE DE PAIEMENT -->
+                    <!-- ==================================================== -->
+                    <div class="acte-section">
+                        <h5 class="acte-section-title"><i class="fa fa-credit-card"></i> Nouveau paiement</h5>
+
+                        <form method="post">
+                            {% csrf_token %}
+
+                            <!-- Erreurs générales (ex : montant trop grand) -->
+                            {% if form.non_field_errors %}
+                                <div class="acte-erreur">
+                                    {% for erreur in form.non_field_errors %}
+                                        {{ erreur }}<br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <div class="acte-form-grid">
+                                <div class="acte-field">
+                                    <label class="acte-label" for="{{ form.montant_verse.id_for_label }}">Montant versé</label>
+                                    {{ form.montant_verse }}
+                                    <span class="acte-help">Pour un paiement partiel, baissez ce montant.</span>
+                                    {% for erreur in form.montant_verse.errors %}
+                                        <span class="acte-erreur-champ">{{ erreur }}</span>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="acte-field">
+                                    <label class="acte-label" for="{{ form.montant_reduction.id_for_label }}">Réduction</label>
+                                    {{ form.montant_reduction }}
+                                    <span class="acte-help">Laissez 0 s'il n'y a pas de réduction.</span>
+                                    {% for erreur in form.montant_reduction.errors %}
+                                        <span class="acte-erreur-champ">{{ erreur }}</span>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="acte-field">
+                                    <label class="acte-label" for="{{ form.devise.id_for_label }}">Devise</label>
+                                    {{ form.devise }}
+                                    {% for erreur in form.devise.errors %}
+                                        <span class="acte-erreur-champ">{{ erreur }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="acte-form-actions">
+                                <button type="submit" class="acte-btn acte-btn--primary">
+                                    <i class="fa fa-check"></i> Enregistrer le paiement
+                                </button>
+                                <a href="{% url 'detail_acte_medical' acte.pk %}" class="acte-btn">Annuler</a>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ==================================================== -->
+                    <!-- SECTION 3 : HISTORIQUE DES PAIEMENTS -->
+                    <!-- ==================================================== -->
+                    <div class="acte-section">
+                        <h5 class="acte-section-title"><i class="fa fa-history"></i> Paiements déjà enregistrés</h5>
+
+                        <div class="acte-table-wrap">
+                            <table class="acte-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Caissier</th>
+                                        <th class="acte-num">Versé</th>
+                                        <th class="acte-num">Réduction</th>
+                                        <th>Devise</th>
+                                        <th class="acte-num">Reste après</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for paiement in paiements %}
+                                    <tr>
+                                        <td>{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ paiement.caissier }}</td>
+                                        <td class="acte-num">{{ paiement.montant_verse }}</td>
+                                        <td class="acte-num">{{ paiement.montant_reduction }}</td>
+                                        <td>{{ paiement.devise }}</td>
+                                        <td class="acte-num">{{ paiement.reste_a_payer }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="acte-empty">Aucun paiement enregistré pour cet acte.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

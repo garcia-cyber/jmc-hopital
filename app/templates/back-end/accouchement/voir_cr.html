@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails Compte-rendu | Moyanoli</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <div class="page-header mb-4">
+                    <h3>Détails du Compte-rendu d'Accouchement</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-6 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-light"><strong>Informations Patient</strong></div>
+                            <div class="card-body">
+                                <p><strong>Nom :</strong> {{ cr.consultation.triage.patient.noms }}</p>
+                                <p><strong>Date Création :</strong> {{ cr.date_creation|date:"d/m/Y H:i" }}</p>
+                                <p><strong>Auteur :</strong> {{ cr.auteur.username }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-light"><strong>Récapitulatif Financier</strong></div>
+                            <div class="card-body">
+                                <p><strong>Prestation :</strong> {{ cr.prestation.nom }}</p>
+                                <p><strong>Prix Initial :</strong> {{ cr.prestation.prix }} USD</p>
+                                <p><strong>Réduction :</strong> 
+                                    {% if cr.paiement.montant_reduction %} {{ cr.paiement.montant_reduction }} {% else %} 0.00 {% endif %} USD
+                                </p>
+                                <p><strong>Reste à payer :</strong> 
+                                    <span class="text-danger font-weight-bold">
+                                        {% if cr.paiement %}{{ cr.paiement.reste_a_payer }}{% else %}{{ cr.prestation.prix }}{% endif %} USD
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-2">
+                    <div class="card-header bg-primary text-white">Observations Médicales</div>
+                    <div class="card-body">
+                        <div class="p-3 bg-light border rounded">
+                            {{ cr.notes|linebreaks }} 
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex flex-wrap gap-2">
+                    <a href="{% url 'liste_cr_accouchement' %}" class="btn btn-secondary mb-2">
+                        <i class="fa fa-arrow-left"></i> Retour à la liste
+                    </a>
+                    <button onclick="window.print()" class="btn btn-primary mb-2">
+                        <i class="fa fa-print"></i> Imprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

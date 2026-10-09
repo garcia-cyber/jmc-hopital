@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Reçu de paiement - {{ acte.nom_personne }}</title>
+    <style>
+        :root { --primary-color: #006064; --bg-light: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; color: #2d3436; max-width: 750px; margin: 40px auto; padding: 40px; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.05); border-top: 8px solid var(--primary-color); }
+
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { max-width: 120px; }
+        .hospital-info { text-align: right; }
+        .hospital-info h1 { margin: 0; color: var(--primary-color); font-size: 24px; text-transform: uppercase; }
+
+        .patient-card { background: var(--bg-light); padding: 15px 20px; border-radius: 8px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .patient-card div strong { color: var(--primary-color); display: block; font-size: 0.8rem; text-transform: uppercase; }
+
+        h3 { border-left: 4px solid var(--primary-color); padding-left: 10px; color: var(--primary-color); margin-top: 30px; font-size: 1.1rem; }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; }
+        th { background: #f8f9fa; color: #636e72; padding: 12px; text-align: left; font-size: 0.9rem; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #f1f1f1; }
+        .droite { text-align: right; }
+
+        .totaux { width: 55%; margin-left: auto; margin-top: 20px; }
+        .totaux td { background: #f8f9fa; }
+        .totaux tr.fort td { background: var(--bg-light); color: var(--primary-color); font-weight: bold; border-bottom: 2px solid var(--primary-color); }
+
+        .statut { margin-top: 25px; padding: 12px; text-align: center; font-weight: bold; text-transform: uppercase; border-radius: 8px; }
+        .statut.paye { background: var(--bg-light); color: var(--primary-color); border: 2px solid var(--primary-color); }
+        .statut.partiel { background: #fff8f0; color: #b35c00; border: 2px solid #b35c00; }
+
+        .signature-box { margin-top: 50px; display: flex; justify-content: space-between; }
+        .note-area { flex: 1; margin-right: 20px; font-size: 0.9rem; }
+        .stamp-area { width: 250px; text-align: center; }
+
+        .pied { margin-top: 30px; font-size: 0.75rem; color: #999; text-align: center; }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { box-shadow: none; border-top: none; margin: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}" alt="Logo" class="logo">
+        <div class="hospital-info">
+            <h1>JMC</h1>
+            <p style="margin:0; font-size: 0.9rem;">Votre santé, notre priorité</p>
+        </div>
+    </div>
+
+    <div class="patient-card">
+        <div><strong>Patient / Client</strong> {{ acte.nom_personne }}</div>
+        <div><strong>Date de l'acte</strong> {{ acte.date_acte|date:"d/m/Y" }}</div>
+        <div><strong>Médecin</strong> {% if acte.medecin %}Dr. {{ acte.medecin.get_full_name|default:acte.medecin.username }}{% else %}-{% endif %}</div>
+        <div><strong>Acte médical</strong> #{{ acte.pk }}</div>
+        {% if acte.telephone_personne %}
+        <div><strong>Téléphone</strong> {{ acte.telephone_personne }}</div>
+        {% endif %}
+        <div><strong>Type</strong> {{ acte.get_type_patient_display }}</div>
+    </div>
+
+    <h3>Prestations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Prestation</th>
+                <th class="droite">Prix</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prestation in prestations %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ prestation.libelle }}</strong></td>
+                <td class="droite">{{ prestation.prix|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="color: #999;">Aucune prestation.</td></tr>
+            {% endfor %}
+            <tr>
+                <td colspan="2" class="droite"><strong>Total prévu</strong></td>
+                <td class="droite"><strong>{{ acte.montant_prevu|floatformat:2 }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Paiements effectués</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th class="droite">Montant versé</th>
+                <th class="droite">Réduction</th>
+                <th>Devise</th>
+                <th>Caissier</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for paiement in paiements %}
+            <tr>
+                <td>{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+                <td class="droite"><strong>{{ paiement.montant_verse|floatformat:2 }}</strong></td>
+                <td class="droite">{{ paiement.montant_reduction|floatformat:2 }}</td>
+                <td>{{ paiement.devise }}</td>
+                <td>{{ paiement.caissier.get_full_name|default:paiement.caissier.username }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="color: #999;">Aucun paiement.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totaux">
+        <tr>
+            <td>Total versé (CDF)</td>
+            <td class="droite">{{ acte.total_verse|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <td>Total réduction (CDF)</td>
+            <td class="droite">{{ acte.total_reduction|floatformat:2 }}</td>
+        </tr>
+        <tr class="fort">
+            <td>Reste à payer (CDF)</td>
+            <td class="droite">{{ acte.reste_a_payer|floatformat:2 }}</td>
+        </tr>
+    </table>
+
+    {% if acte.est_paye %}
+    <div class="statut paye">Acte entièrement payé</div>
+    {% else %}
+    <div class="statut partiel">Paiement partiel - Reste à payer : {{ acte.reste_a_payer|floatformat:2 }} CDF</div>
+    {% endif %}
+
+    <div class="signature-box">
+        <div class="note-area">
+            <strong>Notes :</strong><br>
+            {{ acte.observation|default:"Aucune note particulière." }}
+        </div>
+        <div class="stamp-area">
+            <p>Signature et Cachet</p>
+            <br><br>
+            <div style="border-top: 1px solid #333; width: 100%;"></div>
+        </div>
+    </div>
+
+    <div class="pied">
+        Imprimé le {{ date_impression|date:"d/m/Y H:i" }}
+        par {{ imprime_par.get_full_name|default:imprime_par.username }}
+    </div>
+
+    <div style="margin-top: 50px; text-align: center;">
+        <button class="no-print" onclick="window.print()" style="padding: 10px 25px; background: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Imprimer le reçu
+        </button>
+        <a class="no-print" href="{% url 'detail_acte_medical' acte.pk %}" style="margin-left: 10px; padding: 10px 25px; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 5px; text-decoration: none;">
+            Retour
+        </a>
+    </div>
+
+    <script>
+        window.onload = function() { setTimeout(window.print, 500); }
+    </script>
+</body>
+</html>

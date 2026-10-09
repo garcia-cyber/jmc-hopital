@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+    <title>Compte-rendu Opératoire | {{ bloc.consultation.triage.patient.noms }}</title>
+    {% include 'back-end/includes/css.html' %}
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+        
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="text-primary">Compte-rendu Opératoire</h3>
+                        <button onclick="window.print()" class="btn btn-secondary">
+                            <i class="fa fa-print"></i> Imprimer
+                        </button>
+                    </div>
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Patient :</strong> {{ bloc.consultation.triage.patient.noms }}</p>
+                            <p><strong>Intervention :</strong> {{ bloc.prestation.libelle }}</p>
+                        </div>
+                        <div class="col-md-6 text-md-right">
+                            <p><strong>Chirurgien :</strong> {{ bloc.chirurgien.username }}</p>
+                            <p><strong>Date de fin :</strong> {{ bloc.date_fin|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>Détails de l'intervention</h5>
+                        <div class="p-3 bg-light border rounded" style="min-height: 200px;">
+                            {{ bloc.acte_realise|default:"Aucun rapport disponible."|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="javascript:history.back()" class="btn btn-outline-primary mt-3">
+                    <i class="fa fa-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

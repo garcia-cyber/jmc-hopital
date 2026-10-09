@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirmer la suppression | JMC</title>
+    {% include 'back-end/includes/css.html' %}
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-700: #334155;
+        }
+
+        body { background: #f8fafc; }
+
+        .admin-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-title i { color: var(--danger); }
+
+        .breadcrumb { margin: 0; font-size: 0.875rem; }
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--gray-600); }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body { padding: 2rem; }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover { background: #dc2626; color: white; }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-view:hover {
+            background: var(--gray-200);
+            color: var(--dark);
+        }
+
+        .alert-warning-custom {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            color: #92400e;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        {% include 'back-end/includes/header.html' %}
+        {% include 'back-end/includes/sidebar.html' %}
+
+        <div class="page-wrapper">
+            <div class="content container-fluid">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h1 class="admin-title">
+                                <i class="fa fa-triangle-exclamation"></i>
+                                Suppression du Lit
+                            </h1>
+                            <ul class="breadcrumb mt-2">
+                                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'lit_list' %}">Lits</a></li>
+                                <li class="breadcrumb-item active">Supprimer #{{ objet.id }}</li>
+                            </ul>
+                        </div>
+                        <a href="{% url 'lit_list' %}" class="btn-action btn-view">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Confirmation Card -->
+                <div class="detail-card">
+                    <div class="card-header-custom">
+                        <h5 class="card-title">
+                            <i class="fa fa-trash text-danger"></i>
+                            Confirmation requise (Rôle : {{ fonctionKey }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert-warning-custom">
+                            <i class="fa fa-exclamation-triangle"></i> 
+                            Êtes-vous sûr de vouloir supprimer ce lit ? 
+                            <strong>{% if objet.nom_lit %}{{ objet.nom_lit }}{% else %}#{{ objet.id }}{% endif %}</strong>
+                            <br>Cette action est irréversible.
+                        </div>
+
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-end gap-2 mt-4">
+                                <a href="{% url 'lit_list' %}" class="btn-action btn-view">Annuler</a>
+                                <button type="submit" class="btn-action btn-danger">
+                                    <i class="fa fa-trash"></i> Confirmer la suppression
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% include 'back-end/includes/js.html' %}
+</body>
+</html>

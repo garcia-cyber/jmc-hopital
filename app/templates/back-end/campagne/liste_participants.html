@@ -1,0 +1,144 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Participants | {{ campagne.nom }}</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        body {
+            background: #f3f5f8;
+            color: #263238;
+        }
+
+        .page-content {
+            padding: 25px;
+        }
+
+        .card-participants {
+            background: #fff;
+            border: 1px solid #e1e7ec;
+            border-radius: 7px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .table th {
+            background: #f8fafc;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+<div class="main-wrapper">
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid page-content">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h3>Participants de la campagne</h3>
+                    <p class="text-muted mb-0">{{ campagne.nom }}</p>
+                </div>
+
+                <a href="{% url 'enregistrer_participant_campagne' campagne.pk %}"
+                   class="btn btn-success">
+                    <i class="fa fa-user-plus mr-1"></i>
+                    Enregistrer un participant
+                </a>
+            </div>
+
+            <div class="card-participants">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Participant</th>
+                                <th>Type</th>
+                                <th>Personnes</th>
+                                <th>Prix total</th>
+                                <th>Payé</th>
+                                <th>Reste à payer</th>
+                                <th>Statut</th>
+                                <th>Date inscription</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for participant in participants %}
+                                <tr>
+                                    <td>{{ participant.nom_personne }}</td>
+
+                                    <td>
+                                        {% if participant.patient %}
+                                            Patient interne
+                                        {% else %}
+                                            Client externe
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ participant.nombre_personnes }}</td>
+
+                                    <td>
+                                        {{ participant.prix_total_cdf|floatformat:2 }} CDF
+                                    </td>
+
+                                    <td>
+                                        {{ participant.montant_paye_cdf|floatformat:2 }} CDF
+                                    </td>
+
+                                    <td>
+                                        {{ participant.reste_a_payer_cdf|floatformat:2 }} CDF
+                                    </td>
+
+                                    <td>{{ participant.get_statut_display }}</td>
+
+                                    <td>
+                                        {{ participant.date_inscription|date:"d/m/Y H:i" }}
+                                    </td>
+
+                                    <td>
+                                        <a href="{% url 'modifier_participant_campagne' participant.pk %}"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fa fa-edit"></i>
+                                            Modifier
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        Aucun participant inscrit à cette campagne.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

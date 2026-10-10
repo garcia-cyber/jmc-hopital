@@ -1389,3 +1389,77 @@ class CampagneForm(forms.ModelForm):
 
         return cleaned_data
 
+# ===============
+# ===============
+# 
+class CampagneParticipantForm(forms.ModelForm):
+    class Meta:
+        model = CampagneParticipant
+        fields = [
+            'campagne',
+            'patient',
+            'clientEx',
+            'nombre_personnes',
+            'prix_total_cdf',
+            'montant_paye_cdf',
+            'statut',
+        ]
+
+        widgets = {
+            'campagne': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+            'patient': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+            'clientEx': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+            'nombre_personnes': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+            }),
+            'prix_total_cdf': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01',
+            }),
+            'montant_paye_cdf': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01',
+            }),
+            'statut': forms.Select(attrs={
+                'class': 'form-control',
+            }),
+        }
+
+    def __init__(self, *args, user=None, est_admin=False, hopital_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['campagne'].queryset = Campagne.objects.all().order_by('nom')
+        self.fields['patient'].queryset = Patient.objects.all().order_by('noms')
+        self.fields['clientEx'].queryset = ClientExterne.objects.all().order_by('noms')
+
+        # Un utilisateur non administrateur ne choisit que les campagnes
+        # de son propre hôpital.
+        if not est_admin:
+            if hopital_user:
+                self.fields['campagne'].queryset = (
+                    Campagne.objects
+                    .filter(hopital=hopital_user)
+                    .order_by('nom')
+                )
+            else:
+                self.fields['campagne'].queryset = Campagne.objects.none()
+
+        self.fields['campagne'].label = 'Campagne'
+        self.fields['patient'].label = 'Patient interne'
+        self.fields['clientEx'].label = 'Client externe'
+        self.fields['nombre_personnes'].label = 'Nombre de personnes'
+        self.fields['prix_total_cdf'].label = 'Prix total (CDF)'
+        self.fields['montant_paye_cdf'].label = 'Montant payé (CDF)'
+        self.fields['statut'].label = 'Statut'
+
+        self.fields['patient'].required = False
+        self.fields['clientEx'].required = False

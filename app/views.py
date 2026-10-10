@@ -10,7 +10,7 @@ from django.db.models import Q , Sum ,Prefetch , Count , ExpressionWrapper , Out
 from decimal import Decimal , ROUND_HALF_UP , InvalidOperation
 import pytz
 from datetime import timedelta , date  , datetime , time 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models.functions import Coalesce , Length ,TruncDay, TruncWeek, TruncMonth
@@ -14777,9 +14777,445 @@ def gestion_campagnes(request):
         context
     )
 
+# -------------------------------------------------
+# MODIFICATION DE LA CAMPAGNE
+# ------------------------------------------------- 
+@login_required
+def modifier_campagne_participant(request, pk):
+    participant = get_object_or_404(
+        CampagneParticipant.objects.select_related(
+            'campagne',
+            'campagne__hopital',
+            'patient',
+            'clientEx',
+        ),
+        pk=pk,
+    )
+
+    fonction_user = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
+
+    fonctionKey = ''
+    hopital_user = None
+
+    if fonction_user:
+        if fonction_user.fonctionKey:
+            fonctionKey = (
+                fonction_user.fonctionKey.roleName or ''
+            ).strip().lower()
+
+        hopital_user = fonction_user.hopital
+
+    roles_admin = {
+        'admin',
+        'administrateur',
+        'superadmin',
+        'super administrateur',
+    }
+
+    est_admin = fonctionKey in roles_admin
+
+    # Un utilisateur non administrateur ne peut modifier
+    # que les participants de son hôpital.
+    if not est_admin:
+        if (
+            not hopital_user
+            or participant.campagne.hopital_id != hopital_user.pk
+        ):
+            raise PermissionDenied
+
+    if request.method == 'POST':
+        form = CampagneParticipantForm(
+            request.POST,
+            instance=participant,
+        )
+
+        if form.is_valid():
+            participant_modifie = form.save(commit=False)
+
+            try:
+                participant_modifie.full_clean()
+                participant_modifie.save()
+
+                messages.success(
+                    request,
+                    "Le participant a été modifié avec succès.",
+                )
+
+                return redirect('gestion_campagnes')
+
+            except ValidationError as exc:
+                if hasattr(exc, 'message_dict'):
+                    for champ, erreurs in exc.message_dict.items():
+                        if champ in form.fields:
+                            for erreur in erreurs:
+                                form.add_error(champ, erreur)
+                        else:
+                            for erreur in erreurs:
+                                form.add_error(None, erreur)
+                else:
+                    form.add_error(None, exc)
+
+            except IntegrityError:
+                form.add_error(
+                    None,
+                    "Ce patient ou ce client est déjà inscrit "
+                    "à cette campagne.",
+                )
+
+    else:
+        form = CampagneParticipantForm(instance=participant)
+
+    context = {
+        'form': form,
+        'participant': participant,
+        'campagne': participant.campagne,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+        'est_admin': est_admin,
+    }
+
+    return render(
+        request,
+        'back-end/campagne/modifier_participant.html',
+        context,
+    )
 
 
+# ---------------------------------------------
+#
+#
+def obtenir_infos_acces(request):
+    """
+    Renvoie le rôle, l'hôpital et le statut administrateur de l'utilisateur.
+    Reprend la structure de Fonction utilisée dans gestion_campagnes.
+    """
+    fonction_user = (
+        Fonction.objects
+        .filter(userKey=request.user)
+        .select_related('fonctionKey', 'hopital')
+        .first()
+    )
 
+    role = None
+    hopital_user = None
+
+    if fonction_user:
+        if fonction_user.fonctionKey:
+            role = fonction_user.fonctionKey.roleName
+
+        hopital_user = fonction_user.hopital
+
+    role_normalise = (role or '').strip().lower()
+
+    roles_admin = {
+        'admin',
+        'administrateur',
+        'superadmin',
+        'super administrateur',
+    }
+
+    est_admin = role_normalise in roles_admin
+
+    return role, hopital_user, est_admin
+
+# ============================================
+# ============================================
+#
+def verifier_acces_campagne(request, campagne):
+    """
+    Les administrateurs peuvent accéder à toutes les campagnes.
+    Les autres utilisateurs sont limités à leur hôpital.
+    """
+    role, hopital_user, est_admin = obtenir_infos_acces(request)
+
+    if not est_admin:
+        if not hopital_user or campagne.hopital_id != hopital_user.pk:
+            raise PermissionDenied
+
+    return role, hopital_user, est_admin
+
+# ------------------------------------------------------------------
+#  ENREGISTREMENT DE PATIENT POUR LA CAMPAGNE
+# ------------------------------------------------------------------
+@login_required
+def enregistrer_participant_campagne(request, campagne_id):
+    """
+    Enregistre un nouveau participant dans une campagne.
+    """
+    campagne = get_object_or_404(
+        Campagne.objects.select_related('hopital'),
+        pk=campagne_id,
+    )
+
+    fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+        request,
+        campagne,
+    )
+
+    # Normaliser le rôle pour les tests dans le template.
+    fonctionKey = (fonctionKey or '').strip().lower()
+
+    if request.method == 'POST':
+        form = CampagneParticipantForm(
+            request.POST,
+            user=request.user,
+            est_admin=est_admin,
+            hopital_user=hopital_user,
+        )
+
+        if form.is_valid():
+            participant = form.save(commit=False)
+
+            # La campagne est imposée par l'URL.
+            participant.campagne = campagne
+
+            # Utilisateur ayant créé l'inscription.
+            participant.created_by = request.user
+
+            # Calcul du prix selon le nombre de personnes.
+            participant.prix_total_cdf = (
+                campagne.get_prix_total(participant.nombre_personnes)
+                or Decimal('0.00')
+            )
+
+            participant.montant_paye_cdf = (
+                participant.montant_paye_cdf or Decimal('0.00')
+            )
+
+            # Le reste à payer est calculé automatiquement.
+            participant.reste_a_payer_cdf = max(
+                participant.prix_total_cdf - participant.montant_paye_cdf,
+                Decimal('0.00'),
+            )
+
+            try:
+                with transaction.atomic():
+                    participant.full_clean()
+                    participant.save()
+
+                messages.success(
+                    request,
+                    "Le participant a été enregistré avec succès.",
+                )
+
+                return redirect(
+                    'participants_campagne',
+                    campagne_id=campagne.pk,
+                )
+
+            except ValidationError as exc:
+                if hasattr(exc, 'message_dict'):
+                    for champ, erreurs in exc.message_dict.items():
+                        if champ in form.fields:
+                            for erreur in erreurs:
+                                form.add_error(champ, erreur)
+                        else:
+                            for erreur in erreurs:
+                                form.add_error(None, erreur)
+                else:
+                    form.add_error(None, exc)
+
+            except IntegrityError:
+                form.add_error(
+                    None,
+                    "Ce patient ou ce client est déjà inscrit "
+                    "à cette campagne.",
+                )
+
+    else:
+        form = CampagneParticipantForm(
+            initial={
+                'campagne': campagne,
+                'nombre_personnes': 1,
+                'prix_total_cdf': campagne.get_prix_total(1),
+            },
+            user=request.user,
+            est_admin=est_admin,
+            hopital_user=hopital_user,
+        )
+
+    context = {
+        'form': form,
+        'campagne': campagne,
+        'participant': None,
+        'mode_modification': False,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+        'est_admin': est_admin,
+    }
+
+    return render(
+        request,
+        'back-end/campagne/form_participant.html',
+        context,
+    )
+
+# ----------------------------------------------------------------
+# MODIFICATION DE LA PATIENT DE LA CAMPAGNE
+# ----------------------------------------------------------------
+
+@login_required
+def modifier_participant_campagne(request, participant_id):
+    """
+    Modifie un participant déjà inscrit.
+    """
+    participant = get_object_or_404(
+        CampagneParticipant.objects.select_related(
+            'campagne',
+            'campagne__hopital',
+            'patient',
+            'clientEx',
+        ),
+        pk=participant_id,
+    )
+
+    campagne = participant.campagne
+
+    fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+        request,
+        campagne,
+    )
+
+    fonctionKey = (fonctionKey or '').strip().lower()
+
+    if request.method == 'POST':
+        form = CampagneParticipantForm(
+            request.POST,
+            instance=participant,
+            user=request.user,
+            est_admin=est_admin,
+            hopital_user=hopital_user,
+        )
+
+        if form.is_valid():
+            participant_modifie = form.save(commit=False)
+
+            # Le participant reste associé à sa campagne d'origine.
+            participant_modifie.campagne = campagne
+
+            # Recalcul selon la campagne et le nombre de personnes.
+            participant_modifie.prix_total_cdf = (
+                campagne.get_prix_total(
+                    participant_modifie.nombre_personnes
+                )
+                or Decimal('0.00')
+            )
+
+            participant_modifie.montant_paye_cdf = (
+                participant_modifie.montant_paye_cdf
+                or Decimal('0.00')
+            )
+
+            participant_modifie.reste_a_payer_cdf = max(
+                participant_modifie.prix_total_cdf
+                - participant_modifie.montant_paye_cdf,
+                Decimal('0.00'),
+            )
+
+            try:
+                with transaction.atomic():
+                    participant_modifie.full_clean()
+                    participant_modifie.save()
+
+                messages.success(
+                    request,
+                    "Le participant a été modifié avec succès.",
+                )
+
+                return redirect(
+                    'participants_campagne',
+                    campagne_id=campagne.pk,
+                )
+
+            except ValidationError as exc:
+                if hasattr(exc, 'message_dict'):
+                    for champ, erreurs in exc.message_dict.items():
+                        if champ in form.fields:
+                            for erreur in erreurs:
+                                form.add_error(champ, erreur)
+                        else:
+                            for erreur in erreurs:
+                                form.add_error(None, erreur)
+                else:
+                    form.add_error(None, exc)
+
+            except IntegrityError:
+                form.add_error(
+                    None,
+                    "Ce patient ou ce client est déjà inscrit "
+                    "à cette campagne.",
+                )
+
+    else:
+        form = CampagneParticipantForm(
+            instance=participant,
+            user=request.user,
+            est_admin=est_admin,
+            hopital_user=hopital_user,
+        )
+
+    context = {
+        'form': form,
+        'campagne': campagne,
+        'participant': participant,
+        'mode_modification': True,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+        'est_admin': est_admin,
+    }
+
+    return render(
+        request,
+        'back-end/campagne/form_participant.html',
+        context,
+    )
+
+# -----------------------------------------------------------
+# LISTE DE PATIENT DE LA CAMPAGNE
+# -----------------------------------------------------------
+
+@login_required
+def participants_campagne(request, campagne_id):
+    """
+    Affiche les participants inscrits à une campagne.
+    """
+    campagne = get_object_or_404(
+        Campagne.objects.select_related('hopital'),
+        pk=campagne_id,
+    )
+
+    fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+        request,
+        campagne,
+    )
+
+    fonctionKey = (fonctionKey or '').strip().lower()
+
+    participants = (
+        CampagneParticipant.objects
+        .filter(campagne=campagne)
+        .select_related('patient', 'clientEx', 'created_by')
+        .order_by('-date_inscription')
+    )
+
+    context = {
+        'campagne': campagne,
+        'participants': participants,
+        'fonctionKey': fonctionKey,
+        'hopital_user': hopital_user,
+        'est_admin': est_admin,
+    }
+
+    return render(
+        request,
+        'back-end/campagne/liste_participants.html',
+        context,
+    )
 
 
 

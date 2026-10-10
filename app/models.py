@@ -239,6 +239,14 @@ class Campagne(models.Model):
         verbose_name="Nom de la campagne"
     )
 
+    prestations = models.ManyToManyField(
+    'Prestation',
+    through='CampagnePrestation',
+    related_name='campagnes',
+    blank=True,
+    verbose_name="Prestations incluses"
+)
+
     description = models.TextField(
         blank=True,
         null=True,
@@ -415,6 +423,35 @@ class Campagne(models.Model):
             f"{self.nom} - {self.hopital.nomH} - "
             f"{self.get_type_campagne_display()}"
         )
+#
+#
+# ========================================
+# pour gere plusieurs prestations
+# 
+
+class CampagnePrestation(models.Model):
+    campagne = models.ForeignKey(
+        'Campagne',
+        on_delete=models.CASCADE,
+        related_name='prestations_associees',
+    )
+
+    prestation = models.ForeignKey(
+        'Prestation',
+        on_delete=models.PROTECT,
+        related_name='campagnes_associees',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['campagne', 'prestation'],
+                name='unique_prestation_par_campagne',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.campagne.nom} — {self.prestation.libelle}"
 
 
 # ============================================================

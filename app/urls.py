@@ -396,7 +396,29 @@ path('audit/', views.liste_audit, name='liste_audit'),
 
 # ----------- le 09/10/2025
 #
-#
-path("gestion_campagnes/",views.gestion_campagnes , name = "gestion_campagnes")
+# Campagne gestion
+path("gestion_campagnes/",views.gestion_campagnes , name = "gestion_campagnes"),
+path(
+    'campagnes/participants/<int:pk>/modifier/',
+    views.modifier_campagne_participant,
+    name='modifier_campagne_participant',
+),
+ path(
+        'campagnes/<int:campagne_id>/participants/',
+        views.participants_campagne,
+        name='participants_campagne',
+    ),
+
+    path(
+        'campagnes/<int:campagne_id>/participants/enregistrer/',
+        views.enregistrer_participant_campagne,
+        name='enregistrer_participant_campagne',
+    ),
+
+    path(
+        'campagnes/participants/<int:participant_id>/modifier/',
+        views.modifier_participant_campagne,
+        name='modifier_participant_campagne',
+    ),
 
  ]

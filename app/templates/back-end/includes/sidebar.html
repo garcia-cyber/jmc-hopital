@@ -73,6 +73,8 @@
                         </ul>
                     </li>
 
+                    
+
                     {% if fonctionKey == 'gestionnaire'%}
                     <li>
                         <a href="{% url 'liste_examens_techniques' %}">
@@ -100,6 +102,12 @@
                             <span>Consultation journaliere</span>
                         </a>
                     </li>
+                    <li class="{% if request.resolver_match.url_name == 'creer_acte_medical' %}active{% endif %}">
+  <a href="{% url 'gestion_campagnes' %}">
+    <i class="fa fa-bullhorn"></i>
+    <span>Campagne</span>
+  </a>
+</li>
                     <li class="submenu">
                         <a href="#">
                             <i class="fa fa-cog"></i>
@@ -490,7 +498,7 @@
 
 <li class="{% if request.resolver_match.url_name == 'creer_acte_medical' %}active{% endif %}">
   <a href="{% url 'gestion_campagnes' %}">
-    <i class="fa fa-stethoscope"></i>
+    <i class="fa fa-bullhorn"></i>
     <span>Campagne</span>
   </a>
 </li>

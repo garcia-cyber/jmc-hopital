@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from datetime import date
 from django.utils import timezone
+from decimal import Decimal
 
 # creation du formulaire d'authentification
 # ==========================================
@@ -1249,4 +1250,142 @@ class PaiementActeForm(forms.Form):
     choices=Paiement.CURRENCY,
     widget=forms.Select(attrs={"class": "acte-input"}),
   )
+
+# --------------------------------
+# --------------------------------
+# --------------------------------
+#
+# 
+
+
+
+class CampagneForm(forms.ModelForm):
+
+    class Meta:
+        model = Campagne
+
+        fields = [
+            'nom',
+            'description',
+            'type_campagne',
+            'prix_defaut_cdf',
+            'date_debut',
+            'date_fin',
+            'statut',
+            'active',
+        ]
+
+        widgets = {
+            'nom': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Nom de la campagne',
+                }
+            ),
+
+            'description': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 4,
+                    'placeholder': 'Description de la campagne',
+                }
+            ),
+
+            'type_campagne': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
+
+            'prix_defaut_cdf': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'step': '0.01',
+                    'min': '0',
+                    'placeholder': 'Exemple : 25000.00',
+                }
+            ),
+
+            'date_debut': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                }
+            ),
+
+            'date_fin': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                }
+            ),
+
+            'statut': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
+
+            'active': forms.CheckboxInput(
+                attrs={
+                    'class': 'form-check-input',
+                }
+            ),
+        }
+
+        labels = {
+            'nom': 'Nom de la campagne',
+            'description': 'Description',
+            'type_campagne': 'Type de campagne',
+            'prix_defaut_cdf': 'Prix de la campagne en CDF',
+            'date_debut': 'Date de début',
+            'date_fin': 'Date de fin',
+            'statut': 'Statut',
+            'active': 'Campagne active',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        type_campagne = cleaned_data.get('type_campagne')
+        prix = cleaned_data.get('prix_defaut_cdf')
+        date_debut = cleaned_data.get('date_debut')
+        date_fin = cleaned_data.get('date_fin')
+
+        types_gratuits = [
+            Campagne.TYPE_GRATUITE,
+            Campagne.TYPE_COUPLE_GRATUIT,
+        ]
+
+        types_payants = [
+            Campagne.TYPE_PAYANTE,
+            Campagne.TYPE_COUPLE,
+        ]
+
+        if type_campagne in types_gratuits:
+            cleaned_data['prix_defaut_cdf'] = Decimal('0.00')
+
+        elif type_campagne in types_payants:
+            if prix is None:
+                self.add_error(
+                    'prix_defaut_cdf',
+                    "Veuillez saisir le prix de la campagne."
+                )
+
+            elif prix <= Decimal('0.00'):
+                self.add_error(
+                    'prix_defaut_cdf',
+                    "Le prix doit être supérieur à zéro."
+                )
+
+        if date_debut and date_fin and date_fin < date_debut:
+            self.add_error(
+                'date_fin',
+                "La date de fin ne peut pas être avant "
+                "la date de début."
+            )
+
+        return cleaned_data
 

@@ -808,3 +808,160 @@ class VideoRoomAdmin(admin.ModelAdmin):
     def get_changeform_initial_data(self, request):
         # Le créateur est rempli automatiquement avec l'utilisateur connecté
         return {'created_by': request.user.pk}
+
+
+
+# -------------- campagne 
+#
+#
+@admin.register(Campagne)
+class CampagneAdmin(admin.ModelAdmin):
+    list_display = (
+        'nom',
+        'hopital',
+        'type_campagne',
+        'prix_defaut_cdf',
+        'get_prix_par_personne',
+        'statut',
+        'active',
+        'date_debut',
+        'date_fin',
+        'est_actuellement_active',
+    )
+
+    list_filter = (
+        'hopital',
+        'type_campagne',
+        'statut',
+        'active',
+        'date_debut',
+        'date_fin',
+    )
+
+    search_fields = (
+        'nom',
+        'description',
+        'hopital__nomH',
+    )
+
+    readonly_fields = (
+        'date_creation',
+        'date_modification',
+    )
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': (
+                'nom',
+                'description',
+                'hopital',
+            )
+        }),
+
+        ('Type et prix', {
+            'fields': (
+                'type_campagne',
+                'prix_defaut_cdf',
+            )
+        }),
+
+        ('Période et statut', {
+            'fields': (
+                'date_debut',
+                'date_fin',
+                'statut',
+                'active',
+            )
+        }),
+
+        ('Informations système', {
+            'fields': (
+                'creee_par',
+                'date_creation',
+                'date_modification',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+
+    @admin.display(
+        description="Prix par personne (CDF)"
+    )
+    def get_prix_par_personne(self, obj):
+        return obj.get_prix_par_personne()
+
+    @admin.display(
+        boolean=True,
+        description="Active maintenant ?"
+    )
+    def est_actuellement_active(self, obj):
+        return obj.est_actuellement_active
+
+
+@admin.register(CampagneParticipant)
+class CampagneParticipantAdmin(admin.ModelAdmin):
+    list_display = (
+        'nom_personne',
+        'campagne',
+        'nombre_personnes',
+        'prix_total_cdf',
+        'montant_paye_cdf',
+        'reste_a_payer_cdf',
+        'statut',
+        'date_inscription',
+    )
+
+    list_filter = (
+        'campagne',
+        'campagne__type_campagne',
+        'statut',
+        'campagne__hopital',
+    )
+
+    search_fields = (
+        'patient__noms',
+        'patient__code_patient',
+        'clientEx__noms',
+        'campagne__nom',
+    )
+
+    readonly_fields = (
+        'prix_total_cdf',
+        'montant_paye_cdf',
+        'reste_a_payer_cdf',
+        'date_inscription',
+    )
+
+    fieldsets = (
+        ('Campagne et personne', {
+            'fields': (
+                'campagne',
+                'patient',
+                'clientEx',
+            )
+        }),
+
+        ('Participation et paiement', {
+            'fields': (
+                'nombre_personnes',
+                'prix_total_cdf',
+                'montant_paye_cdf',
+                'reste_a_payer_cdf',
+                'statut',
+            )
+        }),
+
+        ('Informations système', {
+            'fields': (
+                'created_by',
+                'date_inscription',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+
+    @admin.display(
+        description="Personne"
+    )
+    def nom_personne(self, obj):
+        return obj.nom_personne

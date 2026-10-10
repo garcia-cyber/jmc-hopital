@@ -142,7 +142,7 @@ LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Africa/Kinshasa"
 
 USE_I18N = True
-USE_TZ = False
+USE_TZ = True
 
 
 # =============================================================================

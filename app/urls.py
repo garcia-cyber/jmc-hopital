@@ -393,4 +393,10 @@ path('audit/', views.liste_audit, name='liste_audit'),
     path("video/<str:room_name>/", views.video_call_room, name="video_call_room"),
     path("video-room/<uuid:room_id>/add-colleague/", views.add_colleague_to_room, name="add_colleague_to_room"),
 
+
+# ----------- le 09/10/2025
+#
+#
+path("gestion_campagnes/",views.gestion_campagnes , name = "gestion_campagnes")
+
  ]

@@ -487,6 +487,14 @@
     <span>Créer un Acte Médical</span>
   </a>
 </li>
+
+<li class="{% if request.resolver_match.url_name == 'creer_acte_medical' %}active{% endif %}">
+  <a href="{% url 'gestion_campagnes' %}">
+    <i class="fa fa-stethoscope"></i>
+    <span>Campagne</span>
+  </a>
+</li>
+
 <li class="{% if request.resolver_match.url_name == 'liste_actes_medicaux' %}active{% endif %}">
   <a href="{% url 'liste_actes_medicaux' %}">
     <i class="fa fa-list-alt"></i>

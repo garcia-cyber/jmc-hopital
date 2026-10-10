@@ -210,6 +210,386 @@ class ClientExterne(models.Model):
     def __str__(self):
         return f"{self.noms} (Externe)"
 
+# ============================================================
+# CAMPAGNE
+# ============================================================
+
+class Campagne(models.Model):
+    TYPE_GRATUITE = 'GRATUITE'
+    TYPE_PAYANTE = 'PAYANTE'
+    TYPE_COUPLE = 'COUPLE'
+    TYPE_COUPLE_GRATUIT = 'COUPLE_GRATUIT'
+
+    TYPE_CHOICES = [
+        (TYPE_GRATUITE, 'Campagne gratuite'),
+        (TYPE_PAYANTE, 'Campagne payante'),
+        (TYPE_COUPLE, 'Campagne couple payante'),
+        (TYPE_COUPLE_GRATUIT, 'Campagne couple gratuite'),
+    ]
+
+    STATUT_CHOICES = [
+        ('BROUILLON', 'Brouillon'),
+        ('ACTIVE', 'Active'),
+        ('TERMINEE', 'Terminée'),
+        ('ANNULEE', 'Annulée'),
+    ]
+
+    nom = models.CharField(
+        max_length=200,
+        verbose_name="Nom de la campagne"
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Description"
+    )
+
+    type_campagne = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_GRATUITE,
+        verbose_name="Type de campagne"
+    )
+
+    # Prix officiel de la campagne en CDF
+    # - GRATUITE : 0
+    # - PAYANTE : prix pour 1 personne
+    # - COUPLE : prix pour 2 personnes
+    # - COUPLE_GRATUIT : 0
+    prix_defaut_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Prix par défaut (CDF)"
+    )
+
+    hopital = models.ForeignKey(
+        Hopital,
+        on_delete=models.CASCADE,
+        related_name='campagnes',
+        verbose_name="Hôpital"
+    )
+
+    date_debut = models.DateField(
+        default=timezone.now,
+        verbose_name="Date de début"
+    )
+
+    date_fin = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date de fin"
+    )
+
+    statut = models.CharField(
+        max_length=15,
+        choices=STATUT_CHOICES,
+        default='BROUILLON'
+    )
+
+    active = models.BooleanField(
+        default=True,
+        verbose_name="Campagne active"
+    )
+
+    creee_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='campagnes_creees'
+    )
+
+    date_creation = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    date_modification = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = "Campagne"
+        verbose_name_plural = "Campagnes"
+        ordering = ['-date_creation']
+
+    def clean(self):
+        erreurs = {}
+
+        # Campagnes gratuites : prix obligatoirement 0
+        if self.est_gratuite:
+            self.prix_defaut_cdf = Decimal('0.00')
+
+        # Campagnes payantes : prix obligatoire
+        elif self.est_payante:
+            if self.prix_defaut_cdf is None:
+                erreurs['prix_defaut_cdf'] = (
+                    "Cette campagne doit avoir un prix."
+                )
+
+            elif self.prix_defaut_cdf <= Decimal('0.00'):
+                erreurs['prix_defaut_cdf'] = (
+                    "Le prix doit être supérieur à zéro."
+                )
+
+        # Vérification des dates
+        if self.date_debut and self.date_fin:
+            if self.date_fin < self.date_debut:
+                erreurs['date_fin'] = (
+                    "La date de fin ne peut pas être avant la date de début."
+                )
+
+        if erreurs:
+            raise ValidationError(erreurs)
+
+    @property
+    def est_gratuite(self):
+        return self.type_campagne in [
+            self.TYPE_GRATUITE,
+            self.TYPE_COUPLE_GRATUIT
+        ]
+
+    @property
+    def est_payante(self):
+        return self.type_campagne in [
+            self.TYPE_PAYANTE,
+            self.TYPE_COUPLE
+        ]
+
+    @property
+    def est_couple(self):
+        return self.type_campagne in [
+            self.TYPE_COUPLE,
+            self.TYPE_COUPLE_GRATUIT
+        ]
+
+    @property
+    def est_actuellement_active(self):
+        aujourd_hui = timezone.localdate()
+
+        if not self.active:
+            return False
+
+        if self.statut != 'ACTIVE':
+            return False
+
+        if aujourd_hui < self.date_debut:
+            return False
+
+        if self.date_fin and aujourd_hui > self.date_fin:
+            return False
+
+        return True
+
+    def get_prix_par_personne(self):
+        """
+        Retourne le prix par personne en CDF.
+        Une campagne gratuite coûte toujours 0 CDF.
+        """
+        if self.est_gratuite:
+            return Decimal('0.00')
+
+        if self.type_campagne == self.TYPE_COUPLE:
+            return (
+                self.prix_defaut_cdf / Decimal('2')
+            ).quantize(Decimal('0.01'))
+
+        return self.prix_defaut_cdf or Decimal('0.00')
+
+    def get_prix_total(self, nombre_personnes=1):
+        """
+        Retourne le prix total selon le nombre de personnes.
+        """
+        if self.est_gratuite:
+            return Decimal('0.00')
+
+        nombre_personnes = max(1, int(nombre_personnes))
+
+        return (
+            self.get_prix_par_personne() * nombre_personnes
+        ).quantize(Decimal('0.01'))
+
+    def __str__(self):
+        return (
+            f"{self.nom} - {self.hopital.nomH} - "
+            f"{self.get_type_campagne_display()}"
+        )
+
+
+# ============================================================
+# PARTICIPANT A UNE CAMPAGNE
+# ============================================================
+
+class CampagneParticipant(models.Model):
+    """
+    Enregistre une personne inscrite à une campagne.
+
+    Pour une campagne couple :
+    - nombre_personnes = 1 : une seule personne vient
+    - nombre_personnes = 2 : les deux personnes viennent
+    """
+
+    campagne = models.ForeignKey(
+        Campagne,
+        on_delete=models.PROTECT,
+        related_name='participants',
+        verbose_name="Campagne"
+    )
+
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='participations_campagnes',
+        verbose_name="Patient interne"
+    )
+
+    clientEx = models.ForeignKey(
+        ClientExterne,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='participations_campagnes',
+        verbose_name="Client externe"
+    )
+
+    nombre_personnes = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Nombre de personnes",
+        help_text="1 personne ou 2 personnes pour une campagne couple."
+    )
+
+    prix_total_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Prix total à payer (CDF)"
+    )
+
+    montant_paye_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Montant déjà payé (CDF)"
+    )
+
+    reste_a_payer_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Reste à payer (CDF)"
+    )
+
+    statut = models.CharField(
+        max_length=20,
+        choices=[
+            ('INSCRIT', 'Inscrit'),
+            ('EN_COURS', 'En cours'),
+            ('TERMINE', 'Terminé'),
+            ('ANNULE', 'Annulé'),
+        ],
+        default='INSCRIT'
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='campagnes_participants_crees'
+    )
+
+    date_inscription = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        verbose_name = "Participant à une campagne"
+        verbose_name_plural = "Participants aux campagnes"
+        ordering = ['-date_inscription']
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['campagne', 'patient'],
+                condition=models.Q(patient__isnull=False),
+                name='unique_patient_par_campagne'
+            ),
+            models.UniqueConstraint(
+                fields=['campagne', 'clientEx'],
+                condition=models.Q(clientEx__isnull=False),
+                name='unique_client_externe_par_campagne'
+            ),
+        ]
+
+    def clean(self):
+        erreurs = {}
+
+        if not self.patient and not self.clientEx:
+            erreurs['patient'] = (
+                "Vous devez sélectionner un patient ou un client externe."
+            )
+
+        if self.patient and self.clientEx:
+            erreurs['clientEx'] = (
+                "Vous ne pouvez pas sélectionner à la fois un patient "
+                "et un client externe."
+            )
+
+        # Vérification du nombre de personnes
+        if self.campagne:
+
+            # Campagne couple gratuite ou payante
+            if self.campagne.est_couple:
+                if self.nombre_personnes not in [1, 2]:
+                    erreurs['nombre_personnes'] = (
+                        "Pour une campagne couple, choisissez 1 ou 2 personnes."
+                    )
+
+            # Campagne individuelle
+            else:
+                if self.nombre_personnes != 1:
+                    erreurs['nombre_personnes'] = (
+                        "Pour une campagne individuelle, "
+                        "une seule personne est autorisée."
+                    )
+
+        if erreurs:
+            raise ValidationError(erreurs)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.prix_total_cdf = self.campagne.get_prix_total(
+                self.nombre_personnes
+            )
+            self.reste_a_payer_cdf = self.prix_total_cdf
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def est_paye(self):
+        return self.reste_a_payer_cdf <= Decimal('0.00')
+
+    @property
+    def nom_personne(self):
+        if self.patient:
+            return self.patient.noms
+
+        if self.clientEx:
+            return self.clientEx.noms
+
+        return "Personne non identifiée"
+
+    def __str__(self):
+        return (
+            f"{self.nom_personne} - {self.campagne.nom} - "
+            f"{self.nombre_personnes} personne(s)"
+        )
+
+
+
 # 6. PATIENT =======================================================
 class Paiement(models.Model):
     CURRENCY = [
@@ -234,6 +614,9 @@ class Paiement(models.Model):
         ('ENTREPRISE', 'Paiement Entreprise'),
         ('HOSPITALISATION', 'Hospitalisation'),
         ('ACTE_MEDICAL', 'Acte médical'),
+
+        # Nouveau service ajouté
+        ('CAMPAGNE', 'Campagne médicale'),
     ]
 
     # ============================================================
@@ -332,7 +715,37 @@ class Paiement(models.Model):
         'ClientExterne',
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name='paiements'
+    )
+
+    # ============================================================
+    # RELATION CAMPAGNE
+    # ============================================================
+
+    campagne = models.ForeignKey(
+        'Campagne',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements',
+        verbose_name="Campagne"
+    )
+
+    # Prix officiel de la campagne au moment du paiement, en CDF
+    prix_campagne_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Prix de la campagne (CDF)"
+    )
+
+    # Montant versé converti automatiquement en CDF
+    montant_verse_cdf = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name="Montant versé converti (CDF)"
     )
 
     # ============================================================
@@ -607,6 +1020,109 @@ class Paiement(models.Model):
             if self.reste_a_payer <= Decimal('1'):
                 self.demande_examen_externe.statut = 'PAYE'
                 self.demande_examen_externe.save()
+
+        # --------------------------------------------------------
+        # LOGIQUE CAMPAGNE
+        # --------------------------------------------------------
+        if self.service == 'CAMPAGNE':
+
+            if not self.campagne:
+                raise ValidationError(
+                    "Vous devez sélectionner une campagne."
+                )
+
+            if not self.patient and not self.clientEx:
+                raise ValidationError(
+                    "Vous devez sélectionner un patient ou un client externe."
+                )
+
+            # Vérifier que la campagne appartient au même hôpital
+            if self.hopital_id and self.campagne.hopital_id != self.hopital_id:
+                raise ValidationError(
+                    "Cette campagne n'appartient pas à l'hôpital sélectionné."
+                )
+
+            # Récupération du taux USD -> CDF
+            taux = ConfigurationHopital.get_taux()
+
+            if not taux or taux <= 0:
+                raise ValidationError(
+                    "Le taux USD/CDF n'est pas configuré correctement."
+                )
+
+            # Prix officiel de la campagne, toujours en CDF
+            prix_campagne_cdf = self.campagne.get_prix()
+
+            # ----------------------------------------------------
+            # CAMPAGNE GRATUITE
+            # ----------------------------------------------------
+            if self.campagne.type_campagne == Campagne.TYPE_GRATUITE:
+
+                self.prix_campagne_cdf = Decimal('0.00')
+                self.montant_verse_cdf = Decimal('0.00')
+                self.montant_verse = Decimal('0.00')
+                self.montant_reduction = Decimal('0.00')
+                self.reste_a_payer = Decimal('0.00')
+
+            # ----------------------------------------------------
+            # CAMPAGNE PAYANTE
+            # ----------------------------------------------------
+            elif self.campagne.type_campagne == Campagne.TYPE_PAYANTE:
+
+                if prix_campagne_cdf <= Decimal('0.00'):
+                    raise ValidationError(
+                        "Le prix de cette campagne payante est invalide."
+                    )
+
+                self.prix_campagne_cdf = prix_campagne_cdf
+
+                # Conversion du montant réellement versé en CDF
+                if self.devise == 'CDF':
+                    montant_verse_cdf = (
+                        self.montant_verse or Decimal('0.00')
+                    )
+                else:
+                    montant_verse_cdf = (
+                        (self.montant_verse or Decimal('0.00'))
+                        * taux
+                    )
+
+                self.montant_verse_cdf = montant_verse_cdf
+
+                # Paiements précédents pour cette même campagne
+                paiements_precedents = Paiement.objects.filter(
+                    campagne=self.campagne,
+                    patient=self.patient,
+                    clientEx=self.clientEx,
+                    service='CAMPAGNE'
+                ).exclude(pk=self.pk)
+
+                total_deja_verse_cdf = (
+                    paiements_precedents.aggregate(
+                        total=Sum('montant_verse_cdf')
+                    )['total']
+                    or Decimal('0.00')
+                )
+
+                total_reduction_cdf = (
+                    paiements_precedents.aggregate(
+                        total=Sum('montant_reduction')
+                    )['total']
+                    or Decimal('0.00')
+                )
+
+                total_paye_cdf = (
+                    total_deja_verse_cdf
+                    + total_reduction_cdf
+                    + montant_verse_cdf
+                    + (self.montant_reduction or Decimal('0.00'))
+                )
+
+                # Le reste à payer est toujours calculé en CDF
+                self.reste_a_payer = max(
+                    Decimal('0.00'),
+                    prix_campagne_cdf - total_paye_cdf
+                )
 
         # --------------------------------------------------------
         # LOGIQUE MATERNITE
@@ -2287,6 +2803,8 @@ class ActeMedical(models.Model):
     @property
     def est_paye(self):
         return self.reste_a_payer <= 0
+
+
 
 
 

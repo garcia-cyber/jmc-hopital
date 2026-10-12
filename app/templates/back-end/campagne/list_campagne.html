@@ -127,6 +127,27 @@
             color: var(--primary);
         }
 
+        .btn-action {
+            align-items: center;
+            border-radius: 5px;
+            display: inline-flex;
+            font-size: 12px;
+            font-weight: 600;
+            justify-content: center;
+            padding: 7px 10px;
+        }
+
+        .btn-participants {
+            background: #eaf2f8;
+            border: 1px solid #d5e5f1;
+            color: var(--primary);
+        }
+
+        .btn-participants:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
         .summary-card {
             background: var(--white);
             border: 1px solid var(--border);
@@ -305,7 +326,7 @@
 
         .campaign-table {
             margin-bottom: 0;
-            min-width: 1180px;
+            min-width: 1350px;
         }
 
         .campaign-table thead th {
@@ -430,6 +451,18 @@
             font-size: 10px;
             margin-top: 3px;
             white-space: nowrap;
+        }
+
+        .prestation-badge {
+            background: #f0f4f8;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--dark);
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 600;
+            margin: 2px 2px 2px 0;
+            padding: 4px 7px;
         }
 
         .status-badge {
@@ -1054,7 +1087,9 @@
                                         <th>Période</th>
                                         <th>Prix campagne</th>
                                         <th>Prix/personne</th>
+                                        <th>Prestations</th>
                                         <th>Statut</th>
+                                        <th>Participants</th>
                                     </tr>
 
                                 </thead>
@@ -1223,6 +1258,25 @@
 
                                             </td>
 
+                                            <!-- Prestations -->
+                                            <td>
+
+                                                {% for item in campagne.prestations_associees.all %}
+
+                                                    <span class="prestation-badge">
+                                                        {{ item.prestation.libelle }}
+                                                    </span>
+
+                                                {% empty %}
+
+                                                    <span class="text-muted">
+                                                        Aucune
+                                                    </span>
+
+                                                {% endfor %}
+
+                                            </td>
+
                                             <!-- Statut -->
                                             <td>
 
@@ -1262,6 +1316,19 @@
                                                     </span>
 
                                                 {% endif %}
+
+                                            </td>
+
+                                            <!-- Participants -->
+                                            <td>
+
+                                                <a href="{% url 'participants_campagne' campagne.id %}"
+                                                   class="btn btn-action btn-participants">
+
+                                                    <i class="fa fa-users mr-1"></i>
+                                                    Participants
+
+                                                </a>
 
                                             </td>
 
@@ -1522,15 +1589,15 @@
                         {% for field in form %}
 
                             {% if field.name == 'description' %}
+                                <div class="col-md-12 mb-3">
 
+                            {% elif field.name == 'prestations' %}
                                 <div class="col-md-12 mb-3">
 
                             {% elif field.name == 'active' %}
-
                                 <div class="col-md-12 mb-3">
 
                             {% else %}
-
                                 <div class="col-md-6 mb-3">
 
                             {% endif %}
@@ -1573,6 +1640,13 @@
                                         le prix est automatiquement fixé à 0 CDF.
                                         Pour une campagne payante,
                                         saisissez le prix officiel en CDF.
+                                    </small>
+
+                                {% elif field.name == 'prestations' %}
+
+                                    <small class="price-help">
+                                        Sélectionnez une ou plusieurs prestations
+                                        incluses dans cette campagne.
                                     </small>
 
                                 {% elif field.help_text %}
@@ -1654,11 +1728,11 @@
                 priceField.prop('readonly', true);
 
                 priceField
-                    .closest('.form-group')
+                    .closest('.col-md-6')
                     .find('.price-help')
                     .text(
-                        'Cette campagne est gratuite. '
-                        + 'Le prix est fixé automatiquement à 0 CDF.'
+                        'Cette campagne est gratuite. ' +
+                        'Le prix est fixé automatiquement à 0 CDF.'
                     );
 
             } else {
@@ -1666,7 +1740,7 @@
                 priceField.prop('readonly', false);
 
                 priceField
-                    .closest('.form-group')
+                    .closest('.col-md-6')
                     .find('.price-help')
                     .text(
                         'Saisissez le prix officiel de la campagne en CDF.'

@@ -14345,14 +14345,15 @@ def gestion_campagnes(request):
     - L'hôpital d'un utilisateur normal est récupéré automatiquement.
     - Un administrateur peut voir les campagnes de tous les hôpitaux.
     - Un administrateur peut choisir l'hôpital dans le formulaire.
-    - Recherche par nom, description et hôpital.
+    - Recherche par nom, description, hôpital et créateur.
     - Filtre par période : toutes, en cours, terminées, à venir.
     - Calcul des prix en CDF et en USD.
+    - Gestion des prestations incluses via CampagnePrestation.
     - Pagination de 10 campagnes.
     """
 
     # ==========================================================
-    # 1. Récupération du rôle et de l'hôpital de l'utilisateur
+    # 1. Rôle et hôpital de l'utilisateur connecté
     # ==========================================================
 
     fonction_user = (
@@ -14383,7 +14384,7 @@ def gestion_campagnes(request):
     est_admin = role_normalise in roles_admin
 
     # ==========================================================
-    # 2. Récupération des paramètres de recherche
+    # 2. Paramètres de recherche et filtres
     # ==========================================================
 
     query = request.GET.get('q', '').strip()
@@ -14403,7 +14404,6 @@ def gestion_campagnes(request):
     if statut not in statuts_autorises:
         statut = 'toutes'
 
-    # Date actuelle pour les DateField
     aujourd_hui = timezone.localdate()
 
     # ==========================================================
@@ -14413,11 +14413,10 @@ def gestion_campagnes(request):
     campagnes_list = (
         Campagne.objects
         .select_related('hopital', 'creee_par')
+        .prefetch_related('prestations_associees__prestation')
         .all()
     )
 
-    # Utilisateur normal :
-    # il ne voit que les campagnes de son hôpital.
     if not est_admin:
 
         if hopital_user:
@@ -14425,8 +14424,6 @@ def gestion_campagnes(request):
                 hopital=hopital_user
             )
         else:
-            # Aucun hôpital associé :
-            # aucune campagne ne doit être visible.
             campagnes_list = campagnes_list.none()
 
     # ==========================================================
@@ -14446,19 +14443,11 @@ def gestion_campagnes(request):
     # ==========================================================
 
     if statut == 'avenir':
-
-        # Campagnes dont la date de début est future
         campagnes_list = campagnes_list.filter(
             date_debut__gt=aujourd_hui
         )
 
     elif statut == 'encours':
-
-        # Une campagne est en cours si :
-        # - elle a commencé ;
-        # - elle n'est pas terminée ;
-        # - elle est active ;
-        # - son statut est ACTIVE.
         campagnes_list = campagnes_list.filter(
             active=True,
             statut='ACTIVE',
@@ -14469,8 +14458,6 @@ def gestion_campagnes(request):
         )
 
     elif statut == 'terminees':
-
-        # Une campagne avec une date de fin dépassée
         campagnes_list = campagnes_list.filter(
             date_fin__isnull=False,
             date_fin__lt=aujourd_hui
@@ -14479,7 +14466,7 @@ def gestion_campagnes(request):
     campagnes_list = campagnes_list.order_by('-date_creation')
 
     # ==========================================================
-    # 6. Récupération du taux de change
+    # 6. Taux de change
     # ==========================================================
 
     config = ConfigurationHopital.objects.first()
@@ -14487,23 +14474,13 @@ def gestion_campagnes(request):
     taux_defaut = Decimal('2500.00')
 
     if config and config.taux_usd_en_cdf:
-
         try:
-            taux = Decimal(
-                str(config.taux_usd_en_cdf)
-            )
-
-        except (
-            InvalidOperation,
-            TypeError,
-            ValueError
-        ):
+            taux = Decimal(str(config.taux_usd_en_cdf))
+        except (InvalidOperation, TypeError, ValueError):
             taux = taux_defaut
-
     else:
         taux = taux_defaut
 
-    # Protection contre une division par zéro
     if taux <= 0:
         taux = taux_defaut
 
@@ -14511,85 +14488,55 @@ def gestion_campagnes(request):
     # 7. Pagination
     # ==========================================================
 
-    paginator = Paginator(
-        campagnes_list,
-        10
-    )
+    paginator = Paginator(campagnes_list, 10)
 
     page_number = request.GET.get('page')
 
-    campagnes_obj = paginator.get_page(
-        page_number
-    )
+    campagnes_obj = paginator.get_page(page_number)
 
     # ==========================================================
-    # 8. Calcul des prix et statut d'affichage
+    # 8. Prix et statut d'affichage
     # ==========================================================
 
     for campagne in campagnes_obj:
-
-        # ------------------------------------------
-        # Prix total de la campagne en CDF
-        # ------------------------------------------
 
         prix_defaut_cdf = (
             campagne.prix_defaut_cdf
             or Decimal('0.00')
         )
 
-        # ------------------------------------------
-        # Prix total en USD
-        # ------------------------------------------
-
         campagne.prix_usd = (
             prix_defaut_cdf / taux
-        ).quantize(
-            Decimal('0.01')
-        )
-
-        # ------------------------------------------
-        # Prix par personne en CDF
-        # ------------------------------------------
+        ).quantize(Decimal('0.01'))
 
         campagne.prix_par_personne = (
             campagne.get_prix_par_personne()
             or Decimal('0.00')
         )
 
-        # ------------------------------------------
-        # Prix par personne en USD
-        # ------------------------------------------
-
         campagne.prix_par_personne_usd = (
             campagne.prix_par_personne / taux
-        ).quantize(
-            Decimal('0.01')
-        )
-
-        # ------------------------------------------
-        # Statut calculé pour l'affichage
-        # ------------------------------------------
+        ).quantize(Decimal('0.01'))
 
         if campagne.statut == 'ANNULEE':
-
             campagne.statut_campagne = 'annulee'
             campagne.statut_label = 'Annulée'
             campagne.statut_class = 'danger'
 
         elif campagne.statut == 'BROUILLON':
-
             campagne.statut_campagne = 'brouillon'
             campagne.statut_label = 'Brouillon'
             campagne.statut_class = 'secondary'
 
         elif campagne.date_debut > aujourd_hui:
-
             campagne.statut_campagne = 'avenir'
             campagne.statut_label = 'À venir'
             campagne.statut_class = 'warning'
 
-        elif campagne.date_fin and campagne.date_fin < aujourd_hui:
-
+        elif (
+            campagne.date_fin
+            and campagne.date_fin < aujourd_hui
+        ):
             campagne.statut_campagne = 'terminee'
             campagne.statut_label = 'Terminée'
             campagne.statut_class = 'dark'
@@ -14603,126 +14550,82 @@ def gestion_campagnes(request):
                 or campagne.date_fin >= aujourd_hui
             )
         ):
-
             campagne.statut_campagne = 'encours'
             campagne.statut_label = 'En cours'
             campagne.statut_class = 'success'
 
         else:
-
             campagne.statut_campagne = 'terminee'
             campagne.statut_label = 'Terminée'
             campagne.statut_class = 'dark'
 
     # ==========================================================
-    # 9. Traitement du formulaire
+    # 9. Formulaire
     # ==========================================================
 
     if request.method == 'POST':
 
-        # Un utilisateur normal doit être associé
-        # à un hôpital.
         if not est_admin and not hopital_user:
-
             messages.error(
                 request,
                 "Votre compte n'est associé à aucun hôpital. "
                 "Impossible de créer une campagne."
             )
 
-            return redirect(
-                'gestion_campagnes'
-            )
+            return redirect('gestion_campagnes')
 
         form = CampagneForm(
-            request.POST
+            request.POST,
+            hopital=hopital_user
         )
-
-        # Pour un utilisateur normal :
-        # le champ hôpital, s'il existe, ne doit contenir
-        # que son propre hôpital.
-        if not est_admin and hopital_user:
-
-            if 'hopital' in form.fields:
-
-                form.fields['hopital'].queryset = (
-                    form.fields['hopital']
-                    .queryset
-                    .filter(
-                        pk=hopital_user.pk
-                    )
-                )
 
         if form.is_valid():
 
-            # On récupère les valeurs saisies :
-            # nom, description, type, prix, dates, statut, etc.
-            campagne = form.save(
-                commit=False
-            )
+            campagne = form.save(commit=False)
 
-            # Le créateur est toujours l'utilisateur connecté.
             campagne.creee_par = request.user
 
-            # Pour un utilisateur normal,
-            # l'hôpital est imposé automatiquement.
             if not est_admin:
                 campagne.hopital = hopital_user
 
-            # Le modèle impose 0 pour les campagnes gratuites.
             if campagne.est_gratuite:
                 campagne.prix_defaut_cdf = Decimal('0.00')
 
-            # Validation complète après affectation
-            # du créateur et de l'hôpital.
-            campagne.full_clean()
-
             campagne.save()
+
+            # Enregistre les prestations dans CampagnePrestation
+            form.save_m2m()
 
             messages.success(
                 request,
                 "La campagne a été créée avec succès."
             )
 
-            return redirect(
-                'gestion_campagnes'
-            )
+            return redirect('gestion_campagnes')
 
     else:
 
-        form = CampagneForm()
+        form = CampagneForm(
+            hopital=hopital_user
+        )
 
-        # Pour un utilisateur normal :
-        # présélectionner son hôpital.
         if not est_admin and hopital_user:
-
             if 'hopital' in form.fields:
-
                 form.fields['hopital'].queryset = (
                     form.fields['hopital']
                     .queryset
-                    .filter(
-                        pk=hopital_user.pk
-                    )
+                    .filter(pk=hopital_user.pk)
                 )
 
-                form.fields['hopital'].initial = (
-                    hopital_user
-                )
+                form.fields['hopital'].initial = hopital_user
 
     # ==========================================================
-    # 10. Compteurs pour le tableau de bord
+    # 10. Compteurs
     # ==========================================================
 
-    # Base non filtrée par période, mais déjà filtrée
-    # selon l'hôpital de l'utilisateur.
-    campagnes_stats = (
-        Campagne.objects
-        .all()
-    )
+    campagnes_stats = Campagne.objects.all()
 
     if not est_admin:
-
         if hopital_user:
             campagnes_stats = campagnes_stats.filter(
                 hopital=hopital_user
@@ -15216,6 +15119,19 @@ def participants_campagne(request, campagne_id):
         'back-end/campagne/liste_participants.html',
         context,
     )
+
+
+
+
+
+
+# ----------------------------------------------------------------
+# ---------------------------------------------------------------
+#
+# MOBILE
+def service_worker(request):
+  # -- envoyer le fichier js avec le bon type --
+  return render(request, 'serviceworker.js', content_type='application/javascript')
 
 
 

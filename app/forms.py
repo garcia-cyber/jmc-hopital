@@ -1261,6 +1261,23 @@ class PaiementActeForm(forms.Form):
 
 class CampagneForm(forms.ModelForm):
 
+    prestations = forms.ModelMultipleChoiceField(
+        queryset=Prestation.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                'class': 'form-control select2',
+                'multiple': 'multiple',
+                'placeholder': 'Sélectionnez les prestations incluses',
+            }
+        ),
+        label='Prestations incluses',
+        help_text=(
+            'Maintenez Ctrl (Windows) ou Cmd (Mac) pour sélectionner '
+            'plusieurs prestations.'
+        ),
+    )
+
     class Meta:
         model = Campagne
 
@@ -1282,7 +1299,6 @@ class CampagneForm(forms.ModelForm):
                     'placeholder': 'Nom de la campagne',
                 }
             ),
-
             'description': forms.Textarea(
                 attrs={
                     'class': 'form-control',
@@ -1290,13 +1306,11 @@ class CampagneForm(forms.ModelForm):
                     'placeholder': 'Description de la campagne',
                 }
             ),
-
             'type_campagne': forms.Select(
                 attrs={
                     'class': 'form-control',
                 }
             ),
-
             'prix_defaut_cdf': forms.NumberInput(
                 attrs={
                     'class': 'form-control',
@@ -1305,7 +1319,6 @@ class CampagneForm(forms.ModelForm):
                     'placeholder': 'Exemple : 25000.00',
                 }
             ),
-
             'date_debut': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={
@@ -1313,7 +1326,6 @@ class CampagneForm(forms.ModelForm):
                     'type': 'date',
                 }
             ),
-
             'date_fin': forms.DateInput(
                 format='%Y-%m-%d',
                 attrs={
@@ -1321,13 +1333,11 @@ class CampagneForm(forms.ModelForm):
                     'type': 'date',
                 }
             ),
-
             'statut': forms.Select(
                 attrs={
                     'class': 'form-control',
                 }
             ),
-
             'active': forms.CheckboxInput(
                 attrs={
                     'class': 'form-check-input',
@@ -1345,6 +1355,33 @@ class CampagneForm(forms.ModelForm):
             'statut': 'Statut',
             'active': 'Campagne active',
         }
+
+    def __init__(self, *args, **kwargs):
+        self.hopital = kwargs.pop('hopital', None)
+
+        super().__init__(*args, **kwargs)
+
+        # Filtrer les prestations selon l'hôpital si possible
+        if self.hopital:
+            self.fields['prestations'].queryset = Prestation.objects.filter(
+                hopital=self.hopital
+            )
+
+        # En modification : pré-cocher les prestations déjà associées
+        if self.instance and self.instance.pk:
+            self.fields['prestations'].initial = Prestation.objects.filter(
+                campagnes_associees__campagne=self.instance
+            )
+
+    def clean_prestations(self):
+        prestations = self.cleaned_data.get('prestations')
+
+        if prestations and prestations.count() != len(set(prestations)):
+            raise forms.ValidationError(
+                "Une prestation ne peut pas être sélectionnée deux fois."
+            )
+
+        return prestations
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1388,6 +1425,32 @@ class CampagneForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+    def save(self, commit=True):
+        campagne = super().save(commit=False)
+
+        prestations = self.cleaned_data.get('prestations')
+
+        if commit:
+            campagne.save()
+
+            # Supprimer les anciennes liaisons
+            CampagnePrestation.objects.filter(
+                campagne=campagne
+            ).delete()
+
+            # Créer les nouvelles liaisons
+            CampagnePrestation.objects.bulk_create(
+                [
+                    CampagnePrestation(
+                        campagne=campagne,
+                        prestation=prestation,
+                    )
+                    for prestation in prestations
+                ]
+            )
+
+        return campagne
 
 # ===============
 # ===============

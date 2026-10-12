@@ -421,4 +421,7 @@ path(
         name='modifier_participant_campagne',
     ),
 
+    # -- le service worker doit être à la racine du site --
+  path('serviceworker.js', views.service_worker),
+
  ]

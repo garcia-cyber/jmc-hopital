@@ -1,6 +1,6 @@
 {
-  "name": "JMC",
-  "short_name": "MonApp",
+  "name": "JMC Hospital",
+"short_name": "JMC",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

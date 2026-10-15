@@ -1,0 +1,267 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Modifier la campagne | JMC ERP</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        :root {
+            --primary: #1f4e79;
+            --primary-dark: #173b5d;
+            --secondary: #2f80b7;
+            --danger: #bd342a;
+            --dark: #263238;
+            --muted: #78858f;
+            --background: #f3f5f8;
+            --white: #ffffff;
+            --border: #e1e7ec;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--dark);
+            font-family: "Roboto", Arial, sans-serif;
+        }
+
+        .page-wrapper {
+            background: var(--background);
+        }
+
+        .content {
+            padding-bottom: 40px;
+        }
+
+        .page-title {
+            color: var(--primary-dark);
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .page-subtitle {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .erp-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+        }
+
+        .erp-card-header {
+            border-bottom: 1px solid var(--border);
+            padding: 17px 20px;
+        }
+
+        .erp-card-title {
+            color: var(--primary-dark);
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .erp-card-body {
+            padding: 22px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .required {
+            color: var(--danger);
+        }
+
+        .price-help {
+            color: var(--muted);
+            display: block;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="main-wrapper">
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+
+        <div class="content container-fluid">
+
+            <div class="page-header">
+
+                <h3 class="page-title">
+                    Modifier la campagne
+                </h3>
+
+                <p class="page-subtitle">
+                    {{ campagne.nom }}
+                </p>
+
+            </div>
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="alert
+                        {% if message.tags == 'success' %}
+                            alert-success
+                        {% elif message.tags == 'error' %}
+                            alert-danger
+                        {% else %}
+                            alert-info
+                        {% endif %}">
+
+                        {{ message }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+            <div class="erp-card">
+
+                <div class="erp-card-header">
+                    <h4 class="erp-card-title">
+                        <i class="fa fa-edit mr-2"></i>
+                        Informations de la campagne
+                    </h4>
+                </div>
+
+                <div class="erp-card-body">
+
+                    <form method="post" novalidate>
+
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+
+                            {% for field in form %}
+
+                                {% if field.name == 'description' %}
+                                    <div class="col-md-12 mb-3">
+
+                                {% elif field.name == 'prestations' %}
+                                    <div class="col-md-12 mb-3">
+
+                                {% elif field.name == 'active' %}
+                                    <div class="col-md-12 mb-3">
+
+                                {% else %}
+                                    <div class="col-md-6 mb-3">
+
+                                {% endif %}
+
+                                    {% if field.name == 'active' %}
+
+                                        <div class="form-check">
+
+                                            {{ field }}
+
+                                            <label class="form-check-label"
+                                                   for="{{ field.id_for_label }}">
+                                                {{ field.label }}
+                                            </label>
+
+                                        </div>
+
+                                    {% else %}
+
+                                        <label for="{{ field.id_for_label }}">
+                                            {{ field.label }}
+
+                                            {% if field.field.required %}
+                                                <span class="required">*</span>
+                                            {% endif %}
+                                        </label>
+
+                                        {{ field }}
+
+                                    {% endif %}
+
+                                    {% if field.name == 'prix_defaut_cdf' %}
+
+                                        <small class="price-help">
+                                            Pour une campagne gratuite,
+                                            le prix est automatiquement fixé à 0 CDF.
+                                        </small>
+
+                                    {% elif field.name == 'prestations' %}
+
+                                        <small class="price-help">
+                                            Sélectionnez les prestations incluses
+                                            dans cette campagne.
+                                        </small>
+
+                                    {% elif field.help_text %}
+
+                                        <small class="price-help">
+                                            {{ field.help_text }}
+                                        </small>
+
+                                    {% endif %}
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+
+                            <a href="{% url 'gestion_campagnes' %}"
+                               class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                <i class="fa fa-save mr-1"></i>
+                                Enregistrer les modifications
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+
+</body>
+
+</html>

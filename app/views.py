@@ -14684,16 +14684,29 @@ def gestion_campagnes(request):
 # MODIFICATION DE LA CAMPAGNE
 # ------------------------------------------------- 
 @login_required
-def modifier_campagne_participant(request, pk):
-    participant = get_object_or_404(
-        CampagneParticipant.objects.select_related(
-            'campagne',
-            'campagne__hopital',
-            'patient',
-            'clientEx',
+def modifier_campagne(request, pk):
+    """
+    Modification d'une campagne existante.
+
+    Règles :
+    - Un utilisateur normal ne peut modifier que les campagnes de son hôpital.
+    - Un administrateur peut modifier les campagnes de tous les hôpitaux.
+    - Le créateur reste l'utilisateur qui a créé la campagne.
+    - Pour un utilisateur normal, l'hôpital ne peut pas être changé.
+    - Les prestations sélectionnées remplacent les anciennes prestations.
+    """
+
+    campagne = get_object_or_404(
+        Campagne.objects.select_related(
+            'hopital',
+            'creee_par',
         ),
         pk=pk,
     )
+
+    # ==========================================================
+    # Rôle et hôpital de l'utilisateur connecté
+    # ==========================================================
 
     fonction_user = (
         Fonction.objects
@@ -14702,16 +14715,16 @@ def modifier_campagne_participant(request, pk):
         .first()
     )
 
-    fonctionKey = ''
+    role = None
     hopital_user = None
 
     if fonction_user:
         if fonction_user.fonctionKey:
-            fonctionKey = (
-                fonction_user.fonctionKey.roleName or ''
-            ).strip().lower()
+            role = fonction_user.fonctionKey.roleName
 
         hopital_user = fonction_user.hopital
+
+    role_normalise = (role or '').strip().lower()
 
     roles_admin = {
         'admin',
@@ -14720,72 +14733,82 @@ def modifier_campagne_participant(request, pk):
         'super administrateur',
     }
 
-    est_admin = fonctionKey in roles_admin
+    est_admin = role_normalise in roles_admin
 
-    # Un utilisateur non administrateur ne peut modifier
-    # que les participants de son hôpital.
+    # ==========================================================
+    # Sécurité : un utilisateur normal ne modifie que son hôpital
+    # ==========================================================
+
     if not est_admin:
+
         if (
             not hopital_user
-            or participant.campagne.hopital_id != hopital_user.pk
+            or campagne.hopital_id != hopital_user.pk
         ):
             raise PermissionDenied
 
+    # ==========================================================
+    # Traitement du formulaire
+    # ==========================================================
+
     if request.method == 'POST':
-        form = CampagneParticipantForm(
+
+        form = CampagneForm(
             request.POST,
-            instance=participant,
+            instance=campagne,
+            hopital=hopital_user
         )
 
         if form.is_valid():
-            participant_modifie = form.save(commit=False)
 
-            try:
-                participant_modifie.full_clean()
-                participant_modifie.save()
+            campagne_modifiee = form.save(commit=False)
 
-                messages.success(
-                    request,
-                    "Le participant a été modifié avec succès.",
-                )
+            # Le créateur initial ne change pas
+            campagne_modifiee.creee_par = campagne.creee_par
 
-                return redirect('gestion_campagnes')
+            # Un utilisateur normal ne peut pas changer l'hôpital
+            if not est_admin:
+                campagne_modifiee.hopital = hopital_user
 
-            except ValidationError as exc:
-                if hasattr(exc, 'message_dict'):
-                    for champ, erreurs in exc.message_dict.items():
-                        if champ in form.fields:
-                            for erreur in erreurs:
-                                form.add_error(champ, erreur)
-                        else:
-                            for erreur in erreurs:
-                                form.add_error(None, erreur)
-                else:
-                    form.add_error(None, exc)
+            # Les campagnes gratuites ont toujours un prix de 0
+            if campagne_modifiee.est_gratuite:
+                campagne_modifiee.prix_defaut_cdf = Decimal('0.00')
 
-            except IntegrityError:
-                form.add_error(
-                    None,
-                    "Ce patient ou ce client est déjà inscrit "
-                    "à cette campagne.",
-                )
+            campagne_modifiee.save()
+
+            # Enregistre / met à jour les prestations
+            form.save_m2m()
+
+            messages.success(
+                request,
+                "La campagne a été modifiée avec succès."
+            )
+
+            return redirect('gestion_campagnes')
 
     else:
-        form = CampagneParticipantForm(instance=participant)
+
+        form = CampagneForm(
+            instance=campagne,
+            hopital=hopital_user
+        )
+
+    # ==========================================================
+    # Contexte
+    # ==========================================================
 
     context = {
         'form': form,
-        'participant': participant,
-        'campagne': participant.campagne,
-        'fonctionKey': fonctionKey,
+        'campagne': campagne,
+        'fonctionKey': role,
         'hopital_user': hopital_user,
         'est_admin': est_admin,
     }
 
     return render(
         request,
-        'back-end/campagne/modifier_participant.html',
-        context,
+        'back-end/campagne/modifier_campagne.html',
+        context
     )
 
 
@@ -14958,6 +14981,10 @@ def enregistrer_participant_campagne(request, campagne_id):
         context,
     )
 
+
+
+
+
 # ----------------------------------------------------------------
 # MODIFICATION DE LA PATIENT DE LA CAMPAGNE
 # ----------------------------------------------------------------
@@ -15120,7 +15147,8 @@ def participants_campagne(request, campagne_id):
         context,
     )
 
-
+#
+#  mise en jour 
 
 
 
@@ -15131,12 +15159,12 @@ def participants_campagne(request, campagne_id):
 # MOBILE
 def service_worker(request):
   # -- envoyer le fichier js avec le bon type --
-  return render(request, 'serviceworker.js', content_type='application/javascript')
+  return render(request, 'serviceworker.js', content_type='application/javascript')   
 
 
 
 
-
+   
 
 
 

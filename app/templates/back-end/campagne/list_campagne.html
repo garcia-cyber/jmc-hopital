@@ -148,6 +148,18 @@
             color: #fff;
         }
 
+        .btn-modifier {
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--dark);
+        }
+
+        .btn-modifier:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
         .summary-card {
             background: var(--white);
             border: 1px solid var(--border);
@@ -451,18 +463,6 @@
             font-size: 10px;
             margin-top: 3px;
             white-space: nowrap;
-        }
-
-        .prestation-badge {
-            background: #f0f4f8;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            color: var(--dark);
-            display: inline-block;
-            font-size: 10px;
-            font-weight: 600;
-            margin: 2px 2px 2px 0;
-            padding: 4px 7px;
         }
 
         .status-badge {
@@ -1089,7 +1089,7 @@
                                         <th>Prix/personne</th>
                                         <th>Prestations</th>
                                         <th>Statut</th>
-                                        <th>Participants</th>
+                                        <th>Actions</th>
                                     </tr>
 
                                 </thead>
@@ -1261,19 +1261,30 @@
                                             <!-- Prestations -->
                                             <td>
 
-                                                {% for item in campagne.prestations_associees.all %}
+                                                {% with total_prestations=campagne.prestations_associees.all.count %}
 
-                                                    <span class="prestation-badge">
-                                                        {{ item.prestation.libelle }}
-                                                    </span>
+                                                    {% if total_prestations == 0 %}
 
-                                                {% empty %}
+                                                        <span class="text-muted">
+                                                            Aucune
+                                                        </span>
 
-                                                    <span class="text-muted">
-                                                        Aucune
-                                                    </span>
+                                                    {% else %}
 
-                                                {% endfor %}
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-erp"
+                                                                data-toggle="modal"
+                                                                data-target="#prestationsModal{{ campagne.id }}">
+
+                                                            <i class="fa fa-list mr-1"></i>
+                                                            {{ total_prestations }}
+                                                            prestation{{ total_prestations|pluralize }}
+
+                                                        </button>
+
+                                                    {% endif %}
+
+                                                {% endwith %}
 
                                             </td>
 
@@ -1319,16 +1330,28 @@
 
                                             </td>
 
-                                            <!-- Participants -->
+                                            <!-- Actions -->
                                             <td>
 
-                                                <a href="{% url 'participants_campagne' campagne.id %}"
-                                                   class="btn btn-action btn-participants">
+                                                <div class="d-flex flex-wrap gap-1">
 
-                                                    <i class="fa fa-users mr-1"></i>
-                                                    Participants
+                                                    <a href="{% url 'participants_campagne' campagne.id %}"
+                                                       class="btn btn-action btn-participants"
+                                                       title="Participants">
 
-                                                </a>
+                                                        <i class="fa fa-users"></i>
+
+                                                    </a>
+
+                                                    <a href="{% url 'modifier_campagne_participant' campagne.id %}"
+                                                       class="btn btn-action btn-modifier"
+                                                       title="Modifier la campagne">
+
+                                                        <i class="fa fa-edit"></i>
+
+                                                    </a>
+
+                                                </div>
 
                                             </td>
 
@@ -1508,6 +1531,108 @@
         </div>
     </div>
 </div>
+
+<!-- Modales des prestations -->
+{% for campagne in campagnes %}
+
+    <div class="modal fade"
+         id="prestationsModal{{ campagne.id }}"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered"
+             role="document">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        <i class="fa fa-list mr-2"></i>
+                        Prestations : {{ campagne.nom }}
+                    </h5>
+
+                    <button type="button"
+                            class="close"
+                            data-dismiss="modal"
+                            aria-label="Fermer">
+
+                        <span aria-hidden="true">&times;</span>
+
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    {% if campagne.prestations_associees.all %}
+
+                        <div class="table-responsive"
+                             style="max-height: 450px; overflow-y: auto;">
+
+                            <table class="table table-sm table-striped">
+
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Prestation</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for item in campagne.prestations_associees.all %}
+
+                                        <tr>
+                                            <td>
+                                                {{ forloop.counter }}
+                                            </td>
+
+                                            <td>
+                                                {{ item.prestation.libelle }}
+                                            </td>
+                                        </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="text-center text-muted py-4">
+                            <i class="fa fa-inbox fa-2x mb-2"></i>
+
+                            <p class="mb-0">
+                                Aucune prestation associée à cette campagne.
+                            </p>
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-erp"
+                            data-dismiss="modal">
+                        Fermer
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+{% endfor %}
 
 <!-- Modal de création -->
 <div class="modal fade"

@@ -1259,23 +1259,31 @@ class PaiementActeForm(forms.Form):
 
 
 
+# ============================================================
+# FORMULAIRE CAMPAGNE
+# ============================================================
+
 class CampagneForm(forms.ModelForm):
 
-    prestations = forms.ModelMultipleChoiceField(
-        queryset=Prestation.objects.all(),
+    # Champ temporaire :
+    # sert uniquement à filtrer les prestations par catégorie.
+    categorie = forms.ChoiceField(
+        choices=[('', '---------')] + list(Prestation.CATEGORIES),
         required=False,
-        widget=forms.SelectMultiple(
+        widget=forms.Select(
             attrs={
-                'class': 'form-control select2',
-                'multiple': 'multiple',
-                'placeholder': 'Sélectionnez les prestations incluses',
+                'class': 'form-control',
+                'id': 'categoriePrestation',
             }
         ),
+        label='Catégorie de prestation',
+    )
+
+    prestations = forms.ModelMultipleChoiceField(
+        queryset=Prestation.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
         label='Prestations incluses',
-        help_text=(
-            'Maintenez Ctrl (Windows) ou Cmd (Mac) pour sélectionner '
-            'plusieurs prestations.'
-        ),
     )
 
     class Meta:
@@ -1361,13 +1369,21 @@ class CampagneForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
-        # Filtrer les prestations selon l'hôpital si possible
+        # Catégories de prestations
+        self.fields['categorie'].choices = [
+            ('', '---------')
+        ] + list(Prestation.CATEGORIES)
+
+        # Prestations filtrées selon l'hôpital
         if self.hopital:
             self.fields['prestations'].queryset = Prestation.objects.filter(
                 hopital=self.hopital
             )
+        else:
+            self.fields['prestations'].queryset = Prestation.objects.none()
 
-        # En modification : pré-cocher les prestations déjà associées
+        # En modification :
+        # pré-cocher les prestations déjà associées à la campagne
         if self.instance and self.instance.pk:
             self.fields['prestations'].initial = Prestation.objects.filter(
                 campagnes_associees__campagne=self.instance
@@ -1451,6 +1467,103 @@ class CampagneForm(forms.ModelForm):
             )
 
         return campagne
+
+
+# ============================================================
+# FORMULAIRE PARTICIPANT À UNE CAMPAGNE
+# ============================================================
+
+class CampagneParticipantForm(forms.ModelForm):
+
+    class Meta:
+        model = CampagneParticipant
+
+        fields = [
+            'patient',
+            'clientEx',
+            'nombre_personnes',
+            'montant_paye_cdf',
+            'statut',
+        ]
+
+        widgets = {
+            'patient': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
+            'clientEx': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
+            'nombre_personnes': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'min': '1',
+                    'max': '2',
+                }
+            ),
+            'montant_paye_cdf': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'step': '0.01',
+                    'min': '0',
+                    'placeholder': 'Montant déjà payé en CDF',
+                }
+            ),
+            'statut': forms.Select(
+                attrs={
+                    'class': 'form-control',
+                }
+            ),
+        }
+
+        labels = {
+            'patient': 'Patient interne',
+            'clientEx': 'Client externe',
+            'nombre_personnes': 'Nombre de personnes',
+            'montant_paye_cdf': 'Montant déjà payé (CDF)',
+            'statut': 'Statut du participant',
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.est_admin = kwargs.pop('est_admin', False)
+        self.hopital_user = kwargs.pop('hopital_user', None)
+
+        super().__init__(*args, **kwargs)
+
+        # Filtrer les patients selon l'hôpital de l'utilisateur
+        if not self.est_admin and self.hopital_user:
+            if 'patient' in self.fields:
+                self.fields['patient'].queryset = Patient.objects.filter(
+                    hopital=self.hopital_user
+                )
+
+        # Un participant ne peut pas être à la fois
+        # patient interne et client externe.
+        self.fields['clientEx'].required = False
+        self.fields['patient'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        patient = cleaned_data.get('patient')
+        clientEx = cleaned_data.get('clientEx')
+
+        if not patient and not clientEx:
+            raise ValidationError(
+                "Vous devez sélectionner un patient ou un client externe."
+            )
+
+        if patient and clientEx:
+            raise ValidationError(
+                "Vous ne pouvez pas sélectionner à la fois un patient "
+                "et un client externe."
+            )
+
+        return cleaned_data
 
 # ===============
 # ===============

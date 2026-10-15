@@ -12,7 +12,7 @@ urlpatterns =[
 
     path(
         'googled1e54ebf53c448fb.html',
-        TemplateView.as_view(template_name='googled1e54ebf53c448fb.html'),
+        TemplateView.as_view(template_name='googled1e54ebf53c448fb.html'), 
     ),
      # ===================================
      # page d'accueil login
@@ -398,16 +398,8 @@ path('audit/', views.liste_audit, name='liste_audit'),
 #
 # Campagne gestion
 path("gestion_campagnes/",views.gestion_campagnes , name = "gestion_campagnes"),
-path(
-    'campagnes/participants/<int:pk>/modifier/',
-    views.modifier_campagne_participant,
-    name='modifier_campagne_participant',
-),
- path(
-        'campagnes/<int:campagne_id>/participants/',
-        views.participants_campagne,
-        name='participants_campagne',
-    ),
+path('campagnes/participants/<int:pk>/modifier/',views.modifier_campagne,name='modifier_campagne'),
+path('campagnes/<int:campagne_id>/participants/',views.participants_campagne,name='participants_campagne'),
 
     path(
         'campagnes/<int:campagne_id>/participants/enregistrer/',

@@ -3,112 +3,309 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, user-scalable=0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Créer un Acte Médical</title>
 
     {% include 'back-end/includes/css.html' %}
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-        rel="stylesheet"
-    >
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet"
-    >
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
     <style>
+        :root {
+            --primary: #155eef;
+            --primary-dark: #1048c7;
+            --primary-soft: #eef4ff;
+            --success: #059669;
+            --danger: #dc2626;
+            --dark: #101828;
+            --muted: #667085;
+            --border: #e4e7ec;
+            --surface: #ffffff;
+            --page-bg: #f5f7fb;
+            --radius-lg: 20px;
+            --shadow-card: 0 12px 35px rgba(16, 24, 40, .07);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background:
+                radial-gradient(circle at 8% 0%, rgba(21, 94, 239, .055), transparent 28rem),
+                var(--page-bg);
+            color: var(--dark);
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .page-wrapper .content { padding-top: 28px; padding-bottom: 42px; }
+
+        .page-header {
+            padding: 1.35rem 1.5rem;
+            border: 1px solid rgba(228, 231, 236, .85);
+            border-radius: var(--radius-lg);
+            background: linear-gradient(120deg, #fff 0%, #f7faff 100%);
+            box-shadow: 0 8px 24px rgba(16, 24, 40, .035);
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            font-size: clamp(1.35rem, 2vw, 1.8rem);
+            letter-spacing: -.035em;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: .55rem;
+        }
+
+        .page-title > i {
+            display: inline-flex;
+            width: 44px;
+            height: 44px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: var(--primary-soft);
+            color: var(--primary) !important;
+            font-size: 1.15rem;
+        }
+
         .card {
-            border: none;
-            border-radius: 12px;
+            border: 1px solid rgba(228, 231, 236, .9);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .card-body { background: #fff; }
+
+        .form-label {
+            color: #344054;
+            font-size: .88rem;
+            margin-bottom: .5rem;
         }
 
         .form-control,
         .form-select {
-            border-radius: 8px;
-            padding: 0.65rem 1rem;
+            min-height: 46px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: .72rem .9rem;
+            color: var(--dark);
+            background-color: #fff;
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
         }
 
+        textarea.form-control { min-height: 112px; resize: vertical; }
+
+        .form-control:hover,
+        .form-select:hover { border-color: #b8c6dc; }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(21, 94, 239, .12);
+        }
+
+        .select2-container { width: 100% !important; }
         .select2-container--bootstrap-5 .select2-selection {
-            border-radius: 8px;
-            min-height: 45px;
-            padding: 0.35rem 0.5rem;
+            min-height: 46px;
+            padding: .42rem .65rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            padding-left: .15rem;
+            line-height: 1.8rem;
+            color: var(--dark);
+        }
+
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+            top: 9px;
+            right: 8px;
+        }
+
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap-5.select2-container--open .select2-selection {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(21, 94, 239, .12);
+        }
+
+        .select2-dropdown {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 12px 30px rgba(16, 24, 40, .12);
         }
 
         .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 1rem;
-        }
-
-        #zone-prestations {
-            max-height: 420px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            background: #f8f9fa;
-            padding: 1rem;
-        }
-
-        .groupe-categorie-prestations {
-            margin-bottom: 1.5rem;
-        }
-
-        .groupe-categorie-prestations:last-child {
-            margin-bottom: 0;
-        }
-
-        .prestation-item {
             display: flex;
             align-items: center;
-            gap: 0.65rem;
-            padding: 0.75rem;
-            margin-bottom: 0.55rem;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            background: #ffffff;
-            cursor: pointer;
-            transition: 0.2s ease;
+            gap: .7rem;
+            margin-bottom: 1.15rem;
+            color: #1d2939;
+            font-size: 1rem;
+            font-weight: 800;
         }
 
-        .prestation-item:hover {
-            border-color: #0d6efd;
-            background: #f1f7ff;
+        .section-title i {
+            display: inline-flex;
+            width: 34px;
+            height: 34px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            background: var(--primary-soft);
+            color: var(--primary);
         }
 
-        .prestation-item:has(input[type="checkbox"]:checked) {
-            border-color: #0d6efd;
-            background: #eef6ff;
+        .patient-summary {
+            border: 1px solid #d9e6ff;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f0f6ff 0%, #fbfdff 100%);
+            padding: 1.15rem !important;
         }
 
-        .prestation-item:last-child {
-            margin-bottom: 0;
+        #bloc-nouveau-client {
+            border-color: #dce5f2 !important;
+            background: #fbfcfe !important;
         }
 
-        .prestation-item input[type="checkbox"] {
-            width: 19px;
-            height: 19px;
-            cursor: pointer;
-            flex-shrink: 0;
+        .panier-card { position: sticky; top: 18px; }
+        .panier-header {
+            padding: 1.25rem 1.35rem;
+            color: #fff;
+            background: linear-gradient(135deg, #155eef 0%, #123a9b 100%);
         }
 
-        .prestation-item label {
-            margin: 0;
-            cursor: pointer;
-            font-weight: 500;
-            width: 100%;
+        .panier-header h6 {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
         }
 
-        .info-prestations {
-            border-left: 4px solid #0d6efd;
-            background: #eef6ff;
-            border-radius: 7px;
+        .panier-header .badge {
+            min-width: 34px;
+            padding: .45rem .65rem;
+            border-radius: 999px;
+        }
+
+        .panier-body { padding: 1.25rem; }
+
+        .panier-table { margin-bottom: 0; }
+        .panier-table thead th {
+            padding: .85rem .7rem;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--muted);
+            font-size: .68rem;
+            font-weight: 800;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .panier-table td {
+            padding: .8rem .65rem;
+            vertical-align: middle;
+            border-color: #eef1f5;
+        }
+
+        .prestation-nom { color: var(--dark); font-weight: 750; line-height: 1.35; }
+        .prestation-prix { margin-top: .25rem; color: var(--success); font-weight: 800; font-size: .88rem; }
+
+        .qty-prestation {
+            min-width: 58px;
+            min-height: 36px;
+            padding: .35rem;
+            border-radius: 9px;
+        }
+
+        .btn-retirer {
+            display: inline-flex;
+            width: 34px;
+            height: 34px;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 10px;
+            color: var(--danger);
+            background: #fff0f0;
+            transition: background .2s ease, transform .2s ease;
+        }
+
+        .btn-retirer:hover { background: #ffdede; transform: translateY(-1px); }
+
+        .panier-vide {
+            padding: 2rem 1rem;
+            color: var(--muted);
+            text-align: center;
+            background: #fbfcfe;
+        }
+
+        .panier-vide i { color: #98a2b3; }
+
+        .total-panier { color: var(--primary); font-size: 1.25rem; font-weight: 900; }
+        .card-footer {
+            padding: 1.1rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-primary-custom {
+            padding: .8rem 1.15rem;
+            border: 0;
+            border-radius: 12px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            box-shadow: 0 7px 16px rgba(21, 94, 239, .18);
+            font-weight: 750;
+            transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        }
+
+        .btn-primary-custom:hover {
+            color: #fff;
+            filter: brightness(1.04);
+            box-shadow: 0 10px 22px rgba(21, 94, 239, .25);
+            transform: translateY(-1px);
+        }
+
+        .btn-light,
+        .btn-outline-primary { border-radius: 12px; font-weight: 700; }
+
+        hr { opacity: .65; border-color: #e4e7ec; }
+
+        .alert {
+            border: 1px solid #fecaca;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(220, 38, 38, .05);
+        }
+
+        @media (max-width: 1199.98px) {
+            .panier-card { position: static; }
+        }
+
+        @media (max-width: 767.98px) {
+            .page-wrapper .content { padding: 16px 12px 28px; }
+            .page-header { padding: 1rem; }
+            .page-title { align-items: flex-start; font-size: 1.25rem; }
+            .page-title > i { flex: 0 0 40px; width: 40px; height: 40px; }
+            .card-body { padding: 1.15rem !important; }
+            .patient-summary { padding: .9rem !important; }
+            .panier-card { margin-top: 0; }
+            .panier-body { padding: 1rem; }
+            .d-flex.justify-content-end.gap-2.mt-4 { flex-wrap: wrap; }
+            .d-flex.justify-content-end.gap-2.mt-4 > * { flex: 1 1 100%; }
+            .d-flex.justify-content-end.gap-2.mt-4 .btn { width: 100%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                transition-duration: .01ms !important;
+                animation-duration: .01ms !important;
+            }
         }
     </style>
 </head>
@@ -125,142 +322,89 @@
             <div class="page-header mb-4">
                 <div class="row align-items-center">
                     <div class="col">
-                        <h3 class="page-title font-weight-bold text-dark">
+                        <h3 class="page-title">
+                            <i class="fa fa-file-medical text-primary me-2"></i>
                             Créer un Acte Médical
                         </h3>
 
                         <p class="text-muted mb-0">
-                            Hôpital assigné :
-                            <span class="badge bg-primary text-white fs-6">
-                                {{ hopital.nomH }}
-                            </span>
+                            Hôpital :
+                            <span class="badge bg-primary">{{ hopital.nomH }}</span>
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-xl-10 offset-xl-1">
-                    <div class="card shadow-sm">
-                        <div class="card-body p-4 p-md-5">
+            {% if acte_form.errors or client_form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <strong><i class="fa fa-exclamation-circle me-1"></i> Formulaire incomplet :</strong>
 
-                            <div class="d-flex align-items-center mb-4">
-                                <div class="bg-light p-3 rounded-circle text-primary me-3">
-                                    <i class="fa fa-stethoscope fa-2x"></i>
+                    <ul class="mb-0 mt-2 small">
+                        {% for field, errors in acte_form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|title }} : {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+
+                        {% for field, errors in client_form.errors.items %}
+                            {% for error in errors %}
+                                <li>Client externe ({{ field|title }}) : {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <form method="post" novalidate id="form-acte">
+                {% csrf_token %}
+
+                <div class="row g-4">
+                    <div class="col-xl-8">
+                        <div class="card">
+                            <div class="card-body p-4 p-md-5">
+
+                                <div class="section-title">
+                                    <i class="fa fa-user"></i>
+                                    Informations du patient
                                 </div>
 
-                                <div>
-                                    <h5 class="card-title text-primary mb-1 fw-bold">
-                                        Formulaire de Saisie
-                                    </h5>
+                                <div class="patient-summary p-3 mb-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">
+                                                {{ acte_form.type_patient.label }}
+                                                <span class="text-danger">*</span>
+                                            </label>
 
-                                    <p class="text-muted small mb-0">
-                                        Renseignez les informations de la personne
-                                        et les prestations médicales.
-                                    </p>
-                                </div>
-                            </div>
+                                            {{ acte_form.type_patient }}
 
-                            <hr class="mb-4">
-
-                            {% if acte_form.errors or client_form.errors %}
-                                <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-exclamation-circle fa-2x me-3"></i>
-
-                                        <div>
-                                            <strong>Le formulaire contient des erreurs :</strong>
-
-                                            <ul class="mb-0 mt-1 small">
-                                                {% for field, errors in acte_form.errors.items %}
-                                                    {% for error in errors %}
-                                                        <li>{{ field|title }} : {{ error }}</li>
-                                                    {% endfor %}
-                                                {% endfor %}
-
-                                                {% for field, errors in client_form.errors.items %}
-                                                    {% for error in errors %}
-                                                        <li>
-                                                            Client externe ({{ field|title }}) :
-                                                            {{ error }}
-                                                        </li>
-                                                    {% endfor %}
-                                                {% endfor %}
-                                            </ul>
+                                            {% if acte_form.type_patient.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ acte_form.type_patient.errors.0 }}
+                                                </div>
+                                            {% endif %}
                                         </div>
-                                    </div>
 
-                                    <button
-                                        type="button"
-                                        class="btn-close"
-                                        data-bs-dismiss="alert"
-                                    ></button>
-                                </div>
-                            {% endif %}
+                                        <div class="col-md-6" id="bloc-interne" style="display:none;">
+                                            <label class="form-label fw-bold">
+                                                {{ acte_form.patient.label }}
+                                                <span class="text-danger">*</span>
+                                            </label>
 
-                            <form method="post" novalidate id="form-acte">
-                                {% csrf_token %}
+                                            {{ acte_form.patient }}
 
-                                <div class="row mb-4">
-                                    <div class="col-12 form-group">
-                                        <label
-                                            for="{{ acte_form.type_patient.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
-                                            {{ acte_form.type_patient.label }}
-                                            <span class="text-danger">*</span>
-                                        </label>
+                                            {% if acte_form.patient.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ acte_form.patient.errors.0 }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
 
-                                        {{ acte_form.type_patient }}
-
-                                        {% if acte_form.type_patient.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ acte_form.type_patient.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div
-                                    id="bloc-interne"
-                                    class="row mb-4"
-                                    style="display: none;"
-                                >
-                                    <div class="col-12 form-group">
-                                        <label
-                                            for="{{ acte_form.patient.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
-                                            {{ acte_form.patient.label }}
-                                            <span class="text-danger">*</span>
-                                        </label>
-
-                                        {{ acte_form.patient }}
-
-                                        {% if acte_form.patient.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {{ acte_form.patient.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div
-                                    id="bloc-externe"
-                                    class="mb-4"
-                                    style="display: none;"
-                                >
-                                    <div class="row">
-                                        <div class="col-12 form-group">
-                                            <label
-                                                for="{{ acte_form.client_externe.id_for_label }}"
-                                                class="form-label fw-bold"
-                                            >
+                                        <div class="col-md-6" id="bloc-externe" style="display:none;">
+                                            <label class="form-label fw-bold">
                                                 {{ acte_form.client_externe.label }}
-
-                                                <span class="text-muted fw-normal">
-                                                    (client déjà enregistré)
-                                                </span>
                                             </label>
 
                                             {{ acte_form.client_externe }}
@@ -273,7 +417,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="text-start my-3">
+                                    <div class="text-end mt-3" id="bloc-btn-client" style="display:none;">
                                         <button
                                             type="button"
                                             class="btn btn-outline-primary btn-sm rounded-pill px-3"
@@ -283,71 +427,65 @@
                                             Nouveau client externe
                                         </button>
                                     </div>
+                                </div>
 
-                                    <div
-                                        id="bloc-nouveau-client"
-                                        class="p-3 border rounded bg-light mt-3"
-                                        style="display: none;"
-                                    >
-                                        <h6 class="text-secondary mb-3 fw-bold">
-                                            <i class="fa fa-id-card me-1"></i>
-                                            Informations du nouveau client
-                                        </h6>
+                                <div id="bloc-nouveau-client" class="border rounded-4 p-4 mb-4" style="display:none; background:#f8fafc;">
+                                    <h6 class="fw-bold text-secondary mb-3">
+                                        <i class="fa fa-id-card me-1"></i>
+                                        Nouveau client externe
+                                    </h6>
 
-                                        <div class="row">
-                                            <div class="col-md-6 form-group mb-3">
-                                                <label class="form-label small fw-bold">
-                                                    {{ client_form.noms.label }}
-                                                </label>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">
+                                                {{ client_form.noms.label }}
+                                            </label>
 
-                                                {{ client_form.noms }}
+                                            {{ client_form.noms }}
 
-                                                {% if client_form.noms.errors %}
-                                                    <small class="text-danger">
-                                                        {{ client_form.noms.errors.0 }}
-                                                    </small>
-                                                {% endif %}
-                                            </div>
-
-                                            <div class="col-md-6 form-group mb-3">
-                                                <label class="form-label small fw-bold">
-                                                    {{ client_form.sexe.label }}
-                                                </label>
-
-                                                {{ client_form.sexe }}
-
-                                                {% if client_form.sexe.errors %}
-                                                    <small class="text-danger">
-                                                        {{ client_form.sexe.errors.0 }}
-                                                    </small>
-                                                {% endif %}
-                                            </div>
+                                            {% if client_form.noms.errors %}
+                                                <small class="text-danger d-block mt-1">
+                                                    {{ client_form.noms.errors.0 }}
+                                                </small>
+                                            {% endif %}
                                         </div>
 
-                                        <div class="row">
-                                            <div class="col-md-4 form-group mb-3">
-                                                <label class="form-label small fw-bold">
-                                                    {{ client_form.poids.label }}
-                                                </label>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">
+                                                {{ client_form.sexe.label }}
+                                            </label>
 
-                                                {{ client_form.poids }}
-                                            </div>
+                                            {{ client_form.sexe }}
 
-                                            <div class="col-md-4 form-group mb-3">
-                                                <label class="form-label small fw-bold">
-                                                    {{ client_form.age.label }}
-                                                </label>
+                                            {% if client_form.sexe.errors %}
+                                                <small class="text-danger d-block mt-1">
+                                                    {{ client_form.sexe.errors.0 }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
 
-                                                {{ client_form.age }}
-                                            </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">
+                                                {{ client_form.poids.label }}
+                                            </label>
 
-                                            <div class="col-md-4 form-group mb-3">
-                                                <label class="form-label small fw-bold">
-                                                    {{ client_form.telephone.label }}
-                                                </label>
+                                            {{ client_form.poids }}
+                                        </div>
 
-                                                {{ client_form.telephone }}
-                                            </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">
+                                                {{ client_form.age.label }}
+                                            </label>
+
+                                            {{ client_form.age }}
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">
+                                                {{ client_form.telephone.label }}
+                                            </label>
+
+                                            {{ client_form.telephone }}
                                         </div>
                                     </div>
                                 </div>
@@ -355,35 +493,13 @@
                                 <hr class="my-4">
 
                                 <div class="section-title">
-                                    Détails de l'Acte Médical
+                                    <i class="fa fa-notes-medical"></i>
+                                    Détails de l’acte
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 form-group mb-3">
-                                        <label
-                                            for="{{ acte_form.categorie.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
-                                            {{ acte_form.categorie.label }}
-
-                                            <span class="text-muted fw-normal small">
-                                                (facultatif)
-                                            </span>
-                                        </label>
-
-                                        {{ acte_form.categorie }}
-
-                                        <small class="form-text text-muted">
-                                            Filtrez les prestations affichées. Vous pouvez
-                                            sélectionner plusieurs catégories dans le même acte.
-                                        </small>
-                                    </div>
-
-                                    <div class="col-md-6 form-group mb-3">
-                                        <label
-                                            for="{{ acte_form.medecin.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">
                                             {{ acte_form.medecin.label }}
                                         </label>
 
@@ -395,116 +511,9 @@
                                             </div>
                                         {% endif %}
                                     </div>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-12 form-group mb-4">
+                                    <div class="col-md-6">
                                         <label class="form-label fw-bold">
-                                            Prestations à réaliser
-                                            <span class="text-danger">*</span>
-                                        </label>
-
-                                        <div class="info-prestations small p-3 mb-3">
-                                            <i class="fa fa-info-circle me-1"></i>
-
-                                            Sélectionnez une catégorie pour filtrer l'affichage,
-                                            puis cochez les prestations voulues. Vous pouvez
-                                            changer de catégorie sans perdre les prestations
-                                            déjà cochées.
-                                        </div>
-
-                                        <div
-                                            class="alert alert-success d-flex justify-content-between align-items-center mb-3"
-                                        >
-                                            <span>
-                                                <i class="fa fa-list-check me-1"></i>
-                                                Prestations sélectionnées :
-                                                <strong id="nombre-prestations">0</strong>
-                                            </span>
-
-                                            <span>
-                                                Total prévisionnel :
-                                                <strong id="montant-total">0,00</strong> CDF
-                                            </span>
-                                        </div>
-
-                                        <div id="zone-prestations">
-                                            {% for groupe in prestations_par_categorie %}
-                                                <div
-                                                    class="groupe-categorie-prestations"
-                                                    data-categorie="{{ groupe.code }}"
-                                                >
-                                                    <div class="border-bottom pb-2 mb-3">
-                                                        <h6 class="text-primary fw-bold mb-0">
-                                                            <i class="fa fa-folder-open me-1"></i>
-                                                            {{ groupe.libelle }}
-                                                        </h6>
-                                                    </div>
-
-                                                    {% for prestation in groupe.prestations %}
-                                                        <div class="prestation-item">
-                                                            <input
-                                                                type="checkbox"
-                                                                name="prestations"
-                                                                value="{{ prestation.pk }}"
-                                                                id="prestation_{{ prestation.pk }}"
-                                                                class="form-check-input prestation-checkbox"
-                                                                data-prix="{{ prestation.prix }}"
-                                                                {% if prestation.pk|stringformat:"s" in prestations_selectionnees %}
-                                                                    checked
-                                                                {% endif %}
-                                                            >
-
-                                                            <label for="prestation_{{ prestation.pk }}">
-                                                                <span class="d-block">
-                                                                    {{ prestation.libelle }}
-                                                                </span>
-
-                                                                <small class="text-success fw-bold">
-                                                                    {{ prestation.prix }} CDF
-                                                                </small>
-
-                                                                {% if prestation.categorie == 'LABO' and prestation.valeur_normale %}
-                                                                    <small class="d-block text-muted mt-1">
-                                                                        Valeur normale :
-                                                                        {{ prestation.valeur_normale }}
-                                                                    </small>
-                                                                {% endif %}
-                                                            </label>
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
-                                            {% empty %}
-                                                <p class="text-muted mb-0 text-center">
-                                                    Aucune prestation n'est configurée
-                                                    dans cet hôpital.
-                                                </p>
-                                            {% endfor %}
-
-                                            <p
-                                                id="message-aucune-prestation"
-                                                class="text-muted mb-0 text-center"
-                                                style="display: none;"
-                                            >
-                                                <i class="fa fa-search me-1"></i>
-                                                Aucune prestation dans cette catégorie.
-                                            </p>
-                                        </div>
-
-                                        {% if acte_form.prestations.errors %}
-                                            <div class="text-danger small mt-2">
-                                                {{ acte_form.prestations.errors.0 }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 form-group mb-3">
-                                        <label
-                                            for="{{ acte_form.date_acte.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
                                             {{ acte_form.date_acte.label }}
                                         </label>
 
@@ -517,11 +526,8 @@
                                         {% endif %}
                                     </div>
 
-                                    <div class="col-md-6 form-group mb-3">
-                                        <label
-                                            for="{{ acte_form.statut.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">
                                             {{ acte_form.statut.label }}
                                         </label>
 
@@ -533,14 +539,9 @@
                                             </div>
                                         {% endif %}
                                     </div>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-12 form-group mb-4">
-                                        <label
-                                            for="{{ acte_form.observation.id_for_label }}"
-                                            class="form-label fw-bold"
-                                        >
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">
                                             {{ acte_form.observation.label }}
                                         </label>
 
@@ -554,29 +555,157 @@
                                     </div>
                                 </div>
 
-                                <div class="mt-4 text-end">
-                                    <a
-                                        href="{% url 'dashboard' %}"
-                                        class="btn btn-light btn-lg px-4 me-2 border"
-                                    >
-                                        <i class="fa fa-times me-1"></i>
+                                <div class="d-flex justify-content-end gap-2 mt-4">
+                                    <a href="{% url 'dashboard' %}" class="btn btn-light border px-4">
+                                        <i class="fa fa-arrow-left me-1"></i>
                                         Annuler
                                     </a>
 
-                                    <button
-                                        type="submit"
-                                        class="btn btn-primary btn-lg px-5 shadow-sm"
-                                    >
+                                    <button type="submit" class="btn btn-primary-custom btn-lg px-4">
                                         <i class="fa fa-save me-1"></i>
-                                        Enregistrer l'acte
+                                        Enregistrer l’acte
                                     </button>
                                 </div>
-                            </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-4">
+                        <div class="card panier-card">
+                            <div class="panier-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fa fa-cart-shopping me-2"></i>
+                                        Panier des prestations
+                                    </h6>
+
+                                    <span class="badge bg-light text-primary fw-bold">
+                                        <span id="nombre-prestations">0</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="panier-body">
+                                <label class="form-label small fw-bold text-muted">
+                                    1. Filtrer par catégorie
+                                </label>
+
+                                <select id="filter_categorie" class="form-select mb-3">
+                                    <option value="all">-- Toutes les catégories --</option>
+
+                                    {% regroup prestations_par_categorie by code as categories_list %}
+                                    {% for cat in categories_list %}
+                                        <option value="{{ cat.grouper }}">{{ cat.grouper }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <label class="form-label small fw-bold text-muted">
+                                    2. Rechercher et choisir une prestation
+                                </label>
+
+                                <select id="select_prestation" class="form-select select-prestation mb-3">
+                                    <option value=""></option>
+
+                                    {% for groupe in prestations_par_categorie %}
+                                        {% for prestation in groupe.prestations %}
+                                            <option
+                                                value="{{ prestation.pk }}"
+                                                data-cat="{{ groupe.code }}"
+                                                data-libelle="{{ prestation.libelle }}"
+                                                data-prix="{{ prestation.prix }}"
+                                            >
+                                                [{{ groupe.code }}] {{ prestation.libelle }} — {{ prestation.prix }} CDF
+                                            </option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </select>
+
+                                <button type="button" id="btn_add_prestation" class="btn btn-primary-custom w-100">
+                                    <i class="fa fa-plus me-1"></i>
+                                    Ajouter au panier
+                                </button>
+
+                                {% if acte_form.prestations.errors %}
+                                    <div class="text-danger small mt-2">
+                                        {{ acte_form.prestations.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered panier-table mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Prestation</th>
+                                            <th class="text-center" style="width:85px;">Qté</th>
+                                            <th class="text-center" style="width:55px;"></th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="wrapper_prestations">
+                                        {% if prestations_selectionnees %}
+                                            {% for groupe in prestations_par_categorie %}
+                                                {% for prestation in groupe.prestations %}
+                                                    {% if prestation.pk|stringformat:"s" in prestations_selectionnees %}
+                                                        <tr id="prestation_row_{{ prestation.pk }}">
+                                                            <td>
+                                                                <input type="hidden" name="prestations" value="{{ prestation.pk }}">
+
+                                                                <div class="prestation-nom">
+                                                                    {{ prestation.libelle }}
+                                                                </div>
+
+                                                                <small class="text-muted">{{ groupe.code }}</small>
+
+                                                                <div class="prestation-prix">
+                                                                    {{ prestation.prix }} CDF
+                                                                </div>
+                                                            </td>
+
+                                                            <td class="text-center">
+                                                                <input
+                                                                    type="number"
+                                                                    name="qty_{{ prestation.pk }}"
+                                                                    value="1"
+                                                                    min="1"
+                                                                    class="form-control form-control-sm text-center qty-prestation"
+                                                                    data-prix="{{ prestation.prix }}"
+                                                                >
+                                                            </td>
+
+                                                            <td class="text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    class="btn-retirer btn-remove-prestation"
+                                                                >
+                                                                    <i class="fa fa-times"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="panier-vide" id="panier-vide">
+                                <i class="fa fa-cart-plus fa-2x mb-2 d-block"></i>
+                                Aucune prestation ajoutée.
+                            </div>
+
+                            <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-semibold">Total prévisionnel</span>
+
+                                <span class="total-panier">
+                                    <span id="montant-total">0,00</span> CDF
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
+            </form>
         </div>
     </div>
 </div>
@@ -586,176 +715,198 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const typePatient = document.getElementById('id_type_patient');
-    const categorie = document.getElementById('id_categorie');
-    const patient = document.getElementById('id_patient');
-    const clientExterne = document.getElementById('id_client_externe');
-    const medecin = document.getElementById('id_medecin');
+$(document).ready(function () {
+    // Recherche patient interne
+    $('#id_patient').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Rechercher un patient interne...',
+        allowClear: true
+    });
 
-    const blocInterne = document.getElementById('bloc-interne');
-    const blocExterne = document.getElementById('bloc-externe');
-    const btnNouveauClient = document.getElementById('btn-nouveau-client');
-    const blocNouveauClient = document.getElementById('bloc-nouveau-client');
+    // Recherche client externe
+    $('#id_client_externe').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Rechercher un client externe...',
+        allowClear: true
+    });
 
-    const groupesCategories = document.querySelectorAll(
-        '.groupe-categorie-prestations'
-    );
+    // Recherche médecin
+    $('#id_medecin').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Sélectionner un médecin...',
+        allowClear: true
+    });
 
-    const casesPrestations = document.querySelectorAll(
-        '.prestation-checkbox'
-    );
+    // Recherche prestation
+    $('.select-prestation').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Rechercher une prestation...',
+        allowClear: true,
+        language: {
+            noResults: function () {
+                return 'Aucune prestation trouvée';
+            }
+        }
+    });
 
-    const nombrePrestations = document.getElementById(
-        'nombre-prestations'
-    );
+    // Filtrage catégorie
+    var allPrestationOptions = $('#select_prestation option').clone();
 
-    const montantTotal = document.getElementById(
-        'montant-total'
-    );
+    $('#filter_categorie').on('change', function () {
+        var categorie = $(this).val();
 
-    const messageAucunePrestation = document.getElementById(
-        'message-aucune-prestation'
-    );
+        $('#select_prestation').empty();
 
-    if (medecin) {
-        $(medecin).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Sélectionnez un médecin...',
-            allowClear: true
+        allPrestationOptions.each(function () {
+            var optionCat = $(this).data('cat');
+
+            if (categorie === 'all' || !optionCat || optionCat === categorie) {
+                $('#select_prestation').append($(this).clone());
+            }
         });
-    }
 
-    if (patient) {
-        $(patient).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Rechercher un patient interne...',
-            allowClear: true
-        });
-    }
+        $('#select_prestation').trigger('change');
+    });
 
-    if (clientExterne) {
-        $(clientExterne).select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Rechercher un client externe...',
-            allowClear: true
-        });
-    }
+    // Ajout au panier
+    $('#btn_add_prestation').on('click', function () {
+        var select = $('#select_prestation');
+        var option = $('#select_prestation option:selected');
 
-    function viderPatientInterne() {
-        if (patient) {
-            $(patient).val(null).trigger('change');
-        }
-    }
+        var id = select.val();
+        var nom = option.data('libelle');
+        var categorie = option.data('cat');
+        var prix = parseFloat((option.data('prix') || '0').toString().replace(',', '.')) || 0;
 
-    function viderClientExterne() {
-        if (clientExterne) {
-            $(clientExterne).val(null).trigger('change');
-        }
-    }
-
-    function masquerNouveauClient() {
-        if (blocNouveauClient) {
-            blocNouveauClient.style.display = 'none';
-        }
-    }
-
-    function afficherNouveauClient() {
-        if (blocNouveauClient) {
-            blocNouveauClient.style.display = 'block';
-        }
-    }
-
-    function togglerType() {
-        if (!typePatient) {
+        if (!id) {
+            alert('Veuillez sélectionner une prestation.');
             return;
         }
+
+        if ($('#prestation_row_' + id).length > 0) {
+            alert('Cette prestation est déjà dans le panier.');
+            return;
+        }
+
+        var ligne = `
+            <tr id="prestation_row_${id}">
+                <td>
+                    <input type="hidden" name="prestations" value="${id}">
+
+                    <div class="prestation-nom">${nom}</div>
+                    <small class="text-muted">${categorie}</small>
+
+                    <div class="prestation-prix">
+                        ${prix.toLocaleString('fr-FR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })} CDF
+                    </div>
+                </td>
+
+                <td class="text-center">
+                    <input
+                        type="number"
+                        name="qty_${id}"
+                        value="1"
+                        min="1"
+                        class="form-control form-control-sm text-center qty-prestation"
+                        data-prix="${prix}"
+                    >
+                </td>
+
+                <td class="text-center">
+                    <button type="button" class="btn-retirer btn-remove-prestation">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $('#wrapper_prestations').append(ligne);
+
+        select.val(null).trigger('change');
+
+        mettreAJourPanier();
+    });
+
+    // Retirer du panier
+    $(document).on('click', '.btn-remove-prestation', function () {
+        $(this).closest('tr').remove();
+        mettreAJourPanier();
+    });
+
+    // Quantité
+    $(document).on('input change', '.qty-prestation', function () {
+        calculerTotal();
+    });
+
+    function mettreAJourPanier() {
+        var nombre = $('#wrapper_prestations tr').length;
+
+        $('#nombre-prestations').text(nombre);
+
+        if (nombre === 0) {
+            $('#panier-vide').show();
+        } else {
+            $('#panier-vide').hide();
+        }
+
+        calculerTotal();
+    }
+
+    function calculerTotal() {
+        var total = 0;
+
+        $('#wrapper_prestations tr').each(function () {
+            var input = $(this).find('.qty-prestation');
+            var prix = parseFloat(input.data('prix') || 0);
+            var quantite = parseInt(input.val() || 1);
+
+            if (isNaN(quantite) || quantite < 1) {
+                quantite = 1;
+            }
+
+            total += prix * quantite;
+        });
+
+        $('#montant-total').text(
+            total.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })
+        );
+    }
+
+    // Type patient
+    const typePatient = document.getElementById('id_type_patient');
+    const blocInterne = document.getElementById('bloc-interne');
+    const blocExterne = document.getElementById('bloc-externe');
+    const blocBtnClient = document.getElementById('bloc-btn-client');
+    const blocNouveauClient = document.getElementById('bloc-nouveau-client');
+    const btnNouveauClient = document.getElementById('btn-nouveau-client');
+
+    function togglerType() {
+        if (!typePatient) return;
 
         if (typePatient.value === 'INTERNE') {
             blocInterne.style.display = 'block';
             blocExterne.style.display = 'none';
-
-            viderClientExterne();
-            masquerNouveauClient();
+            blocBtnClient.style.display = 'none';
+            blocNouveauClient.style.display = 'none';
         } else if (typePatient.value === 'EXTERNE') {
             blocInterne.style.display = 'none';
             blocExterne.style.display = 'block';
-
-            viderPatientInterne();
+            blocBtnClient.style.display = 'block';
         } else {
             blocInterne.style.display = 'none';
             blocExterne.style.display = 'none';
-
-            viderPatientInterne();
-            viderClientExterne();
-            masquerNouveauClient();
-        }
-    }
-
-    function formaterMontant(montant) {
-        return montant.toLocaleString(
-            'fr-FR',
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }
-        );
-    }
-
-    function calculerTotalPrestations() {
-        let total = 0;
-        let nombre = 0;
-
-        casesPrestations.forEach(function (checkbox) {
-            if (checkbox.checked) {
-                let prix = checkbox.dataset.prix || '0';
-
-                prix = prix.replace(',', '.');
-
-                total += parseFloat(prix) || 0;
-                nombre += 1;
-            }
-        });
-
-        if (nombrePrestations) {
-            nombrePrestations.textContent = nombre;
-        }
-
-        if (montantTotal) {
-            montantTotal.textContent = formaterMontant(total);
-        }
-    }
-
-    function filtrerPrestationsParCategorie() {
-        if (!categorie) {
-            return;
-        }
-
-        const categorieChoisie = categorie.value;
-        let groupesVisibles = 0;
-
-        groupesCategories.forEach(function (groupe) {
-            const categorieGroupe = groupe.dataset.categorie;
-
-            const estVisible = (
-                !categorieChoisie ||
-                categorieGroupe === categorieChoisie
-            );
-
-            groupe.style.display = estVisible ? 'block' : 'none';
-
-            if (estVisible) {
-                groupesVisibles += 1;
-            }
-        });
-
-        if (messageAucunePrestation) {
-            messageAucunePrestation.style.display = (
-                groupesVisibles === 0 ? 'block' : 'none'
-            );
+            blocBtnClient.style.display = 'none';
+            blocNouveauClient.style.display = 'none';
         }
     }
 
@@ -766,37 +917,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (btnNouveauClient && blocNouveauClient) {
         btnNouveauClient.addEventListener('click', function () {
-            const estVisible = blocNouveauClient.style.display === 'block';
+            const visible = blocNouveauClient.style.display === 'block';
 
-            if (estVisible) {
-                masquerNouveauClient();
-            } else {
-                viderClientExterne();
-                afficherNouveauClient();
-            }
+            blocNouveauClient.style.display = visible ? 'none' : 'block';
         });
     }
 
-    if (categorie) {
-        categorie.addEventListener(
-            'change',
-            filtrerPrestationsParCategorie
-        );
-    }
-
-    casesPrestations.forEach(function (checkbox) {
-        checkbox.addEventListener(
-            'change',
-            calculerTotalPrestations
-        );
-    });
-
-    filtrerPrestationsParCategorie();
-    calculerTotalPrestations();
+    // Initialisation
+    mettreAJourPanier();
 
     {% if client_form.errors %}
         if (typePatient && typePatient.value === 'EXTERNE') {
-            afficherNouveauClient();
+            blocNouveauClient.style.display = 'block';
         }
     {% endif %}
 });

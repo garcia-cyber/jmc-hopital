@@ -398,23 +398,41 @@
                         <div class="balance-box">
                             <div class="balance-title">
                                 <i class="fa fa-wallet"></i>
-                                <span>Solde disponible</span>
+                                <span>Solde disponible aujourd’hui</span>
                             </div>
+
                             <div class="balance-grid">
                                 <div class="balance-item">
-                                    <div class="balance-label">USD</div>
-                                    <div class="balance-value">{{ solde_disponible_usd|floatformat:2 }} $</div>
+                                    <div class="balance-label">USD encaissé aujourd’hui</div>
+                                    <div class="balance-value" id="solde-usd">
+                                        {{ solde_disponible_usd|floatformat:2 }} $
+                                    </div>
                                 </div>
+
                                 <div class="balance-item">
-                                    <div class="balance-label">CDF</div>
-                                    <div class="balance-value">{{ solde_disponible_cdf|floatformat:2 }} FC</div>
+                                    <div class="balance-label">CDF encaissé aujourd’hui</div>
+                                    <div class="balance-value" id="solde-cdf">
+                                        {{ solde_disponible_cdf|floatformat:2 }} FC
+                                    </div>
                                 </div>
                             </div>
+
                             <div class="balance-note">
                                 <i class="fa fa-info-circle"></i>
-                                <span>Le montant sera vérifié automatiquement selon la devise choisie</span>
+                                <span>
+                                    Vous pouvez uniquement dépenser l’argent encaissé aujourd’hui,
+                                    selon la devise choisie.
+                                </span>
                             </div>
                         </div>
+
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}
+                                <div class="alert-soft">
+                                    <div><i class="fa fa-exclamation-triangle"></i> {{ error }}</div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
 
                         {% if messages %}
                             {% for message in messages %}
@@ -424,7 +442,7 @@
                             {% endfor %}
                         {% endif %}
 
-                        <form method="POST" autocomplete="off" novalidate>
+                        <form method="POST" autocomplete="off" novalidate id="depense-form">
                             {% csrf_token %}
 
                             <!-- Section 1: Informations -->
@@ -439,12 +457,22 @@
                                         <label for="motif" class="form-label">
                                             Motif de la dépense <span class="required">*</span>
                                         </label>
+
                                         <input type="text" 
-                                               class="form-control" 
+                                               class="form-control {% if form.motif.errors %}is-invalid{% endif %}" 
                                                id="motif" 
                                                name="motif" 
+                                               value="{{ form.motif.value|default_if_none:'' }}"
                                                placeholder="Ex: Achat fournitures, Paiement électricité, Transport..." 
                                                required>
+
+                                        {% if form.motif.errors %}
+                                            <div class="field-error">
+                                                <i class="fa fa-exclamation-circle"></i>
+                                                {{ form.motif.errors.0 }}
+                                            </div>
+                                        {% endif %}
+
                                         <div class="form-help">
                                             <i class="fa fa-lightbulb"></i>
                                             Saisissez librement le motif de votre dépense
@@ -457,31 +485,56 @@
                                         <label for="devise" class="form-label">
                                             Devise <span class="required">*</span>
                                         </label>
-                                        <select class="form-control" id="devise" name="devise" required>
+
+                                        <select class="form-control {% if form.devise.errors %}is-invalid{% endif %}" 
+                                                id="devise" 
+                                                name="devise" 
+                                                required>
                                             <option value="">Sélectionnez une devise</option>
-                                            <option value="USD">USD - Dollar Américain</option>
-                                            <option value="CDF">CDF - Franc Congolais</option>
+                                            <option value="USD" {% if form.devise.value == 'USD' %}selected{% endif %}>
+                                                USD - Dollar Américain
+                                            </option>
+                                            <option value="CDF" {% if form.devise.value == 'CDF' %}selected{% endif %}>
+                                                CDF - Franc Congolais
+                                            </option>
                                         </select>
+
+                                        {% if form.devise.errors %}
+                                            <div class="field-error">
+                                                <i class="fa fa-exclamation-circle"></i>
+                                                {{ form.devise.errors.0 }}
+                                            </div>
+                                        {% endif %}
                                     </div>
 
                                     <div class="col-md-6 mb-3">
                                         <label for="montant" class="form-label">
                                             Montant à décaisser <span class="required">*</span>
                                         </label>
+
                                         <div class="input-group">
                                             <input type="number" 
-                                                   class="form-control" 
+                                                   class="form-control {% if form.montant.errors %}is-invalid{% endif %}" 
                                                    id="montant" 
                                                    name="montant" 
+                                                   value="{{ form.montant.value|default_if_none:'' }}"
                                                    placeholder="0.00" 
                                                    step="0.01" 
                                                    min="0"
                                                    required>
                                             <div class="input-group-addon" id="currency-symbol">$</div>
                                         </div>
-                                        <div class="form-help">
+
+                                        {% if form.montant.errors %}
+                                            <div class="field-error">
+                                                <i class="fa fa-exclamation-circle"></i>
+                                                {{ form.montant.errors.0 }}
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="form-help" id="montant-help">
                                             <i class="fa fa-exclamation-circle"></i>
-                                            Le symbole évoluera selon la devise choisie
+                                            Le montant ne peut pas dépasser le solde encaissé aujourd’hui.
                                         </div>
                                     </div>
                                 </div>
@@ -499,10 +552,12 @@
                                         <label for="beneficiaire" class="form-label">
                                             Bénéficiaire / Fournisseur
                                         </label>
+
                                         <input type="text" 
                                                class="form-control" 
                                                id="beneficiaire" 
                                                name="beneficiaire" 
+                                               value="{{ form.beneficiaire.value|default_if_none:'' }}"
                                                placeholder="Nom de la personne ou de l'entreprise">
                                     </div>
                                 </div>
@@ -512,10 +567,12 @@
                                         <label for="description" class="form-label">
                                             Description / Justification
                                         </label>
+
                                         <textarea class="form-control" 
                                                   id="description" 
                                                   name="description" 
-                                                  placeholder="Précisez les détails de cette dépense (optionnel)"></textarea>
+                                                  placeholder="Précisez les détails de cette dépense (optionnel)">{{ form.description.value|default_if_none:'' }}</textarea>
+
                                         <div class="form-help">
                                             <i class="fa fa-info-circle"></i>
                                             Ajoutez des précisions si nécessaire
@@ -531,6 +588,7 @@
                                 <a href="{% url 'dashboard_finance' %}" class="btn btn-secondary">
                                     <i class="fa fa-arrow-left"></i> Annuler
                                 </a>
+
                                 <button type="submit" class="btn btn-success-custom">
                                     <i class="fa fa-check-circle"></i> Valider le Décaissement
                                 </button>
@@ -543,15 +601,108 @@
     </div>
 
     <script>
-        // Change currency symbol based on selection
-        document.getElementById('devise').addEventListener('change', function() {
-            const symbol = document.getElementById('currency-symbol');
-            if (this.value === 'USD') {
-                symbol.textContent = '$';
-            } else if (this.value === 'CDF') {
-                symbol.textContent = 'FC';
+        const soldeUSD = parseFloat("{{ solde_disponible_usd|floatformat:2 }}" || 0);
+        const soldeCDF = parseFloat("{{ solde_disponible_cdf|floatformat:2 }}" || 0);
+
+        const deviseSelect = document.getElementById('devise');
+        const montantInput = document.getElementById('montant');
+        const currencySymbol = document.getElementById('currency-symbol');
+        const montantHelp = document.getElementById('montant-help');
+        const form = document.getElementById('depense-form');
+
+        function getSoldeActuel() {
+            if (deviseSelect.value === 'USD') {
+                return soldeUSD;
+            }
+
+            if (deviseSelect.value === 'CDF') {
+                return soldeCDF;
+            }
+
+            return null;
+        }
+
+        function updateCurrencySymbol() {
+            if (deviseSelect.value === 'USD') {
+                currencySymbol.textContent = '$';
+            } else if (deviseSelect.value === 'CDF') {
+                currencySymbol.textContent = 'FC';
+            } else {
+                currencySymbol.textContent = '$';
+            }
+
+            updateMontantHelp();
+        }
+
+        function updateMontantHelp() {
+            const solde = getSoldeActuel();
+
+            if (solde === null) {
+                montantHelp.innerHTML = `
+                    <i class="fa fa-exclamation-circle"></i>
+                    Sélectionnez d’abord une devise.
+                `;
+                return;
+            }
+
+            const deviseLabel = deviseSelect.value === 'USD' ? 'USD' : 'CDF';
+
+            montantHelp.innerHTML = `
+                <i class="fa fa-exclamation-circle"></i>
+                Montant maximum disponible aujourd’hui : 
+                <strong>${solde.toFixed(2)} ${deviseLabel}</strong>
+            `;
+        }
+
+        function validerMontant() {
+            const solde = getSoldeActuel();
+
+            if (solde === null) {
+                return true;
+            }
+
+            const montant = parseFloat(montantInput.value || 0);
+
+            if (montant > solde) {
+                const deviseLabel = deviseSelect.value === 'USD' ? 'USD' : 'CDF';
+
+                montantInput.classList.add('is-invalid');
+
+                montantHelp.innerHTML = `
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <span style="color: var(--danger);">
+                        Montant indisponible. Vous ne pouvez dépenser que 
+                        <strong>${solde.toFixed(2)} ${deviseLabel}</strong> encaissés aujourd’hui.
+                    </span>
+                `;
+
+                return false;
+            }
+
+            montantInput.classList.remove('is-invalid');
+            updateMontantHelp();
+
+            return true;
+        }
+
+        deviseSelect.addEventListener('change', function () {
+            updateCurrencySymbol();
+            validerMontant();
+        });
+
+        montantInput.addEventListener('input', function () {
+            validerMontant();
+        });
+
+        form.addEventListener('submit', function (event) {
+            if (!validerMontant()) {
+                event.preventDefault();
             }
         });
+
+        // Initialisation
+        updateCurrencySymbol();
+        updateMontantHelp();
     </script>
 
     {% include 'back-end/includes/js.html' %}

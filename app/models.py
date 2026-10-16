@@ -13,7 +13,7 @@ import uuid
 
 # 0 Plusieurs Hopitaux
 class Hopital(models.Model):
-    nomH = models.CharField(max_length=30)
+    nomH = models.CharField(max_length=30) 
     
 
     def __str__(self):
@@ -1469,7 +1469,6 @@ class LigneMedicament(models.Model):
 # 14. DEPENSE ======================================================
 class Depense(models.Model):
     CURRENCY = [('USD', 'USD'), ('CDF', 'CDF')]
-    
 
     motif = models.CharField(max_length=50, verbose_name="Motif")
     description = models.TextField(blank=True, null=True)
@@ -1485,25 +1484,41 @@ class Depense(models.Model):
         verbose_name_plural = "Dépenses"
 
     def clean(self):
-        paiement_qs = Paiement.objects.filter(devise=self.devise)
-        depense_qs = Depense.objects.filter(devise=self.devise)
+        aujourd_hui = timezone.localdate()
+
+        # Paiements encaissés aujourd'hui uniquement
+        paiement_qs = Paiement.objects.filter(
+            devise=self.devise,
+            date_paiement__date=aujourd_hui
+        )
+
+        # Dépenses effectuées aujourd'hui uniquement
+        depense_qs = Depense.objects.filter(
+            devise=self.devise,
+            date_depense__date=aujourd_hui
+        )
 
         if self.hopital_id:
             paiement_qs = paiement_qs.filter(hopital_id=self.hopital_id)
             depense_qs = depense_qs.filter(hopital_id=self.hopital_id)
 
-        total_entrees = paiement_qs.aggregate(total=Sum('montant_verse'))['total'] or Decimal('0.00')
+        total_entrees = paiement_qs.aggregate(
+            total=Sum('montant_verse')
+        )['total'] or Decimal('0.00')
 
         if self.pk:
             depense_qs = depense_qs.exclude(pk=self.pk)
 
-        total_sorties = depense_qs.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+        total_sorties = depense_qs.aggregate(
+            total=Sum('montant')
+        )['total'] or Decimal('0.00')
+
         solde_disponible = total_entrees - total_sorties
 
         if self.montant > solde_disponible:
             raise ValidationError(
-                f"Opération refusée. Solde de caisse insuffisant en {self.devise}. "
-                f"Disponible : {solde_disponible:.2f} {self.devise}. "
+                f"Opération refusée. Vous ne pouvez dépenser que l’argent encaissé aujourd’hui en {self.devise}. "
+                f"Disponible aujourd’hui : {solde_disponible:.2f} {self.devise}. "
                 f"Montant demandé : {self.montant:.2f} {self.devise}."
             )
 

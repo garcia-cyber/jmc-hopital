@@ -15,7 +15,7 @@ class LoginForm(forms.Form):
     password = forms.CharField(max_length = 200 , widget = forms.PasswordInput(attrs={'class':'form-control'}))
 
 # creation du formulaire Utilisateurs
-# ===================================
+# =================================== 
 # ===================================
 class EmployeForm(forms.ModelForm):
     password = forms.CharField(

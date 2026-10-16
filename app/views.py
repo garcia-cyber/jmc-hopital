@@ -23,6 +23,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import ProtectedError
 from django.views.decorators.http import require_POST
+from datetime import date
 
 from .models import ClientExterne
 from .forms import ActeMedicalForm, ClientExterneFormDeux
@@ -3435,6 +3436,7 @@ def dashboard_finance(request):
 # ==================================================================================================
 @login_required
 def creer_depense(request):
+    
     role = Fonction.objects.select_related('fonctionKey', 'hopital').filter(userKey=request.user).first()
 
     fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
@@ -3442,22 +3444,42 @@ def creer_depense(request):
 
     is_admin = fonctionKey in ['admin', 'Admin', 'ADMIN', 'Administrateur']
 
+    aujourd_hui = timezone.localdate()
+
     def qs_hopital(model_qs, devise):
         qs = model_qs.filter(devise=devise)
+
         if not is_admin:
             if hopital_user_id:
                 qs = qs.filter(hopital_id=hopital_user_id)
             else:
                 qs = qs.none()
+
         return qs
 
     def solde_par_devise(devise):
-        total_entrees = qs_hopital(Paiement.objects.all(), devise).aggregate(
-            total=Coalesce(Sum('montant_verse'), Decimal('0.00'), output_field=DecimalField())
+        # Argent encaissé AUJOURD'HUI uniquement
+        total_entrees = qs_hopital(
+            Paiement.objects.filter(date_paiement__date=aujourd_hui),
+            devise
+        ).aggregate(
+            total=Coalesce(
+                Sum('montant_verse'),
+                Decimal('0.00'),
+                output_field=DecimalField()
+            )
         )['total']
 
-        total_sorties = qs_hopital(Depense.objects.all(), devise).aggregate(
-            total=Coalesce(Sum('montant'), Decimal('0.00'), output_field=DecimalField())
+        # Dépenses effectuées AUJOURD'HUI uniquement
+        total_sorties = qs_hopital(
+            Depense.objects.filter(date_depense__date=aujourd_hui),
+            devise
+        ).aggregate(
+            total=Coalesce(
+                Sum('montant'),
+                Decimal('0.00'),
+                output_field=DecimalField()
+            )
         )['total']
 
         return total_entrees - total_sorties
@@ -3467,6 +3489,7 @@ def creer_depense(request):
 
     if request.method == 'POST':
         form = DepenseForm(request.POST)
+
         if form.is_valid():
             depense = form.save(commit=False)
             depense.auteur = request.user
@@ -3474,6 +3497,7 @@ def creer_depense(request):
             if not is_admin:
                 if not hopital_user_id:
                     form.add_error(None, "Impossible de déterminer l'hôpital du gestionnaire.")
+
                     context = {
                         'form': form,
                         'titre_page': "Enregistrer une Sortie de Caisse",
@@ -3481,23 +3505,43 @@ def creer_depense(request):
                         'solde_disponible_usd': solde_disponible_usd,
                         'solde_disponible_cdf': solde_disponible_cdf,
                     }
+
                     return render(request, 'back-end/finance/creer_depense.html', context)
+
                 depense.hopital_id = hopital_user_id
 
-            try:
-                depense.full_clean()
-                depense.save()
-                messages.success(request, "La dépense a été enregistrée avec succès !")
-                return redirect('historique_depenses')
+            # Vérification : dépense limitée à l'argent encaissé aujourd'hui
+            devise = depense.devise
+            montant = depense.montant
 
-            except ValidationError as e:
-                if hasattr(e, 'message_dict'):
-                    for _, errors in e.message_dict.items():
-                        for error in errors:
+            if devise == 'USD':
+                disponible = solde_par_devise('USD')
+            else:
+                disponible = solde_par_devise('CDF')
+
+            if montant > disponible:
+                form.add_error(
+                    'montant',
+                    f"Montant indisponible. Vous ne pouvez dépenser que "
+                    f"{disponible} {devise} encaissés aujourd'hui."
+                )
+            else:
+                try:
+                    depense.full_clean()
+                    depense.save()
+
+                    messages.success(request, "La dépense a été enregistrée avec succès !")
+                    return redirect('historique_depenses')
+
+                except ValidationError as e:
+                    if hasattr(e, 'message_dict'):
+                        for _, errors in e.message_dict.items():
+                            for error in errors:
+                                form.add_error(None, error)
+                    else:
+                        for error in e.messages:
                             form.add_error(None, error)
-                else:
-                    for error in e.messages:
-                        form.add_error(None, error)
+
     else:
         form = DepenseForm()
 
@@ -3508,6 +3552,7 @@ def creer_depense(request):
         'solde_disponible_usd': solde_disponible_usd,
         'solde_disponible_cdf': solde_disponible_cdf,
     }
+
     return render(request, 'back-end/finance/creer_depense.html', context)
 
 # ==================================================================================================

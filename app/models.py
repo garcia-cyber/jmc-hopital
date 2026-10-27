@@ -1670,7 +1670,7 @@ class DemandeExamen(models.Model):
       nom_patient = self.consultation.patient.noms
     except (AttributeError, ObjectDoesNotExist):
       nom_patient = "Patient inconnu"
-    return f"{self.prestation.libelle} pour {nom_patient}"
+    return f"{self.prestation.libelle} pour {nom_patient}" 
     
 # ======================================================================================================================
 # ======================================================================================================================

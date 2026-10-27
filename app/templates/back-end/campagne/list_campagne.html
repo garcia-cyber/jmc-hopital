@@ -1,4 +1,5 @@
 {% load static %}
+{% load l10n %}
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -10,9 +11,6 @@
     <title>Gestion des campagnes | JMC ERP</title>
 
     {% include 'back-end/includes/css.html' %}
-
-    <!-- Select2 CSS (recherche dans la liste des prestations) -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <style>
         :root {
@@ -681,21 +679,22 @@
             margin-top: 8px;
         }
 
-        /* Select2 aligné sur les champs du formulaire */
-        .select2-container--default .select2-selection--single {
-            border: 1px solid #d6dfe6;
-            border-radius: 5px;
-            height: 42px;
+        /* Liste des prestations : toujours visible, jamais flottante */
+        .liste-prestations {
+            height: auto !important;
+            overflow-y: auto;
         }
 
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            color: var(--dark);
+        .liste-prestations option {
             font-size: 13px;
-            line-height: 40px;
+            padding: 7px 10px;
         }
 
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 40px;
+        .aucune-prestation {
+            color: var(--muted);
+            display: none;
+            font-size: 12px;
+            margin-top: 6px;
         }
 
         @media (max-width: 991px) {
@@ -1897,6 +1896,11 @@
 
                             {{ form.statut }}
 
+                            <small class="price-help">
+                                Choisissez « Active » pour lancer la campagne.
+                                « Brouillon » la laisse en préparation.
+                            </small>
+
                         </div>
 
                         <!-- Dates -->
@@ -1944,7 +1948,7 @@
                         <!-- ====================================================
                              PANIER DES PRESTATIONS
                              1. filtrer par catégorie
-                             2. choisir la prestation
+                             2. rechercher et choisir la prestation (liste visible)
                              3. choisir le type (incluse / supplément)
                              4. ajouter au panier
                              ==================================================== -->
@@ -1973,7 +1977,7 @@
                                             <!-- ÉTAPE 1 : catégorie -->
                                             <div class="col-md-6 mb-2">
 
-                                                <label>
+                                                <label for="filter_categorie_campagne">
                                                     1. Filtrer par catégorie
                                                 </label>
 
@@ -1996,26 +2000,29 @@
 
                                             </div>
 
-                                            <!-- ÉTAPE 2 : prestation -->
+                                            <!-- ÉTAPE 2 : recherche + liste des prestations -->
                                             <div class="col-md-6 mb-2">
 
-                                                <label>
-                                                    2. Choisir la prestation
+                                                <label for="recherche_prestation">
+                                                    2. Rechercher et choisir la prestation
                                                 </label>
 
-                                                <select id="select_prestation"
-                                                        class="form-control select-prestation">
+                                                <input type="text"
+                                                       id="recherche_prestation"
+                                                       class="form-control mb-2"
+                                                       autocomplete="off"
+                                                       placeholder="Tapez le nom de la prestation...">
 
-                                                    <option value="">
-                                                        -- Choisir une prestation --
-                                                    </option>
+                                                <select id="select_prestation"
+                                                        class="form-control liste-prestations"
+                                                        size="6">
 
                                                     {% for ligne in lignes %}
                                                         <option value="{{ ligne.prestation.pk }}"
                                                                 data-cat="{{ ligne.prestation.categorie }}"
                                                                 data-libelle="{{ ligne.prestation.libelle }}"
                                                                 data-init-type="{% if ligne.prestation.pk|stringformat:'s' in form.prestations.value %}INCLUSE{% elif ligne.prestation.pk|stringformat:'s' in form.prestations_supplement.value %}SUPPLEMENT{% endif %}"
-                                                                data-init-prix="{{ ligne.champ_prix.value|default_if_none:'' }}">
+                                                                data-init-prix="{{ ligne.champ_prix.value|default_if_none:''|unlocalize }}">
 
                                                             [{{ ligne.prestation.categorie }}]
                                                             {{ ligne.prestation.libelle }}
@@ -2024,6 +2031,11 @@
                                                     {% endfor %}
 
                                                 </select>
+
+                                                <small class="aucune-prestation"
+                                                       id="aucune_prestation">
+                                                    Aucune prestation ne correspond.
+                                                </small>
 
                                             </div>
 
@@ -2163,9 +2175,6 @@
 
 {% include 'back-end/includes/js.html' %}
 
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
     $(document).ready(function () {
 
@@ -2231,43 +2240,65 @@
             return;
         }
 
-        // On garde une copie de toutes les options pour pouvoir filtrer
+        // On garde une copie de toutes les prestations pour pouvoir filtrer
         var toutesOptions = $selectPrestation.find('option').clone();
 
-        // Liste avec recherche (dans la fenêtre modale)
-        $selectPrestation.select2({
-            placeholder: 'Rechercher une prestation...',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('#campaignModal'),
-            language: {
-                noResults: function () {
-                    return 'Aucune prestation trouvée';
-                }
-            }
-        });
+        // ---- Remplit la liste selon la catégorie et le texte tapé.
+        // Les prestations déjà dans le panier n'apparaissent plus.
+        function filtrerPrestations() {
 
-        // ---- Étape 1 : filtre par catégorie
-        $('#filter_categorie_campagne').on('change', function () {
-
-            var categorieChoisie = $(this).val();
+            var categorieChoisie = $('#filter_categorie_campagne').val();
+            var texte = $.trim($('#recherche_prestation').val()).toLowerCase();
+            var nombre = 0;
 
             $selectPrestation.empty();
 
             toutesOptions.each(function () {
 
+                var id = $(this).val();
                 var categorieOption = $(this).attr('data-cat');
+                var libelle = ($(this).attr('data-libelle') || '').toLowerCase();
 
-                if (
-                    categorieChoisie === 'all' ||
-                    !categorieOption ||
-                    categorieOption === categorieChoisie
-                ) {
-                    $selectPrestation.append($(this).clone());
+                // déjà dans le panier : on ne la propose plus
+                if ($('#presta_row_' + id).length > 0) {
+                    return;
                 }
+
+                // mauvaise catégorie
+                if (
+                    categorieChoisie !== 'all' &&
+                    categorieOption !== categorieChoisie
+                ) {
+                    return;
+                }
+
+                // le nom ne contient pas le texte tapé
+                if (texte !== '' && libelle.indexOf(texte) === -1) {
+                    return;
+                }
+
+                $selectPrestation.append($(this).clone());
+                nombre++;
             });
 
-            $selectPrestation.val('').trigger('change');
+            if (nombre === 0) {
+                $('#aucune_prestation').show();
+            } else {
+                $('#aucune_prestation').hide();
+            }
+        }
+
+        // ---- Étape 1 : filtre par catégorie
+        $('#filter_categorie_campagne').on('change', filtrerPrestations);
+
+        // ---- Étape 2 : recherche par nom
+        $('#recherche_prestation').on('input', filtrerPrestations);
+
+        // La touche Entrée ne doit pas envoyer le formulaire
+        $('#recherche_prestation').on('keydown', function (event) {
+            if (event.which === 13) {
+                event.preventDefault();
+            }
         });
 
         // ---- Étape 3 : le prix n'apparaît que pour un supplément
@@ -2281,7 +2312,7 @@
             }
         });
 
-        // ---- Met à jour le message vide et le résumé du panier
+        // ---- Met à jour le message vide, le résumé et la liste
         function majPanier() {
 
             var nbIncluses = $('#wrapper_prestations tr[data-type="INCLUSE"]').length;
@@ -2297,6 +2328,8 @@
                     nbSupplements + ' en supplément'
                 );
             }
+
+            filtrerPrestations();
         }
 
         // ---- Ajoute une ligne dans le panier
@@ -2384,7 +2417,7 @@
             var id = $selectPrestation.val();
 
             if (!id) {
-                alert('Veuillez sélectionner une prestation d\'abord.');
+                alert('Veuillez cliquer sur une prestation dans la liste.');
                 return;
             }
 
@@ -2413,7 +2446,6 @@
                 prix
             );
 
-            $selectPrestation.val('').trigger('change');
             $('#prix_supplement_ajout').val('');
         });
 

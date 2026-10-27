@@ -1,4 +1,5 @@
 {% load static %}
+{% load l10n %}
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -10,6 +11,9 @@
     <title>Modifier la campagne | JMC ERP</title>
 
     {% include 'back-end/includes/css.html' %}
+
+    <!-- Select2 CSS (recherche dans la liste des prestations) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <style>
         :root {
@@ -78,6 +82,11 @@
             font-weight: 700;
         }
 
+        label {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
         .required {
             color: var(--danger);
         }
@@ -87,6 +96,79 @@
             display: block;
             font-size: 11px;
             margin-top: 5px;
+        }
+
+        .form-check {
+            margin-top: 28px;
+        }
+
+        .form-check-label {
+            font-size: 13px;
+            font-weight: 500 !important;
+        }
+
+        /* ---------- Panier des prestations ---------- */
+
+        .panier-box {
+            background: #fbfcfd;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+        }
+
+        .panier-title {
+            color: var(--primary-dark);
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .panier-title i {
+            color: var(--primary);
+            margin-right: 6px;
+        }
+
+        .panier-table {
+            background: #fff;
+            margin-bottom: 0;
+        }
+
+        .panier-table thead th {
+            background: #f8fafc;
+            color: #697783;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 9px 10px;
+        }
+
+        .panier-table td {
+            font-size: 12px;
+            padding: 8px 10px;
+            vertical-align: middle;
+        }
+
+        .panier-resume {
+            color: var(--muted);
+            display: block;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+
+        /* Select2 aligné sur les champs du formulaire */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #d6dfe6;
+            border-radius: 5px;
+            height: 42px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--dark);
+            font-size: 13px;
+            line-height: 40px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
         }
     </style>
 </head>
@@ -146,99 +228,363 @@
 
                 <div class="erp-card-body">
 
-                    <form method="post" novalidate>
+                    <form method="post"
+                          id="campagneForm"
+                          novalidate>
 
                         {% csrf_token %}
 
-                        {% if form.non_field_errors %}
+                        <!-- Toutes les erreurs du formulaire au même endroit -->
+                        {% if form.errors %}
+
                             <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
+
+                                <strong>Veuillez corriger les points suivants :</strong>
+
+                                <ul class="mb-0 pl-3 mt-2">
+
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <li>{{ field.label }} : {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+
+                                </ul>
+
                             </div>
+
+                        {% endif %}
+
+                        <!-- Avertissement si la campagne a déjà des participants -->
+                        {% if campagne.participants.exists %}
+
+                            <div class="alert alert-warning">
+
+                                <i class="fa fa-exclamation-triangle mr-1"></i>
+
+                                Cette campagne a déjà des participants.
+                                Si vous retirez une prestation ou changez son prix,
+                                le montant à payer des examens déjà demandés
+                                peut changer.
+
+                            </div>
+
                         {% endif %}
 
                         <div class="row">
 
-                            {% for field in form %}
+                            <!-- Nom -->
+                            <div class="col-md-6 mb-3">
 
-                                {% if field.name == 'description' %}
-                                    <div class="col-md-12 mb-3">
-
-                                {% elif field.name == 'prestations' %}
-                                    <div class="col-md-12 mb-3">
-
-                                {% elif field.name == 'active' %}
-                                    <div class="col-md-12 mb-3">
-
-                                {% else %}
-                                    <div class="col-md-6 mb-3">
-
-                                {% endif %}
-
-                                    {% if field.name == 'active' %}
-
-                                        <div class="form-check">
-
-                                            {{ field }}
-
-                                            <label class="form-check-label"
-                                                   for="{{ field.id_for_label }}">
-                                                {{ field.label }}
-                                            </label>
-
-                                        </div>
-
-                                    {% else %}
-
-                                        <label for="{{ field.id_for_label }}">
-                                            {{ field.label }}
-
-                                            {% if field.field.required %}
-                                                <span class="required">*</span>
-                                            {% endif %}
-                                        </label>
-
-                                        {{ field }}
-
+                                <label for="{{ form.nom.id_for_label }}">
+                                    {{ form.nom.label }}
+                                    {% if form.nom.field.required %}
+                                        <span class="required">*</span>
                                     {% endif %}
+                                </label>
 
-                                    {% if field.name == 'prix_defaut_cdf' %}
+                                {{ form.nom }}
 
-                                        <small class="price-help">
-                                            Pour une campagne gratuite,
-                                            le prix est automatiquement fixé à 0 CDF.
-                                        </small>
+                            </div>
 
-                                    {% elif field.name == 'prestations' %}
+                            <!-- Type de campagne -->
+                            <div class="col-md-6 mb-3">
 
-                                        <small class="price-help">
-                                            Sélectionnez les prestations incluses
-                                            dans cette campagne.
-                                        </small>
-
-                                    {% elif field.help_text %}
-
-                                        <small class="price-help">
-                                            {{ field.help_text }}
-                                        </small>
-
+                                <label for="{{ form.type_campagne.id_for_label }}">
+                                    {{ form.type_campagne.label }}
+                                    {% if form.type_campagne.field.required %}
+                                        <span class="required">*</span>
                                     {% endif %}
+                                </label>
 
-                                    {% if field.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ field.errors }}
-                                        </div>
+                                {{ form.type_campagne }}
+
+                            </div>
+
+                            <!-- Description -->
+                            <div class="col-md-12 mb-3">
+
+                                <label for="{{ form.description.id_for_label }}">
+                                    {{ form.description.label }}
+                                </label>
+
+                                {{ form.description }}
+
+                            </div>
+
+                            <!-- Prix de la campagne -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="{{ form.prix_defaut_cdf.id_for_label }}">
+                                    {{ form.prix_defaut_cdf.label }}
+                                    {% if form.prix_defaut_cdf.field.required %}
+                                        <span class="required">*</span>
                                     {% endif %}
+                                </label>
+
+                                {{ form.prix_defaut_cdf }}
+
+                                <small class="price-help">
+                                    Pour une campagne gratuite,
+                                    le prix est automatiquement fixé à 0 CDF.
+                                </small>
+
+                            </div>
+
+                            <!-- Statut -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="{{ form.statut.id_for_label }}">
+                                    {{ form.statut.label }}
+                                    {% if form.statut.field.required %}
+                                        <span class="required">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {{ form.statut }}
+
+                                <small class="price-help">
+                                    Choisissez « Active » pour lancer la campagne.
+                                    « Brouillon » la laisse en préparation.
+                                </small>
+
+                            </div>
+
+                            <!-- Dates -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="{{ form.date_debut.id_for_label }}">
+                                    {{ form.date_debut.label }}
+                                    {% if form.date_debut.field.required %}
+                                        <span class="required">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {{ form.date_debut }}
+
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+
+                                <label for="{{ form.date_fin.id_for_label }}">
+                                    {{ form.date_fin.label }}
+                                </label>
+
+                                {{ form.date_fin }}
+
+                            </div>
+
+                            <!-- Campagne active -->
+                            <div class="col-md-12 mb-3">
+
+                                <div class="form-check">
+
+                                    {{ form.active }}
+
+                                    <label class="form-check-label"
+                                           for="{{ form.active.id_for_label }}">
+
+                                        {{ form.active.label }}
+
+                                    </label>
 
                                 </div>
 
-                            {% endfor %}
+                            </div>
+
+                            <!-- ====================================================
+                                 PANIER DES PRESTATIONS
+                                 1. filtrer par catégorie
+                                 2. choisir la prestation
+                                 3. choisir le type (incluse / supplément)
+                                 4. ajouter au panier
+                                 ==================================================== -->
+                            <div class="col-md-12 mb-3">
+
+                                <div class="panier-box">
+
+                                    <h6 class="panier-title">
+                                        <i class="fa fa-shopping-basket"></i>
+                                        Prestations de la campagne
+                                    </h6>
+
+                                    {% with lignes=form.lignes_prestations %}
+
+                                        {% if not lignes %}
+
+                                            <div class="alert alert-warning mb-0">
+                                                Aucune prestation n'est enregistrée
+                                                pour l'hôpital de cette campagne.
+                                            </div>
+
+                                        {% else %}
+
+                                            <div class="row">
+
+                                                <!-- ÉTAPE 1 : catégorie -->
+                                                <div class="col-md-6 mb-2">
+
+                                                    <label>
+                                                        1. Filtrer par catégorie
+                                                    </label>
+
+                                                    <select id="filter_categorie_campagne"
+                                                            class="form-control">
+
+                                                        <option value="all">
+                                                            -- Toutes les catégories --
+                                                        </option>
+
+                                                        {% for value, label in form.fields.categorie.choices %}
+                                                            {% if value %}
+                                                                <option value="{{ value }}">
+                                                                    {{ label }}
+                                                                </option>
+                                                            {% endif %}
+                                                        {% endfor %}
+
+                                                    </select>
+
+                                                </div>
+
+                                                <!-- ÉTAPE 2 : prestation -->
+                                                <div class="col-md-6 mb-2">
+
+                                                    <label>
+                                                        2. Choisir la prestation
+                                                    </label>
+
+                                                    <select id="select_prestation"
+                                                            class="form-control select-prestation">
+
+                                                        <option value="">
+                                                            -- Choisir une prestation --
+                                                        </option>
+
+                                                        {% for ligne in lignes %}
+                                                            <option value="{{ ligne.prestation.pk }}"
+                                                                    data-cat="{{ ligne.prestation.categorie }}"
+                                                                    data-libelle="{{ ligne.prestation.libelle }}"
+                                                                    data-init-type="{% if ligne.prestation.pk in form.prestations.value or ligne.prestation.pk|stringformat:'s' in form.prestations.value %}INCLUSE{% elif ligne.prestation.pk in form.prestations_supplement.value or ligne.prestation.pk|stringformat:'s' in form.prestations_supplement.value %}SUPPLEMENT{% endif %}"
+                                                                    data-init-prix="{{ ligne.champ_prix.value|default_if_none:''|unlocalize }}">
+
+                                                                [{{ ligne.prestation.categorie }}]
+                                                                {{ ligne.prestation.libelle }}
+
+                                                            </option>
+                                                        {% endfor %}
+
+                                                    </select>
+
+                                                </div>
+
+                                                <!-- ÉTAPE 3 : type -->
+                                                <div class="col-md-4 mb-2">
+
+                                                    <label for="type_inclusion_ajout">
+                                                        3. Type
+                                                    </label>
+
+                                                    <select id="type_inclusion_ajout"
+                                                            class="form-control">
+
+                                                        <option value="INCLUSE">
+                                                            Incluse dans la campagne
+                                                        </option>
+
+                                                        <option value="SUPPLEMENT">
+                                                            Supplément payant
+                                                        </option>
+
+                                                    </select>
+
+                                                </div>
+
+                                                <!-- Prix du supplément (visible seulement pour un supplément) -->
+                                                <div class="col-md-4 mb-2"
+                                                     id="bloc_prix_ajout"
+                                                     style="display: none;">
+
+                                                    <label for="prix_supplement_ajout">
+                                                        Prix du supplément (CDF)
+                                                    </label>
+
+                                                    <input type="number"
+                                                           id="prix_supplement_ajout"
+                                                           class="form-control"
+                                                           step="0.01"
+                                                           min="0"
+                                                           placeholder="Prix en CDF">
+
+                                                </div>
+
+                                                <!-- ÉTAPE 4 : ajouter -->
+                                                <div class="col-md-4 mb-2 d-flex align-items-end">
+
+                                                    <button type="button"
+                                                            id="btn_add_prestation"
+                                                            class="btn btn-primary btn-block">
+
+                                                        <i class="fa fa-plus mr-1"></i>
+                                                        Ajouter
+
+                                                    </button>
+
+                                                </div>
+
+                                            </div>
+
+                                            <!-- Le panier -->
+                                            <div class="table-responsive mt-2"
+                                                 style="min-height: 0;">
+
+                                                <table class="table table-sm table-bordered panier-table">
+
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Prestation</th>
+                                                            <th style="width: 130px;">Type</th>
+                                                            <th style="width: 190px;">Prix supplément (CDF)</th>
+                                                            <th style="width: 45px;"></th>
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody id="wrapper_prestations">
+
+                                                        <tr id="ligne_panier_vide">
+                                                            <td colspan="4"
+                                                                class="text-center text-muted">
+                                                                Aucune prestation ajoutée.
+                                                            </td>
+                                                        </tr>
+
+                                                    </tbody>
+
+                                                </table>
+
+                                            </div>
+
+                                            <small class="panier-resume"
+                                                   id="resume_panier"></small>
+
+                                        {% endif %}
+
+                                    {% endwith %}
+
+                                </div>
+
+                            </div>
 
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
 
                             <a href="{% url 'gestion_campagnes' %}"
-                               class="btn btn-outline-secondary">
+                               class="btn btn-outline-secondary mr-2">
                                 Annuler
                             </a>
 
@@ -261,6 +607,300 @@
 </div>
 
 {% include 'back-end/includes/js.html' %}
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+
+        // ======================================================
+        // PRIX DE LA CAMPAGNE (gratuite = 0 CDF)
+        // ======================================================
+
+        const typeField = $('#id_type_campagne');
+        const priceField = $('#id_prix_defaut_cdf');
+
+        function updatePriceField() {
+
+            const typeCampagne = typeField.val();
+
+            if (
+                typeCampagne === 'GRATUITE' ||
+                typeCampagne === 'COUPLE_GRATUIT'
+            ) {
+                priceField.val('0.00');
+                priceField.prop('readonly', true);
+
+                priceField
+                    .closest('.col-md-6')
+                    .find('.price-help')
+                    .text(
+                        'Cette campagne est gratuite. ' +
+                        'Le prix est fixé automatiquement à 0 CDF.'
+                    );
+
+            } else {
+
+                priceField.prop('readonly', false);
+
+                priceField
+                    .closest('.col-md-6')
+                    .find('.price-help')
+                    .text(
+                        'Saisissez le prix officiel de la campagne en CDF.'
+                    );
+            }
+        }
+
+        typeField.on('change', updatePriceField);
+
+        updatePriceField();
+
+        // ======================================================
+        // PANIER DES PRESTATIONS
+        // ======================================================
+
+        var $selectPrestation = $('#select_prestation');
+
+        // S'il n'y a aucune prestation, il n'y a rien à initialiser
+        if ($selectPrestation.length === 0) {
+            return;
+        }
+
+        // On garde une copie de toutes les options pour pouvoir filtrer
+        var toutesOptions = $selectPrestation.find('option').clone();
+
+        // Liste avec recherche
+        $selectPrestation.select2({
+            placeholder: 'Rechercher une prestation...',
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function () {
+                    return 'Aucune prestation trouvée';
+                }
+            }
+        });
+
+        // ---- Étape 1 : filtre par catégorie
+        $('#filter_categorie_campagne').on('change', function () {
+
+            var categorieChoisie = $(this).val();
+
+            $selectPrestation.empty();
+
+            toutesOptions.each(function () {
+
+                var categorieOption = $(this).attr('data-cat');
+
+                if (
+                    categorieChoisie === 'all' ||
+                    !categorieOption ||
+                    categorieOption === categorieChoisie
+                ) {
+                    $selectPrestation.append($(this).clone());
+                }
+            });
+
+            $selectPrestation.val('').trigger('change');
+        });
+
+        // ---- Étape 3 : le prix n'apparaît que pour un supplément
+        $('#type_inclusion_ajout').on('change', function () {
+
+            if ($(this).val() === 'SUPPLEMENT') {
+                $('#bloc_prix_ajout').show();
+            } else {
+                $('#bloc_prix_ajout').hide();
+                $('#prix_supplement_ajout').val('');
+            }
+        });
+
+        // ---- Met à jour le message vide et le résumé du panier
+        function majPanier() {
+
+            var nbIncluses = $('#wrapper_prestations tr[data-type="INCLUSE"]').length;
+            var nbSupplements = $('#wrapper_prestations tr[data-type="SUPPLEMENT"]').length;
+
+            if (nbIncluses + nbSupplements === 0) {
+                $('#ligne_panier_vide').show();
+                $('#resume_panier').text('');
+            } else {
+                $('#ligne_panier_vide').hide();
+                $('#resume_panier').text(
+                    nbIncluses + ' incluse(s), ' +
+                    nbSupplements + ' en supplément'
+                );
+            }
+        }
+
+        // ---- Ajoute une ligne dans le panier
+        function ajouterLigne(id, libelle, categorie, type, prix) {
+
+            var estSupplement = (type === 'SUPPLEMENT');
+
+            var ligne = $('<tr>')
+                .attr('id', 'presta_row_' + id)
+                .attr('data-type', type);
+
+            // Colonne 1 : nom de la prestation + champ caché envoyé au serveur
+            var colNom = $('<td>');
+
+            colNom.append(
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: estSupplement ? 'prestations_supplement' : 'prestations',
+                    value: id
+                })
+            );
+
+            colNom.append(
+                $('<small>')
+                    .addClass('badge badge-secondary mr-1')
+                    .text(categorie)
+            );
+
+            colNom.append(document.createTextNode(' ' + libelle));
+
+            // Colonne 2 : type
+            var colType = $('<td>');
+
+            if (estSupplement) {
+                colType.append(
+                    $('<span>').addClass('badge badge-warning').text('Supplément')
+                );
+            } else {
+                colType.append(
+                    $('<span>').addClass('badge badge-success').text('Incluse')
+                );
+            }
+
+            // Colonne 3 : prix du supplément (seulement pour un supplément)
+            var colPrix = $('<td>');
+
+            if (estSupplement) {
+                colPrix.append(
+                    $('<input>')
+                        .attr({
+                            type: 'number',
+                            name: 'prix_supplement_' + id,
+                            value: prix,
+                            step: '0.01',
+                            min: '0'
+                        })
+                        .addClass('form-control form-control-sm input-prix-supplement')
+                );
+            } else {
+                colPrix.append($('<span>').addClass('text-muted').text('-'));
+            }
+
+            // Colonne 4 : retirer
+            var colRetirer = $('<td>').addClass('text-center');
+
+            colRetirer.append(
+                $('<button>')
+                    .attr('type', 'button')
+                    .addClass('btn btn-sm btn-outline-danger btn-retirer-prestation')
+                    .attr('data-id', id)
+                    .html('<i class="fa fa-times"></i>')
+            );
+
+            ligne.append(colNom, colType, colPrix, colRetirer);
+
+            $('#wrapper_prestations').append(ligne);
+
+            majPanier();
+        }
+
+        // ---- Étape 4 : bouton Ajouter
+        $('#btn_add_prestation').on('click', function () {
+
+            var option = $selectPrestation.find('option:selected');
+            var id = $selectPrestation.val();
+
+            if (!id) {
+                alert('Veuillez sélectionner une prestation d\'abord.');
+                return;
+            }
+
+            if ($('#presta_row_' + id).length > 0) {
+                alert('Cette prestation a déjà été ajoutée.');
+                return;
+            }
+
+            var type = $('#type_inclusion_ajout').val();
+            var prix = $('#prix_supplement_ajout').val();
+
+            if (type === 'SUPPLEMENT') {
+                if (!prix || parseFloat(prix) <= 0) {
+                    alert('Saisissez le prix du supplément (supérieur à zéro).');
+                    return;
+                }
+            } else {
+                prix = '';
+            }
+
+            ajouterLigne(
+                id,
+                option.attr('data-libelle'),
+                option.attr('data-cat'),
+                type,
+                prix
+            );
+
+            $selectPrestation.val('').trigger('change');
+            $('#prix_supplement_ajout').val('');
+        });
+
+        // ---- Retirer une ligne du panier
+        $(document).on('click', '.btn-retirer-prestation', function () {
+            $('#presta_row_' + $(this).attr('data-id')).remove();
+            majPanier();
+        });
+
+        // ---- Vérification avant l'envoi : chaque supplément doit avoir un prix
+        $('#campagneForm').on('submit', function (event) {
+
+            var prixManquant = false;
+
+            $('.input-prix-supplement').each(function () {
+                var valeur = parseFloat($(this).val());
+                if (isNaN(valeur) || valeur <= 0) {
+                    prixManquant = true;
+                    $(this).addClass('is-invalid');
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+
+            if (prixManquant) {
+                event.preventDefault();
+                alert('Chaque prestation en supplément doit avoir un prix supérieur à zéro.');
+            }
+        });
+
+        // ---- Remet dans le panier les prestations déjà enregistrées
+        // (ou ce que l'utilisateur avait choisi si le formulaire a des erreurs)
+        toutesOptions.each(function () {
+
+            var typeInitial = $(this).attr('data-init-type');
+
+            if (typeInitial) {
+                ajouterLigne(
+                    $(this).val(),
+                    $(this).attr('data-libelle'),
+                    $(this).attr('data-cat'),
+                    typeInitial,
+                    $(this).attr('data-init-prix') || ''
+                );
+            }
+        });
+
+        majPanier();
+
+    });
+</script>
 
 </body>
 

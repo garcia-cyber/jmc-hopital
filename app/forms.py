@@ -1265,208 +1265,329 @@ class PaiementActeForm(forms.Form):
 
 class CampagneForm(forms.ModelForm):
 
-    # Champ temporaire :
-    # sert uniquement à filtrer les prestations par catégorie.
-    categorie = forms.ChoiceField(
-        choices=[('', '---------')] + list(Prestation.CATEGORIES),
+  # Champ temporaire :
+  # sert uniquement à filtrer les prestations par catégorie.
+  categorie = forms.ChoiceField(
+    choices=[('', '---------')] + list(Prestation.CATEGORIES),
+    required=False,
+    widget=forms.Select(
+      attrs={
+        'class': 'form-control',
+        'id': 'categoriePrestation',
+      }
+    ),
+    label='Catégorie de prestation',
+  )
+
+  # ---- Prestations incluses dans le prix de la campagne
+  prestations = forms.ModelMultipleChoiceField(
+    queryset=Prestation.objects.none(),
+    required=False,
+    widget=forms.CheckboxSelectMultiple,
+    label='Prestations incluses',
+  )
+
+  # ---- NOUVEAU : prestations payantes en supplément
+  prestations_supplement = forms.ModelMultipleChoiceField(
+    queryset=Prestation.objects.none(),
+    required=False,
+    widget=forms.CheckboxSelectMultiple,
+    label='Prestations en supplément (payantes)',
+  )
+
+  class Meta:
+    model = Campagne
+
+    fields = [
+      'nom',
+      'description',
+      'type_campagne',
+      'prix_defaut_cdf',
+      'date_debut',
+      'date_fin',
+      'statut',
+      'active',
+    ]
+
+    widgets = {
+      'nom': forms.TextInput(
+        attrs={
+          'class': 'form-control',
+          'placeholder': 'Nom de la campagne',
+        }
+      ),
+      'description': forms.Textarea(
+        attrs={
+          'class': 'form-control',
+          'rows': 4,
+          'placeholder': 'Description de la campagne',
+        }
+      ),
+      'type_campagne': forms.Select(
+        attrs={
+          'class': 'form-control',
+        }
+      ),
+      'prix_defaut_cdf': forms.NumberInput(
+        attrs={
+          'class': 'form-control',
+          'step': '0.01',
+          'min': '0',
+          'placeholder': 'Exemple : 25000.00',
+        }
+      ),
+      'date_debut': forms.DateInput(
+        format='%Y-%m-%d',
+        attrs={
+          'class': 'form-control',
+          'type': 'date',
+        }
+      ),
+      'date_fin': forms.DateInput(
+        format='%Y-%m-%d',
+        attrs={
+          'class': 'form-control',
+          'type': 'date',
+        }
+      ),
+      'statut': forms.Select(
+        attrs={
+          'class': 'form-control',
+        }
+      ),
+      'active': forms.CheckboxInput(
+        attrs={
+          'class': 'form-check-input',
+        }
+      ),
+    }
+
+    labels = {
+      'nom': 'Nom de la campagne',
+      'description': 'Description',
+      'type_campagne': 'Type de campagne',
+      'prix_defaut_cdf': 'Prix de la campagne en CDF',
+      'date_debut': 'Date de début',
+      'date_fin': 'Date de fin',
+      'statut': 'Statut',
+      'active': 'Campagne active',
+    }
+
+  def __init__(self, *args, **kwargs):
+    self.hopital = kwargs.pop('hopital', None)
+
+    super().__init__(*args, **kwargs)
+
+    # Catégories de prestations
+    self.fields['categorie'].choices = [
+      ('', '---------')
+    ] + list(Prestation.CATEGORIES)
+
+    # Prestations filtrées selon l'hôpital
+    if self.hopital:
+      queryset = Prestation.objects.filter(
+        hopital=self.hopital
+      )
+    else:
+      queryset = Prestation.objects.none()
+
+    self.fields['prestations'].queryset = queryset
+    self.fields['prestations_supplement'].queryset = queryset
+
+    # ---- NOUVEAU : un champ prix pour chaque prestation
+    # (utilisé seulement si la prestation est en supplément)
+    for prestation in queryset:
+      self.fields[f'prix_supplement_{prestation.pk}'] = forms.DecimalField(
         required=False,
-        widget=forms.Select(
-            attrs={
-                'class': 'form-control',
-                'id': 'categoriePrestation',
-            }
+        min_value=Decimal('0.00'),
+        max_digits=15,
+        decimal_places=2,
+        label=f'Prix supplément : {prestation.libelle}',
+        widget=forms.NumberInput(
+          attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0',
+            'placeholder': 'Prix en CDF',
+          }
         ),
-        label='Catégorie de prestation',
-    )
+      )
 
-    prestations = forms.ModelMultipleChoiceField(
-        queryset=Prestation.objects.none(),
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label='Prestations incluses',
-    )
+    # En modification :
+    # pré-cocher les prestations déjà associées à la campagne
+    if self.instance and self.instance.pk:
 
-    class Meta:
-        model = Campagne
+      # ---- prestations incluses
+      self.fields['prestations'].initial = Prestation.objects.filter(
+        campagnes_associees__campagne=self.instance,
+        campagnes_associees__type_inclusion='INCLUSE'
+      )
 
-        fields = [
-            'nom',
-            'description',
-            'type_campagne',
-            'prix_defaut_cdf',
-            'date_debut',
-            'date_fin',
-            'statut',
-            'active',
-        ]
+      # ---- prestations en supplément
+      self.fields['prestations_supplement'].initial = Prestation.objects.filter(
+        campagnes_associees__campagne=self.instance,
+        campagnes_associees__type_inclusion='SUPPLEMENT'
+      )
 
-        widgets = {
-            'nom': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Nom de la campagne',
-                }
-            ),
-            'description': forms.Textarea(
-                attrs={
-                    'class': 'form-control',
-                    'rows': 4,
-                    'placeholder': 'Description de la campagne',
-                }
-            ),
-            'type_campagne': forms.Select(
-                attrs={
-                    'class': 'form-control',
-                }
-            ),
-            'prix_defaut_cdf': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'step': '0.01',
-                    'min': '0',
-                    'placeholder': 'Exemple : 25000.00',
-                }
-            ),
-            'date_debut': forms.DateInput(
-                format='%Y-%m-%d',
-                attrs={
-                    'class': 'form-control',
-                    'type': 'date',
-                }
-            ),
-            'date_fin': forms.DateInput(
-                format='%Y-%m-%d',
-                attrs={
-                    'class': 'form-control',
-                    'type': 'date',
-                }
-            ),
-            'statut': forms.Select(
-                attrs={
-                    'class': 'form-control',
-                }
-            ),
-            'active': forms.CheckboxInput(
-                attrs={
-                    'class': 'form-check-input',
-                }
-            ),
-        }
+      # ---- prix déjà enregistrés des suppléments
+      liens_supplement = CampagnePrestation.objects.filter(
+        campagne=self.instance,
+        type_inclusion='SUPPLEMENT'
+      )
 
-        labels = {
-            'nom': 'Nom de la campagne',
-            'description': 'Description',
-            'type_campagne': 'Type de campagne',
-            'prix_defaut_cdf': 'Prix de la campagne en CDF',
-            'date_debut': 'Date de début',
-            'date_fin': 'Date de fin',
-            'statut': 'Statut',
-            'active': 'Campagne active',
-        }
+      for lien in liens_supplement:
+        nom_champ = f'prix_supplement_{lien.prestation_id}'
+        if nom_champ in self.fields:
+          self.fields[nom_champ].initial = lien.prix_supplement_cdf
 
-    def __init__(self, *args, **kwargs):
-        self.hopital = kwargs.pop('hopital', None)
+  # ---- NOUVEAU : aide pour le template
+  # donne pour chaque prestation son champ prix
+  @property
+  def lignes_prestations(self):
+    lignes = []
+    for prestation in self.fields['prestations'].queryset:
+      nom_champ = f'prix_supplement_{prestation.pk}'
+      lignes.append({
+        'prestation': prestation,
+        'champ_prix': self[nom_champ],
+      })
+    return lignes
 
-        super().__init__(*args, **kwargs)
+  def clean_prestations(self):
+    prestations = self.cleaned_data.get('prestations')
 
-        # Catégories de prestations
-        self.fields['categorie'].choices = [
-            ('', '---------')
-        ] + list(Prestation.CATEGORIES)
+    if prestations and prestations.count() != len(set(prestations)):
+      raise forms.ValidationError(
+        "Une prestation ne peut pas être sélectionnée deux fois."
+      )
 
-        # Prestations filtrées selon l'hôpital
-        if self.hopital:
-            self.fields['prestations'].queryset = Prestation.objects.filter(
-                hopital=self.hopital
-            )
-        else:
-            self.fields['prestations'].queryset = Prestation.objects.none()
+    return prestations
 
-        # En modification :
-        # pré-cocher les prestations déjà associées à la campagne
-        if self.instance and self.instance.pk:
-            self.fields['prestations'].initial = Prestation.objects.filter(
-                campagnes_associees__campagne=self.instance
-            )
+  def clean(self):
+    cleaned_data = super().clean()
 
-    def clean_prestations(self):
-        prestations = self.cleaned_data.get('prestations')
+    type_campagne = cleaned_data.get('type_campagne')
+    prix = cleaned_data.get('prix_defaut_cdf')
+    date_debut = cleaned_data.get('date_debut')
+    date_fin = cleaned_data.get('date_fin')
 
-        if prestations and prestations.count() != len(set(prestations)):
-            raise forms.ValidationError(
-                "Une prestation ne peut pas être sélectionnée deux fois."
-            )
+    types_gratuits = [
+      Campagne.TYPE_GRATUITE,
+      Campagne.TYPE_COUPLE_GRATUIT,
+    ]
 
-        return prestations
+    types_payants = [
+      Campagne.TYPE_PAYANTE,
+      Campagne.TYPE_COUPLE,
+    ]
 
-    def clean(self):
-        cleaned_data = super().clean()
+    if type_campagne in types_gratuits:
+      cleaned_data['prix_defaut_cdf'] = Decimal('0.00')
 
-        type_campagne = cleaned_data.get('type_campagne')
-        prix = cleaned_data.get('prix_defaut_cdf')
-        date_debut = cleaned_data.get('date_debut')
-        date_fin = cleaned_data.get('date_fin')
+    elif type_campagne in types_payants:
+      if prix is None:
+        self.add_error(
+          'prix_defaut_cdf',
+          "Veuillez saisir le prix de la campagne."
+        )
 
-        types_gratuits = [
-            Campagne.TYPE_GRATUITE,
-            Campagne.TYPE_COUPLE_GRATUIT,
-        ]
+      elif prix <= Decimal('0.00'):
+        self.add_error(
+          'prix_defaut_cdf',
+          "Le prix doit être supérieur à zéro."
+        )
 
-        types_payants = [
-            Campagne.TYPE_PAYANTE,
-            Campagne.TYPE_COUPLE,
-        ]
+    if date_debut and date_fin and date_fin < date_debut:
+      self.add_error(
+        'date_fin',
+        "La date de fin ne peut pas être avant "
+        "la date de début."
+      )
 
-        if type_campagne in types_gratuits:
-            cleaned_data['prix_defaut_cdf'] = Decimal('0.00')
+    # ---- NOUVEAU : vérification des suppléments
+    incluses = list(cleaned_data.get('prestations') or [])
+    supplements = list(cleaned_data.get('prestations_supplement') or [])
 
-        elif type_campagne in types_payants:
-            if prix is None:
-                self.add_error(
-                    'prix_defaut_cdf',
-                    "Veuillez saisir le prix de la campagne."
-                )
+    for prestation in supplements:
 
-            elif prix <= Decimal('0.00'):
-                self.add_error(
-                    'prix_defaut_cdf',
-                    "Le prix doit être supérieur à zéro."
-                )
+      # une prestation ne peut pas être incluse ET en supplément
+      if prestation in incluses:
+        self.add_error(
+          'prestations_supplement',
+          f"« {prestation.libelle} » ne peut pas être incluse "
+          f"et en supplément en même temps."
+        )
 
-        if date_debut and date_fin and date_fin < date_debut:
-            self.add_error(
-                'date_fin',
-                "La date de fin ne peut pas être avant "
-                "la date de début."
-            )
+      # un supplément doit avoir un prix supérieur à zéro
+      nom_champ = f'prix_supplement_{prestation.pk}'
+      prix_supp = cleaned_data.get(nom_champ)
 
-        return cleaned_data
+      if prix_supp is None or prix_supp <= Decimal('0.00'):
+        self.add_error(
+          nom_champ,
+          "Le prix du supplément doit être supérieur à zéro."
+        )
 
-    def save(self, commit=True):
-        campagne = super().save(commit=False)
+    return cleaned_data
 
-        prestations = self.cleaned_data.get('prestations')
+  # ---- NOUVEAU : enregistre les prestations de la campagne
+  def _enregistrer_prestations(self, campagne):
 
-        if commit:
-            campagne.save()
+    # Supprimer les anciennes liaisons
+    CampagnePrestation.objects.filter(
+      campagne=campagne
+    ).delete()
 
-            # Supprimer les anciennes liaisons
-            CampagnePrestation.objects.filter(
-                campagne=campagne
-            ).delete()
+    liaisons = []
 
-            # Créer les nouvelles liaisons
-            CampagnePrestation.objects.bulk_create(
-                [
-                    CampagnePrestation(
-                        campagne=campagne,
-                        prestation=prestation,
-                    )
-                    for prestation in prestations
-                ]
-            )
+    # ---- prestations incluses : prix supplément = 0
+    for prestation in self.cleaned_data.get('prestations') or []:
+      liaisons.append(
+        CampagnePrestation(
+          campagne=campagne,
+          prestation=prestation,
+          type_inclusion='INCLUSE',
+          prix_supplement_cdf=Decimal('0.00'),
+        )
+      )
 
-        return campagne
+    # ---- prestations en supplément : avec leur prix
+    for prestation in self.cleaned_data.get('prestations_supplement') or []:
+      prix_supp = self.cleaned_data.get(
+        f'prix_supplement_{prestation.pk}'
+      ) or Decimal('0.00')
+
+      liaisons.append(
+        CampagnePrestation(
+          campagne=campagne,
+          prestation=prestation,
+          type_inclusion='SUPPLEMENT',
+          prix_supplement_cdf=prix_supp,
+        )
+      )
+
+    # Créer les nouvelles liaisons
+    CampagnePrestation.objects.bulk_create(liaisons)
+
+  def save(self, commit=True):
+    campagne = super().save(commit=False)
+
+    if commit:
+      campagne.save()
+      self._enregistrer_prestations(campagne)
+
+    else:
+      # ---- ta vue appelle form.save_m2m() après campagne.save() 
+      # on ajoute l'enregistrement des prestations à ce moment-là
+      ancien_save_m2m = self.save_m2m
+
+      def nouveau_save_m2m():
+        ancien_save_m2m()
+        self._enregistrer_prestations(campagne)
+
+      self.save_m2m = nouveau_save_m2m
+
+    return campagne
 
 
 # ============================================================

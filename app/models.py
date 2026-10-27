@@ -15,6 +15,7 @@ import uuid
 class Hopital(models.Model):
     nomH = models.CharField(max_length=30) 
     
+    
 
     def __str__(self):
         return self.nomH
@@ -550,6 +551,10 @@ class CampagnePrestation(models.Model):
         )
 
 
+
+
+
+
 # ============================================================
 # PARTICIPANT A UNE CAMPAGNE
 # ============================================================
@@ -719,7 +724,7 @@ class CampagneParticipant(models.Model):
         return (
             f"{self.nom_personne} - {self.campagne.nom} - "
             f"{self.nombre_personnes} personne(s)"
-        )
+        ) 
 
 
 
@@ -1412,177 +1417,260 @@ class SigneVital(models.Model):
 #
 #
 class Consultation(models.Model):
-    triage = models.OneToOneField(
-        SigneVital,
-        db_index=True,
-        on_delete=models.CASCADE
+  triage = models.OneToOneField(
+    SigneVital,
+    db_index=True,
+    on_delete=models.CASCADE
+  )
+
+  medecin = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.SET_NULL,
+    null=True
+  )
+
+  motif_consultation = models.TextField(
+    verbose_name="Motif"
+  )
+
+  antecedent = models.CharField(
+    max_length=255,
+    null=True,
+    blank=True
+  )
+
+  histoire_maladie = models.TextField(
+    verbose_name="Histoire de la maladie"
+  )
+
+  examen_physique = models.TextField(
+    verbose_name="Examen physique"
+  )
+
+  complement_d_anamnese = models.CharField(
+    max_length=200,
+    null=True
+  )
+
+  hypothese_diagnostique = models.TextField(
+    verbose_name="Hypothèse diagnostique"
+  )
+
+  date_creation = models.DateTimeField(
+    default=timezone.now
+  )
+
+  consultation_payee = models.BooleanField(
+    default=False,
+    verbose_name="Consultation payée"
+  )
+
+  session = models.OneToOneField(
+    SessionSoins,
+    on_delete=models.CASCADE,
+    null=True
+  )
+
+  hopital = models.ForeignKey(
+    Hopital,
+    on_delete=models.SET_NULL,
+    null=True
+  )
+
+  diagnostic_final = models.TextField(
+    blank=True,
+    null=True
+  )
+
+  # ============================================================
+  # RELATION CAMPAGNE
+  # ============================================================
+
+  campagne = models.ForeignKey(
+    'Campagne',
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='consultations',
+    verbose_name="Campagne"
+  )
+
+  # ============================================================
+  # PROPRIÉTÉS
+  # ============================================================
+
+  @property
+  def patient(self):
+    """Retourne le patient associé au triage."""
+    return self.triage.patient
+
+  @property
+  def est_consultation_campagne(self):
+    """Indique si cette consultation est liée à une campagne."""
+    return self.campagne_id is not None
+
+  @property
+  def participant_campagne(self):
+    """
+    Retourne l'inscription du patient à la campagne,
+    sans modifier la consultation ni supprimer des informations.
+    """
+    if not self.campagne_id or not self.triage_id:
+      return None
+
+    return CampagneParticipant.objects.filter(
+      patient=self.triage.patient,
+      campagne=self.campagne
+    ).select_related(
+      'campagne',
+      'patient'
+    ).first()
+
+  @property
+  def est_accessible(self):
+    """
+    Le médecin peut-il voir cette consultation ?
+
+    - Consultation normale : on garde la règle consultation_payee.
+    - Campagne gratuite : toujours accessible.
+    - Campagne payante : accessible dès que le patient a payé
+      quelque chose (paiement total ou partiel).
+    """
+    # ---- consultation normale : on garde la règle du paiement
+    if not self.campagne_id:
+      return self.consultation_payee
+
+    # ---- campagne gratuite : toujours accessible
+    if self.campagne.est_gratuite:
+      return True
+
+    # ---- campagne payante : accessible si le patient a payé quelque chose
+    participant = self.participant_campagne
+    if participant and participant.montant_paye_cdf > 0:
+      return True
+
+    # ---- sinon on garde l'ancienne règle
+    return self.consultation_payee
+
+  @property
+  def total_examens_a_payer(self):
+    """
+    Total à payer pour tous les examens de la consultation.
+    Chaque examen calcule son propre prix (normal, inclus,
+    supplément ou ajouté par le médecin).
+    """
+    # ---- on additionne le prix à payer de chaque examen
+    return sum(
+      (examen.get_prix_a_payer() for examen in self.examens.all()),
+      Decimal('0.00')
     )
 
-    medecin = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True
+  def __str__(self):
+    return (
+      f"Consultation de {self.triage.patient.noms} "
+      f"le {self.date_creation.strftime('%d/%m/%Y')}"
     )
-
-    motif_consultation = models.TextField(
-        verbose_name="Motif"
-    )
-
-    antecedent = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True
-    )
-
-    histoire_maladie = models.TextField(
-        verbose_name="Histoire de la maladie"
-    )
-
-    examen_physique = models.TextField(
-        verbose_name="Examen physique"
-    )
-
-    complement_d_anamnese = models.CharField(
-        max_length=200,
-        null=True
-    )
-
-    hypothese_diagnostique = models.TextField(
-        verbose_name="Hypothèse diagnostique"
-    )
-
-    date_creation = models.DateTimeField(
-        default=timezone.now
-    )
-
-    consultation_payee = models.BooleanField(
-        default=False,
-        verbose_name="Consultation payée"
-    )
-
-    session = models.OneToOneField(
-        SessionSoins,
-        on_delete=models.CASCADE,
-        null=True
-    )
-
-    hopital = models.ForeignKey(
-        Hopital,
-        on_delete=models.SET_NULL,
-        null=True
-    )
-
-    diagnostic_final = models.TextField(
-        blank=True,
-        null=True
-    )
-
-    # ============================================================
-    # RELATION CAMPAGNE
-    # ============================================================
-
-    campagne = models.ForeignKey(
-        'Campagne',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='consultations',
-        verbose_name="Campagne"
-    )
-
-    # ============================================================
-    # PROPRIÉTÉS
-    # ============================================================
-
-    @property
-    def patient(self):
-        """Retourne le patient associé au triage."""
-        return self.triage.patient
-
-    @property
-    def est_consultation_campagne(self):
-        """Indique si cette consultation est liée à une campagne."""
-        return self.campagne_id is not None
-
-    @property
-    def est_accessible(self):
-        """
-        Consultation normale :
-            conserve la règle consultation_payee.
-
-        Consultation de campagne gratuite :
-            accessible sans paiement du forfait de base.
-
-        Consultation de campagne payante :
-            utilise consultation_payee, à renseigner par le flux
-            de paiement et d'inscription à la campagne.
-        """
-        if self.campagne_id and self.campagne.est_gratuite:
-            return True
-
-        return self.consultation_payee
-
-    @property
-    def total_examens_a_payer(self):
-        """
-        Calcul existant conservé.
-
-        Attention : ce calcul utilise encore le prix normal des
-        prestations. Il devra être adapté après la mise à jour
-        de DemandeExamen pour distinguer les examens inclus,
-        les suppléments et les examens ajoutés par le médecin.
-        """
-        examens_lies = self.examens.all()
-
-        return sum(
-            (
-                examen.prestation.prix * examen.quantite
-                for examen in examens_lies
-                if examen.prestation and examen.prestation.prix
-            ),
-            Decimal('0.00')
-        )
-
-    def __str__(self):
-        return (
-            f"Consultation de {self.triage.patient.noms} "
-            f"le {self.date_creation.strftime('%d/%m/%Y')}"
-        )
 
 
     
 # 11. DEMANDE EXAMEN ===============================================
 class DemandeExamen(models.Model):
-    STATUT = [
-        ('EN_ATTENTE', 'En attente'),
-        ('TERMINE', 'Terminé'),
-        ('ANNULE', 'Annulé'),
-    ]
-    
-    consultation = models.ForeignKey('Consultation', related_name='examens', on_delete=models.CASCADE)
-    prestation = models.ForeignKey('Prestation', on_delete=models.PROTECT)
-    indication = models.TextField(blank=True, help_text="Note du médecin pour le technicien")
-    resultat = models.TextField(blank=True, null=True)
-    image_resultat = models.ImageField(upload_to='resultats_examens/', blank=True, null=True)
-    technicien = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        related_name='examens_realises', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True
-    )
-    statut = models.CharField(max_length=20, choices=STATUT, default='EN_ATTENTE')
-    date_demande = models.DateTimeField(default=timezone.now)
-    date_realisation = models.DateTimeField(null=True, blank=True)
-    quantite = models.PositiveIntegerField(default=1)
-    hopital = models.ForeignKey(Hopital , on_delete= models.SET_NULL , null = True)
+  STATUT = [
+    ('EN_ATTENTE', 'En attente'),
+    ('TERMINE', 'Terminé'),
+    ('ANNULE', 'Annulé'),
+  ]
 
-    def __str__(self):
-        try:
-            nom_patient = self.consultation.patient.noms  # ⚠️ adapte selon ton modèle Consultation
-        except (AttributeError, ObjectDoesNotExist):
-            nom_patient = "Patient inconnu"
-        return f"{self.prestation.libelle} pour {nom_patient}"
+  # ---- d'où vient cet examen ?
+  ORIGINE = [
+    ('NORMAL', 'Consultation normale'),
+    ('INCLUSE', 'Incluse dans la campagne'),
+    ('SUPPLEMENT', 'Supplément de la campagne'),
+    ('AJOUTE_MEDECIN', 'Ajoutée par le médecin'),
+  ]
+
+  consultation = models.ForeignKey('Consultation', related_name='examens', on_delete=models.CASCADE)
+  prestation = models.ForeignKey('Prestation', on_delete=models.PROTECT)
+  indication = models.TextField(blank=True, help_text="Note du médecin pour le technicien")
+  resultat = models.TextField(blank=True, null=True)
+  image_resultat = models.ImageField(upload_to='resultats_examens/', blank=True, null=True)
+  technicien = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    related_name='examens_realises',
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True
+  )
+  statut = models.CharField(max_length=20, choices=STATUT, default='EN_ATTENTE')
+  date_demande = models.DateTimeField(default=timezone.now)
+  date_realisation = models.DateTimeField(null=True, blank=True)
+  quantite = models.PositiveIntegerField(default=1)
+  hopital = models.ForeignKey(Hopital, on_delete=models.SET_NULL, null=True)
+
+  # ---- NOUVEAU : origine de l'examen (les anciens restent NORMAL)
+  origine = models.CharField(
+    max_length=20,
+    choices=ORIGINE,
+    default='NORMAL',
+    verbose_name="Origine de l'examen"
+  )
+
+  # ---- NOUVEAU : cet examen est-il payé ? (utile pour supplément et ajout du médecin)
+  paye = models.BooleanField(
+    default=False,
+    verbose_name="Examen payé"
+  )
+
+  # ---- Le médecin voit-il cet examen ?
+  @property
+  def visible_par_medecin(self):
+    # supplément non payé = caché pour le médecin
+    if self.origine == 'SUPPLEMENT' and not self.paye:
+      return False
+    return True
+
+  # ---- Le technicien peut-il le réaliser ?
+  @property
+  def realisable_par_technicien(self):
+    # normal ou inclus dans le forfait = oui
+    if self.origine in ['NORMAL', 'INCLUSE']:
+      return True
+    # supplément ou ajout du médecin = seulement si payé
+    return self.paye
+
+  # ---- Combien le patient doit-il payer pour cet examen ?
+  def get_prix_a_payer(self):
+    # anciens examens et examens normaux : prix normal (comme avant)
+    if self.origine == 'NORMAL':
+      return (self.prestation.prix or Decimal('0.00')) * self.quantite
+
+    # examen retiré par le médecin : rien à payer
+    if self.statut == 'ANNULE':
+      return Decimal('0.00')
+
+    # inclus dans le forfait de la campagne : rien à payer
+    if self.origine == 'INCLUSE':
+      return Decimal('0.00')
+
+    # supplément de la campagne : prix prévu dans CampagnePrestation
+    if self.origine == 'SUPPLEMENT':
+      lien = CampagnePrestation.objects.filter(
+        campagne=self.consultation.campagne,
+        prestation=self.prestation
+      ).first()
+      if lien:
+        return lien.get_prix_a_payer()
+      return Decimal('0.00')
+
+    # ajouté par le médecin : prix normal de la prestation
+    return (self.prestation.prix or Decimal('0.00')) * self.quantite
+
+  def __str__(self):
+    try:
+      nom_patient = self.consultation.patient.noms
+    except (AttributeError, ObjectDoesNotExist):
+      nom_patient = "Patient inconnu"
+    return f"{self.prestation.libelle} pour {nom_patient}"
     
 # ======================================================================================================================
 # ======================================================================================================================

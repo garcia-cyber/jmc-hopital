@@ -1,0 +1,150 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Nouveau patient de campagne | JMC ERP</title>
+
+    {% include 'back-end/includes/css.html' %}
+
+    <style>
+        body {
+            background: #f3f5f8;
+            color: #263238;
+        }
+
+        .participant-card {
+            background: #fff;
+            border: 1px solid #e1e7ec;
+            border-radius: 8px;
+            margin: 35px auto;
+            max-width: 850px;
+            overflow: hidden;
+        }
+
+        .participant-header {
+            background: #1f4e79;
+            color: #fff;
+            padding: 20px 25px;
+        }
+
+        .participant-header h3 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .participant-body {
+            padding: 25px;
+        }
+
+        .participant-body label {
+            font-weight: 600;
+        }
+
+        .participant-body input,
+        .participant-body select,
+        .participant-body textarea {
+            width: 100%;
+        }
+
+        .participant-footer {
+            background: #fafbfc;
+            border-top: 1px solid #e1e7ec;
+            padding: 15px 25px;
+            text-align: right;
+        }
+
+        .errorlist {
+            color: #bd342a;
+            list-style: none;
+            margin: 5px 0 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+<div class="main-wrapper">
+
+    {% include 'back-end/includes/header.html' %}
+    {% include 'back-end/includes/sidebar.html' %}
+
+    <div class="page-wrapper">
+        <div class="content container-fluid">
+
+            <div class="participant-card">
+                <div class="participant-header">
+                    <h3>
+                        <i class="fa fa-user-plus mr-2"></i>
+                        Nouveau patient de campagne
+                    </h3>
+
+                    <div class="mt-2">
+                        Campagne : <strong>{{ campagne.nom }}</strong>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="participant-body">
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        {{ form.non_field_errors }}
+
+                        <div class="row">
+                            {% for field in form %}
+                                <div class="col-md-6 mb-3">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">
+                                            {{ field.help_text }}
+                                        </small>
+                                    {% endif %}
+
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="alert alert-info">
+                            Le patient est enregistré et inscrit à la campagne
+                            en une seule étape. Si le patient existe déjà dans
+                            l'hôpital, il est retrouvé et inscrit sans doublon.
+                            Le paiement se fait à la caisse.
+                        </div>
+                    </div>
+
+                    <div class="participant-footer">
+                        <a href="{% url 'participants_campagne' campagne.pk %}"
+                           class="btn btn-secondary">
+                            Annuler
+                        </a>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save mr-1"></i>
+                            Enregistrer le patient
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'back-end/includes/js.html' %}
+</body>
+</html>

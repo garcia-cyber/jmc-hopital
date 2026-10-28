@@ -110,7 +110,7 @@ urlpatterns =[
     # MEDECIN
     path('medecin/consultations-en-attente/', views.liste_consultation_medecin, name='liste_consultation_medecin'),
     path('medecin/marquer-consulte/<int:sv_id>/', views.marquer_consulte, name='marquer_consulte'),
-    path('consultation/<int:triage_id>/', views.consultation_medicale, name='consultation_medicale'),
+    path('consultation/<int:triage_id>/', views.consultation_medicale, name='consultation_medicale'), 
     path('medecin/consultations/historique/', views.liste_consultations_terminees, name='liste_consultations'),
     path("medecin/consultation/<int:consultation_id>/modifier/",views.modifier_consultation,name="modifier_consultation"),
     path('consultation/<int:pk>/', views.detail_consultation, name='detail_consultation'),
@@ -412,6 +412,13 @@ path('campagnes/<int:campagne_id>/participants/',views.participants_campagne,nam
         views.modifier_participant_campagne,
         name='modifier_participant_campagne',
     ),
+
+     path(
+   'campagne/<int:campagne_id>/nouveau-patient/',
+ views.enregistrer_patient_campagne,
+  name='enregistrer_patient_campagne',
+),
+
 
     # -- le service worker doit être à la racine du site --
   path('serviceworker.js', views.service_worker),

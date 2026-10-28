@@ -728,7 +728,11 @@ class CampagneParticipant(models.Model):
 
 
 
-# 6. PATIENT =======================================================
+# 6. PAIEMENT =======================================================
+# Les imports (models, Decimal, Sum, timezone, User, ValidationError...)
+# sont déjà dans ton fichier : ne rien changer en haut.
+# AUCUN champ n'est modifié : pas de migration à faire.
+
 class Paiement(models.Model):
     CURRENCY = [
         ('CDF', 'CDF'),
@@ -871,15 +875,14 @@ class Paiement(models.Model):
         verbose_name="Campagne"
     )
 
-
     campagne_prestation = models.ForeignKey(
-    'CampagnePrestation',
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='paiements',
-    verbose_name='Prestation supplémentaire de campagne'
-)
+        'CampagnePrestation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements',
+        verbose_name='Prestation supplémentaire de campagne'
+    )
 
     # Prix officiel de la campagne au moment du paiement, en CDF
     prix_campagne_cdf = models.DecimalField(
@@ -985,6 +988,11 @@ class Paiement(models.Model):
     # ============================================================
 
     def save(self, *args, **kwargs):
+        # CHANGEMENT 1 : un seul import ici, au début.
+        # (Avant, "from .models import ConfigurationHopital" était
+        # dans le bloc examen externe et cassait les autres blocs.)
+        from .models import ConfigurationHopital, Facture
+
         is_new = self.pk is None
 
         # --------------------------------------------------------
@@ -1109,8 +1117,6 @@ class Paiement(models.Model):
         # LOGIQUE EXAMEN EXTERNE
         # --------------------------------------------------------
         if self.demande_examen_externe:
-            from .models import ConfigurationHopital
-
             config = ConfigurationHopital.objects.first()
 
             taux = (
@@ -1223,7 +1229,20 @@ class Paiement(models.Model):
                         "Le prix de cette campagne payante est invalide."
                     )
 
-                self.prix_campagne_cdf = prix_campagne_cdf
+                # CHANGEMENT 2 : prix selon l'inscription
+                # (1 ou 2 personnes pour une campagne couple).
+                participant = CampagneParticipant.objects.filter(
+                    campagne=self.campagne,
+                    patient=self.patient,
+                    clientEx=self.clientEx,
+                ).first()
+
+                if participant and participant.prix_total_cdf > 0:
+                    prix_a_payer_cdf = participant.prix_total_cdf
+                else:
+                    prix_a_payer_cdf = prix_campagne_cdf
+
+                self.prix_campagne_cdf = prix_a_payer_cdf
 
                 # Conversion du montant réellement versé en CDF
                 if self.devise == 'CDF':
@@ -1267,11 +1286,98 @@ class Paiement(models.Model):
                     + (self.montant_reduction or Decimal('0.00'))
                 )
 
+                # CHANGEMENT 3 : refuser un paiement trop grand
+                if total_paye_cdf > prix_a_payer_cdf + Decimal('1'):
+                    raise ValidationError(
+                        "Le montant dépasse le prix de la campagne "
+                        f"({prix_a_payer_cdf} CDF)."
+                    )
+
                 # Le reste à payer est toujours calculé en CDF
                 self.reste_a_payer = max(
                     Decimal('0.00'),
-                    prix_campagne_cdf - total_paye_cdf
+                    prix_a_payer_cdf - total_paye_cdf
                 )
+
+        # --------------------------------------------------------
+        # CHANGEMENT 4 : LOGIQUE SUPPLEMENT CAMPAGNE
+        # (examens supplémentaires, même dans une campagne gratuite)
+        # --------------------------------------------------------
+        if self.service == 'SUPPLEMENT_CAMPAGNE':
+
+            # On doit savoir quel examen supplémentaire est payé
+            if not self.campagne_prestation:
+                raise ValidationError(
+                    "Vous devez choisir l'examen supplémentaire."
+                )
+
+            if not self.patient and not self.clientEx:
+                raise ValidationError(
+                    "Vous devez sélectionner un patient ou un client externe."
+                )
+
+            taux = ConfigurationHopital.get_taux()
+
+            if not taux or taux <= 0:
+                raise ValidationError(
+                    "Le taux USD/CDF n'est pas configuré correctement."
+                )
+
+            # Prix de cet examen, en CDF
+            prix_examen_cdf = (
+                self.campagne_prestation.prix_reference
+                or Decimal('0.00')
+            )
+
+            # Montant versé, converti en CDF
+            if self.devise == 'CDF':
+                montant_verse_cdf = (
+                    self.montant_verse or Decimal('0.00')
+                )
+            else:
+                montant_verse_cdf = (
+                    (self.montant_verse or Decimal('0.00'))
+                    * taux
+                )
+
+            self.prix_campagne_cdf = prix_examen_cdf
+            self.montant_verse_cdf = montant_verse_cdf
+
+            # Paiements déjà faits pour CET examen et CETTE personne
+            precedents = Paiement.objects.filter(
+                service='SUPPLEMENT_CAMPAGNE',
+                campagne_prestation=self.campagne_prestation,
+                patient=self.patient,
+                clientEx=self.clientEx,
+            ).exclude(pk=self.pk)
+
+            deja_verse_cdf = precedents.aggregate(
+                total=Sum('montant_verse_cdf')
+            )['total'] or Decimal('0.00')
+
+            deja_reduit = precedents.aggregate(
+                total=Sum('montant_reduction')
+            )['total'] or Decimal('0.00')
+
+            total_paye_cdf = (
+                deja_verse_cdf
+                + deja_reduit
+                + montant_verse_cdf
+                + (self.montant_reduction or Decimal('0.00'))
+            )
+
+            # Si le total dépasse le prix de l'examen, on refuse
+            if total_paye_cdf > prix_examen_cdf + Decimal('1'):
+                raise ValidationError(
+                    "Le montant dépasse le prix de cet examen "
+                    f"({prix_examen_cdf} CDF)."
+                )
+
+            # Reste à payer pour cet examen
+            self.reste_a_payer = max(
+                Decimal('0.00'),
+                prix_examen_cdf - total_paye_cdf
+            )
 
         # --------------------------------------------------------
         # LOGIQUE MATERNITE
@@ -1312,11 +1418,54 @@ class Paiement(models.Model):
         super().save(*args, **kwargs)
 
         # --------------------------------------------------------
+        # CHANGEMENT 5 : mettre à jour l'inscription (campagne payante)
+        # --------------------------------------------------------
+        if (
+            self.service == 'CAMPAGNE'
+            and self.campagne
+            and self.campagne.type_campagne == Campagne.TYPE_PAYANTE
+        ):
+            participant = CampagneParticipant.objects.filter(
+                campagne=self.campagne,
+                patient=self.patient,
+                clientEx=self.clientEx,
+            ).first()
+
+            if participant:
+                tous = Paiement.objects.filter(
+                    campagne=self.campagne,
+                    patient=self.patient,
+                    clientEx=self.clientEx,
+                    service='CAMPAGNE'
+                )
+
+                total_verse = tous.aggregate(
+                    total=Sum('montant_verse_cdf')
+                )['total'] or Decimal('0.00')
+
+                total_reduit = tous.aggregate(
+                    total=Sum('montant_reduction')
+                )['total'] or Decimal('0.00')
+
+                montant_paye = total_verse + total_reduit
+
+                reste = max(
+                    Decimal('0.00'),
+                    participant.prix_total_cdf - montant_paye
+                )
+
+                # update() ne relance pas save() du participant
+                CampagneParticipant.objects.filter(
+                    pk=participant.pk
+                ).update(
+                    montant_paye_cdf=montant_paye,
+                    reste_a_payer_cdf=reste,
+                )
+
+        # --------------------------------------------------------
         # CREATION AUTOMATIQUE DE FACTURE
         # --------------------------------------------------------
         if is_new:
-            from .models import Facture
-
             Facture.objects.create(
                 paiement=self,
                 numero_facture=(

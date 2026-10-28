@@ -17,6 +17,10 @@
 
     {% include 'back-end/includes/css.html' %}
 
+    {# Select2 : liste déroulante avec zone de recherche #}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+
     <style>
         body {
             background: #f3f5f8;
@@ -70,6 +74,43 @@
             margin: 5px 0 0;
             padding: 0;
         }
+
+        /* Bloc "nouveau patient" */
+        .nouveau-patient-box {
+            background: #f1f7fc;
+            border: 1px dashed #1f4e79;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            padding: 12px 15px;
+        }
+
+        .nouveau-patient-box .btn {
+            width: auto;
+        }
+
+        /* Select2 : même hauteur que les autres champs */
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+            padding-left: 12px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+
+        .select2-dropdown {
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -112,12 +153,37 @@
                             {% endfor %}
                         {% endif %}
 
+                        {# Nouveau patient : seulement à l'inscription, pas à la modification #}
+                        {% if not mode_modification %}
+                            <div class="nouveau-patient-box">
+                                <div class="mb-2">
+                                    <strong>La personne n'est pas encore enregistrée ?</strong><br>
+                                    <small class="text-muted">
+                                        Enregistrez-la comme nouveau patient. Elle sera
+                                        aussi inscrite à cette campagne.
+                                    </small>
+                                </div>
+
+                                <a href="{% url 'enregistrer_patient_campagne' campagne.pk %}"
+                                   class="btn btn-outline-primary">
+                                    <i class="fa fa-user-plus mr-1"></i>
+                                    Nouveau patient
+                                </a>
+                            </div>
+                        {% endif %}
+
                         {{ form.non_field_errors }}
 
                         <div class="row">
                             {% for field in form %}
+
                                 {% if field.name == 'campagne' %}
                                     {# La campagne est imposée par l'URL. #}
+
+                                {% elif field.name == 'prix_total_cdf' or field.name == 'montant_paye_cdf' or field.name == 'reste_a_payer_cdf' %}
+                                    {# L'argent se gère à la caisse : champs cachés. #}
+                                    {{ field.as_hidden }}
+
                                 {% else %}
                                     <div class="col-md-6 mb-3">
                                         {{ field.label_tag }}
@@ -132,12 +198,13 @@
                                         {{ field.errors }}
                                     </div>
                                 {% endif %}
+
                             {% endfor %}
                         </div>
 
                         <div class="alert alert-info">
-                            Le reste à payer est calculé automatiquement à partir
-                            du prix total et du montant payé.
+                            Le prix est calculé automatiquement selon la campagne
+                            et le nombre de personnes. Le paiement se fait à la caisse.
                         </div>
                     </div>
 
@@ -165,5 +232,61 @@
 </div>
 
 {% include 'back-end/includes/js.html' %}
+
+{# Select2 : à charger après jQuery (qui est dans js.html) #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+    (function ($) {
+        // ---- Sécurité : si jQuery n'est pas chargé, on ne fait rien
+        if (!$ || !$.fn.select2) {
+            return;
+        }
+
+        // ---- Textes en français
+        var langueFr = {
+            noResults: function () { return "Aucun résultat"; },
+            searching: function () { return "Recherche en cours..."; },
+            inputTooShort: function () { return "Tapez le nom à chercher"; }
+        };
+
+        // ---- Recherche sur le patient interne
+        $('#id_patient').select2({
+            placeholder: "Rechercher un patient interne...",
+            allowClear: true,
+            width: '100%',
+            language: langueFr
+        });
+
+        // ---- Recherche sur le client externe
+        $('#id_clientEx').select2({
+            placeholder: "Rechercher un client externe...",
+            allowClear: true,
+            width: '100%',
+            language: langueFr
+        });
+
+        // ---- On choisit l'un OU l'autre, jamais les deux
+        $('#id_patient').on('change', function () {
+            if ($(this).val()) {
+                $('#id_clientEx').val(null).trigger('change.select2');
+            }
+        });
+
+        $('#id_clientEx').on('change', function () {
+            if ($(this).val()) {
+                $('#id_patient').val(null).trigger('change.select2');
+            }
+        });
+
+        // ---- Le curseur va directement dans la zone de recherche
+        $(document).on('select2:open', function () {
+            var champ = document.querySelector('.select2-container--open .select2-search__field');
+            if (champ) {
+                champ.focus();
+            }
+        });
+    })(window.jQuery);
+</script>
 </body>
 </html>

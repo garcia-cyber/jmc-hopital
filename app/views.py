@@ -14958,118 +14958,288 @@ def verifier_acces_campagne(request, campagne):
 # ------------------------------------------------------------------
 @login_required
 def enregistrer_participant_campagne(request, campagne_id):
-    """
-    Enregistre un nouveau participant dans une campagne.
-    """
-    campagne = get_object_or_404(
-        Campagne.objects.select_related('hopital'),
-        pk=campagne_id,
+  """
+  Enregistre un nouveau participant dans une campagne.
+  """
+  campagne = get_object_or_404(
+    Campagne.objects.select_related('hopital'),
+    pk=campagne_id,
+  )
+
+  fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+    request,
+    campagne,
+  )
+
+  # ---- Normaliser le rôle pour les tests dans le template
+  fonctionKey = (fonctionKey or '').strip().lower()
+
+  if request.method == 'POST':
+    form = CampagneParticipantForm(
+      request.POST,
+      user=request.user,
+      est_admin=est_admin,
+      hopital_user=hopital_user,
     )
 
-    fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
-        request,
-        campagne,
-    )
+    if form.is_valid():
+      participant = form.save(commit=False)
 
-    # Normaliser le rôle pour les tests dans le template.
-    fonctionKey = (fonctionKey or '').strip().lower()
+      # ---- La campagne est imposée par l'URL
+      participant.campagne = campagne
 
-    if request.method == 'POST':
-        form = CampagneParticipantForm(
-            request.POST,
-            user=request.user,
-            est_admin=est_admin,
-            hopital_user=hopital_user,
+      # ---- Utilisateur ayant créé l'inscription
+      participant.created_by = request.user
+
+      # ---- Prix selon le nombre de personnes
+      prix_total = (
+        campagne.get_prix_total(participant.nombre_personnes)
+        or Decimal('0.00')
+      )
+      participant.prix_total_cdf = prix_total
+
+      # ---- Aucun paiement à l'inscription : tout se paie à la caisse
+      participant.montant_paye_cdf = Decimal('0.00')
+      participant.reste_a_payer_cdf = prix_total
+
+      try:
+        with transaction.atomic():
+          participant.full_clean()
+          participant.save()
+
+        messages.success(
+          request,
+          "Le participant a été enregistré avec succès. "
+          "Le paiement se fait à la caisse.",
         )
 
-        if form.is_valid():
-            participant = form.save(commit=False)
-
-            # La campagne est imposée par l'URL.
-            participant.campagne = campagne
-
-            # Utilisateur ayant créé l'inscription.
-            participant.created_by = request.user
-
-            # Calcul du prix selon le nombre de personnes.
-            participant.prix_total_cdf = (
-                campagne.get_prix_total(participant.nombre_personnes)
-                or Decimal('0.00')
-            )
-
-            participant.montant_paye_cdf = (
-                participant.montant_paye_cdf or Decimal('0.00')
-            )
-
-            # Le reste à payer est calculé automatiquement.
-            participant.reste_a_payer_cdf = max(
-                participant.prix_total_cdf - participant.montant_paye_cdf,
-                Decimal('0.00'),
-            )
-
-            try:
-                with transaction.atomic():
-                    participant.full_clean()
-                    participant.save()
-
-                messages.success(
-                    request,
-                    "Le participant a été enregistré avec succès.",
-                )
-
-                return redirect(
-                    'participants_campagne',
-                    campagne_id=campagne.pk,
-                )
-
-            except ValidationError as exc:
-                if hasattr(exc, 'message_dict'):
-                    for champ, erreurs in exc.message_dict.items():
-                        if champ in form.fields:
-                            for erreur in erreurs:
-                                form.add_error(champ, erreur)
-                        else:
-                            for erreur in erreurs:
-                                form.add_error(None, erreur)
-                else:
-                    form.add_error(None, exc)
-
-            except IntegrityError:
-                form.add_error(
-                    None,
-                    "Ce patient ou ce client est déjà inscrit "
-                    "à cette campagne.",
-                )
-
-    else:
-        form = CampagneParticipantForm(
-            initial={
-                'campagne': campagne,
-                'nombre_personnes': 1,
-                'prix_total_cdf': campagne.get_prix_total(1),
-            },
-            user=request.user,
-            est_admin=est_admin,
-            hopital_user=hopital_user,
+        return redirect(
+          'participants_campagne',
+          campagne_id=campagne.pk,
         )
 
-    context = {
-        'form': form,
+      except ValidationError as exc:
+        if hasattr(exc, 'message_dict'):
+          for champ, erreurs in exc.message_dict.items():
+            if champ in form.fields:
+              for erreur in erreurs:
+                form.add_error(champ, erreur)
+            else:
+              for erreur in erreurs:
+                form.add_error(None, erreur)
+        else:
+          form.add_error(None, exc)
+
+      except IntegrityError:
+        form.add_error(
+          None,
+          "Ce patient ou ce client est déjà inscrit "
+          "à cette campagne.",
+        )
+
+  else:
+    form = CampagneParticipantForm(
+      initial={
         'campagne': campagne,
-        'participant': None,
-        'mode_modification': False,
-        'fonctionKey': fonctionKey,
-        'hopital_user': hopital_user,
-        'est_admin': est_admin,
-    }
-
-    return render(
-        request,
-        'back-end/campagne/form_participant.html',
-        context,
+        'nombre_personnes': 1,
+        'prix_total_cdf': campagne.get_prix_total(1),
+      },
+      user=request.user,
+      est_admin=est_admin,
+      hopital_user=hopital_user,
     )
 
+  context = {
+    'form': form,
+    'campagne': campagne,
+    'participant': None,
+    'mode_modification': False,
+    'fonctionKey': fonctionKey,
+    'hopital_user': hopital_user,
+    'est_admin': est_admin,
+  }
 
+  return render(
+    request,
+    'back-end/campagne/form_participant.html',
+    context,
+  )
+
+# ------------------------------------------------------------------
+#
+#
+# ====================================================================
+# NOUVELLE VUE : enregistrer un patient directement pour une campagne
+# --------------------------------------------------------------------
+# Ta vue enregistrement_patient n'est PAS modifiée.
+# Cette vue fait 2 choses en une seule page :
+#   1. Elle enregistre le patient (ou retrouve celui qui existe déjà).
+#   2. Elle l'inscrit à la campagne (CampagneParticipant).
+# Le paiement se fait ensuite à la caisse (modèle Paiement).
+#
+# Imports à vérifier en haut de ton fichier de vues :
+#   from decimal import Decimal
+#   from django.db import transaction
+#   from django.core.exceptions import ValidationError
+# ====================================================================
+
+@login_required
+def enregistrer_patient_campagne(request, campagne_id):
+  """
+  Enregistre un nouveau patient et l'inscrit à la campagne.
+  """
+  campagne = get_object_or_404(
+    Campagne.objects.select_related('hopital'),
+    pk=campagne_id,
+  )
+
+  fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+    request,
+    campagne,
+  )
+
+  # ---- Normaliser le rôle pour les tests dans le template
+  fonctionKey = (fonctionKey or '').strip().lower()
+
+  if request.method == 'POST':
+    form = PatientForm(request.POST)
+
+    if form.is_valid():
+      try:
+        with transaction.atomic():
+
+          # ---- Champs utilisés pour retrouver un ancien patient
+          noms = (form.cleaned_data.get('noms') or '').strip()
+          telephone = (form.cleaned_data.get('telephone') or '').strip()
+          sexe = form.cleaned_data.get('sexe')
+          age = (form.cleaned_data.get('age') or '').strip()
+
+          # ---- Recherche d'un ancien patient dans le même hôpital
+          patient_existant = None
+
+          if telephone:
+            patient_existant = (
+              Patient.objects
+              .filter(
+                hopital=campagne.hopital,
+                telephone__iexact=telephone,
+                noms__iexact=noms,
+              )
+              .first()
+            )
+
+          if not patient_existant:
+            patient_existant = (
+              Patient.objects
+              .filter(
+                hopital=campagne.hopital,
+                noms__iexact=noms,
+                sexe=sexe,
+                age=age,
+              )
+              .first()
+            )
+
+          # ---- Patient déjà dans la base : on le réutilise
+          if patient_existant:
+            patient = patient_existant
+
+          # ---- Nouveau patient : on le crée
+          else:
+            patient = form.save(commit=False)
+
+            patient.created_by = request.user
+            patient.hopital = campagne.hopital
+
+            if patient.entreprise:
+              patient.type_patient = 'CONVENTIONNE'
+            else:
+              patient.type_patient = 'SIMPLE'
+
+            patient.save()
+
+          # ---- Déjà inscrit à cette campagne ?
+          deja_inscrit = CampagneParticipant.objects.filter(
+            campagne=campagne,
+            patient=patient,
+          ).exists()
+
+          if deja_inscrit:
+            form.add_error(
+              None,
+              f"{patient.noms} est déjà inscrit à cette campagne.",
+            )
+            raise ValidationError("deja_inscrit")
+
+          # ---- Inscription à la campagne
+          prix_total = (
+            campagne.get_prix_total(1)
+            or Decimal('0.00')
+          )
+
+          participant = CampagneParticipant(
+            campagne=campagne,
+            patient=patient,
+            nombre_personnes=1,
+            created_by=request.user,
+            prix_total_cdf=prix_total,
+            montant_paye_cdf=Decimal('0.00'),
+            reste_a_payer_cdf=prix_total,
+          )
+
+          participant.full_clean()
+          participant.save()
+
+        messages.success(
+          request,
+          f"{patient.noms} a été enregistré dans la campagne. "
+          f"Le paiement se fait à la caisse.",
+        )
+
+        return redirect(
+          'participants_campagne',
+          campagne_id=campagne.pk,
+        )
+
+      except ValidationError as exc:
+        # ---- Erreur déjà ajoutée au formulaire : on ne fait rien
+        if hasattr(exc, 'message_dict'):
+          for champ, erreurs in exc.message_dict.items():
+            for erreur in erreurs:
+              form.add_error(None, erreur)
+
+      except Exception as erreur:
+        form.add_error(
+          None,
+          f"Erreur lors de l'enregistrement : {erreur}",
+        )
+
+  else:
+    form = PatientForm()
+
+  context = {
+    'form': form,
+    'campagne': campagne,
+    'fonctionKey': fonctionKey,
+    'hopital_user': hopital_user,
+    'est_admin': est_admin,
+  }
+
+  return render(
+    request,
+    'back-end/campagne/form_patient_campagne.html',
+    context,
+  )
+
+
+# ====================================================================
+# URL À AJOUTER DANS urls.py
+# ====================================================================
+# path(
+#   'campagne/<int:campagne_id>/nouveau-patient/',
+#   views.enregistrer_patient_campagne,
+#   name='enregistrer_patient_campagne',
+# ),
 
 
 

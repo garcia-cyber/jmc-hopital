@@ -6,6 +6,24 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
         <title>JMC - File d'attente Triage</title>
         {% include 'back-end/includes/css.html' %}
+
+        <style>
+            /* -- Badge pour les patients de campagne -- */
+            .badge-campagne {
+                background: linear-gradient(135deg, #11998e, #38ef7d);
+                color: #fff;
+                border-radius: 20px;
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                margin-left: 6px;
+            }
+
+            /* -- Ligne légèrement colorée pour les patients de campagne -- */
+            tr.ligne-campagne {
+                background: #f0faf7;
+            }
+        </style>
     </head>
     <body>
         <div class="main-wrapper">
@@ -65,19 +83,37 @@
                                     </thead>
                                     <tbody>
                                         {% for patient in patients %}
-                                        <tr>
+                                        <tr {% if patient.est_en_campagne %}class="ligne-campagne"{% endif %}>
+
+                                            {# -- Nom du patient + badge campagne -- #}
                                             <td>
                                                 <h2 class="table-avatar">
                                                     <a href="#" class="avatar avatar-sm mr-2">
                                                         <img class="avatar-img rounded-circle" src="{% static 'back-end/assets/img/user.jpg' %}" alt="User">
                                                     </a>
-                                                    <a href="#">{{ patient.noms }} <span>ID: {{ patient.code_patient }}</span></a>
+                                                    <a href="#">
+                                                        {{ patient.noms }}
+                                                        {% if patient.est_en_campagne %}
+                                                            <span class="badge-campagne">
+                                                                <i class="fa fa-bullhorn"></i> Campagne
+                                                            </span>
+                                                        {% endif %}
+                                                        <span>ID: {{ patient.code_patient }}</span>
+                                                    </a>
                                                 </h2>
                                             </td>
+
+                                            {# -- Type -- #}
                                             <td><span class="badge badge-primary">{{ patient.get_type_patient_display }}</span></td>
+
+                                            {# -- Heure d'arrivée -- #}
                                             <td>{{ patient.date_creation|date:"H:i" }}</td>
+
+                                            {# -- Total payé (fiche) -- #}
                                             <td class="text-center">
-                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                {% if patient.est_en_campagne %}
+                                                    <span class="badge badge-success">Campagne</span>
+                                                {% elif patient.type_patient != 'SIMPLE' %}
                                                     <span class="badge badge-secondary">Exonéré</span>
                                                 {% else %}
                                                     <span class="badge {% if patient.a_solde_fiche %}badge-success{% else %}badge-warning{% endif %}">
@@ -85,8 +121,12 @@
                                                     </span>
                                                 {% endif %}
                                             </td>
+
+                                            {# -- Statut de la fiche -- #}
                                             <td class="text-center">
-                                                {% if patient.type_patient != 'SIMPLE' %}
+                                                {% if patient.est_en_campagne %}
+                                                    <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Campagne (fiche gratuite)</span>
+                                                {% elif patient.type_patient != 'SIMPLE' %}
                                                     <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Exonéré</span>
                                                 {% elif patient.a_solde_fiche %}
                                                     <span class="badge badge-success-border"><i class="fa fa-check-circle"></i> Prêt</span>
@@ -94,9 +134,11 @@
                                                     <span class="badge badge-danger-border"><i class="fa fa-clock"></i> Paiement requis</span>
                                                 {% endif %}
                                             </td>
+
+                                            {# -- Action -- #}
                                             <td class="text-right">
-                                                {% if patient.type_patient != 'SIMPLE' %}
-                                                    {# Patients exonérés : toujours accessibles #}
+                                                {% if patient.est_en_campagne or patient.type_patient != 'SIMPLE' %}
+                                                    {# Patients de campagne ou exonérés : toujours accessibles #}
                                                     {% if patient.a_signes_vitaux_deja_pris %}
                                                         <button class="btn btn-warning btn-sm" disabled>
                                                             <i class="fa fa-check-square"></i> Déjà prélevé

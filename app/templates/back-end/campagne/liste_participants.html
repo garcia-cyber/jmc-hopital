@@ -3,140 +3,487 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Participants | {{ campagne.nom }}</title>
+  <title>Participants | {{ campagne.nom }}</title>
 
-    {% include 'back-end/includes/css.html' %}
+  {% include 'back-end/includes/css.html' %}
 
-    <style>
-        body {
-            background: #f3f5f8;
-            color: #263238;
-        }
+  <style>
+    /* -- Fond de la page -- */
+    body {
+      background: #f4f7f6;
+      color: #22313f;
+    }
 
-        .page-content {
-            padding: 25px;
-        }
+    .page-content {
+      padding: 25px;
+    }
 
-        .card-participants {
-            background: #fff;
-            border: 1px solid #e1e7ec;
-            border-radius: 7px;
-            margin-top: 20px;
-            padding: 20px;
-        }
+    /* -- En-tête blanc avec trait de couleur -- */
+    .entete-page {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px 25px;
+      margin-bottom: 25px;
+      border-top: 5px solid #11998e;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
 
-        .table th {
-            background: #f8fafc;
-            white-space: nowrap;
-        }
-    </style>
+    .entete-page h3 {
+      margin: 0;
+      font-weight: 700;
+      color: #0b6e66;
+    }
+
+    .entete-page .nom-campagne {
+      color: #6b7c8a;
+      margin: 4px 0 0 0;
+    }
+
+    .btn-vert {
+      background: linear-gradient(135deg, #11998e, #38ef7d);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 10px 22px;
+      font-weight: 600;
+    }
+
+    .btn-vert:hover {
+      color: #fff;
+      opacity: 0.9;
+    }
+
+    /* -- Cartes de résumé -- */
+    .carte-resume {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .carte-resume .icone {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #fff;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+
+    .icone.bleu { background: #3b82f6; }
+    .icone.orange { background: #f59e0b; }
+    .icone.vert { background: #10b981; }
+    .icone.rouge { background: #ef4444; }
+
+    .carte-resume .titre {
+      font-size: 12px;
+      color: #6b7c8a;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .carte-resume .valeur {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    /* -- Bloc des prestations de la campagne -- */
+    .bloc-prestations {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .ligne-prestation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border-radius: 10px;
+      background: #f8fbfa;
+    }
+
+    .ligne-prestation.supplement {
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .prix-supplement {
+      font-weight: 700;
+      color: #d97706;
+    }
+
+    /* -- Bloc du tableau -- */
+    .bloc-tableau {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .champ-recherche {
+      border-radius: 30px;
+      padding-left: 18px;
+    }
+
+    /* -- Tableau avec lignes séparées -- */
+    .table-moderne {
+      border-collapse: separate;
+      border-spacing: 0 8px;
+    }
+
+    .table-moderne thead th {
+      border: none;
+      color: #6b7c8a;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .table-moderne tbody tr {
+      background: #f8fbfa;
+    }
+
+    .table-moderne tbody td {
+      border: none;
+      vertical-align: middle;
+      padding: 14px 12px;
+    }
+
+    .table-moderne tbody tr td:first-child {
+      border-radius: 10px 0 0 10px;
+    }
+
+    .table-moderne tbody tr td:last-child {
+      border-radius: 0 10px 10px 0;
+    }
+
+    .table-moderne tbody tr:hover {
+      background: #eaf7f4;
+    }
+
+    /* -- Rond avec la première lettre du nom -- */
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #11998e, #38ef7d);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-right: 10px;
+    }
+
+    /* -- Barre de progression du paiement -- */
+    .barre-paiement {
+      height: 7px;
+      background: #dfe7e5;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 6px;
+      min-width: 110px;
+    }
+
+    .barre-paiement div {
+      height: 100%;
+      background: #10b981;
+      border-radius: 10px;
+    }
+
+    .montant-paye {
+      font-weight: 600;
+    }
+
+    .reste-rouge {
+      color: #ef4444;
+      font-weight: 700;
+    }
+
+    .reste-vert {
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    .badge-statut {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body>
 <div class="main-wrapper">
 
-    {% include 'back-end/includes/header.html' %}
-    {% include 'back-end/includes/sidebar.html' %}
+  {% include 'back-end/includes/header.html' %}
+  {% include 'back-end/includes/sidebar.html' %}
 
-    <div class="page-wrapper">
-        <div class="content container-fluid page-content">
+  <div class="page-wrapper">
+    <div class="content container-fluid page-content">
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-success">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+      <!-- Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-success">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- En-tête de la page -->
+      <div class="entete-page d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+          <h3>Participants de la campagne</h3>
+          <p class="nom-campagne">{{ campagne.nom }}</p>
+        </div>
+
+        <a href="{% url 'enregistrer_participant_campagne' campagne.pk %}"
+           class="btn btn-vert">
+          <i class="fa fa-user-plus mr-1"></i>
+          Enregistrer un participant
+        </a>
+      </div>
+
+      <!-- Cartes de résumé -->
+      <div class="row">
+        <div class="col-xl-3 col-md-6">
+          <div class="carte-resume">
+            <div class="icone bleu"><i class="fa fa-users"></i></div>
+            <div>
+              <div class="titre">Participants</div>
+              <div class="valeur">{{ nombre_participants }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="carte-resume">
+            <div class="icone orange"><i class="fa fa-tags"></i></div>
+            <div>
+              <div class="titre">Prix total</div>
+              <div class="valeur">{{ total_prix|floatformat:2 }} CDF</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="carte-resume">
+            <div class="icone vert"><i class="fa fa-check"></i></div>
+            <div>
+              <div class="titre">Total payé</div>
+              <div class="valeur">{{ total_paye|floatformat:2 }} CDF</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="carte-resume">
+            <div class="icone rouge"><i class="fa fa-exclamation"></i></div>
+            <div>
+              <div class="titre">Reste à payer</div>
+              <div class="valeur">{{ total_reste|floatformat:2 }} CDF</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prestations de la campagne -->
+      <div class="bloc-prestations">
+        <div class="row">
+
+          <!-- Prestations incluses -->
+          <div class="col-md-6">
+            <h5 class="mb-3">
+              <i class="fa fa-check-circle text-success mr-1"></i>
+              Prestations incluses
+            </h5>
+
+            {% for lien in prestations_incluses %}
+              <div class="ligne-prestation">
+                <span>{{ lien.prestation.libelle }}</span>
+                <span class="badge badge-success">Incluse</span>
+              </div>
+            {% empty %}
+              <p class="text-muted">Aucune prestation incluse.</p>
+            {% endfor %}
+          </div>
+
+          <!-- Prestations supplémentaires -->
+          <div class="col-md-6">
+            <h5 class="mb-3">
+              <i class="fa fa-plus-circle text-warning mr-1"></i>
+              Prestations supplémentaires (payantes)
+            </h5>
+
+            {% for lien in prestations_supplements %}
+              <div class="ligne-prestation supplement">
+                <span>{{ lien.prestation.libelle }}</span>
+                <span class="prix-supplement">
+                  + {{ lien.prix_supplement_cdf|floatformat:2 }} CDF
+                </span>
+              </div>
+            {% empty %}
+              <p class="text-muted">Aucune prestation supplémentaire.</p>
+            {% endfor %}
+
+            {% if prestations_supplements %}
+              <p class="mt-2 mb-0">
+                <strong>Total des suppléments :</strong>
+                {{ total_supplements|floatformat:2 }} CDF
+              </p>
             {% endif %}
-
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <h3>Participants de la campagne</h3>
-                    <p class="text-muted mb-0">{{ campagne.nom }}</p>
-                </div>
-
-                <a href="{% url 'enregistrer_participant_campagne' campagne.pk %}"
-                   class="btn btn-success">
-                    <i class="fa fa-user-plus mr-1"></i>
-                    Enregistrer un participant
-                </a>
-            </div>
-
-            <div class="card-participants">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Participant</th>
-                                <th>Type</th>
-                                <th>Personnes</th>
-                                <th>Prix total</th>
-                                <th>Payé</th>
-                                <th>Reste à payer</th>
-                                <th>Statut</th>
-                                <th>Date inscription</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {% for participant in participants %}
-                                <tr>
-                                    <td>{{ participant.nom_personne }}</td>
-
-                                    <td>
-                                        {% if participant.patient %}
-                                            Patient interne
-                                        {% else %}
-                                            Client externe
-                                        {% endif %}
-                                    </td>
-
-                                    <td>{{ participant.nombre_personnes }}</td>
-
-                                    <td>
-                                        {{ participant.prix_total_cdf|floatformat:2 }} CDF
-                                    </td>
-
-                                    <td>
-                                        {{ participant.montant_paye_cdf|floatformat:2 }} CDF
-                                    </td>
-
-                                    <td>
-                                        {{ participant.reste_a_payer_cdf|floatformat:2 }} CDF
-                                    </td>
-
-                                    <td>{{ participant.get_statut_display }}</td>
-
-                                    <td>
-                                        {{ participant.date_inscription|date:"d/m/Y H:i" }}
-                                    </td>
-
-                                    <td>
-                                        <a href="{% url 'modifier_participant_campagne' participant.pk %}"
-                                           class="btn btn-sm btn-primary">
-                                            <i class="fa fa-edit"></i>
-                                            Modifier
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted">
-                                        Aucun participant inscrit à cette campagne.
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+          </div>
 
         </div>
+      </div>
+
+      <!-- Tableau des participants -->
+      <div class="bloc-tableau">
+
+        <!-- Recherche -->
+        <form method="get" class="d-flex mb-2">
+          <input type="text"
+                 name="q"
+                 value="{{ q }}"
+                 class="form-control champ-recherche mr-2"
+                 placeholder="Rechercher un participant par nom...">
+          <button type="submit" class="btn btn-vert">
+            <i class="fa fa-search"></i>
+          </button>
+          {% if q %}
+            <a href="{% url 'participants_campagne' campagne.pk %}"
+               class="btn btn-outline-secondary ml-2">
+              Effacer
+            </a>
+          {% endif %}
+        </form>
+
+        <p class="text-muted mb-1">
+          {{ nombre_soldes }} participant(s) sur {{ nombre_participants }} ont tout payé.
+        </p>
+
+        <div class="table-responsive">
+          <table class="table table-moderne">
+            <thead>
+              <tr>
+                <th>Participant</th>
+                <th>Type</th>
+                <th>Personnes</th>
+                <th>Prix total</th>
+                <th>Paiement</th>
+                <th>Reste à payer</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for participant in participants %}
+                <tr>
+                  <!-- Nom -->
+                  <td>
+                    <span class="avatar">
+                      {{ participant.nom_personne|slice:":1"|upper }}
+                    </span>
+                    <strong>{{ participant.nom_personne }}</strong>
+                  </td>
+
+                  <!-- Type -->
+                  <td>
+                    {% if participant.patient %}
+                      <span class="badge badge-primary">Patient interne</span>
+                    {% elif participant.clientEx %}
+                      <span class="badge badge-secondary">Client externe</span>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+
+                  <!-- Nombre de personnes -->
+                  <td>{{ participant.nombre_personnes }}</td>
+
+                  <!-- Prix total -->
+                  <td>{{ participant.prix_calcule|floatformat:2 }} CDF</td>
+
+                  <!-- Montant payé + barre de progression -->
+                  <td>
+                    <span class="montant-paye">
+                      {{ participant.paye_calcule|floatformat:2 }} CDF
+                    </span>
+                    <div class="barre-paiement">
+                      <div style="width: {% widthratio participant.paye_calcule participant.prix_calcule 100 %}%;"></div>
+                    </div>
+                  </td>
+
+                  <!-- Reste à payer -->
+                  <td>
+                    {% if participant.est_solde %}
+                      <span class="reste-vert">
+                        <i class="fa fa-check-circle"></i> Soldé
+                      </span>
+                    {% elif participant.prix_calcule == 0 %}
+                      <span class="text-muted">Prix non défini</span>
+                    {% else %}
+                      <span class="reste-rouge">
+                        {{ participant.reste_calcule|floatformat:2 }} CDF
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Statut -->
+                  <td>
+                    <span class="badge-statut">
+                      {{ participant.get_statut_display }}
+                    </span>
+                  </td>
+
+                  <!-- Date d'inscription -->
+                  <td>
+                    {{ participant.date_inscription|date:"d/m/Y H:i" }}
+                  </td>
+
+                  <!-- Actions -->
+                  <td>
+                    <a href="{% url 'modifier_participant_campagne' participant.pk %}"
+                       class="btn btn-sm btn-primary">
+                      <i class="fa fa-edit"></i>
+                      Modifier
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="9" class="text-center text-muted">
+                    Aucun participant inscrit à cette campagne.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
+  </div>
 </div>
 
 {% include 'back-end/includes/js.html' %}

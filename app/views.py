@@ -1354,98 +1354,113 @@ def imprimer_recu_direct(request, paiement_id):
     return render(request, 'back-end/finance/ticket_paiement.html', context)
 # 23
 # ==================================================================================================
-# PATIENT LISTE D'ATTENTE TRIAGE
+# PATIENT LISTE D'ATTENTE TRIAGE 
+#   28/10/2026 
+#       - pour le signe vitaux  le patient de la campagne n'est sera pas aussi bloque 
 # ==================================================================================================
 @login_required
 def liste_attente_triage(request):
-    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
+  taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
-    role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    hopital_user = role.hopital if role else None
+  role = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+  hopital_user = role.hopital if role else None
 
-    if not hopital_user:
-        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
-        return redirect('enregistrement_patient')
+  if not hopital_user:
+    messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+    return redirect('enregistrement_patient')
 
-    # --- Détermination jour / nuit (16h–7h = nuit) ---
-    now = timezone.now()
-    if timezone.is_naive(now):
-        now = timezone.make_aware(now, timezone.get_current_timezone())
-    now_local = timezone.localtime(now)
-    heure_actuelle = now_local.hour
+  # --- Détermination jour / nuit (16h–7h = nuit) ---
+  now = timezone.now()
+  if timezone.is_naive(now):
+    now = timezone.make_aware(now, timezone.get_current_timezone())
+  now_local = timezone.localtime(now)
+  heure_actuelle = now_local.hour
 
-    est_nuit = heure_actuelle >= 16 or heure_actuelle < 7
-    libelle_cible = "Fiche nuit" if est_nuit else "Fiche jour"
+  est_nuit = heure_actuelle >= 16 or heure_actuelle < 7
+  libelle_cible = "Fiche nuit" if est_nuit else "Fiche jour"
 
-    # --- Récupération de la prestation (prix en CDF) ---
-    prestation_fiche = Prestation.objects.filter(
-        categorie='ADM',
-        libelle__icontains=libelle_cible,
-        hopital=hopital_user
-    ).first()
+  # --- Récupération de la prestation (prix en CDF) ---
+  prestation_fiche = Prestation.objects.filter(
+    categorie='ADM',
+    libelle__icontains=libelle_cible,
+    hopital=hopital_user
+  ).first()
 
-    if not prestation_fiche:
-        # Fallback si aucune prestation trouvée
-        messages.error(
-            request,
-            f"La prestation '{libelle_cible}' n'est pas configurée pour votre hôpital."
-        )
-        # Tu peux choisir de rediriger ou continuer avec un prix par défaut
-        # return redirect('enregistrement_patient')
-        prix_fiche_cdf = Decimal('0')
+  if not prestation_fiche:
+    messages.error(
+      request,
+      f"La prestation '{libelle_cible}' n'est pas configurée pour votre hôpital."
+    )
+    prix_fiche_cdf = Decimal('0')
+  else:
+    prix_fiche_cdf = prestation_fiche.prix or Decimal('0')
+
+  # Prix en USD juste pour affichage
+  prix_fiche_usd = prix_fiche_cdf / taux if taux else Decimal('0')
+
+  # --- NOUVEAU : patients inscrits à une campagne de cet hôpital ---
+  ids_patients_campagne = set(
+    CampagneParticipant.objects
+    .filter(campagne__hopital=hopital_user, patient__isnull=False)
+    .values_list('patient_id', flat=True)
+  )
+
+  patients_liste = Patient.objects.filter(hopital=hopital_user).order_by('-date_creation')
+
+  for patient in patients_liste:
+
+    # --- NOUVEAU : patient de campagne = jamais bloqué par la fiche ---
+    patient.est_en_campagne = patient.pk in ids_patients_campagne
+
+    if patient.est_en_campagne:
+      patient.a_solde_fiche = True
+      patient.total_fiche_cdf = Decimal('0')
+      patient.doit_payer_fiche = False
+
+    # Patients non SIMPLE : pas de fiche à payer
+    elif patient.type_patient != 'SIMPLE':
+      patient.a_solde_fiche = True
+      patient.total_fiche_cdf = Decimal('0')
+      patient.doit_payer_fiche = False
+
     else:
-        prix_fiche_cdf = prestation_fiche.prix or Decimal('0')
+      patient.doit_payer_fiche = True
 
-    # Prix en USD juste pour affichage (si besoin dans le template)
-    prix_fiche_usd = prix_fiche_cdf / taux if taux else Decimal('0')
+      # Tous les paiements FICHE pour ce patient
+      paiements = Paiement.objects.filter(
+        patient=patient,
+        service='FICHE',
+        hopital=hopital_user
+      )
 
-    patients_liste = Patient.objects.filter(hopital=hopital_user).order_by('-date_creation')
+      # Total payé en CDF (les USD sont convertis en CDF)
+      total_paye_cdf = Decimal('0')
+      for p in paiements:
+        if p.devise == 'CDF':
+          total_paye_cdf += p.montant_verse
+        else:  # USD
+          total_paye_cdf += p.montant_verse * taux
 
-    for patient in patients_liste:
-        # Patients non SIMPLE : on considère qu'ils n'ont pas à payer la fiche
-        if patient.type_patient != 'SIMPLE':
-            patient.a_solde_fiche = True
-            patient.total_fiche_cdf = Decimal('0')  # ou total_fiche_usd si tu veux garder ce champ
-            patient.doit_payer_fiche = False
-        else:
-            patient.doit_payer_fiche = True
+      patient.total_fiche_cdf = total_paye_cdf
 
-            # Tous les paiements FICHE pour ce patient
-            paiements = Paiement.objects.filter(
-                patient=patient,
-                service='FICHE',
-                hopital=hopital_user
-            )
+      # Soldé si le total payé >= prix de la fiche (en CDF)
+      patient.a_solde_fiche = total_paye_cdf >= prix_fiche_cdf
 
-            # Calcul du total payé en CDF (en convertissant les USD en CDF)
-            total_paye_cdf = Decimal('0')
-            for p in paiements:
-                if p.devise == 'CDF':
-                    total_paye_cdf += p.montant_verse
-                else:  # USD
-                    total_paye_cdf += p.montant_verse * taux
+    # Signes vitaux
+    patient.a_signes_vitaux_deja_pris = SigneVital.objects.filter(patient=patient).exists()
 
-            # On stocke le total payé (en CDF) dans le patient (adapte le nom du champ selon ton modèle)
-            patient.total_fiche_cdf = total_paye_cdf
+  fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
 
-            # Le patient a soldé si le total payé >= prix de la fiche (en CDF)
-            patient.a_solde_fiche = total_paye_cdf >= prix_fiche_cdf
-
-        # Signes vitaux
-        patient.a_signes_vitaux_deja_pris = SigneVital.objects.filter(patient=patient).exists()
-
-    fonctionKey = role.fonctionKey.roleName if (role and role.fonctionKey) else None
-
-    return render(request, 'back-end/infirmerie/liste_attente.html', {
-        'patients': patients_liste,
-        'taux': taux,
-        'prix_fiche': prix_fiche_usd,      # pour affichage en USD si tu veux
-        'prix_fiche_cdf': prix_fiche_cdf,  # pour affichage en CDF
-        'fonctionKey': fonctionKey,
-        'libelle_cible': libelle_cible,
-        'est_nuit': est_nuit,
-        'heure_actuelle': heure_actuelle,
-    })
+  return render(request, 'back-end/infirmerie/liste_attente.html', {
+    'patients': patients_liste,
+    'taux': taux,
+    'prix_fiche': prix_fiche_usd,
+    'prix_fiche_cdf': prix_fiche_cdf,
+    'fonctionKey': fonctionKey,
+    'libelle_cible': libelle_cible,
+    'est_nuit': est_nuit,
+    'heure_actuelle': heure_actuelle,
+  })
 
 
 # 24
@@ -15369,42 +15384,110 @@ def modifier_participant_campagne(request, participant_id):
 
 @login_required
 def participants_campagne(request, campagne_id):
-    """
-    Affiche les participants inscrits à une campagne.
-    """
-    campagne = get_object_or_404(
-        Campagne.objects.select_related('hopital'),
-        pk=campagne_id,
-    )
+  """
+  Affiche les participants inscrits à une campagne
+  avec ce qu'ils ont payé, ce qui reste à payer
+  et les prestations de la campagne.
+  """
 
-    fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
-        request,
-        campagne,
-    )
+  # -- 1. Récupérer la campagne --
+  campagne = get_object_or_404(
+    Campagne.objects.select_related('hopital'),
+    pk=campagne_id,
+  )
 
-    fonctionKey = (fonctionKey or '').strip().lower()
+  # -- 2. Vérifier l'accès de l'utilisateur --
+  fonctionKey, hopital_user, est_admin = verifier_acces_campagne(
+    request,
+    campagne,
+  )
 
-    participants = (
-        CampagneParticipant.objects
-        .filter(campagne=campagne)
-        .select_related('patient', 'clientEx', 'created_by')
-        .order_by('-date_inscription')
-    )
+  fonctionKey = (fonctionKey or '').strip().lower()
 
-    context = {
-        'campagne': campagne,
-        'participants': participants,
-        'fonctionKey': fonctionKey,
-        'hopital_user': hopital_user,
-        'est_admin': est_admin,
-    }
+  # -- 3. Récupérer les participants --
+  participants = (
+    CampagneParticipant.objects
+    .filter(campagne=campagne)
+    .select_related('patient', 'clientEx', 'created_by')
+    .order_by('-date_inscription')
+  )
 
-    return render(
-        request,
-        'back-end/campagne/liste_participants.html',
-        context,
-    )
+  # -- 4. Recherche par nom --
+  q = request.GET.get('q', '').strip()
+  if q:
+    participants = participants.filter(nom_personne__icontains=q)
 
+  # -- 5. Calcul des montants --
+  liste = list(participants)
+
+  total_prix = 0
+  total_paye = 0
+  total_reste = 0
+  nombre_soldes = 0
+
+  for p in liste:
+    prix = p.prix_total_cdf or 0
+    paye = p.montant_paye_cdf or 0
+
+    reste = prix - paye
+    if reste < 0:
+      reste = 0
+
+    solde = prix > 0 and paye >= prix
+
+    p.prix_calcule = prix
+    p.paye_calcule = paye
+    p.reste_calcule = reste
+    p.est_solde = solde
+
+    total_prix += prix
+    total_paye += paye
+    total_reste += reste
+
+    if solde:
+      nombre_soldes += 1
+
+  # -- 6. Prestations de la campagne (incluses et suppléments) --
+  prestations = (
+    CampagnePrestation.objects
+    .filter(campagne=campagne, actif=True)
+    .select_related('prestation')
+  )
+
+  prestations_incluses = []
+  prestations_supplements = []
+  total_supplements = 0
+
+  for lien in prestations:
+    if lien.est_supplement:
+      prestations_supplements.append(lien)
+      total_supplements += lien.prix_supplement_cdf or 0
+    else:
+      prestations_incluses.append(lien)
+
+  # -- 7. Envoyer au template --
+  context = {
+    'campagne': campagne,
+    'participants': liste,
+    'q': q,
+    'total_prix': total_prix,
+    'total_paye': total_paye,
+    'total_reste': total_reste,
+    'nombre_participants': len(liste),
+    'nombre_soldes': nombre_soldes,
+    'prestations_incluses': prestations_incluses,
+    'prestations_supplements': prestations_supplements,
+    'total_supplements': total_supplements,
+    'fonctionKey': fonctionKey,
+    'hopital_user': hopital_user,
+    'est_admin': est_admin,
+  }
+
+  return render(
+    request,
+    'back-end/campagne/liste_participants.html',
+    context,
+  )
 #
 #  mise en jour 
 

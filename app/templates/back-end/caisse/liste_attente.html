@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
     <title>JMC - Attente Facturation Caisse</title>
 
+
     {% include 'back-end/includes/css.html' %}
     <style>
         .exam-list {
@@ -26,11 +27,14 @@
 <body>
     <div class="main-wrapper">
 
+
         {% include 'back-end/includes/header.html' %}
         {% include 'back-end/includes/sidebar.html' %}
 
+
         <div class="page-wrapper">
             <div class="content container-fluid">
+
 
                 <div class="page-header">
                     <div class="row align-items-center">
@@ -38,11 +42,12 @@
                             <h3 class="page-title"><i class="fa fa-money"></i> Guichet de Caisse</h3>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="#">Accueil</a></li>
-                                <li class="breadcrumb-item active">Examens en attente de paiement</li>
+                                <li class="breadcrumb-item active">Examens et campagnes en attente de paiement</li>
                             </ul>
                         </div>
                     </div>
                 </div>
+
 
                 {% if messages %}
                 <div class="row">
@@ -58,6 +63,7 @@
                     </div>
                 </div>
                 {% endif %}
+
 
                 <div class="row mb-3">
                     <div class="col-md-12">
@@ -76,6 +82,7 @@
                         </form>
                     </div>
                 </div>
+
 
                 <div class="row">
                     <div class="col-md-12">
@@ -97,10 +104,15 @@
                                             </tr>
                                         </thead>
                                         <tbody>
+
+
+                                            <!-- ================================ -->
+                                            <!-- LIGNES : EXAMENS (CONSULTATIONS) -->
+                                            <!-- ================================ -->
                                             {% for c in consultations %}
                                             <tr>
-                                                <td><strong>{{ c.id }}</strong></td>
-                                                <td>
+                                                <td data-order="{{ c.id }}"><strong>{{ c.id }}</strong></td>
+                                                <td data-order="{{ c.date_creation|date:'Y-m-d H:i:s' }}">
                                                     <strong>{{ c.date_creation|date:"d/m/Y" }}</strong><br>
                                                     <small class="text-muted">{{ c.date_creation|date:"H:i" }}</small>
                                                 </td>
@@ -158,14 +170,120 @@
                                                     </a>
                                                 </td>
                                             </tr>
-                                            {% empty %}
+                                            {% endfor %}
+
+
+                                            <!-- ================================ -->
+                                            <!-- LIGNES : PATIENTS DE CAMPAGNE    -->
+                                            <!-- ================================ -->
+                                            {% for p in participants_campagne %}
                                             <tr>
-                                                <td colspan="9" class="text-center text-muted py-5">
-                                                    <i class="fa fa-check-circle fa-3x text-success"></i>
-                                                    <h5 class="text-secondary font-weight-normal">Aucun examen en attente de paiement</h5>
+                                                <td data-order="{{ p.id }}"><strong>{{ p.id }}</strong></td>
+                                                <td data-order="{{ p.date_inscription|date:'Y-m-d H:i:s' }}">
+                                                    <strong>{{ p.date_inscription|date:"d/m/Y" }}</strong><br>
+                                                    <small class="text-muted">{{ p.date_inscription|date:"H:i" }}</small>
+                                                </td>
+                                                <td>
+                                                    {% if p.patient %}
+                                                    <span class="badge badge-light-info">
+                                                        {{ p.patient.code_patient }}
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="badge badge-light-secondary">Client externe</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <strong>{{ p.nom_personne }}</strong><br>
+                                                    {% if p.patient %}
+                                                    <small class="text-muted">{{ p.patient.age }} ans</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">—</small>
+                                                </td>
+                                                <td>
+                                                    <i class="fa fa-bullhorn text-primary"></i>
+                                                    <strong>{{ p.campagne.nom }}</strong>
+
+                                                    <span class="exam-meta">
+                                                        {{ p.campagne.get_type_campagne_display }} |
+                                                        {{ p.nombre_personnes }} personne(s)
+                                                    </span>
+
+                                                    <span class="exam-meta">
+                                                        <strong>Prix campagne :</strong>
+                                                        {{ p.prix_total_cdf|floatformat:0 }} FC
+                                                        (~ {{ p.prix_total_usd|floatformat:2 }} USD)
+                                                    </span>
+
+                                                    <span class="exam-meta">
+                                                        <strong>Déjà payé :</strong>
+                                                        {{ p.montant_paye_cdf|floatformat:0 }} FC
+                                                        (~ {{ p.montant_paye_usd|floatformat:2 }} USD)
+                                                    </span>
+
+                                                    {% for d in p.supplement_details %}
+                                                    <span class="exam-meta">
+                                                        <strong>Examen payant :</strong>
+                                                        {{ d.libelle }} — {{ d.prix_cdf|floatformat:0 }} FC
+                                                        {% if d.quantite > 0 %}
+                                                        (x{{ d.quantite }}) :
+                                                        <span class="text-danger font-weight-bold">reste {{ d.reste_cdf|floatformat:0 }} FC</span>
+                                                        {% else %}
+                                                        <em>(pas encore demandé par le médecin)</em>
+                                                        {% endif %}
+                                                    </span>
+                                                    {% endfor %}
+                                                </td>
+                                                <td>
+                                                    {% if p.total_reste_cdf > 0 %}
+                                                    <span class="badge badge-warning">Campagne à payer</span>
+                                                    {% else %}
+                                                    <span class="badge badge-success">Campagne soldée</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if p.total_reste_cdf > 0 %}
+                                                    <strong class="text-danger" style="font-size: 16px;">
+                                                        {{ p.total_reste_cdf|floatformat:0 }} FC
+                                                    </strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        ~ {{ p.total_reste_usd|floatformat:2 }} USD
+                                                    </small>
+                                                    {% else %}
+                                                    <strong class="text-success">0 FC</strong>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-right">
+                                                    {% if p.reste_a_payer_cdf > 0 %}
+                                                    <a href="{% url 'encaisser_campagne' p.id %}"
+                                                       class="btn btn-sm btn-success px-3 shadow-sm">
+                                                        <i class="fa fa-money"></i> Encaisser
+                                                    </a>
+                                                    {% elif p.supplement_reste_cdf > 0 %}
+                                                    <span class="badge badge-warning">Examen à payer</span>
+                                                    {% else %}
+                                                    <span class="badge badge-success">Payé</span>
+                                                    {% endif %}
                                                 </td>
                                             </tr>
                                             {% endfor %}
+
+
+                                            <!-- ================================ -->
+                                            <!-- MESSAGE SI TOUT EST VIDE         -->
+                                            <!-- ================================ -->
+                                            {% if not consultations and not participants_campagne %}
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted py-5">
+                                                    <i class="fa fa-check-circle fa-3x text-success"></i>
+                                                    <h5 class="text-secondary font-weight-normal">Aucun examen ni campagne en attente de paiement</h5>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+
+
                                         </tbody>
                                     </table>
                                 </div>
@@ -174,15 +292,19 @@
                     </div>
                 </div>
 
+
             </div>
         </div>
     </div>
 
+
     {% include 'back-end/includes/js.html' %}
+
 
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
+
 
     <script>
         $(document).ready(function() {
@@ -191,8 +313,9 @@
                 $('.datatable').DataTable().destroy();
             }
 
+
             $('.datatable').DataTable({
-                "order": [[0, "desc"]], // Trie par ID (colonne 0) en décroissant
+                "order": [[1, "desc"]], // Trie par Date & Heure (colonne 1) en décroissant
                 "language": {
                     "search": "Rechercher :",
                     "lengthMenu": "Afficher _MENU_ lignes",

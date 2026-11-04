@@ -2515,96 +2515,206 @@ def encaisser_examens_prescrits(request, consultation_id):
 # ==================================================================================================
 @login_required
 def liste_attente_caisse(request):
-    taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
+  taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
-    role = (
-        Fonction.objects
-        .select_related('hopital', 'fonctionKey')
-        .filter(userKey=request.user)
-        .first()
+  role = (
+    Fonction.objects
+    .select_related('hopital', 'fonctionKey')
+    .filter(userKey=request.user)
+    .first()
+  )
+  hopital_user = role.hopital if role else None
+
+  if not hopital_user:
+    messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+    return redirect('enregistrement_patient')
+
+  # ----------------------------------------
+  # RECHERCHE (utilisée pour les 2 listes)
+  # ----------------------------------------
+  query = request.GET.get('q', '').strip()
+
+  # ----------------------------------------
+  # PARTIE 1 : CONSULTATIONS AVEC EXAMENS
+  # ----------------------------------------
+  consultations_qs = (
+    Consultation.objects
+    .filter(
+      examens__isnull=False,
+      triage__patient__hopital=hopital_user,
     )
-    hopital_user = role.hopital if role else None
+    .exclude(
+      triage__patient__type_patient__in=['CONVENTIONNE', 'FIDELE']
+    )
+    .select_related('triage__patient', 'medecin')
+    .prefetch_related('examens__prestation', 'paiements')
+    .distinct()
+    .order_by(
+      '-date_creation',
+      '-id',
+    )
+  )
 
-    if not hopital_user:
-        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
-        return redirect('enregistrement_patient')
-
-    # Requête de base : consultations qui ont au moins un examen, pour l'hôpital de l'utilisateur
-    # On exclut les patients CONVENTIONNE et FIDELE
-    consultations_qs = (
-        Consultation.objects
-        .filter(
-            examens__isnull=False,
-            triage__patient__hopital=hopital_user,
-        )
-        .exclude(
-            triage__patient__type_patient__in=['CONVENTIONNE', 'FIDELE']
-        )
-        .select_related('triage__patient', 'medecin')
-        .prefetch_related('examens__prestation', 'paiements')
-        .distinct()  # important pour éviter les doublons
-        .order_by('-id')
+  if query:
+    consultations_qs = consultations_qs.filter(
+      Q(triage__patient__noms__icontains=query) |
+      Q(triage__patient__code_patient__icontains=query)
     )
 
-    # Filtre recherche
-    query = request.GET.get('q', '').strip()
-    if query:
-        consultations_qs = consultations_qs.filter(
-            Q(triage__patient__noms__icontains=query) |
-            Q(triage__patient__code_patient__icontains=query)
+  consultations = []
+
+  for c in consultations_qs:
+    # ---- Total des examens en CDF ----
+    total_a_payer_cdf = c.examens.aggregate(
+      total=Coalesce(
+        Sum(F('prestation__prix') * F('quantite')),
+        Value(
+          Decimal('0.00'),
+          output_field=DecimalField(max_digits=15, decimal_places=2)
         )
+      )
+    )['total'] or Decimal('0.00')
 
-    consultations = []
-    for c in consultations_qs:
-        # ---- Total des examens en CDF ----
-        total_a_payer_cdf = c.examens.aggregate(
-            total=Coalesce(
-                Sum(F('prestation__prix') * F('quantite')),
-                Value(Decimal('0.00'), output_field=DecimalField(max_digits=15, decimal_places=2))
-            )
-        )['total'] or Decimal('0.00')
+    # ---- Paiements déjà faits pour les examens (en CDF) ----
+    paiements_examens = c.paiements.filter(service='EXAMENS')
 
-        # ---- Paiements déjà faits pour les examens (en CDF) ----
-        paiements_examens = c.paiements.filter(service='EXAMENS')
+    total_deja_paye_cdf = Decimal('0.00')
 
-        total_deja_paye_cdf = Decimal('0.00')
-        for p in paiements_examens:
-            if p.devise == 'CDF':
-                total_deja_paye_cdf += p.montant_verse
-            else:  # USD
-                total_deja_paye_cdf += p.montant_verse * taux
+    for p in paiements_examens:
+      if p.devise == 'CDF':
+        total_deja_paye_cdf += p.montant_verse
+      else:  # USD
+        total_deja_paye_cdf += p.montant_verse * taux
 
-        # ---- Reste à payer ----
-        reste_a_payer_cdf = total_a_payer_cdf - total_deja_paye_cdf
-        if reste_a_payer_cdf <= 0:
-            continue  # déjà payée, on ne l'affiche pas
+    # ---- Reste à payer ----
+    reste_a_payer_cdf = total_a_payer_cdf - total_deja_paye_cdf
 
-        # Conversion en USD pour affichage
-        total_a_payer_usd = total_a_payer_cdf / taux if taux else Decimal('0')
-        total_deja_paye_usd = total_deja_paye_cdf / taux if taux else Decimal('0')
-        reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
+    if reste_a_payer_cdf <= 0:
+      continue  # déjà payée, on ne l'affiche pas
 
-        # On attache les infos à la consultation
-        c.total_a_payer_cdf = total_a_payer_cdf
-        c.total_deja_paye_cdf = total_deja_paye_cdf
-        c.reste_a_payer_cdf = reste_a_payer_cdf
+    # ---- Conversion en USD pour affichage ----
+    total_a_payer_usd = total_a_payer_cdf / taux if taux else Decimal('0')
+    total_deja_paye_usd = total_deja_paye_cdf / taux if taux else Decimal('0')
+    reste_a_payer_usd = reste_a_payer_cdf / taux if taux else Decimal('0')
 
-        c.total_a_payer_usd = total_a_payer_usd
-        c.total_deja_paye_usd = total_deja_paye_usd
-        c.reste_a_payer_usd = reste_a_payer_usd
+    # ---- On attache les infos à la consultation ----
+    c.total_a_payer_cdf = total_a_payer_cdf
+    c.total_deja_paye_cdf = total_deja_paye_cdf
+    c.reste_a_payer_cdf = reste_a_payer_cdf
 
-        consultations.append(c)
+    c.total_a_payer_usd = total_a_payer_usd
+    c.total_deja_paye_usd = total_deja_paye_usd
+    c.reste_a_payer_usd = reste_a_payer_usd
 
-    # Tri explicite décroissant par id (déjà fait en DB, mais on garde pour sécurité)
-    consultations.sort(key=lambda x: x.id, reverse=True)
+    consultations.append(c)
 
-    return render(request, 'back-end/caisse/liste_attente.html', {
-        'consultations': consultations,
-        'fonctionKey': role.fonctionKey.roleName if (role and role.fonctionKey) else None,
-        'query': query,
-        'taux': taux,
-    })
+  # ----------------------------------------
+  # PARTIE 2 : PARTICIPANTS DE CAMPAGNE
+  # ----------------------------------------
+  participants_qs = (
+    CampagneParticipant.objects
+    .filter(campagne__hopital=hopital_user)
+    .exclude(statut='ANNULE')
+    .select_related('campagne', 'patient', 'clientEx')
+    .order_by(
+      '-date_inscription',
+      '-id',
+    )
+  )
 
+  if query:
+    participants_qs = participants_qs.filter(
+      Q(patient__noms__icontains=query) |
+      Q(patient__code_patient__icontains=query) |
+      Q(clientEx__noms__icontains=query)
+    )
+
+  participants_campagne = []
+
+  for p in participants_qs:
+    # ---- Conversion en USD pour affichage ----
+    p.prix_total_usd = p.prix_total_cdf / taux if taux else Decimal('0')
+    p.montant_paye_usd = p.montant_paye_cdf / taux if taux else Decimal('0')
+    p.reste_a_payer_usd = p.reste_a_payer_cdf / taux if taux else Decimal('0')
+
+    # ---- Examens payants de la campagne (SUPPLEMENT) ----
+    p.supplement_total_cdf = Decimal('0.00')
+    p.supplement_reste_cdf = Decimal('0.00')
+    p.supplement_details = []
+
+    lignes_supplement = (
+      CampagnePrestation.objects
+      .filter(
+        campagne=p.campagne,
+        type_inclusion='SUPPLEMENT',
+        actif=True,
+      )
+      .select_related('prestation')
+    )
+
+    for ligne in lignes_supplement:
+      prix_unitaire = ligne.prix_supplement_cdf or Decimal('0.00')
+
+      quantite = 0
+      reste_ligne = Decimal('0.00')
+
+      # ---- Si le patient est connu, on regarde ce que le médecin a demandé ----
+      if p.patient_id:
+        quantite = Consultation.objects.filter(
+          triage__patient=p.patient,
+          examens__prestation=ligne.prestation,
+        ).aggregate(
+          total=Sum('examens__quantite')
+        )['total'] or 0
+
+        if quantite > 0:
+          total_ligne = prix_unitaire * quantite
+
+          # ---- Déjà payé pour cet examen ----
+          paiements_ligne = Paiement.objects.filter(
+            service='SUPPLEMENT_CAMPAGNE',
+            campagne_prestation=ligne,
+            patient=p.patient,
+          )
+          deja_verse = paiements_ligne.aggregate(
+            total=Sum('montant_verse_cdf')
+          )['total'] or Decimal('0.00')
+          deja_reduit = paiements_ligne.aggregate(
+            total=Sum('montant_reduction')
+          )['total'] or Decimal('0.00')
+
+          reste_ligne = max(
+            Decimal('0.00'),
+            total_ligne - deja_verse - deja_reduit
+          )
+
+          p.supplement_total_cdf += total_ligne
+          p.supplement_reste_cdf += reste_ligne
+
+      # ---- On garde TOUS les examens payants pour l'affichage ----
+      p.supplement_details.append({
+        'libelle': ligne.prestation.libelle,
+        'prix_cdf': prix_unitaire,
+        'quantite': quantite,
+        'reste_cdf': reste_ligne,
+      })
+
+    # ---- Total à payer = campagne + examens demandés ----
+    p.total_reste_cdf = p.reste_a_payer_cdf + p.supplement_reste_cdf
+    p.total_reste_usd = p.total_reste_cdf / taux if taux else Decimal('0')
+
+    participants_campagne.append(p)
+
+  # ----------------------------------------
+  # ENVOI AU TEMPLATE
+  # ----------------------------------------
+  return render(request, 'back-end/caisse/liste_attente.html', {
+    'consultations': consultations,
+    'participants_campagne': participants_campagne,
+    'fonctionKey': role.fonctionKey.roleName if (role and role.fonctionKey) else None,
+    'query': query,
+    'taux': taux,
+  })
     
 # 36
 # ==================================================================================================

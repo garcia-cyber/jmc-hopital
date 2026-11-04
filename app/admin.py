@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils import timezone
 from .models import *
 
+
 # 0. HOPITAL
 @admin.register(Hopital)
 class HopitalAdmin(admin.ModelAdmin):
@@ -168,7 +169,7 @@ class SortiePharmacieAdmin(admin.ModelAdmin):
 @admin.register(LotPharmacie)
 class LotPharmacieAdmin(admin.ModelAdmin):
     # 'quantite_actuelle' est affiché ici pour voir si le stock est bien à 16
-    list_display = ('produit', 'numero_lot', 'quantite_initiale', 'quantite_actuelle', 'date_peremption')
+    list_display = ('produit', 'numero_lot', 'quantite_initiale', 'quantite_actuelle', 'date_peremption','date_entree','hopital')
     list_filter = ('produit',)
     readonly_fields = ('quantite_actuelle',)
 

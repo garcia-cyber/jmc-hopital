@@ -2,73 +2,74 @@
 
 <header class="header-modern">
 
-    <div class="header-left">
-        <a href="{% url 'home' %}" class="logo">
-            <img
-                src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}"
-                width="45"
-                height="45"
-                alt="Moyanoli"
-            >
-        </a>
-
-        <span class="brand-name">
-            JMC Medical
-        </span>
-    </div>
-
-    <!-- Bouton visible sur ordinateur et mobile -->
-    <a
-        id="toggle_btn"
-        href="#"
-        aria-label="Ouvrir ou réduire le menu"
-        title="Menu"
-    >
-        <i class="fa fa-bars"></i>
+  <div class="header-left">
+    <a href="{% url 'home' %}" class="logo">
+      <img
+        src="{% static 'front-end/assets/img/dr/jmc.jpeg' %}"
+        width="45"
+        height="45"
+        alt="Moyanoli"
+      >
     </a>
 
-    <ul class="nav user-menu">
+    <div class="brand-block">
+      <span class="brand-name">JMC Medical</span>
+      <span class="brand-sub">Gestion hospitalière</span>
+    </div>
+  </div>
 
-        <li class="nav-item dropdown has-arrow main-drop">
+  <!-- Bouton visible sur ordinateur et mobile -->
+  <a
+    id="toggle_btn"
+    href="#"
+    aria-label="Ouvrir ou réduire le menu"
+    title="Menu"
+  >
+    <i class="fa fa-bars"></i>
+  </a>
 
-            <a
-                href="#"
-                class="dropdown-toggle nav-link"
-                data-toggle="dropdown"
-            >
-                <span class="user-img">
-                    <img
-                        src="{% static 'back-end/assets/img/profiles/avatar-21.jpg' %}"
-                        width="35"
-                        height="35"
-                        alt="Utilisateur"
-                    >
-                </span>
+  <ul class="nav user-menu">
 
-                <div class="user-info">
-                    <span class="username">
-                        {{ user.username }}
-                    </span>
+    <li class="nav-item dropdown has-arrow main-drop">
 
-                    <span class="user-role">
-                        Administrateur
-                    </span>
-                </div>
-            </a>
+      <a
+        href="#"
+        class="dropdown-toggle nav-link"
+        data-toggle="dropdown"
+      >
+        <span class="user-img">
+          <img
+            src="{% static 'back-end/assets/img/profiles/avatar-21.jpg' %}"
+            width="38"
+            height="38"
+            alt="Utilisateur"
+          >
+        </span>
 
-            <div class="dropdown-menu dropdown-menu-right">
-                <a class="dropdown-item" href="#">
-                    Mon Profil
-                </a>
+        <div class="user-info">
+          <span class="username">
+            {{ user.username }}
+          </span>
 
-                <a class="dropdown-item" href="{% url 'deco' %}">
-                    Déconnexion
-                </a>
-            </div>
+          <span class="user-role">
+            {{ fonctionKey|default:"Utilisateur"|capfirst }}
+          </span>
+        </div>
+      </a>
 
-        </li>
+      <div class="dropdown-menu dropdown-menu-right">
+        <a class="dropdown-item" href="#">
+          <i class="fa fa-user"></i> Mon Profil
+        </a>
 
-    </ul>
+        <a class="dropdown-item" href="{% url 'deco' %}">
+          <i class="fa fa-power-off"></i> Déconnexion
+        </a>
+      </div>
+
+    </li>
+
+  </ul>
 
 </header>
 
@@ -80,39 +81,62 @@
 ========================= */
 
 .header-modern {
-    background: #ffffff;
-    height: 60px;
-    width: 100%;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    position: relative;
-    z-index: 1060;
+  background: #ffffff;
+  height: 60px;
+  width: 100%;
+  box-shadow:
+    0 1px 0 #e2e8f0,
+    0 4px 16px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1060;
 }
 
 .header-left {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .header-left .logo {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .header-left .logo img {
-    border-radius: 8px;
-    object-fit: cover;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid #e0e7ff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  margin-left: 12px;
+  line-height: 1.15;
 }
 
 .brand-name {
-    font-weight: 700;
-    font-size: 1.2rem;
-    margin-left: 15px;
-    color: #1e293b;
-    white-space: nowrap;
+  font-weight: 800;
+  font-size: 1.15rem;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #1d4ed8;
+}
+
+.brand-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 /* =========================
@@ -120,21 +144,25 @@
 ========================= */
 
 #toggle_btn {
-    color: #64748b;
-    margin-left: 20px;
-    font-size: 1.4rem;
-    z-index: 10001;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    text-decoration: none;
-    width: 35px;
-    height: 35px;
+  color: #475569;
+  margin-left: 22px;
+  font-size: 1.2rem;
+  z-index: 10001;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 #toggle_btn:hover {
-    color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 /* =========================
@@ -142,78 +170,98 @@
 ========================= */
 
 .user-menu {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    margin: 0 0 0 auto;
-    padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  margin: 0 0 0 auto;
+  padding: 0;
 }
 
 .user-menu .nav-link {
-    display: flex;
-    align-items: center;
-    color: #334155;
-    text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 5px 12px 5px 6px;
+  color: #334155;
+  text-decoration: none;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.user-menu .nav-link:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 .user-img {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 10px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 10px;
 }
 
 .user-img img {
-    border-radius: 50%;
-    object-fit: cover;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ---- Pastille verte "en ligne" ---- */
+.user-img::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
 }
 
 .user-info {
-    line-height: 1.2;
+  line-height: 1.2;
 }
 
 .username {
-    font-weight: 600;
-    display: block;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #1e293b;
+  display: block;
 }
 
 .user-role {
-    font-size: 0.75rem;
-    color: #64748b;
-    display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2563eb;
+  display: block;
 }
 
-/* =========================
-   MODE SIDEBAR RÉDUITE PC
-========================= */
+/* ---- Menu déroulant ---- */
+.header-modern .dropdown-menu {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  margin-top: 10px;
+}
 
-@media (min-width: 993px) {
+.header-modern .dropdown-item {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: #334155;
+}
 
-    #sidebar.sidebar-mini {
-        width: 80px !important;
-        min-width: 80px !important;
-    }
+.header-modern .dropdown-item i {
+  width: 20px;
+  margin-right: 6px;
+  color: #64748b;
+}
 
-    #sidebar.sidebar-mini .sidebar-menu .menu-title,
-    #sidebar.sidebar-mini .sidebar-menu .menu-arrow {
-        display: none !important;
-    }
-
-    #sidebar.sidebar-mini .sidebar-menu li a {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center;
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
-
-    #sidebar.sidebar-mini .sidebar-menu li a i {
-        margin-right: 0 !important;
-        font-size: 1.2rem;
-    }
-
-    #sidebar.sidebar-mini .sidebar-menu li a span:not(.menu-arrow) {
-        display: none !important;
-    }
+.header-modern .dropdown-item:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 /* =========================
@@ -222,26 +270,37 @@
 
 @media (max-width: 992px) {
 
-    .header-modern {
-        padding: 0 12px;
-    }
+  .header-modern {
+    padding: 0 12px;
+  }
 
-    .brand-name {
-        font-size: 1rem;
-        margin-left: 8px;
-    }
+  .brand-name {
+    font-size: 1rem;
+  }
 
-    .user-info {
-        display: none;
-    }
+  .brand-sub {
+    display: none;
+  }
 
-    .user-img {
-        margin-right: 0;
-    }
+  .brand-block {
+    margin-left: 8px;
+  }
 
-    #toggle_btn {
-        margin-left: 12px;
-    }
+  .user-info {
+    display: none;
+  }
+
+  .user-menu .nav-link {
+    padding: 4px;
+  }
+
+  .user-img {
+    margin-right: 0;
+  }
+
+  #toggle_btn {
+    margin-left: 12px;
+  }
 }
 
 </style>
@@ -250,88 +309,88 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    const toggleBtn = document.getElementById('toggle_btn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    const mainWrapper =
-        document.querySelector('.main-wrapper') || document.body;
+  const toggleBtn = document.getElementById('toggle_btn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const mainWrapper =
+    document.querySelector('.main-wrapper') || document.body;
 
-    if (!toggleBtn || !sidebar) {
-        return;
+  if (!toggleBtn || !sidebar) {
+    return;
+  }
+
+  toggleBtn.addEventListener('click', function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isMobile = window.innerWidth <= 992;
+
+    if (isMobile) {
+
+      /*
+       * MOBILE :
+       * On ouvre la sidebar complète.
+       * On enlève le mode icônes uniquement.
+       */
+      sidebar.classList.remove('sidebar-mini');
+      mainWrapper.classList.remove('sidebar-mini');
+
+      sidebar.classList.toggle('active');
+
+      if (overlay) {
+        overlay.classList.toggle('active');
+      }
+
+    } else {
+
+      /*
+       * ORDINATEUR :
+       * On réduit ou agrandit la sidebar.
+       */
+      sidebar.classList.remove('active');
+
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
+
+      sidebar.classList.toggle('sidebar-mini');
+      mainWrapper.classList.toggle('sidebar-mini');
     }
+  });
 
-    toggleBtn.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const isMobile = window.innerWidth <= 992;
-
-        if (isMobile) {
-
-            /*
-             * MOBILE :
-             * On ouvre la sidebar complète.
-             * On enlève le mode icônes uniquement.
-             */
-            sidebar.classList.remove('sidebar-mini');
-            mainWrapper.classList.remove('sidebar-mini');
-
-            sidebar.classList.toggle('active');
-
-            if (overlay) {
-                overlay.classList.toggle('active');
-            }
-
-        } else {
-
-            /*
-             * ORDINATEUR :
-             * On réduit ou agrandit la sidebar.
-             */
-            sidebar.classList.remove('active');
-
-            if (overlay) {
-                overlay.classList.remove('active');
-            }
-
-            sidebar.classList.toggle('sidebar-mini');
-            mainWrapper.classList.toggle('sidebar-mini');
-        }
+  /*
+   * Fermeture de la sidebar mobile
+   * en cliquant sur l'overlay.
+   */
+  if (overlay) {
+    overlay.addEventListener('click', function () {
+      sidebar.classList.remove('active');
+      overlay.classList.remove('active');
     });
+  }
 
-    /*
-     * Fermeture de la sidebar mobile
-     * en cliquant sur l'overlay.
-     */
-    if (overlay) {
-        overlay.addEventListener('click', function () {
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-        });
+  /*
+   * Gestion du changement d'orientation
+   * ou du redimensionnement de l'écran.
+   */
+  window.addEventListener('resize', function () {
+
+    if (window.innerWidth <= 992) {
+
+      // Le mode réduit est interdit sur mobile
+      sidebar.classList.remove('sidebar-mini');
+      mainWrapper.classList.remove('sidebar-mini');
+
+    } else {
+
+      // On ferme l'affichage mobile en revenant sur PC
+      sidebar.classList.remove('active');
+
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
     }
-
-    /*
-     * Gestion du changement d'orientation
-     * ou du redimensionnement de l'écran.
-     */
-    window.addEventListener('resize', function () {
-
-        if (window.innerWidth <= 992) {
-
-            // Le mode réduit est interdit sur mobile
-            sidebar.classList.remove('sidebar-mini');
-            mainWrapper.classList.remove('sidebar-mini');
-
-        } else {
-
-            // On ferme l'affichage mobile en revenant sur PC
-            sidebar.classList.remove('active');
-
-            if (overlay) {
-                overlay.classList.remove('active');
-            }
-        }
-    });
+  });
 
 });
 </script>

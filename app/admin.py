@@ -166,12 +166,24 @@ class SortiePharmacieAdmin(admin.ModelAdmin):
     )
     ordering = ('-date_sortie',)
 
+# @admin.register(LotPharmacie)
+# class LotPharmacieAdmin(admin.ModelAdmin):
+#     # 'quantite_actuelle' est affiché ici pour voir si le stock est bien à 16
+#     list_display = ('produit', 'numero_lot', 'quantite_initiale', 'quantite_actuelle', 'date_peremption','date_entree','hopital')
+#     list_filter = ('produit',)
+#     readonly_fields = ('quantite_actuelle',)
+
+
 @admin.register(LotPharmacie)
 class LotPharmacieAdmin(admin.ModelAdmin):
-    # 'quantite_actuelle' est affiché ici pour voir si le stock est bien à 16
-    list_display = ('produit', 'numero_lot', 'quantite_initiale', 'quantite_actuelle', 'date_peremption','date_entree','hopital')
+    list_display = (
+        'produit', 'numero_lot', 'quantite_initiale',
+        'quantite_actuelle', 'date_peremption', 'date_entree', 'hopital'
+    )
     list_filter = ('produit',)
-    readonly_fields = ('quantite_actuelle',)
+    list_editable = ('quantite_actuelle',)
+
+    # Ne pas mettre quantite_actuelle dans readonly_fields
 
 admin.site.register(Prestation)
 admin.site.register(Deces)

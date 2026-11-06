@@ -1733,58 +1733,92 @@ def historique_signes_vitaux(request, patient_id):
 
 @login_required
 def liste_consultation_medecin(request):
-    """
-    Liste de consultations côté médecin.
-    - Montre TOUTES les prises de signes vitaux de l'hôpital de l'utilisateur
-    - Les NON consultées en premier, puis les consultées
-    - Option de filtre: tous | avec_session | sans_session
-    """
-    filtre = request.GET.get('filtre', 'tous')
+  """
+  Liste de consultations côté médecin.
+  - Montre TOUTES les prises de signes vitaux de l'hôpital de l'utilisateur
+  - Les NON consultées en premier, puis les consultées
+  - Option de filtre: tous | avec_session | sans_session
+  - Indique si le patient est inscrit à une campagne
+  """
+  filtre = request.GET.get('filtre', 'tous')
 
-    role = (
-        Fonction.objects
-        .select_related('hopital', 'fonctionKey')
-        .filter(userKey=request.user)
-        .first()
+  role = (
+    Fonction.objects
+    .select_related('hopital', 'fonctionKey')
+    .filter(userKey=request.user)
+    .first()
+  )
+  hopital_user = role.hopital if role else None
+
+  if not hopital_user:
+    messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+    return redirect('enregistrement_patient')
+
+  # Base: toutes les prises pour l'hôpital de l'utilisateur
+  patients_prets = (
+    SigneVital.objects
+    .filter(patient__hopital=hopital_user)
+    .select_related('patient', 'infirmier', 'session')
+    .prefetch_related('session__items__prestation')
+    .annotate(
+      priorite=Case(
+        When(est_consulte=False, then=Value(0)),
+        default=Value(1),
+        output_field=IntegerField()
+      )
     )
-    hopital_user = role.hopital if role else None
+  )
 
-    if not hopital_user:
-        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
-        return redirect('enregistrement_patient')
+  # Filtres selon la présence de session
+  if filtre == 'avec_session':
+    patients_prets = patients_prets.filter(session__isnull=False)
+  elif filtre == 'sans_session':
+    patients_prets = patients_prets.filter(session__isnull=True)
 
-    # Base: toutes les prises pour l'hôpital de l'utilisateur
-    patients_prets = (
-        SigneVital.objects
-        .filter(patient__hopital=hopital_user)
-        .select_related('patient', 'infirmier', 'session')
-        .prefetch_related('session__items__prestation')
-        .annotate(
-            priorite=Case(
-                When(est_consulte=False, then=Value(0)),
-                default=Value(1),
-                output_field=IntegerField()
-            )
-        )
+  # Tri: d'abord par priorité (non consultés), puis par date (les plus récents en haut)
+  patients_prets = patients_prets.order_by('priorite', '-date_prelevement')
+
+  # ----------------------------------------
+  # PATIENTS DE CAMPAGNE (NOUVEAU)
+  # ----------------------------------------
+  # On prend les inscriptions encore valables de cet hôpital
+  inscriptions = (
+    CampagneParticipant.objects
+    .filter(
+      campagne__hopital=hopital_user,
+      patient__isnull=False,
+    )
+    .exclude(statut__in=['ANNULE', 'TERMINE'])
+    .select_related('campagne')
+    .order_by('id')
+  )
+
+  # Dictionnaire : id du patient -> son inscription
+  # (si un patient a plusieurs inscriptions, la plus récente reste)
+  campagne_par_patient = {}
+  for inscription in inscriptions:
+    campagne_par_patient[inscription.patient_id] = inscription
+
+  # On transforme en liste pour pouvoir ajouter des infos sur chaque ligne
+  patients_prets = list(patients_prets)
+
+  for sv in patients_prets:
+    inscription = campagne_par_patient.get(sv.patient_id)
+
+    sv.est_campagne = inscription is not None
+    sv.campagne_nom = inscription.campagne.nom if inscription else ''
+    sv.campagne_type = (
+      inscription.campagne.get_type_campagne_display() if inscription else ''
     )
 
-    # Filtres selon la présence de session
-    if filtre == 'avec_session':
-        patients_prets = patients_prets.filter(session__isnull=False)
-    elif filtre == 'sans_session':
-        patients_prets = patients_prets.filter(session__isnull=True)
+  fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
 
-    # Tri: d'abord par priorité (non consultés), puis par date (les plus récents en haut)
-    patients_prets = patients_prets.order_by('priorite', '-date_prelevement')
-
-    fonctionKey = role.fonctionKey.roleName if role and role.fonctionKey else None
-
-    context = {
-        'fonctionKey': fonctionKey,
-        'patients_prets': patients_prets,
-        'filtre': filtre,
-    }
-    return render(request, 'back-end/medecin/liste_consultation.html', context)
+  context = {
+    'fonctionKey': fonctionKey,
+    'patients_prets': patients_prets,
+    'filtre': filtre,
+  }
+  return render(request, 'back-end/medecin/liste_consultation.html', context)
 #
 # ===========================================================================================================
 # MARQUE CONSULTE
@@ -1975,155 +2009,228 @@ def reconsulter(request, sv_id):
 # ==================================================================================================
 @login_required
 def consultation_medicale(request, triage_id):
-    """
-    Première consultation d'un patient (ou tentative).
-    Si une consultation existe déjà, on bloque et on redirige.
-    """
-    triage = get_object_or_404(SigneVital, id=triage_id)
+  """
+  Première consultation d'un patient (ou tentative).
+  Si une consultation existe déjà, on bloque et on redirige.
+  Si le patient est inscrit à une campagne, on envoie ses prestations au médecin.
+  """
+  triage = get_object_or_404(SigneVital, id=triage_id)
 
-    role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
-    hopital_user = role_obj.hopital if role_obj else None
-    fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
+  role_obj = Fonction.objects.select_related('hopital', 'fonctionKey').filter(userKey=request.user).first()
+  hopital_user = role_obj.hopital if role_obj else None
+  fonctionKey = role_obj.fonctionKey.roleName if role_obj and role_obj.fonctionKey else None
 
-    if not hopital_user:
-        messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
-        return redirect('enregistrement_patient')
+  if not hopital_user:
+    messages.error(request, "Votre compte n'est rattaché à aucun hôpital.")
+    return redirect('enregistrement_patient')
 
-    if triage.patient.hopital != hopital_user:
-        messages.error(request, "Ce patient appartient à un autre hôpital.")
-        return redirect('liste_consultation_medecin')
+  if triage.patient.hopital != hopital_user:
+    messages.error(request, "Ce patient appartient à un autre hôpital.")
+    return redirect('liste_consultation_medecin')
 
-    consultation = Consultation.objects.filter(triage=triage).first()
+  consultation = Consultation.objects.filter(triage=triage).first()
 
-    # Si déjà consulté et consultation existe → on bloque
-    if triage.est_consulte and consultation is not None:
-        messages.warning(
-            request,
-            f"Le dossier de consultation pour {triage.patient.noms} a déjà été clôturé."
+  # Si déjà consulté et consultation existe → on bloque
+  if triage.est_consulte and consultation is not None:
+    messages.warning(
+      request,
+      f"Le dossier de consultation pour {triage.patient.noms} a déjà été clôturé."
+    )
+    return redirect('liste_consultation_medecin')
+
+  if request.method == 'POST':
+    if consultation is not None:
+      messages.error(
+        request,
+        "Erreur : Cette consultation a déjà été enregistrée par un autre utilisateur."
+      )
+      return redirect('liste_consultation_medecin')
+
+    form = ConsultationForm(request.POST, instance=consultation)
+
+    examens_ids = request.POST.getlist('examens_ids')
+    noms_medocs = request.POST.getlist('nom_medicament')
+    posologies = request.POST.getlist('posologie')
+    durees = request.POST.getlist('duree')
+
+    # --- DEBUG ---
+    print("=== DEBUG CONSULTATION ===")
+    print("nom_medicament:", noms_medocs)
+    print("posologie:", posologies)
+    print("duree:", durees)
+    print("any med?:", any(n.strip() for n in noms_medocs if n))
+    # ------------
+
+    if form.is_valid():
+      try:
+        with transaction.atomic():
+          if Consultation.objects.filter(triage=triage).exists():
+            raise Exception("Ce patient a déjà été pris en charge entre-temps.")
+
+          consultation_obj = form.save(commit=False)
+          consultation_obj.triage = triage
+          consultation_obj.medecin = request.user
+          consultation_obj.hopital = hopital_user
+          consultation_obj.save()
+
+          # Examens
+          DemandeExamen.objects.filter(
+            consultation=consultation_obj,
+            statut='EN_ATTENTE'
+          ).delete()
+
+          for e_id in examens_ids:
+            prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
+            qty_value = request.POST.get(f'qty_{e_id}', 1)
+
+            DemandeExamen.objects.create(
+              consultation=consultation_obj,
+              prestation=prestation,
+              quantite=qty_value,
+              statut='EN_ATTENTE',
+              hopital=hopital_user
+            )
+
+          # Médicaments
+          print("=== AVANT BLOC MEDICAMENTS ===")
+          if any(n.strip() for n in noms_medocs if n):
+            print("ON ENTRE DANS LE BLOC MEDICAMENTS")
+            ordonnance, _ = Ordonnance.objects.get_or_create(
+              consultation=consultation_obj,
+              type_ordonnance='URGENCE',
+              defaults={'hopital': hopital_user}
+            )
+            print("Ordonnance:", ordonnance.id, ordonnance.type_ordonnance)
+
+            if not ordonnance.hopital:
+              ordonnance.hopital = hopital_user
+              ordonnance.save()
+
+            LigneMedicament.objects.filter(ordonnance=ordonnance).delete()
+
+            for i, nom in enumerate(noms_medocs):
+              if nom and nom.strip():
+                poso = posologies[i] if i < len(posologies) else ""
+                dur = durees[i] if i < len(durees) else ""
+
+                print("Création ligne:", nom, poso, dur)
+                LigneMedicament.objects.create(
+                  ordonnance=ordonnance,
+                  nom_medicament=nom,
+                  posologie=poso,
+                  duree=dur,
+                  statut='EN_COURS',
+                  hopital=hopital_user
+                )
+
+            print("=== FIN BLOC MEDICAMENTS ===")
+          else:
+            print("AUCUN MÉDICAMENT → on ne crée pas d'ordonnance")
+
+          triage.est_consulte = True
+          triage.save()
+
+        messages.success(
+          request,
+          f"Consultation de {triage.patient.noms} enregistrée et clôturée avec succès !"
         )
         return redirect('liste_consultation_medecin')
 
-    if request.method == 'POST':
-        if consultation is not None:
-            messages.error(
-                request,
-                "Erreur : Cette consultation a déjà été enregistrée par un autre utilisateur."
-            )
-            return redirect('liste_consultation_medecin')
-
-        form = ConsultationForm(request.POST, instance=consultation)
-
-        examens_ids = request.POST.getlist('examens_ids')
-        noms_medocs = request.POST.getlist('nom_medicament')
-        posologies = request.POST.getlist('posologie')
-        durees = request.POST.getlist('duree')
-
-        # --- DEBUG ---
-        print("=== DEBUG CONSULTATION ===")
-        print("nom_medicament:", noms_medocs)
-        print("posologie:", posologies)
-        print("duree:", durees)
-        print("any med?:", any(n.strip() for n in noms_medocs if n))
-        # ------------
-
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    if Consultation.objects.filter(triage=triage).exists():
-                        raise Exception("Ce patient a déjà été pris en charge entre-temps.")
-
-                    consultation_obj = form.save(commit=False)
-                    consultation_obj.triage = triage
-                    consultation_obj.medecin = request.user
-                    consultation_obj.hopital = hopital_user
-                    consultation_obj.save()
-
-                    # Examens
-                    DemandeExamen.objects.filter(
-                        consultation=consultation_obj,
-                        statut='EN_ATTENTE'
-                    ).delete()
-
-                    for e_id in examens_ids:
-                        prestation = get_object_or_404(Prestation, id=e_id, hopital=hopital_user)
-                        qty_value = request.POST.get(f'qty_{e_id}', 1)
-
-                        DemandeExamen.objects.create(
-                            consultation=consultation_obj,
-                            prestation=prestation,
-                            quantite=qty_value,
-                            statut='EN_ATTENTE',
-                            hopital=hopital_user
-                        )
-
-                    # Médicaments
-                    print("=== AVANT BLOC MEDICAMENTS ===")
-                    if any(n.strip() for n in noms_medocs if n):
-                        print("ON ENTRE DANS LE BLOC MEDICAMENTS")
-                        ordonnance, _ = Ordonnance.objects.get_or_create(
-                            consultation=consultation_obj,
-                            type_ordonnance='URGENCE',
-                            defaults={'hopital': hopital_user}
-                        )
-                        print("Ordonnance:", ordonnance.id, ordonnance.type_ordonnance)
-
-                        if not ordonnance.hopital:
-                            ordonnance.hopital = hopital_user
-                            ordonnance.save()
-
-                        LigneMedicament.objects.filter(ordonnance=ordonnance).delete()
-
-                        for i, nom in enumerate(noms_medocs):
-                            if nom and nom.strip():
-                                poso = posologies[i] if i < len(posologies) else ""
-                                dur = durees[i] if i < len(durees) else ""
-
-                                print("Création ligne:", nom, poso, dur)
-                                LigneMedicament.objects.create(
-                                    ordonnance=ordonnance,
-                                    nom_medicament=nom,
-                                    posologie=poso,
-                                    duree=dur,
-                                    statut='EN_COURS',
-                                    hopital=hopital_user
-                                )
-
-                        print("=== FIN BLOC MEDICAMENTS ===")
-                    else:
-                        print("AUCUN MÉDICAMENT → on ne crée pas d'ordonnance")
-
-                    triage.est_consulte = True
-                    triage.save()
-
-                messages.success(
-                    request,
-                    f"Consultation de {triage.patient.noms} enregistrée et clôturée avec succès !"
-                )
-                return redirect('liste_consultation_medecin')
-
-            except Exception as e:
-                print("=== EXCEPTION ===")
-                print(e)
-                messages.error(request, f"Une erreur technique est survenue : {str(e)}")
-        else:
-            messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
-
+      except Exception as e:
+        print("=== EXCEPTION ===")
+        print(e)
+        messages.error(request, f"Une erreur technique est survenue : {str(e)}")
     else:
-        form = ConsultationForm(instance=consultation)
+      messages.error(request, "Veuillez vérifier les erreurs dans le formulaire clinique.")
 
-    examens_disponibles = Prestation.objects.filter(
-        categorie__in=['LABO', 'ECHO', 'RADIO'],
-        hopital=hopital_user
-    ).order_by('categorie', 'libelle')
+  else:
+    form = ConsultationForm(instance=consultation)
 
-    return render(request, 'back-end/medecin/consultation_medecin.html', {
-        'triage': triage,
-        'form': form,
-        'examens_disponibles': examens_disponibles,
-        'consultation': consultation,
-        'fonctionKey': fonctionKey,
-        # pas de mode → le template affiche "Nouvelle consultation"
-    })
+  examens_disponibles = Prestation.objects.filter(
+    categorie__in=['LABO', 'ECHO', 'RADIO'],
+    hopital=hopital_user
+  ).order_by('categorie', 'libelle')
+
+  # ----------------------------------------
+  # PRESTATIONS DE LA CAMPAGNE DU PATIENT (NOUVEAU)
+  # ----------------------------------------
+  # Étape 1 : on cherche l'inscription du patient à une campagne
+  inscription_campagne = (
+    CampagneParticipant.objects
+    .filter(
+      patient=triage.patient,
+      campagne__hopital=hopital_user,
+    )
+    .exclude(statut__in=['ANNULE', 'TERMINE'])
+    .select_related('campagne')
+    .order_by('-id')
+    .first()
+  )
+
+  campagne_patient = None
+  prestations_incluses = []
+  prestations_payantes = []
+  ids_prestations_campagne = []
+
+  if inscription_campagne:
+    campagne_patient = inscription_campagne.campagne
+
+    # Étape 2 : on lit les prestations de cette campagne
+    lignes_campagne = (
+      CampagnePrestation.objects
+      .filter(campagne=campagne_patient, actif=True)
+      .select_related('prestation')
+      .order_by('prestation__libelle')
+    )
+
+    for ligne in lignes_campagne:
+      ids_prestations_campagne.append(ligne.prestation_id)
+
+      # ---- Prestation incluse : gratuite pour le patient
+      if ligne.type_inclusion == 'INCLUSE':
+        prestations_incluses.append({
+          'id': ligne.prestation_id,
+          'libelle': ligne.prestation.libelle,
+        })
+
+      # ---- Prestation payante : on regarde si le patient a déjà payé
+      else:
+        prix = ligne.prix_supplement_cdf or Decimal('0.00')
+
+        paiements_ligne = Paiement.objects.filter(
+          service='SUPPLEMENT_CAMPAGNE',
+          campagne_prestation=ligne,
+          patient=triage.patient,
+        )
+        deja_verse = paiements_ligne.aggregate(
+          total=Sum('montant_verse_cdf')
+        )['total'] or Decimal('0.00')
+        deja_reduit = paiements_ligne.aggregate(
+          total=Sum('montant_reduction')
+        )['total'] or Decimal('0.00')
+
+        est_payee = (deja_verse + deja_reduit) >= prix
+
+        prestations_payantes.append({
+          'id': ligne.prestation_id,
+          'libelle': ligne.prestation.libelle,
+          'prix_cdf': prix,
+          'est_payee': est_payee,
+        })
+
+  return render(request, 'back-end/medecin/consultation_medecin.html', {
+    'triage': triage,
+    'form': form,
+    'examens_disponibles': examens_disponibles,
+    'consultation': consultation,
+    'fonctionKey': fonctionKey,
+    # pas de mode → le template affiche "Nouvelle consultation"
+    # ---- Campagne (nouveau) ----
+    'campagne_patient': campagne_patient,
+    'prestations_incluses': prestations_incluses,
+    'prestations_payantes': prestations_payantes,
+    'ids_prestations_campagne': ids_prestations_campagne,
+  })
 
 # 30
 # ==================================================================================================
@@ -2515,6 +2622,7 @@ def encaisser_examens_prescrits(request, consultation_id):
 # ==================================================================================================
 @login_required
 def liste_attente_caisse(request):
+  # ---- Le taux sert seulement à afficher le USD (tout est géré en CDF)
   taux = ConfigurationHopital.get_taux()  # 1 USD = taux CDF
 
   role = (
@@ -2637,29 +2745,34 @@ def liste_attente_caisse(request):
     p.montant_paye_usd = p.montant_paye_cdf / taux if taux else Decimal('0')
     p.reste_a_payer_usd = p.reste_a_payer_cdf / taux if taux else Decimal('0')
 
-    # ---- Examens payants de la campagne (SUPPLEMENT) ----
-    p.supplement_total_cdf = Decimal('0.00')
+    # ---- Toutes les prestations de la campagne (incluses + payantes) ----
     p.supplement_reste_cdf = Decimal('0.00')
-    p.supplement_details = []
+    p.prestations_details = []
 
-    lignes_supplement = (
+    lignes_campagne = (
       CampagnePrestation.objects
       .filter(
         campagne=p.campagne,
-        type_inclusion='SUPPLEMENT',
         actif=True,
       )
       .select_related('prestation')
+      .order_by('type_inclusion', 'prestation__libelle')
     )
 
-    for ligne in lignes_supplement:
-      prix_unitaire = ligne.prix_supplement_cdf or Decimal('0.00')
+    for ligne in lignes_campagne:
+      est_supplement = (ligne.type_inclusion == 'SUPPLEMENT')
+
+      # ---- Prix unitaire : 0 si incluse, prix supplément si payante ----
+      if est_supplement:
+        prix_unitaire = ligne.prix_supplement_cdf or Decimal('0.00')
+      else:
+        prix_unitaire = Decimal('0.00')
 
       quantite = 0
       reste_ligne = Decimal('0.00')
 
-      # ---- Si le patient est connu, on regarde ce que le médecin a demandé ----
-      if p.patient_id:
+      # ---- Pour les prestations payantes : ce que le médecin a demandé ----
+      if est_supplement and p.patient_id:
         quantite = Consultation.objects.filter(
           triage__patient=p.patient,
           examens__prestation=ligne.prestation,
@@ -2670,7 +2783,7 @@ def liste_attente_caisse(request):
         if quantite > 0:
           total_ligne = prix_unitaire * quantite
 
-          # ---- Déjà payé pour cet examen ----
+          # ---- Déjà payé pour cette prestation ----
           paiements_ligne = Paiement.objects.filter(
             service='SUPPLEMENT_CAMPAGNE',
             campagne_prestation=ligne,
@@ -2688,18 +2801,18 @@ def liste_attente_caisse(request):
             total_ligne - deja_verse - deja_reduit
           )
 
-          p.supplement_total_cdf += total_ligne
           p.supplement_reste_cdf += reste_ligne
 
-      # ---- On garde TOUS les examens payants pour l'affichage ----
-      p.supplement_details.append({
+      p.prestations_details.append({
         'libelle': ligne.prestation.libelle,
+        'type': ligne.type_inclusion,
         'prix_cdf': prix_unitaire,
+        'prix_usd': prix_unitaire / taux if taux else Decimal('0'),
         'quantite': quantite,
         'reste_cdf': reste_ligne,
       })
 
-    # ---- Total à payer = campagne + examens demandés ----
+    # ---- Total à payer = campagne + prestations payantes demandées ----
     p.total_reste_cdf = p.reste_a_payer_cdf + p.supplement_reste_cdf
     p.total_reste_usd = p.total_reste_cdf / taux if taux else Decimal('0')
 
@@ -2715,6 +2828,7 @@ def liste_attente_caisse(request):
     'query': query,
     'taux': taux,
   })
+
     
 # 36
 # ==================================================================================================

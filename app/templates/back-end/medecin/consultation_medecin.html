@@ -15,6 +15,12 @@
         <style>
             .constant-val { font-size: 16px; font-weight: bold; color: #1f2937; }
             .section-title { border-left: 4px solid #dc3545; padding-left: 10px; font-weight: bold; color: #b21f2d; margin-bottom: 20px; }
+
+            /* ---- Bloc patient de campagne ---- */
+            .campagne-box { border-left: 5px solid #6f42c1; background-color: #f6f2fc; }
+            .campagne-box .campagne-titre { color: #6f42c1; font-weight: 700; }
+            .campagne-box ul { margin-bottom: 10px; padding-left: 20px; }
+            .campagne-box li { margin-bottom: 4px; }
         </style>
     </head>
     <body>
@@ -109,6 +115,58 @@
                             </div>
                         </div>
                     </div>
+
+
+
+                    <!-- ============================================ -->
+                    <!-- PATIENT DE CAMPAGNE : PRESTATIONS (NOUVEAU)  -->
+                    <!-- ============================================ -->
+                    {% if campagne_patient %}
+                    <div class="card campagne-box mb-4">
+                        <div class="card-body">
+                            <h5 class="campagne-titre mb-3">
+                                <i class="fa fa-bullhorn"></i>
+                                Patient de campagne : {{ campagne_patient.nom }}
+                                <small class="text-muted">({{ campagne_patient.get_type_campagne_display }})</small>
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Prestations incluses (gratuites) :</strong>
+                                    <ul>
+                                        {% for pr in prestations_incluses %}
+                                        <li>
+                                            <i class="fa fa-check text-success"></i> {{ pr.libelle }}
+                                        </li>
+                                        {% empty %}
+                                        <li><small class="text-muted">Aucune prestation incluse</small></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <strong>Prestations payantes :</strong>
+                                    <ul>
+                                        {% for pr in prestations_payantes %}
+                                        <li>
+                                            <i class="fa fa-plus-circle text-warning"></i> {{ pr.libelle }}
+                                            — {{ pr.prix_cdf|floatformat:0 }} FC
+                                            {% if pr.est_payee %}
+                                            <span class="badge badge-success">Payée</span>
+                                            {% else %}
+                                            <span class="badge badge-warning">À payer à la caisse</span>
+                                            {% endif %}
+                                        </li>
+                                        {% empty %}
+                                        <li><small class="text-muted">Aucune prestation payante</small></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <!-- /PATIENT DE CAMPAGNE -->
 
 
 

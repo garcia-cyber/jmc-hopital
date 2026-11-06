@@ -16,6 +16,11 @@
         background-color: #f4fff6;
       }
 
+      /* ---- Ligne d'un patient de campagne : trait bleu à gauche ---- */
+      tr.row-campagne td:first-child {
+        border-left: 4px solid #17a2b8;
+      }
+
       .badge-new {
         background-color: #dc3545;
         color: #fff;
@@ -33,6 +38,19 @@
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
+      }
+
+      /* ---- Badge patient de campagne ---- */
+      .badge-campagne {
+        background-color: #6f42c1;
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-top: 4px;
       }
 
       .table thead th {
@@ -130,7 +148,7 @@
                   </thead>
                   <tbody>
                     {% for signe in patients_prets %}
-                      <tr class="{% if signe.est_consulte %}row-consulte{% else %}row-non-consulte{% endif %}">
+                      <tr class="{% if signe.est_consulte %}row-consulte{% else %}row-non-consulte{% endif %}{% if signe.est_campagne %} row-campagne{% endif %}">
                         <td class="nowrap"><strong>#{{ forloop.counter }}</strong></td>
 
                         <td>
@@ -144,9 +162,21 @@
                         <td>
                           <span class="badge-info-custom">{{ signe.patient.code_patient }}</span>
                         </td>
+
                         <td>
                           <span class="patient-name">{{ signe.patient.noms }}</span>
+
+                          {% if signe.est_campagne %}
+                            <br>
+                            <span class="badge-campagne">
+                              <i class="fa fa-bullhorn"></i> Patient de campagne
+                            </span>
+                            <small class="text-muted d-block">
+                              {{ signe.campagne_nom }} ({{ signe.campagne_type }})
+                            </small>
+                          {% endif %}
                         </td>
+
                         <td class="nowrap">{{ signe.patient.age }} ans</td>
 
                         <td class="text-small">
@@ -164,6 +194,11 @@
                                 </li>
                               {% endfor %}
                             </ul>
+                          {% elif signe.est_campagne %}
+                            <span class="text-small">
+                              <i class="fa fa-bullhorn" style="color:#6f42c1;"></i>
+                              Consultation de campagne
+                            </span>
                           {% else %}
                             <span class="text-muted text-small">Consultation Libre</span>
                           {% endif %}

@@ -213,27 +213,46 @@
                                                     <span class="exam-meta">
                                                         <strong>Prix campagne :</strong>
                                                         {{ p.prix_total_cdf|floatformat:0 }} FC
-                                                        (~ {{ p.prix_total_usd|floatformat:2 }} USD)
+                                                        <small>(~ {{ p.prix_total_usd|floatformat:2 }} USD)</small>
                                                     </span>
 
                                                     <span class="exam-meta">
                                                         <strong>Déjà payé :</strong>
                                                         {{ p.montant_paye_cdf|floatformat:0 }} FC
-                                                        (~ {{ p.montant_paye_usd|floatformat:2 }} USD)
+                                                        <small>(~ {{ p.montant_paye_usd|floatformat:2 }} USD)</small>
                                                     </span>
 
-                                                    {% for d in p.supplement_details %}
-                                                    <span class="exam-meta">
-                                                        <strong>Examen payant :</strong>
-                                                        {{ d.libelle }} — {{ d.prix_cdf|floatformat:0 }} FC
-                                                        {% if d.quantite > 0 %}
-                                                        (x{{ d.quantite }}) :
-                                                        <span class="text-danger font-weight-bold">reste {{ d.reste_cdf|floatformat:0 }} FC</span>
-                                                        {% else %}
-                                                        <em>(pas encore demandé par le médecin)</em>
-                                                        {% endif %}
-                                                    </span>
-                                                    {% endfor %}
+                                                    <!-- ---- Liste de toutes les prestations de la campagne ---- -->
+                                                    <ul class="exam-list mt-2">
+                                                        {% for d in p.prestations_details %}
+                                                        <li>
+                                                            {% if d.type == 'INCLUSE' %}
+                                                            <i class="fa fa-check text-success"></i>
+                                                            {{ d.libelle }}
+                                                            <span class="exam-meta text-success">Incluse dans la campagne (gratuit)</span>
+                                                            {% else %}
+                                                            <i class="fa fa-plus-circle text-warning"></i>
+                                                            {{ d.libelle }}
+                                                            <span class="exam-meta">
+                                                                Payante : {{ d.prix_cdf|floatformat:0 }} FC
+                                                                <small>(~ {{ d.prix_usd|floatformat:2 }} USD)</small>
+                                                                {% if d.quantite > 0 %}
+                                                                | Qté : {{ d.quantite }} |
+                                                                {% if d.reste_cdf > 0 %}
+                                                                <span class="text-danger font-weight-bold">Reste : {{ d.reste_cdf|floatformat:0 }} FC</span>
+                                                                {% else %}
+                                                                <span class="text-success font-weight-bold">Payée</span>
+                                                                {% endif %}
+                                                                {% else %}
+                                                                | <em>pas encore demandée par le médecin</em>
+                                                                {% endif %}
+                                                            </span>
+                                                            {% endif %}
+                                                        </li>
+                                                        {% empty %}
+                                                        <li><small class="text-muted">Aucune prestation dans cette campagne</small></li>
+                                                        {% endfor %}
+                                                    </ul>
                                                 </td>
                                                 <td>
                                                     {% if p.total_reste_cdf > 0 %}
@@ -256,13 +275,11 @@
                                                     {% endif %}
                                                 </td>
                                                 <td class="text-right">
-                                                    {% if p.reste_a_payer_cdf > 0 %}
+                                                    {% if p.total_reste_cdf > 0 %}
                                                     <a href="{% url 'encaisser_campagne' p.id %}"
                                                        class="btn btn-sm btn-success px-3 shadow-sm">
                                                         <i class="fa fa-money"></i> Encaisser
                                                     </a>
-                                                    {% elif p.supplement_reste_cdf > 0 %}
-                                                    <span class="badge badge-warning">Examen à payer</span>
                                                     {% else %}
                                                     <span class="badge badge-success">Payé</span>
                                                     {% endif %}
